@@ -10,6 +10,15 @@ class MarkedNumber:
     def is_marked(self):
         return self.number < 0
 
+    def __neg__(self):
+        return MarkedNumber(-self.number)
+
+    def increment(self):
+        if self.number > 0:
+            return MarkedNumber(self.number + 1)
+        else:
+            return MarkedNumber(self.number - 1)
+
     def __eq__(self, other):
         assert type(other) == MarkedNumber
         return self.number == other.number

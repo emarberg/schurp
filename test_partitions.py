@@ -1,4 +1,4 @@
-from partitions import StrictPartition, Shape
+from partitions import Partition, StrictPartition, Shape
 
 
 def test_init():
@@ -59,3 +59,28 @@ def test_empty_shape():
     assert s.max_row == 0
     assert s.max_column == 0
     assert s.positions == set()
+
+
+def test_corners():
+    s = Shape()
+    assert s.corners() == set()
+
+    s = Partition(4, 4, 3, 2).shape
+    assert s.corners() == {(2, 4), (3, 3), (4, 2)}
+
+
+def test_horizontal_border_strips():
+    s = Shape()
+    assert s.horizontal_border_strips() == set()
+
+    s = Partition(3).shape
+    assert s.horizontal_border_strips() == {((1, 3),), ((1, 2), (1, 3)), ((1, 1), (1, 2), (1, 3))}
+
+    s = Partition(3, 3, 3, 2).shape
+    assert s.horizontal_border_strips() == {
+        ((3, 3),),
+        ((3, 3), (4, 2)),
+        ((3, 3), (4, 1), (4, 2)),
+        ((4, 2),),
+        ((4, 1), (4, 2))
+    }
