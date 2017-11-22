@@ -1,4 +1,4 @@
-from partitions import StrictPartition
+from partitions import StrictPartition, Shape
 
 
 def test_init():
@@ -23,44 +23,39 @@ def test_init_failure():
 
 
 def test_repr():
-    assert str(StrictPartition(2, 1)) == '* * \n  * '
+    assert str(StrictPartition(2, 1)) == '* *\n  *'
     assert str(StrictPartition()) == ''
 
 
 def test_shape():
     p = StrictPartition(2, 1)
-    assert p.shape == {(1, 1), (1, 2), (2, 2)}
+    assert p.shape.positions == {(1, 1), (1, 2), (2, 2)}
 
 
 def test_row():
-    p = StrictPartition(2, 1)
-    assert p.row(1) == ((1, 1), (1, 2))
-    assert p.row(2) == ((2, 2),)
-    assert p.row(3) == ()
-    assert p.row(0) == ()
-    assert p.row(-1) == ()
+    s = StrictPartition(2, 1).shape
+    assert s.row(1) == {(1, 1), (1, 2)}
+    assert s.ordered_row(1) == sorted({(1, 1), (1, 2)})
+    assert s.row(2) == {(2, 2)}
+    assert s.row(3) == set()
+    assert s.row(0) == set()
+    assert s.row(-1) == set()
+    assert s.max_row == 2
 
 
 def test_column():
-    p = StrictPartition(2, 1)
-    assert p.column(1) == ((1, 1),)
-    assert p.column(2) == ((1, 2), (2, 2))
-    assert p.column(3) == ()
-    assert p.column(0) == ()
-    assert p.column(-1) == ()
+    s = StrictPartition(2, 1).shape
+    assert s.column(1) == {(1, 1)}
+    assert s.column(2) == {(1, 2), (2, 2)}
+    assert s.ordered_column(2) == sorted({(1, 2), (2, 2)})
+    assert s.column(3) == set()
+    assert s.column(0) == set()
+    assert s.column(-1) == set()
+    assert s.max_column == 2
 
 
-def test_num_rows():
-    p = StrictPartition(2, 1)
-    assert p.num_rows == 2
-
-    p = StrictPartition()
-    assert p.num_rows == 0
-
-
-def test_num_columns():
-    p = StrictPartition(2, 1)
-    assert p.num_columns == 2
-
-    p = StrictPartition()
-    assert p.num_columns == 0
+def test_empty_shape():
+    s = Shape()
+    assert s.max_row == 0
+    assert s.max_column == 0
+    assert s.positions == set()

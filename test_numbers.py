@@ -54,10 +54,3 @@ def test_sorted():
 def test_hash():
     assert hash(MarkedNumber(-3)) == -3
     assert hash(MarkedNumber(2)) == 2
-
-
-def test_len():
-    assert len(MarkedNumber(-3)) == 2
-    assert len(MarkedNumber(3)) == 1
-    assert len(MarkedNumber(30)) == 2
-    assert len(MarkedNumber(-30)) == 3

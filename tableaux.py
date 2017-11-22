@@ -1,53 +1,77 @@
-from partitions import StrictPartition
+from collections import defaultdict
+from partitions import StrictPartition, Shape
 from numbers import MarkedNumber
 
 
-class ShiftedTableau:
-    def __init__(self, **kwargs):
-        if 'string' in kwargs:
-            def mark(i):
-                i = i.strip()
-                if i.endswith("'"):
-                    return MarkedNumber(-int(i[:-1]))
-                else:
-                    return MarkedNumber(int(i))
-            self.rows = [[mark(i) for i in row.split(',')] for row in kwargs['string'].split(';')]
-        elif 'rows' in kwargs:
-            self.rows = kwargs['rows'][:]
-        self.shape = StrictPartition(*[len(row) for row in self.rows])
+class Tableau:
+    def __init__(self, dictionary=None):
+        if dictionary is None:
+            dictionary = {}
+        assert all(type(v) == MarkedNumber for v in dictionary.values())
+        self.mapping = dictionary.copy()
+        self.shape = Shape(self.mapping.keys())
+        self.rows = {}
+        self.columns = {}
+
+    @classmethod
+    def from_string(cls, string):
+        def mark(i):
+            i = i.strip()
+            if i.endswith("'"):
+                return MarkedNumber(-int(i[:-1]))
+            else:
+                return MarkedNumber(int(i))
+        rows = [[mark(i) for i in row.split(',')] for row in string.split(';')]
+        dictionary = {
+            (i + 1, j + 1): rows[i][j]
+            for i in range(len(rows)) for j in range(len(rows[i]))
+        }
+        return Tableau(dictionary)
+
+    def shift(self):
+        return Tableau({(i, i + j - 1): self.cell(i, j) for (i, j) in self.mapping})
 
     def cell(self, i, j):
-        return self.rows[i - 1][j - i]
+        return self.mapping[(i, j)]
 
     def row(self, i):
-        return self.rows[i - 1]
+        if i not in self.rows:
+            self.rows[i] = (self.mapping[p] for p in self.shape.ordered_row(i))
+        return self.rows[i]
 
     def column(self, j):
-        return self.columns[j - 1]
+        if j not in self.columns:
+            self.columns[j] = (self.mapping[p] for p in self.shape.ordered_column(j))
+        return self.columns[j]
 
     @property
-    def num_rows(self):
-        return self.shape.num_rows
+    def max_row(self):
+        return self.shape.max_row
 
     @property
-    def num_columns(self):
-        return self.shape.num_columns
+    def max_column(self):
+        return self.shape.max_column
+
+    def is_shifted(self):
+        if any(j < i for i, j in self.mapping):
+            return False
 
     def is_diagonally_unmarked(self):
-        return not any(self.get(i, i).is_marked() for i in range(1, self.num_rows + 1))
+        return not any(self.cell(i, i).is_marked() for i in range(1, self.max_row + 1))
 
     def is_increasing(self):
         pass
 
-    @property
-    def _cell_width(self):
-        if self.rows:
-            return 1 + max(len(i) for row in self.rows for i in row)
+    def is_p_semistandard(self):
+        pass
+
+    def is_q_semistandard(self):
+        pass
 
     def __repr__(self):
-        width = self._cell_width
-        repr_rows = [
-            index * width * ' ' + ''.join(str(i) + (width - len(i)) * ' ' for i in row)
-            for index, row in enumerate(self.rows)
-        ]
-        return '\n'.join(repr_rows)
+        width = max({len(str(v)) for i in range(1, self.max_row + 1) for v in self.row(i)} | {0})
+        base = [[width * ' ' for i in range(self.max_column)] for i in range(self.max_row)]
+        for i, j in self.mapping:
+            v = str(self.mapping[(i, j)])
+            base[i - 1][j - 1] = v + (width - len(v)) * ' '
+        return '\n'.join(' '.join(row) for row in base)

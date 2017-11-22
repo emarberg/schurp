@@ -32,6 +32,3 @@ class MarkedNumber:
 
     def __hash__(self):
         return self.number
-
-    def __len__(self):
-        return len(str(self))
