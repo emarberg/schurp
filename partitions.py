@@ -48,6 +48,9 @@ class Shape:
             if (i + 1, j) not in self.positions and (i, j + 1) not in self.positions
         }
 
+    def vertical_border_strips(self):
+        return {x.transpose() for x in self.transpose().horizontal_border_strips()}
+
     def horizontal_border_strips(self):
         borders = self._horizontal_border_strips_helper()
         return {x for x in borders if len(x) > 0}

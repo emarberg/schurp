@@ -86,3 +86,24 @@ def test_horizontal_border_strips():
         Shape({(4, 2)}),
         Shape({(4, 1), (4, 2)})
     }
+
+
+def test_vertical_border_strips():
+    s = Shape()
+    assert s.vertical_border_strips() == set()
+
+    s = Partition(1, 1, 1).shape
+    assert s.vertical_border_strips() == {
+        Shape({(3, 1)}),
+        Shape({(2, 1), (3, 1)}),
+        Shape({(1, 1), (2, 1), (3, 1)})
+    }
+
+    s = Partition(4, 4, 3).shape
+    assert s.vertical_border_strips() == {
+        Shape({(3, 3)}),
+        Shape({(3, 3), (2, 4)}),
+        Shape({(3, 3), (1, 4), (2, 4)}),
+        Shape({(2, 4)}),
+        Shape({(1, 4), (2, 4)})
+    }
