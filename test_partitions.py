@@ -34,23 +34,21 @@ def test_shape():
 
 def test_row():
     s = StrictPartition(2, 1).shape
-    assert s.row(1) == {(1, 1), (1, 2)}
-    assert s.ordered_row(1) == sorted({(1, 1), (1, 2)})
-    assert s.row(2) == {(2, 2)}
-    assert s.row(3) == set()
-    assert s.row(0) == set()
-    assert s.row(-1) == set()
+    assert s.row(1) == Shape({(1, 1), (1, 2)})
+    assert s.row(2) == Shape({(2, 2)})
+    assert s.row(3) == Shape()
+    assert s.row(0) == Shape()
+    assert s.row(-1) == Shape()
     assert s.max_row == 2
 
 
 def test_column():
     s = StrictPartition(2, 1).shape
-    assert s.column(1) == {(1, 1)}
-    assert s.column(2) == {(1, 2), (2, 2)}
-    assert s.ordered_column(2) == sorted({(1, 2), (2, 2)})
-    assert s.column(3) == set()
-    assert s.column(0) == set()
-    assert s.column(-1) == set()
+    assert s.column(1) == Shape({(1, 1)})
+    assert s.column(2) == Shape({(1, 2), (2, 2)})
+    assert s.column(3) == Shape()
+    assert s.column(0) == Shape()
+    assert s.column(-1) == Shape()
     assert s.max_column == 2
 
 
@@ -74,13 +72,17 @@ def test_horizontal_border_strips():
     assert s.horizontal_border_strips() == set()
 
     s = Partition(3).shape
-    assert s.horizontal_border_strips() == {((1, 3),), ((1, 2), (1, 3)), ((1, 1), (1, 2), (1, 3))}
+    assert s.horizontal_border_strips() == {
+        Shape({(1, 3)}),
+        Shape({(1, 2), (1, 3)}),
+        Shape({(1, 1), (1, 2), (1, 3)})
+    }
 
     s = Partition(3, 3, 3, 2).shape
     assert s.horizontal_border_strips() == {
-        ((3, 3),),
-        ((3, 3), (4, 2)),
-        ((3, 3), (4, 1), (4, 2)),
-        ((4, 2),),
-        ((4, 1), (4, 2))
+        Shape({(3, 3)}),
+        Shape({(3, 3), (4, 2)}),
+        Shape({(3, 3), (4, 1), (4, 2)}),
+        Shape({(4, 2)}),
+        Shape({(4, 1), (4, 2)})
     }

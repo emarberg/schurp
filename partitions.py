@@ -12,64 +12,67 @@ class Shape:
         for i, j in self.positions:
             self.rows[i].add((i, j))
             self.columns[j].add((i, j))
-        self.max_row = max(set(self.rows) | {0})
-        self.max_column = max(set(self.columns) | {0})
+        self.max_row = max({i for i, j in self.positions} | {0})
+        self.max_column = max({j for i, j in self.positions} | {0})
 
     def __iter__(self):
         return self.positions.__iter__()
+
+    def __hash__(self):
+        return hash(tuple(sorted(self.positions)))
 
     def __sub__(self, shape):
         assert type(shape) == Shape and shape.positions.issubset(self.positions)
         return Shape(self.positions - shape.positions)
 
+    def __add__(self, shape):
+        assert type(shape) == Shape and not (shape.positions & self.positions)
+        return Shape(self.positions | shape.positions)
+
     def transpose(self):
         return Shape({(j, i) for (i, j) in self.positions})
 
     def row(self, i):
-        return self.rows.get(i, set())
+        return Shape({(j, k) for (j, k) in self.positions if i == j})
 
-    def column(self, j):
-        return self.columns.get(j, set())
-
-    def ordered_row(self, i):
-        return sorted(self.row(i))
-
-    def ordered_column(self, j):
-        return sorted(self.column(j))
+    def column(self, i):
+        return Shape({(j, k) for (j, k) in self.positions if i == k})
 
     def northeast_position(self):
         if self.positions:
             return min(self.positions, key=lambda x: (x[0], -x[1]))
 
     def corners(self):
-        rowends = {max(row) for row in self.rows.values()}
-        colends = {max(col) for col in self.columns.values()}
-        return rowends & colends
+        return {
+            (i, j) for i, j in self.positions
+            if (i + 1, j) not in self.positions and (i, j + 1) not in self.positions
+        }
 
     def horizontal_border_strips(self):
         borders = self._horizontal_border_strips_helper()
-        return {x for x in borders if x}
+        return {x for x in borders if len(x) > 0}
 
     def _horizontal_border_strips_helper(self):
         if len(self) == 0:
-            return {()}
+            return {Shape()}
 
         i, k = self.northeast_position()
-        subshape = Shape(self.positions - self.row(i))
+        subshape = self - self.row(i)
         borders = subshape._horizontal_border_strips_helper()
 
         ans = set()
         j = k
         while True:
             for border in borders:
-                newborder = border + tuple((i, l) for l in range(j + 1, k + 1))
-                ans.add(tuple(sorted(newborder)))
-
+                ans.add(border + Shape({(i, l) for l in range(j + 1, k + 1)}))
             if (i + 1, j) in self.positions or (i, j) not in self.positions:
                 break
-
             j -= 1
         return ans
+
+    def __eq__(self, other):
+        assert type(other) == Shape
+        return self.positions == other.positions
 
     def __len__(self):
         return len(self.positions)
