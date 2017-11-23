@@ -27,7 +27,7 @@ class Tableau:
         return Tableau(dictionary)
 
     def shift(self):
-        return Tableau({(i, i + j - 1): self.cell(i, j) for (i, j) in self.mapping})
+        return Tableau({(i, i + j - 1): self.entry(i, j) for (i, j) in self.mapping})
 
     def transpose(self):
         return Tableau({(j, i): self.cell(i, j) for i, j in self.mapping})
@@ -121,12 +121,11 @@ class Tableau:
         for border in shape.horizontal_border_strips():
             for t in cls.get_semistandard(shape - Shape(border)):
                 if t.mapping:
-                    number = t.maximum().increment()
-                    mapping = t.mapping
-                    for i, j in border:
-                        mapping[(i, j)] = number
+                    n, mapping = t.maximum().increment(), t.mapping
                 else:
-                    mapping = {(i, j): MarkedNumber(1) for i, j in border}
+                    n, mapping = MarkedNumber(1), {}
+                for i, j in border:
+                    mapping[(i, j)] = n
                 ans.add(Tableau(mapping))
         return ans
 
@@ -140,13 +139,43 @@ class Tableau:
 
         ans = set()
         for i, j in shape.corners():
-            for t in cls.get_shifted_standard(shape - Shape({(i, j)})):
+            for t in cls.get_standard_shifted(shape - Shape({(i, j)})):
                 mapping = t.mapping
                 mapping[(i, j)] = MarkedNumber(len(shape))
                 ans.add(Tableau(mapping))
                 if i != j:
                     mapping[(i, j)] = MarkedNumber(-len(shape))
                     ans.add(Tableau(mapping))
+        return ans
+
+    @classmethod
+    def get_semistandard_shifted(cls, shape):
+        if isinstance(shape, Partition):
+            shape = shape.shape
+
+        if len(shape) == 0:
+            return {Tableau()}
+
+        borders = {
+            (a, b)
+            for a in shape.horizontal_border_strips() | {Shape()}
+            for b in (shape - a).vertical_border_strips(exclude_diagonal=True) | {Shape()}
+            if len(a) > 0 or len(b) > 0
+        }
+
+        ans = set()
+        for border_h, border_v in borders:
+            for t in cls.get_semistandard_shifted(shape - border_h - border_v):
+                if t.mapping:
+                    n, mapping = t.maximum().weight() + 1, t.mapping
+                else:
+                    n, mapping = 1, {}
+
+                for i, j in border_h:
+                    mapping[(i, j)] = MarkedNumber(n)
+                for i, j in border_v:
+                    mapping[(i, j)] = MarkedNumber(-n)
+                ans.add(Tableau(mapping))
         return ans
 
     def __eq__(self, other):
