@@ -11,6 +11,9 @@ class Tableau:
         self.max_row = max({i for i, j in self.mapping} | {0})
         self.max_column = max({j for i, j in self.mapping} | {0})
 
+    def __iter__(self):
+        return self.mapping.__iter__()
+
     @classmethod
     def from_string(cls, string):
         def mark(i):
@@ -25,6 +28,36 @@ class Tableau:
             for i in range(len(rows)) for j in range(len(rows[i]))
         }
         return Tableau(dictionary)
+
+    def set(self, i, j, v):
+        mapping = self.mapping.copy()
+        mapping[(i, j)] = v
+        return Tableau(mapping)
+
+    def toggle(self):
+        subtableau = self.find(MarkedNumber(-2))
+        if subtableau:
+            assert len(subtableau) == 1
+            i, j = max(subtableau.cells())
+            return self.set(i, j, MarkedNumber(1))
+
+        subtableau = self.find(MarkedNumber(1))
+        if subtableau:
+            i, j = max(subtableau.cells())
+            if i == j:
+                return self.set(i, j, MarkedNumber(2))
+            else:
+                return self.set(i, j, MarkedNumber(-2))
+
+        subtableau = self.find(MarkedNumber(2))
+        if subtableau:
+            i, j = min(subtableau.mapping)
+            return self.set(i, j, MarkedNumber(1))
+
+        return self
+
+    def find(self, *args):
+        return Tableau({key: value for key, value in self.mapping.items() if value in list(args)})
 
     def shift(self):
         return Tableau({(i, i + j - 1): self.entry(i, j) for (i, j) in self.mapping})
@@ -177,6 +210,12 @@ class Tableau:
                     mapping[(i, j)] = MarkedNumber(-n)
                 ans.add(Tableau(mapping))
         return ans
+
+    def __len__(self):
+        return len(self.mapping)
+
+    def __nonzero__(self):
+        return len(self.mapping) > 0
 
     def __eq__(self, other):
         assert type(other) == Tableau

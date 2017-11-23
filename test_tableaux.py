@@ -41,3 +41,9 @@ def test_semistandard_shifted():
         Tableau.from_string("1,2';2").shift(),
         Tableau.from_string("1,2';3").shift(),
     }
+
+
+def test_toggle():
+    p = StrictPartition(4, 2, 1)
+    for i, t in enumerate(Tableau.get_semistandard_shifted(p)):
+        assert t.toggle().toggle() == t

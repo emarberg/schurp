@@ -25,14 +25,18 @@ class Vector:
         return self.dictionary.get(item, 0)
 
     def __add__(self, other):
-        assert type(other) == Vector
-        keys = self.keys() | other.keys()
-        return Vector({key: self[key] + other[key] for key in keys}, self.printer)
+        if type(other) == Vector:
+            keys = self.keys() | other.keys()
+            return Vector({key: self[key] + other[key] for key in keys}, self.printer)
+        else:
+            return other.__radd__(self)
 
     def __sub__(self, other):
-        assert type(other) == Vector
-        keys = self.keys() | other.keys()
-        return Vector({key: self[key] - other[key] for key in keys}, self.printer)
+        if type(other) == Vector:
+            keys = self.keys() | other.keys()
+            return Vector({key: self[key] - other[key] for key in keys}, self.printer)
+        else:
+            return other.__rsub__(self)
 
     def __mul__(self, other):
         return Vector({key: self[key] * other for key in self.keys()}, self.printer)
