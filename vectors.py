@@ -2,7 +2,7 @@
 class Vector:
     def __init__(self, dictionary={}, printer=None):
         self.dictionary = {key: value for key, value in dictionary.items() if value}
-        self.printer = printer or repr
+        self.printer = printer
 
     @classmethod
     def base(cls, key, printer=None):
@@ -21,28 +21,43 @@ class Vector:
         assert type(other) == Vector
         return len((self - other).dictionary) == 0
 
+    def __iter__(self):
+        return self.dictionary.__iter__()
+
     def __getitem__(self, item):
         return self.dictionary.get(item, 0)
 
     def __add__(self, other):
         if type(other) == Vector:
             keys = self.keys() | other.keys()
-            return Vector({key: self[key] + other[key] for key in keys}, self.printer)
+            return Vector({key: self[key] + other[key] for key in keys}, self.printer or other.printer)
         else:
             return other.__radd__(self)
 
     def __sub__(self, other):
         if type(other) == Vector:
             keys = self.keys() | other.keys()
-            return Vector({key: self[key] - other[key] for key in keys}, self.printer)
+            return Vector({key: self[key] - other[key] for key in keys}, self.printer or other.printer)
         else:
             return other.__rsub__(self)
 
     def __mul__(self, other):
-        return Vector({key: self[key] * other for key in self.keys()}, self.printer)
+        if self.is_scalar(other):
+            return Vector({key: self[key] * other for key in self.keys()}, self.printer)
+        elif type(other) == Vector:
+            ans = Vector(printer=self.printer or other.printer)
+            for a, x in self.items():
+                for b, y in other.items():
+                    ans += (x * y) * (a * b)
+            return ans
+        else:
+            return self * Vector.base(other)
 
     def __rmul__(self, other):
-        return Vector({key: self[key] * other for key in self.keys()}, self.printer)
+        return self.__mul__(other)
+
+    def is_scalar(self, other):
+        return type(other) == int
 
     def _repr_coeff(self, coeff):
         if coeff == 1:
@@ -55,7 +70,8 @@ class Vector:
             return ' - %s*' % -coeff
 
     def __repr__(self):
-        base = ''.join(self._repr_coeff(value) + self.printer(key) for key, value in self.items())
+        printer = self.printer or repr
+        base = ''.join(self._repr_coeff(value) + printer(key) for key, value in self.items())
         if base.startswith(' + '):
             return base[3:]
         elif base.startswith(' - '):

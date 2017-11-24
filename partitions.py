@@ -57,25 +57,23 @@ class Shape:
 
     def horizontal_border_strips(self):
         borders = self._horizontal_border_strips_helper()
-        return {x for x in borders if len(x) > 0}
+        return {x for x in borders if x}
 
     def _horizontal_border_strips_helper(self):
         if len(self) == 0:
-            return {Shape()}
+            yield Shape()
+            return
 
-        i, k = self.northeast_position()
+        i, k = min(self.positions, key=lambda x: (x[0], -x[1]))  # northeast position
         subshape = self - self.row(i)
-        borders = subshape._horizontal_border_strips_helper()
 
-        ans = set()
-        j = k
-        while True:
-            for border in borders:
-                ans.add(border + Shape({(i, l) for l in range(j + 1, k + 1)}))
-            if (i + 1, j) in self.positions or (i, j) not in self.positions:
-                break
-            j -= 1
-        return ans
+        for border in subshape._horizontal_border_strips_helper():
+            j = k
+            while True:
+                yield border + Shape({(i, l) for l in range(j + 1, k + 1)})
+                if (i + 1, j) in self.positions or (i, j) not in self.positions:
+                    break
+                j -= 1
 
     def __eq__(self, other):
         assert type(other) == Shape
@@ -83,6 +81,9 @@ class Shape:
 
     def __len__(self):
         return len(self.positions)
+
+    def __nonzero__(self):
+        return len(self.positions) > 0
 
     def __repr__(self):
         base = [[' ' for i in range(self.max_column)] for i in range(self.max_row)]
@@ -93,20 +94,56 @@ class Shape:
 
 class Partition:
     def __init__(self, *args):
-        self.parts = tuple(sorted(args, reverse=True))
-        assert self.parts == tuple(args)
+        self.parts = sorted(args, reverse=True)
+        assert self.parts == list(args)
+
+        while self.parts and self.parts[-1] == 0:
+            self.parts.pop()
+        self.parts = tuple(self.parts)
+
         self.shape = Shape({
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    def pieri(self, i):
+        ranges = self._pieri_ranges(i)
+
+        return {
+            self._pieri_key(delta): self._pieri_value(delta)
+            for delta in self._pieri_helper(i, len(ranges) - 1, ranges)
+        }
+
+    def _pieri_key(self, delta):
+        return self.__class__(*[self(j + 1) + a for j, a in enumerate(delta)])
+
+    def _pieri_value(self, delta):
+        return 1
+
+    def _pieri_ranges(self, i):
+        return [i] + [self(j) - self(j + 1) for j in range(1, len(self) + 1)]
+
+    @classmethod
+    def _pieri_helper(cls, i, j, ranges):
+        if j == 0:
+            yield (i,)
+            return
+        for t in range(min(i, ranges[j]) + 1):
+            for delta in cls._pieri_helper(i - t, j - 1, ranges):
+                yield delta + (t,)
+
     def __hash__(self):
         return hash(self.parts)
 
+    def __lt__(self, other):
+        assert type(self) == type(other)
+        return self.parts < other.parts
+
     def __eq__(self, other):
-        return type(self) == type(other) and self.parts == other.parts
+        assert type(self) == type(other)
+        return self.parts == other.parts
 
     def __call__(self, i):
-        if i <= 0 or i >= len(self.parts):
+        if i <= 0 or i > len(self.parts):
             return 0
         else:
             return self.parts[i - 1]
@@ -117,12 +154,27 @@ class Partition:
     def __len__(self):
         return len(self.parts)
 
+    def __nonzero__(self):
+        return len(self.parts) > 0
+
 
 class StrictPartition(Partition):
     def __init__(self, *args):
-        self.parts = tuple(sorted(args, reverse=True))
+        self.parts = list(sorted(args, reverse=True))
+        assert self.parts == list(args)
+
+        while self.parts and self.parts[-1] == 0:
+            self.parts.pop()
+        self.parts = tuple(self.parts)
+
         assert len(set(self.parts)) == len(self.parts)
-        assert self.parts == tuple(args)
+
         self.shape = Shape({
             (i + 1, i + j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
+
+    def _pieri_value(self, delta):
+        return 2**(sum(x != 0 for x in delta) - 1)
+
+    def _pieri_ranges(self, i):
+        return [i] + [self(j) - self(j + 1) - 1 for j in range(1, len(self) + 1)]

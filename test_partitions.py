@@ -1,6 +1,45 @@
 from partitions import Partition, StrictPartition, Shape
 
 
+def test_call():
+    p = Partition(4, 3)
+    assert p(-1) == 0
+    assert p(0) == 0
+    assert p(1) == 4
+    assert p(2) == 3
+    assert p(3) == 0
+    assert p(4) == 0
+
+
+def test_pieri():
+    p = Partition(4, 3)
+
+    a = Partition(5, 3)
+    b = Partition(4, 4)
+    c = Partition(4, 3, 1)
+    assert p.pieri(1) == {a: 1, b: 1, c: 1}
+
+    a = Partition(5, 4)
+    b = Partition(5, 3, 1)
+    c = Partition(4, 4, 1)
+    d = Partition(4, 3, 2)
+    e = Partition(6, 3)
+    assert p.pieri(2) == {a: 1, b: 1, c: 1, d: 1, e: 1}
+
+
+def test_strict_pieri():
+    p = StrictPartition(4, 3)
+
+    a = StrictPartition(5, 3)
+    b = StrictPartition(4, 3, 1)
+    assert p.pieri(1) == {a: 1, b: 1}
+
+    a = StrictPartition(5, 3, 1)
+    b = StrictPartition(6, 3)
+    c = StrictPartition(4, 3, 2)
+    assert p.pieri(2) == {a: 2, b: 1, c: 1}
+
+
 def test_init():
     StrictPartition(2, 1)
     StrictPartition()
@@ -40,7 +79,6 @@ def test_row():
     assert s.row(0) == Shape()
     assert s.row(-1) == Shape()
     assert s.max_row == 2
-
 
 def test_column():
     s = StrictPartition(2, 1).shape

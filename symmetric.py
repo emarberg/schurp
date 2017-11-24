@@ -7,8 +7,19 @@ class SchurP:
     def __init__(self, strict_partition):
         self.mu = strict_partition
 
+    def __hash__(self):
+        return hash(self.mu)
+
+    def __eq__(self, other):
+        assert type(other) == SchurP
+        return self.mu == other.mu
+
+    def __lt__(self, other):
+        assert type(other) == SchurP
+        return self.mu < other.mu
+
     def __repr__(self):
-        return 'P%s' % str(self.mu.parts)
+        return 'P(%s)' % ', '.join(str(i) for i in self.mu.parts)
 
     def __add__(self, other):
         if type(other) == Vector:
@@ -32,3 +43,10 @@ class SchurP:
 
     def __neg__(self):
         return -Vector.base(self)
+
+    def __mul__(self, other):
+        assert type(other) == SchurP and len(other.mu) == 1
+        return Vector({SchurP(p): v for p, v in self.mu.pieri(other.mu(1)).items()})
+
+    def __rmul__(self, i):
+        self.__mul__(i)
