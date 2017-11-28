@@ -19,3 +19,12 @@ def test_shuffle():
 
     assert u * Word() == Vector.base(u)
     assert Word() * v == Vector.base(v)
+
+
+def test_permutations():
+    u = Permutation(1)
+    v = Permutation(2, 1)
+    w = Permutation(3, 2, 1)
+    assert u * v == v * u == Vector.base(v)
+    assert v * v == Permutation(2, 3, 1) + Permutation(3, 1, 2)
+    assert w * v == Permutation(3, 2, 4, 1) + Permutation(3, 4, 1, 2) + Permutation(4, 2, 1, 3)  

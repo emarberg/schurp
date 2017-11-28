@@ -140,6 +140,23 @@ class Permutation:
     def __repr__(self):
         return ''.join(str(i) for i in self.oneline)
 
+    def __add__(self, other):
+        if type(other) == Permutation:
+            return Vector({self: 1}) + Vector({other: 1})
+        elif type(other) == Vector:
+            return Vector({self: 1}) + other
+        assert type(other) in [Permutation, Vector]
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if type(other) == Permutation:
+            return Vector({self: 1}) + Vector({other: -1})
+        elif type(other) == Vector:
+            return Vector({self: 1}) - other
+        assert type(other) in [Permutation, Vector]
+
     def __mul__(self, other):
         if type(other) == Permutation:
             result = self.vector * (other >> (self.size - 1)).vector
