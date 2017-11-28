@@ -17,6 +17,9 @@ class Vector:
     def items(self):
         return self.dictionary.items()
 
+    def __len__(self):
+        return len(self.dictionary)
+
     def __eq__(self, other):
         assert type(other) == Vector
         return len((self - other).dictionary) == 0
