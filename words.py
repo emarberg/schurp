@@ -1,6 +1,6 @@
 from vectors import Vector
 from collections import defaultdict
-from itertools import combinations
+import itertools
 
 
 class Word:
@@ -70,7 +70,7 @@ class Word:
     def __mul__(self, other):
         if type(other) == Word:
             dictionary = defaultdict(int)
-            for subset in combinations(set(range(len(self) + len(other))), len(self)):
+            for subset in itertools.combinations(set(range(len(self) + len(other))), len(self)):
                 word = self._shuffle(other, subset)
                 dictionary[word] += 1
             return Vector(dictionary)
@@ -111,23 +111,28 @@ class Permutation:
     def __init__(self, *args):
         assert set(args) == set(range(1, len(args) + 1))
         self.vector = Vector({w: 1 for w in get_reduced_words(args)})
-        self._oneline = None
+        self.oneline = tuple(args)
 
     @classmethod
-    def get_oneline_from_word(cls, word):
-        line = list(range(1, max(set(word.elements) | {0}) + 2))
+    def all(cls, n):
+        for args in itertools.permutations(range(1, n + 1)):
+            yield Permutation(*args)
+
+    @classmethod
+    def oneline_from_word(cls, word, n):
+        line = list(range(1, n + 1))
         for i in word:
             temp = line[i]
             line[i] = line[i - 1]
             line[i - 1] = temp
         return tuple(line)
 
-    @property
-    def oneline(self):
-        if self._oneline is None:
-            word = next(iter(self.vector.keys()))
-            self._oneline = self.get_oneline_from_word(word)
-        return self._oneline
+    def __eq__(self, other):
+        assert type(other) == Permutation
+        return self.oneline == other.oneline
+
+    def __hash__(self):
+        return hash(self.oneline)
 
     def __rshift__(self, i):
         assert i >= 0
@@ -136,6 +141,15 @@ class Permutation:
     @property
     def size(self):
         return len(self.oneline)
+
+    def __len__(self):
+        return len(next(iter(self.vector)))
+
+    def find(self, i):
+        for j in range(1, 1 + len(self.oneline)):
+            if self(j) == i:
+                return j
+        return i
 
     def __repr__(self):
         return ''.join(str(i) for i in self.oneline)
@@ -159,13 +173,41 @@ class Permutation:
 
     def __mul__(self, other):
         if type(other) == Permutation:
+            assert self.size >= 1 and other.size >= 1
+            n = self.size + other.size - 1
             result = self.vector * (other >> (self.size - 1)).vector
             answer = Vector()
             while result:
-                print('...%s' % len(result))
                 key, value = next(iter(result.items()))
-                sigma = Permutation(*self.get_oneline_from_word(key))
+                sigma = Permutation(*self.oneline_from_word(key, n))
                 answer += Vector({sigma: value})
                 result -= sigma.vector * value
             return answer
+
+    def exclude(self, *args):
+        if len(args) == 0:
+            return self
+        args = set(args)
+        i = args.pop()
+        assert i > 0
+        args = {j - (j > i) for j in args}
+        newline = tuple(j - (j > i) for j in self.oneline if j != i)
+        return Permutation(*newline).exclude(*args)
+
+    def startswith(self, sequence):
+        return all(self(i + 1) == sequence[i] for i in range(len(sequence)))
+
+    def endswith(self, sequence):
+        n = len(sequence)
+        return all(self(self.size - i) == sequence[n - 1 - i] for i in range(n))
+
+    @classmethod
+    def reverse(cls, n):
+        oneline = list(reversed(range(1, n + 1)))
+        return Permutation(*oneline)
+
+    def __call__(self, i):
+        if i < 1 or i > len(self.oneline):
+            return i
+        return self.oneline[i - 1]
 
