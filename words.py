@@ -4,14 +4,16 @@ import itertools
 
 
 class Word:
-    def __init__(self, *args):
+    def __init__(self, subset=None, *args):
+        self.subset = subset or set()
         self.elements = tuple(args)
+        assert all(i in subset for i in args)
 
     def __iter__(self):
         return self.elements.__iter__()
 
     def __hash__(self):
-        return hash(self.elements)
+        return hash((self.elements, tuple(sorted(self.subset))))
 
     def __getitem__(self, i):
         return self.elements[i]
@@ -38,40 +40,41 @@ class Word:
 
     def __or__(self, other):
         assert type(other) == Word
-        return Word(*(self.elements + other.elements))
+        return Word(self.subset | other.subset, *(self.elements + other.elements))
 
-    def __lshift__(self, i):
-        return Word(*[e - i for e in self.elements])
+    # def __lshift__(self, i):
+    #     return Word(*[e - i for e in self.elements])
 
-    def __rshift__(self, i):
-        return Word(*[e + i for e in self.elements])
+    # def __rshift__(self, i):
+    #     return Word(*[e + i for e in self.elements])
 
     def __eq__(self, other):
         assert type(other) == Word
-        return self.elements == other.elements
+        return self.subset == other.subset and self.elements == other.elements
 
     def __lt__(self, other):
         assert type(other) == Word
         return self.elements < other.elements
 
     def __repr__(self):
-        return str(self.elements)
+        return '(%s | %s)' % (', '.join(map(str, self.elements)), str(self.subset))
 
-    def _shuffle(self, other, subset):
+    def _shuffle(self, other, indices):
         a, b = list(reversed(self.elements)), list(reversed(other.elements))
         word = []
         for i in range(len(self) + len(other)):
-            if i in subset:
+            if i in indices:
                 word.append(a.pop())
             else:
                 word.append(b.pop())
-        return Word(*word)
+        return Word(self.subset | other.subset, *word)
 
     def __mul__(self, other):
         if type(other) == Word:
+            assert self.subset.isdisjoint(other.subset)
             dictionary = defaultdict(int)
-            for subset in itertools.combinations(set(range(len(self) + len(other))), len(self)):
-                word = self._shuffle(other, subset)
+            for indices in itertools.combinations(set(range(len(self) + len(other))), len(self)):
+                word = self._shuffle(other, indices)
                 dictionary[word] += 1
             return Vector(dictionary)
         elif type(other) == int:
@@ -84,8 +87,19 @@ class Word:
         assert type(other) in [int, Word, Vector]
         return self.__mul__(other)
 
+    def coproduct(self, *subsets):
+        # check that subsets are ordered partition of self.subset
+        assert self.subset == {i for x in subsets for i in x}
+        assert {len(x & y) for x in subsets for y in subsets if x != y}.issubset({0})
 
-REDUCED_WORDS = {(): {Word()}}
+        subwords = [tuple(i for i in self if i in a) for a in subsets]
+        if tuple(i for word in subwords for i in word) == self.elements:
+            return Vector.base(tuple(Word(subsets[i], *subwords[i]) for i in range(len(subsets))))
+        else:
+            return Vector()
+
+
+REDUCED_WORDS = {(): {()}}
 
 
 def reduce_oneline(oneline):
@@ -102,15 +116,18 @@ def get_reduced_words(oneline):
             if oneline[i] > oneline[i + 1]:
                 a, b = oneline[i:i + 2]
                 newline = oneline[:i] + (b, a) + oneline[i + 2:]
-                words |= {w | Word(i + 1) for w in get_reduced_words(newline)}
+                words |= {w + (i + 1,) for w in get_reduced_words(newline)}
         REDUCED_WORDS[oneline] = words
     return REDUCED_WORDS[oneline]
 
 
 class Permutation:
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         assert set(args) == set(range(1, len(args) + 1))
-        self.vector = Vector({w: 1 for w in get_reduced_words(args)})
+        s = kwargs.get('subset', None)
+        if s is None:
+            s = set(range(1, len(args)))
+        self.vector = Vector({Word(s, *w): 1 for w in get_reduced_words(args)})
         self.oneline = tuple(args)
 
     @classmethod
@@ -134,9 +151,11 @@ class Permutation:
     def __hash__(self):
         return hash(self.oneline)
 
-    def __rshift__(self, i):
+    def _right_shift(self, i):
         assert i >= 0
-        return Permutation(*(list(range(1, i + 1)) + [n + i for n in self.oneline]))
+        subset = {t + i for t in range(1, self.size)}
+        oneline = list(range(1, i + 1)) + [n + i for n in self.oneline]
+        return Permutation(*oneline, subset=subset)
 
     @property
     def size(self):
@@ -175,7 +194,7 @@ class Permutation:
         if type(other) == Permutation:
             assert self.size >= 1 and other.size >= 1
             n = self.size + other.size - 1
-            result = self.vector * (other >> (self.size - 1)).vector
+            result = self.vector * other._right_shift(self.size - 1).vector
             answer = Vector()
             while result:
                 key, value = next(iter(result.items()))
@@ -210,4 +229,3 @@ class Permutation:
         if i < 1 or i > len(self.oneline):
             return i
         return self.oneline[i - 1]
-

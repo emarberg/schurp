@@ -3,22 +3,42 @@ from vectors import Vector
 
 
 def test_sums():
-    assert Word(3, 2, 1) - Word(3, 2, 1) == Vector()
-    assert Word(3, 2, 1) + Word(3, 2, 1) == Vector({Word(3, 2, 1): 2})
+    s = {1, 2, 3}
+    assert Word(s, 3, 2, 1) - Word(s, 3, 2, 1) == Vector()
+    assert Word(s, 3, 2, 1) + Word(s, 3, 2, 1) == Vector({Word(s, 3, 2, 1): 2})
 
 
 def test_shuffle():
-    u = Word(2, 1)
-    v = Word(4, 3)
+    s = {1, 2, 3, 4}
+    u = Word({1, 2}, 2, 1)
+    v = Word({3, 4}, 4, 3)
 
     assert u * v == \
-        Word(2, 1, 4, 3) + Word(2, 4, 1, 3) + Word(2, 4, 3, 1) + \
-        Word(4, 2, 1, 3) + Word(4, 2, 3, 1) + Word(4, 3, 2, 1)
-
-    assert u * u == 2 * Word(2, 1, 2, 1) + 4 * Word(2, 2, 1, 1)
+        Word(s, 2, 1, 4, 3) + Word(s, 2, 4, 1, 3) + Word(s, 2, 4, 3, 1) + \
+        Word(s, 4, 2, 1, 3) + Word(s, 4, 2, 3, 1) + Word(s, 4, 3, 2, 1)
 
     assert u * Word() == Vector.base(u)
     assert Word() * v == Vector.base(v)
+
+
+def test_coproduct():
+    s = {1, 2, 3, 4}
+    w = Word(s, 2, 1, 2, 4, 4)
+
+    u = Word({1, 2}, 2, 1, 2)
+    v = Word({3, 4}, 4, 4)
+    assert w.coproduct({1, 2}, {3, 4}) == Vector.base((u, v))
+    assert w.coproduct({3, 4}, {1, 2}) == Vector()
+
+    h = Word({1, 2, 3}, 2, 1, 2)
+    x = Word({1, 2}, 2, 1, 2)
+    y = Word({3})
+    z = Word({4}, 4, 4)
+    assert w.coproduct({1, 2}, {3}, {4}) == Vector.base((x, y, z))
+    assert w.coproduct({1, 2}, {4}, {3}) == Vector.base((x, z, y))
+    assert w.coproduct({1, 2, 3}, {4}) == Vector.base((h, z))
+
+    assert w.coproduct({1, 4}, {2, 3}) == Vector()
 
 
 def test_permutations():
