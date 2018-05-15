@@ -1,4 +1,5 @@
 from collections import defaultdict
+from permutations import Permutation
 
 
 class Shape:
@@ -28,6 +29,10 @@ class Shape:
     def __add__(self, shape):
         assert type(shape) == Shape and not (shape.positions & self.positions)
         return Shape(self.positions | shape.positions)
+
+    def contains(self, other):
+        assert type(other) == Shape
+        return self.positions.issuperset(other.positions)
 
     def transpose(self):
         return Shape({(j, i) for (i, j) in self.positions})
@@ -149,13 +154,27 @@ class Partition:
             return self.parts[i - 1]
 
     def __repr__(self):
-        return str(self.shape)
+        return str(self.parts)
 
     def __len__(self):
         return len(self.parts)
 
     def __nonzero__(self):
         return len(self.parts) > 0
+
+    def to_grassmannian(self):
+        if len(self.parts) == 0:
+            return Permutation()
+        oneline = []
+        for i, a in enumerate(reversed(self.parts)):
+            oneline += [a + i + 1]
+        n = max(oneline)
+        oneline += [i for i in range(1, n + 1) if i not in oneline]
+        return Permutation(oneline)
+
+    def contains(self, other):
+        assert type(other) == type(self)
+        return self.shape.contains(other.shape)
 
 
 class StrictPartition(Partition):
@@ -178,3 +197,10 @@ class StrictPartition(Partition):
 
     def _pieri_ranges(self, i):
         return [i] + [self(j) - self(j + 1) - 1 for j in range(1, len(self) + 1)]
+
+    def to_grassmannian(self):
+        n = self.parts[0] if self.parts else 0
+        w = Permutation()
+        for i in range(len(self.parts)):
+            w *= Permutation.cycle([n + 1 + i, n + 1 - self.parts[i]])
+        return w
