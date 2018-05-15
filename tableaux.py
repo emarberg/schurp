@@ -6,8 +6,12 @@ class Tableau:
     def __init__(self, dictionary=None):
         if dictionary is None:
             dictionary = {}
-        assert all(type(v) == MarkedNumber for v in dictionary.values())
-        self.mapping = dictionary.copy()
+
+        self.mapping = {}
+        for key, value in dictionary.items():
+            if type(value) == int:
+                value = MarkedNumber(value)
+            self.mapping[key] = value
         self.max_row = max({i for i, j in self.mapping} | {0})
         self.max_column = max({j for i, j in self.mapping} | {0})
 
@@ -77,6 +81,14 @@ class Tableau:
 
     def entry(self, i, j):
         return self.mapping.get((i, j), None)
+
+    def get_row(self, i):
+        columns = sorted([j for (i_, j) in self.mapping if i == i_])
+        return tuple(self.entry(i, j) for j in columns)
+
+    def get_column(self, j):
+        rows = sorted([i for (i, j_) in self.mapping if j == j_])
+        return tuple(self.entry(i, j) for i in rows)
 
     def is_shifted(self):
         if any(j < i for i, j in self.mapping):
@@ -230,4 +242,188 @@ class Tableau:
         for i, j in self.mapping:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
-        return '\n'.join(' '.join(row) for row in base)
+        return '\n'.join(reversed([' '.join(row) for row in base]))
+
+    def shape(self):
+        return set(self.mapping.keys())
+
+    def replace_row(self, j, newrow, shifted=False):
+        dictionary = {(j_, k): self.entry(j_, k) for (j_, k) in self.mapping if j != j_}
+        for k_zerobased, v in enumerate(newrow):
+            k = k_zerobased + 1
+            assert type(v) == MarkedNumber
+            if shifted:
+                k += j - 1
+            dictionary[(j, k)] = v
+        return Tableau(dictionary)
+
+    def replace_column(self, j, newcol):
+        dictionary = {(i, j_): self.entry(i, j_) for (i, j_) in self.mapping if j != j_}
+        for i_zerobased, v in enumerate(newcol):
+            i = i_zerobased + 1
+            assert type(v) == MarkedNumber
+            dictionary[(i, j)] = v
+        return Tableau(dictionary)
+
+    def add_to_column(self, j, v):
+        return self.replace_column(j, self.get_column(j) + (v, ))
+
+    def add_to_row(self, j, v, shifted=False):
+        return self.replace_row(j, self.get_row(j) + (v, ), shifted)
+
+    @classmethod
+    def bump(cls, p, column_dir, sequence):
+        assert all(sequence[i + 1] > sequence[i] for i in range(len(sequence) - 1))
+        if len(sequence) == 0 or p > sequence[-1]:
+            newseq = sequence + (p,)
+            q = None
+        elif p == sequence[-1]:
+            newseq = sequence
+            q = None
+        else:
+            if p <= sequence[0]:
+                i = 0
+                column_dir = True
+            else:
+                i = [j for j in range(1, len(sequence)) if sequence[j - 1] < p <= sequence[j]][0]
+            if p == sequence[i]:
+                newseq = sequence
+                q = sequence[i + 1]
+            else:
+                newseq = sequence[:i] + (p,) + sequence[i + 1:]
+                q = sequence[i]
+        return q, column_dir, newseq
+
+    def shifted_hecke_insert(self, p, j=0, column_dir=False, verbose=True):
+        if p is None:
+            return (j, column_dir, self)
+
+        j += 1
+        row, col = self.get_row(j), self.get_column(j)
+
+        if verbose:
+            if column_dir:
+                print('Inserting %s into column %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+            else:
+                print('Inserting %s into row %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+
+        if column_dir:
+            p, column_dir, col = self.bump(p, column_dir, col)
+            tab = self.replace_column(j, col)
+        else:
+            p, column_dir, row = self.bump(p, column_dir, row)
+            tab = self.replace_row(j, row, shifted=True)
+
+        if tab.is_increasing():
+            return tab.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
+        else:
+            return self.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
+
+    def involution_insert(self, p, j=0, column_dir=False, verbose=True):
+        if p is None:
+            return (j, column_dir, self)
+
+        def involution_bump(a, cdir, tup):
+            for i, b in enumerate(tup):
+                if a > b:
+                    continue
+                if a == b:
+                    b = tup[i + 1]
+                    new = tup
+                    cdir = cdir or (i == 0)
+                elif not cdir and i == 0:
+                    new = (a,) + tup[1:]
+                    cdir = True
+                else:
+                    new = tup[:i] + (a,) + tup[i + 1:]
+                return (b, cdir, new)
+            return (None, cdir, tup + (a,))
+
+        j += 1
+        row, col = self.get_row(j), self.get_column(j)
+
+        if verbose:
+            if column_dir:
+                print('Inserting %s into column %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+            else:
+                print('Inserting %s into row %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+
+        if column_dir:
+            p, column_dir, col = involution_bump(p, column_dir, col)
+            tab = self.replace_column(j, col)
+        else:
+            p, column_dir, row = involution_bump(p, column_dir, row)
+            tab = self.replace_row(j, row, shifted=True)
+
+        if verbose:
+            print(tab, '\n')
+        assert tab.is_increasing()
+        return tab.involution_insert(p, j, column_dir, verbose=verbose)
+
+    def fpf_insert(self, p, j=0, column_dir=False, verbose=True):
+        if p is None:
+            return (j, column_dir, self)
+
+        def fpf_bump(a, cdir, tup):
+            # inserting `a` (number) into `tup` (tuple) in row (`cdir=False`) or column direction
+            for i, b in enumerate(tup):
+                if a > b:
+                    continue
+                if a == b:
+                    b = tup[i + 1]
+                    assert b == a.increment()
+                    new = tup
+                elif not cdir and i == 0:
+                    cdir = True
+                    if a.number % 2 == 0:
+                        new = (a,) + tup[1:]
+                    else:
+                        b = a.increment().increment()
+                        new = tup
+                else:
+                    new = tup[:i] + (a,) + tup[i + 1:]
+                return (b, cdir, new)
+            return (None, cdir, tup + (a,))
+
+        j += 1
+        row, col = self.get_row(j), self.get_column(j)
+
+        if verbose:
+            if column_dir:
+                print('Inserting %s into column %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+            else:
+                print('Inserting %s into row %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+
+        if column_dir:
+            p, column_dir, col = fpf_bump(p, column_dir, col)
+            tab = self.replace_column(j, col)
+        else:
+            p, column_dir, row = fpf_bump(p, column_dir, row)
+            tab = self.replace_row(j, row, shifted=True)
+
+        assert tab.is_increasing()
+        return tab.fpf_insert(p, j, column_dir, verbose=verbose)

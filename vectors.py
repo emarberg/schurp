@@ -74,7 +74,8 @@ class Vector:
 
     def __repr__(self):
         printer = self.printer or repr
-        base = ''.join(self._repr_coeff(value) + printer(key) for key, value in self.items())
+        sorted_items = sorted([(printer(key), value) for key, value in self.items()])
+        base = ''.join(self._repr_coeff(value) + key for key, value in sorted_items)
         if base.startswith(' + '):
             return base[3:]
         elif base.startswith(' - '):

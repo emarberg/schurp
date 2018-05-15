@@ -1,21 +1,22 @@
 from words import Word, Permutation
 from vectors import Vector
+from tableaux import Tableau
 
 
 def test_sums():
     s = {1, 2, 3}
-    assert Word(s, 3, 2, 1) - Word(s, 3, 2, 1) == Vector()
-    assert Word(s, 3, 2, 1) + Word(s, 3, 2, 1) == Vector({Word(s, 3, 2, 1): 2})
+    assert Word(3, 2, 1, subset=s) - Word(3, 2, 1, subset=s) == Vector()
+    assert Word(3, 2, 1, subset=s) + Word(3, 2, 1, subset=s) == Vector({Word(3, 2, 1, subset=s): 2})
 
 
 def test_shuffle():
     s = {1, 2, 3, 4}
-    u = Word({1, 2}, 2, 1)
-    v = Word({3, 4}, 4, 3)
+    u = Word(2, 1, subset={1, 2})
+    v = Word(4, 3, subset={3, 4})
 
     assert u * v == \
-        Word(s, 2, 1, 4, 3) + Word(s, 2, 4, 1, 3) + Word(s, 2, 4, 3, 1) + \
-        Word(s, 4, 2, 1, 3) + Word(s, 4, 2, 3, 1) + Word(s, 4, 3, 2, 1)
+        Word(2, 1, 4, 3, subset=s) + Word(2, 4, 1, 3, subset=s) + Word(2, 4, 3, 1, subset=s) + \
+        Word(4, 2, 1, 3, subset=s) + Word(4, 2, 3, 1, subset=s) + Word(4, 3, 2, 1, subset=s)
 
     assert u * Word() == Vector.base(u)
     assert Word() * v == Vector.base(v)
@@ -23,17 +24,17 @@ def test_shuffle():
 
 def test_coproduct():
     s = {1, 2, 3, 4}
-    w = Word(s, 2, 1, 2, 4, 4)
+    w = Word(2, 1, 2, 4, 4, subset=s)
 
-    u = Word({1, 2}, 2, 1, 2)
-    v = Word({3, 4}, 4, 4)
+    u = Word(2, 1, 2, subset={1, 2})
+    v = Word(4, 4, subset={3, 4})
     assert w.coproduct({1, 2}, {3, 4}) == Vector.base((u, v))
     assert w.coproduct({3, 4}, {1, 2}) == Vector()
 
-    h = Word({1, 2, 3}, 2, 1, 2)
-    x = Word({1, 2}, 2, 1, 2)
-    y = Word({3})
-    z = Word({4}, 4, 4)
+    h = Word(2, 1, 2, subset={1, 2, 3})
+    x = Word(2, 1, 2, subset={1, 2})
+    y = Word(subset={3})
+    z = Word(4, 4, subset={4})
     assert w.coproduct({1, 2}, {3}, {4}) == Vector.base((x, y, z))
     assert w.coproduct({1, 2}, {4}, {3}) == Vector.base((x, z, y))
     assert w.coproduct({1, 2, 3}, {4}) == Vector.base((h, z))
@@ -52,6 +53,17 @@ def test_permutations():
 
     assert Permutation(1, 2).oneline == (1, 2)
     assert Permutation(1, 2, 3).oneline == (1, 2, 3)
+
+
+def test_product():
+    a = list(Permutation.all(3))
+    for u in a:
+        for v in a:
+            w = Permutation.test_product(u, v)
+            print(w)
+            print(u * v)
+            print('')
+            assert Permutation.test_product(u, v) == u * v
 
 
 def test_exclude():
