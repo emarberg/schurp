@@ -235,9 +235,7 @@ class SignedPermutation:
         return ans
 
     def stanley_schur_s_decomposition(self):
-        ans = Vector()
-        for sh, i in self.stanley_schur_q_decomposition().items():
-            ans += Vector({SchurQ(StrictPartition(*sh)): i})
+        ans = self.stanley_schur_q_decomposition()
         return SchurQ.decompose_s_lambda(ans)
 
     def stanley_schur_d_decomposition(self):
