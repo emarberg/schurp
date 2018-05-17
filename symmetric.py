@@ -1,4 +1,4 @@
-from partitions import StrictPartition
+from partitions import StrictPartition, Partition
 from permutations import Permutation
 from vectors import Vector
 
@@ -232,9 +232,10 @@ class Pfaffian:
 
 class SchurP:
 
-    def __init__(self, mu):
-        assert type(mu) == StrictPartition
-        self.mu = mu
+    def __init__(self, *args):
+        if len(args) == 1 and type(args[0]) in [Partition, StrictPartition]:
+            args = args[0].parts
+        self.mu = StrictPartition(*args)
 
     def __hash__(self):
         return hash(self.mu)
@@ -287,6 +288,27 @@ class SchurP:
     def __rmul__(self, i):
         return self.__mul__(i)
 
+    @classmethod
+    def _check_vector(cls, vector):
+        if type(vector) == SchurS:
+            vector = Vector({vector: 1})
+        assert type(vector) == Vector
+        assert all(type(k) == cls for k in vector.keys())
+        return vector
+
+    @classmethod
+    def to_s_basis(cls, vector):
+        return SchurQ.to_s_basis(cls.to_q_basis(vector))
+
+    @classmethod
+    def to_q_basis(cls, vector):
+        vector = cls._check_vector(vector)
+        assert all(v % 2**len(k.mu) == 0 for k, v in vector.items())
+        ans = Vector()
+        for s, v in vector.items():
+            ans += Vector({SchurQ(s.mu): v // 2**len(s.mu)})
+        return ans
+
 
 s_lambda_cache = {}
 
@@ -294,7 +316,10 @@ s_lambda_cache = {}
 class SchurQ(SchurP):
 
     @classmethod
-    def s_lambda(cls, mu):
+    def s_lambda(cls, *args):
+        if len(args) == 1 and type(args[0]) in [Partition, StrictPartition]:
+            args = args[0].parts
+        mu = Partition(*args)
         if len(mu) == 0:
             return Vector({SchurQ(StrictPartition()): 1})
         if mu.parts not in s_lambda_cache:
@@ -309,7 +334,20 @@ class SchurQ(SchurP):
         return s_lambda_cache[mu.parts]
 
     @classmethod
+    def to_p_basis(cls, vector):
+        vector = cls._check_vector(vector)
+        ans = Vector()
+        for s, v in vector.items():
+            ans += Vector({SchurP(s.mu): 2**len(s.mu) * v})
+        return ans
+
+    @classmethod
+    def to_s_basis(cls, vector):
+        return cls.decompose_s_lambda(vector)
+
+    @classmethod
     def decompose_s_lambda(cls, vector):
+        vector = cls._check_vector(vector)
         if vector.is_zero():
             return Vector()
         else:
@@ -378,8 +416,39 @@ class SchurQ(SchurP):
 
 class SchurS(SchurP):
 
+    def __init__(self, *args):
+        if len(args) == 1 and type(args[0]) in [Partition, StrictPartition]:
+            args = args[0].parts
+        self.mu = Partition(*args)
+
     def __repr__(self):
         return 'S(%s)' % ', '.join(str(i) for i in self.mu.parts)
 
     def __mul__(self, other):
-        raise NotImplementedError
+        if type(other) == int:
+            return Vector({self: other})
+        assert type(other) == type(self)
+        return SchurQ.to_s_basis(SchurS.to_q_basis(self) * SchurS.to_q_basis(other))
+
+    def __add__(self, other):
+        if type(other) == Vector:
+            return Vector.base(self) + other
+        else:
+            assert type(other) == type(self)
+            return SchurQ.to_s_basis(self.to_q_basis(Vector.base(self) + Vector.base(other)))
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    @classmethod
+    def to_p_basis(cls, vector):
+        return SchurQ.to_p_basis(cls.to_q_basis(vector))
+
+    @classmethod
+    def to_q_basis(cls, vector):
+        vector = cls._check_vector(vector)
+        ans = Vector()
+        for s, v in vector.items():
+            for x, u in SchurQ.s_lambda(s.mu).items():
+                ans += Vector({x: u * v})
+        return ans
