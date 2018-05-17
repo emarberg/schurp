@@ -242,7 +242,27 @@ class Tableau:
         for i, j in self.mapping:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
-        return '\n'.join(reversed([' '.join(row) for row in base]))
+        rows = [' '.join(row) for row in base]
+        # return '\n'.join(reversed(rows))  # French
+        return '\n'.join(rows)            # English
+
+    @classmethod
+    def decreasing_part(cls, row):
+        if row:
+            i = 1
+            while i < len(row) and row[i] < row[i - 1]:
+                i += 1
+            return row[:i]
+
+    @classmethod
+    def increasing_part(cls, row):
+        if row:
+            rev = cls.decreasing_part(list(reversed(row)))
+            return tuple(reversed(rev))[1:]
+
+    # def is_decomposition_tableau(self):
+    #     def is_row_unimodal(row):
+    #         return len(self.decreasing_part(row)) + len(self.increasing_part(row)) == len(row)
 
     def shape(self):
         return set(self.mapping.keys())

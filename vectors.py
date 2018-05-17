@@ -17,6 +17,16 @@ class Vector:
     def items(self):
         return self.dictionary.items()
 
+    def is_singleton(self):
+        if len(self.dictionary) != 1:
+            return False
+        return list(self.dictionary.values())[0] == 1
+
+    def is_positive(self):
+        if self.is_zero():
+            return False
+        return all(v > 0 for v in self.values())
+
     def __len__(self):
         return len(self.dictionary)
 
@@ -59,8 +69,14 @@ class Vector:
     def __rmul__(self, other):
         return self.__mul__(other)
 
+    def __neg__(self):
+        return self.__mul__(-1)
+
     def is_scalar(self, other):
         return type(other) == int
+
+    def is_zero(self):
+        return len(self) == 0
 
     def _repr_coeff(self, coeff):
         if coeff == 1:

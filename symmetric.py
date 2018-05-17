@@ -170,23 +170,71 @@ class InvStanleyExpander:
         return sorted(set(ans))
 
 
+class Determinant:
+
+    def __init__(self, matrix):
+        self.matrix = matrix
+        n = len(matrix)
+        assert all(len(matrix[i]) == n for i in range(n))
+
+    def evaluate(self):
+        ans = Vector()
+        n = len(self.matrix)
+        for w in Permutation.all(n):
+            term = (-1)**len(w)
+            for i in range(1, n + 1):
+                term = term * self.matrix[i - 1][w(i) - 1]
+            ans = ans + term
+        return ans
+
+
+class Pfaffian:
+
+    def __init__(self, matrix):
+        self.matrix = matrix
+        n = len(matrix)
+        assert all(len(matrix[i]) == n for i in range(n))
+        assert all(matrix[i][j] == -matrix[j][i] for i in range(n) for j in range(n))
+
+    @classmethod
+    def fpf_involutions(cls, n):
+        if n % 2 != 0 or n <= 0:
+            return
+        m = n // 2
+        indices = m * [0]
+        while indices[-1] != 1:
+            z = Permutation()
+            numbers = list(range(1, n + 1))
+            for i in indices:
+                a = numbers[-1]
+                b = numbers[i]
+                numbers = numbers[:i] + numbers[i + 1:-1]
+                z = z * Permutation.cycle([a, b])
+            yield z
+
+            indices[0] += 1
+            for i in range(m - 1):
+                if indices[i] == n - 1 - 2 * i:
+                    indices[i] = 0
+                    indices[i + 1] += 1
+
+    def evaluate(self):
+        ans = Vector()
+        n = len(self.matrix)
+        for w in self.fpf_involutions(n):
+            term = (-1)**w.involution_length()
+            for c in w.cycles:
+                a, b = tuple(sorted(c))
+                term = term * self.matrix[b - 1][a - 1]
+            ans = ans + term
+        return ans
+
+
 class SchurP:
 
     def __init__(self, mu):
         assert type(mu) == StrictPartition
         self.mu = mu
-
-    # def skew(self, nu):
-    #     assert type(nu) == StrictPartition
-    #     assert self.mu.contains(nu)
-
-    #     m = len(self.mu)
-    #     n = len(nu)
-    #     if (m + n) % 2 != 0:
-    #         n += 1
-
-        
-    #     matrix = []
 
     def __hash__(self):
         return hash(self.mu)
@@ -226,6 +274,8 @@ class SchurP:
         return -Vector.base(self)
 
     def __mul__(self, other):
+        if type(other) == int:
+            return Vector({self: other})
         assert type(other) == type(self)
         # return Vector({SchurP(p): v for p, v in self.mu.pieri(other.mu(1)).items()})
         u = self.mu.to_grassmannian()
@@ -235,15 +285,84 @@ class SchurP:
         return InvStanleyExpander(w).expand()
 
     def __rmul__(self, i):
-        self.__mul__(i)
+        return self.__mul__(i)
+
+
+s_lambda_cache = {}
 
 
 class SchurQ(SchurP):
+
+    @classmethod
+    def s_lambda(cls, mu):
+        if len(mu) == 0:
+            return Vector({SchurQ(StrictPartition()): 1})
+        if mu.parts not in s_lambda_cache:
+            n = len(mu)
+            matrix = [[Vector() for i in range(n)] for j in range(n)]
+            for i in range(1, n + 1):
+                for j in range(1, n + 1):
+                    q = mu(i) - i + j
+                    if q >= 0:
+                        matrix[i - 1][j - 1] = Vector({SchurQ(StrictPartition(q)): 1})
+            s_lambda_cache[mu.parts] = Determinant(matrix).evaluate()
+        return s_lambda_cache[mu.parts]
+
+    @classmethod
+    def decompose_s_lambda(cls, vector):
+        if vector.is_zero():
+            return Vector()
+        else:
+            q = min(vector)
+            c = vector[q]
+            s = cls.s_lambda(q.mu) * c
+            return Vector({SchurS(q.mu): c}) + cls.decompose_s_lambda(vector - s)
+
+    def skew(self, nu, verbose=False):
+        assert type(nu) == StrictPartition
+        assert self.mu.contains(nu)
+
+        m = len(self.mu)
+        n = len(nu)
+
+        if m == n == 0:
+            return Vector({SchurQ(StrictPartition()): 1})
+
+        if (m + n) % 2 != 0:
+            n += 1
+
+        matrix = [[Vector() for i in range(m + n)] for j in range(m + n)]
+        for i in range(m):
+            for j in range(i + 1, m):
+                x = StrictPartition(self.mu(i + 1), self.mu(j + 1))
+                matrix[i][j] = Vector({SchurQ(x): 1})
+                matrix[j][i] = Vector({SchurQ(x): -1})
+        for i in range(m):
+            for j in range(n):
+                q = self.mu(i + 1) - nu(n - j)
+                if q >= 0:
+                    x = StrictPartition(q)
+                    matrix[i][m + j] = Vector({SchurQ(x): 1})
+                    matrix[m + j][i] = Vector({SchurQ(x): -1})
+
+        if verbose:
+            lengths = [len(str(matrix[i][j])) for i in range(m + n) for j in range(m + n)]
+
+            def pad(t):
+                return (max(lengths) - len(str(t))) * ' ' + str(t)
+
+            print('')
+            for row in matrix:
+                print(' '.join(pad(t) for t in row))
+
+        return Pfaffian(matrix).evaluate()
 
     def __repr__(self):
         return 'Q(%s)' % ', '.join(str(i) for i in self.mu.parts)
 
     def __mul__(self, other):
+        if type(other) == int:
+            return Vector({self: other})
         assert type(other) == type(self)
         mult = len(self.mu) + len(other.mu)
         u = self.mu.to_grassmannian()
@@ -255,3 +374,12 @@ class SchurQ(SchurP):
             SchurQ(p.mu): 2**(mult - len(p.mu)) * v
             for p, v in vector.items()
         })
+
+
+class SchurS(SchurP):
+
+    def __repr__(self):
+        return 'S(%s)' % ', '.join(str(i) for i in self.mu.parts)
+
+    def __mul__(self, other):
+        raise NotImplementedError

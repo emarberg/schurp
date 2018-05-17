@@ -1,7 +1,7 @@
 
 class MarkedNumber:
     def __init__(self, i):
-        assert type(i) == int and i != 0
+        assert type(i) == int
         self.number = i
 
     def weight(self):

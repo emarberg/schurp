@@ -43,6 +43,13 @@ class Shape:
     def column(self, i):
         return Shape({(j, k) for (j, k) in self.positions if i == k})
 
+    def justify(self):
+        if len(self.positions) == 0:
+            return Shape()
+        m = min(i for i, j in self.positions) - 1
+        n = min(j for i, j in self.positions) - 1
+        return Shape({(i - m, j - n) for i, j in self.positions})
+
     def northeast_position(self):
         if self.positions:
             return min(self.positions, key=lambda x: (x[0], -x[1]))
@@ -110,6 +117,15 @@ class Partition:
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    def transpose(self):
+        if len(self.parts) == 0:
+            return Partition()
+        else:
+            return Partition(*[
+                len([a for a in self.parts if a > i])
+                for i in range(max(self.parts))
+            ])
+
     def pieri(self, i):
         ranges = self._pieri_ranges(i)
 
@@ -159,6 +175,9 @@ class Partition:
     def __len__(self):
         return len(self.parts)
 
+    def __abs__(self):
+        return sum((0,) + self.parts)
+
     def __nonzero__(self):
         return len(self.parts) > 0
 
@@ -176,11 +195,36 @@ class Partition:
         assert type(other) == type(self)
         return self.shape.contains(other.shape)
 
+    def compact(self):
+        return ','.join([str(i) for i in self.parts])
+
+    @classmethod
+    def all(cls, n, max_part=None):
+        if max_part is None:
+            max_part = n
+
+        if n == 0:
+            yield Partition()
+        else:
+            for i in range(1, 1 + min(max_part, n)):
+                for p in cls.all(n - i, i):
+                    parts = (i,) + p.parts
+                    yield Partition(*parts)
+
+    @classmethod
+    def skew_pairs(cls, n):
+        for mu in cls.all(n):
+            for m in range(n + 1):
+                for nu in cls.all(m):
+                    if mu.contains(nu):
+                        yield mu, nu
+
 
 class StrictPartition(Partition):
     def __init__(self, *args):
         self.parts = list(sorted(args, reverse=True))
         assert self.parts == list(args)
+        assert all(p >= 0 for p in self.parts)
 
         while self.parts and self.parts[-1] == 0:
             self.parts.pop()
@@ -204,3 +248,22 @@ class StrictPartition(Partition):
         for i in range(len(self.parts)):
             w *= Permutation.cycle([n + 1 + i, n + 1 - self.parts[i]])
         return w
+
+    def __add__(self, other):
+        assert type(other) in [Partition, StrictPartition]
+        parts = [self(i) + other(i) for i in range(1, 1 + max(len(self), len(other)))]
+        return StrictPartition(*parts)
+
+    @classmethod
+    def all(cls, n, max_part=None):
+        if max_part is None:
+            max_part = n
+
+        if n == 0:
+            yield StrictPartition()
+        else:
+            for i in range(1, 1 + min(max_part, n)):
+                for p in cls.all(n - i, i - 1):
+                    parts = (i,) + p.parts
+                    yield StrictPartition(*parts)
+

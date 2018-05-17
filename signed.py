@@ -3,6 +3,7 @@ from collections import defaultdict
 from vectors import Vector
 from symmetric import SchurP, SchurQ
 from partitions import StrictPartition
+from permutations import Permutation
 
 
 SIGNED_REDUCED_WORDS = {(): {()}}
@@ -50,6 +51,22 @@ class SignedPermutation:
                     v = v // 2
                 yield SignedPermutation(*oneline)
 
+    @classmethod
+    def involutions(cls, n):
+        for w in Permutation.involutions(n):
+            oneline = w.oneline
+            oneline += tuple(range(len(oneline) + 1, n + 1))
+            cycles = [{i, oneline[i] - 1} for i in range(n) if i <= oneline[i] - 1]
+            k = len(cycles)
+            for v in range(2**k):
+                newline = list(oneline)
+                for i in range(k):
+                    if v % 2 != 0:
+                        for j in cycles[i]:
+                            newline[j] *= -1
+                    v = v // 2
+                yield SignedPermutation(*newline)
+
     def get_reduced_word(self):
         if self.left_descent_set:
             i = min(self.left_descent_set)
@@ -69,6 +86,13 @@ class SignedPermutation:
             SIGNED_REDUCED_WORDS[oneline] = words
         return SIGNED_REDUCED_WORDS[oneline]
 
+    def get_involution_words(self):
+        w = self.reduce()
+        assert w.inverse() == w
+        for a in w.get_atoms():
+            for word in a.get_reduced_words():
+                yield word
+
     def __call__(self, i):
         if i == 0:
             return 0
@@ -86,6 +110,9 @@ class SignedPermutation:
         while newline and newline[-1] == len(newline):
             newline = newline[:-1]
         return SignedPermutation(*newline)
+
+    def involution_length(self):
+        return (len(self.neg()) + len(self.pair()) + len(self)) // 2
 
     @classmethod
     def identity(cls, n):
@@ -163,20 +190,25 @@ class SignedPermutation:
             q = n - p
             return self.__pow__(p) * self.__pow__(q)
 
+    def inv_stanley_schur_s_decomposition(self):
+        assert self == self.inverse()
+        ans = Vector()
+        for x in self.get_atoms():
+            ans += x.stanley_schur_q_decomposition()
+        return SchurQ.decompose_s_lambda(ans)
+
     def inv_stanley_schur_p_decomposition(self):
         assert self == self.inverse()
         ans = Vector()
         for x in self.get_atoms():
-            for sh, i in x.stanley_schur_p_decomposition().items():
-                ans += Vector({SchurP(StrictPartition(*sh)): i})
+            ans += x.stanley_schur_p_decomposition()
         return ans
 
     def inv_stanley_schur_q_decomposition(self):
         assert self == self.inverse()
         ans = Vector()
         for x in self.get_atoms():
-            for sh, i in x.stanley_schur_q_decomposition().items():
-                ans += Vector({SchurQ(StrictPartition(*sh)): i})
+            ans += x.stanley_schur_q_decomposition()
         return ans
 
     def is_even_signed(self):
@@ -191,13 +223,28 @@ class SignedPermutation:
     #     return ans
 
     def stanley_schur_p_decomposition(self):
-        return self.stanley_schur_decomposition('B')
+        ans = Vector()
+        for sh, i in self.stanley_schur_decomposition('B').items():
+            ans += Vector({SchurP(StrictPartition(*sh)): i})
+        return ans
 
     def stanley_schur_q_decomposition(self):
-        return self.stanley_schur_decomposition('C')
+        ans = Vector()
+        for sh, i in self.stanley_schur_decomposition('C').items():
+            ans += Vector({SchurQ(StrictPartition(*sh)): i})
+        return ans
+
+    def stanley_schur_s_decomposition(self):
+        ans = Vector()
+        for sh, i in self.stanley_schur_q_decomposition().items():
+            ans += Vector({SchurQ(StrictPartition(*sh)): i})
+        return SchurQ.decompose_s_lambda(ans)
 
     def stanley_schur_d_decomposition(self):
-        return self.stanley_schur_decomposition('D')
+        ans = Vector()
+        for sh, i in self.stanley_schur_decomposition('D').items():
+            ans += Vector({SchurP(StrictPartition(*sh)): i})
+        return ans
 
     def _get_cache(self, bcd_type):
         assert bcd_type in ['B', 'C', 'D']
