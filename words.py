@@ -140,6 +140,19 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def eg_insert(self):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.eg_insert(MarkedNumber(a))
+
+            v = MarkedNumber(i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
     def fpf_insert(self, verbose=True):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
@@ -350,7 +363,7 @@ def fpf_from_word(*w):
     return start
 
 
-class Permutation:
+class HopfPermutation:
     def __init__(self, *args, **kwargs):
         assert set(args) == set(range(1, len(args) + 1))
         s = kwargs.get('subset', None)
@@ -382,12 +395,12 @@ class Permutation:
     @classmethod
     def all(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
-            yield Permutation(*args)
+            yield HopfPermutation(*args)
 
     @classmethod
     def involutions(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
-            w = Permutation(*args)
+            w = HopfPermutation(*args)
             if all(w(w(i)) == i for i in range(1, n + 1)):
                 yield w
 
@@ -407,7 +420,7 @@ class Permutation:
         return tuple(line)
 
     def __eq__(self, other):
-        assert type(other) == Permutation
+        assert type(other) == HopfPermutation
         return self.oneline == other.oneline
 
     def __hash__(self):
@@ -417,7 +430,7 @@ class Permutation:
         assert i >= 0
         subset = {t + i for t in range(1, self.size)}
         oneline = list(range(1, i + 1)) + [n + i for n in self.oneline]
-        return Permutation(*oneline, subset=subset)
+        return HopfPermutation(*oneline, subset=subset)
 
     @property
     def size(self):
@@ -436,21 +449,21 @@ class Permutation:
         return ''.join(str(i) for i in self.oneline)
 
     def __add__(self, other):
-        if type(other) == Permutation:
+        if type(other) == HopfPermutation:
             return Vector({self: 1}) + Vector({other: 1})
         elif type(other) == Vector:
             return Vector({self: 1}) + other
-        assert type(other) in [Permutation, Vector]
+        assert type(other) in [HopfPermutation, Vector]
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __sub__(self, other):
-        if type(other) == Permutation:
+        if type(other) == HopfPermutation:
             return Vector({self: 1}) + Vector({other: -1})
         elif type(other) == Vector:
             return Vector({self: 1}) - other
-        assert type(other) in [Permutation, Vector]
+        assert type(other) in [HopfPermutation, Vector]
 
     def coproduct(self, *subsets):
         # check that subsets are ordered partition of self.subset
@@ -475,7 +488,7 @@ class Permutation:
     def test_product(cls, u, v):
         answer = Vector()
         for w in cls.test_product_helper(u.oneline, v.oneline):
-            answer += Vector({Permutation(*w): 1})
+            answer += Vector({HopfPermutation(*w): 1})
         return answer
 
     @classmethod
@@ -499,14 +512,14 @@ class Permutation:
         return ans
 
     def __mul__(self, other):
-        if type(other) == Permutation:
+        if type(other) == HopfPermutation:
             assert self.size >= 1 and other.size >= 1
             n = self.size + other.size - 1
             result = self.vector * other._right_shift(self.size - 1).vector
             answer = Vector()
             while result:
                 key, value = next(iter(result.items()))
-                sigma = Permutation(*self.oneline_from_word(key, n))
+                sigma = HopfPermutation(*self.oneline_from_word(key, n))
                 answer += Vector({sigma: value})
                 result -= sigma.vector * value
             return answer
@@ -519,7 +532,7 @@ class Permutation:
         assert i > 0
         args = {j - (j > i) for j in args}
         newline = tuple(j - (j > i) for j in self.oneline if j != i)
-        return Permutation(*newline).exclude(*args)
+        return HopfPermutation(*newline).exclude(*args)
 
     def startswith(self, sequence):
         return all(self(i + 1) == sequence[i] for i in range(len(sequence)))
@@ -531,7 +544,7 @@ class Permutation:
     @classmethod
     def reverse(cls, n):
         oneline = list(reversed(range(1, n + 1)))
-        return Permutation(*oneline)
+        return HopfPermutation(*oneline)
 
     def __call__(self, i):
         if i < 1 or i > len(self.oneline):
@@ -545,7 +558,7 @@ class ShiftedCrystalGenerator:
 
     @classmethod
     def test_insertion_tableaux(cls, n, k):
-        for i, w in enumerate(Permutation.involutions(n)):
+        for i, w in enumerate(HopfPermutation.involutions(n)):
             cg = ShiftedCrystalGenerator(w.oneline, k)
             shapes = [
                 {cg.insertion_tableau(i) for i in comp}
@@ -604,7 +617,7 @@ class ShiftedCrystalGenerator:
 
     @classmethod
     def all(cls, n, k):
-        for w in Permutation.involutions(n):
+        for w in HopfPermutation.involutions(n):
             if w.oneline != reduce_oneline(w.oneline):
                 continue
             cg = ShiftedCrystalGenerator(w.oneline, k)
@@ -784,7 +797,7 @@ class FPFCrystalGenerator(ShiftedCrystalGenerator):
 
     @classmethod
     def test_insertion_tableaux(cls, n, k):
-        for i, w in enumerate(Permutation.fpf_involutions(n)):
+        for i, w in enumerate(HopfPermutation.fpf_involutions(n)):
             cg = FPFCrystalGenerator(w.oneline, k)
             shapes = [
                 {cg.insertion_tableau(i) for i in comp}
@@ -826,7 +839,7 @@ class FPFCrystalGenerator(ShiftedCrystalGenerator):
     @classmethod
     def all(cls, n, k):
         assert n % 2 == 0
-        for w in Permutation.fpf_involutions(n):
+        for w in HopfPermutation.fpf_involutions(n):
             if w.oneline != reduce_fpf(w.oneline):
                 continue
             cg = FPFCrystalGenerator(w.oneline, k)

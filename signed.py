@@ -364,7 +364,7 @@ class SignedPermutation:
         if w not in atoms_b_cache:
             atoms_b_cache[w] = list(w._get_atoms())
         ans = atoms_b_cache[w]
-        return {x.inflate(self.rank) for x in ans}
+        return [x.inflate(self.rank) for x in ans]
 
     def _get_atoms(self):
         def next(oneline):
@@ -387,3 +387,25 @@ class SignedPermutation:
                 yield SignedPermutation(*w).inverse()
             add = {new for w in add for new in next(w)}
 
+    def involution_words(self):
+        for w in self.get_atoms():
+            for e in w.get_reduced_words():
+                yield e
+
+    @classmethod
+    def double_involution_word(cls, word):
+        if len(word) == 0:
+            return tuple()
+        n = 1 + max([i for i in word])
+        w = SignedPermutation.identity(n)
+        ans = []
+        for i in word:
+            assert i not in w.right_descent_set
+            s = SignedPermutation.s_i(i, n)
+            w *= s
+            if i not in w.left_descent_set:
+                ans = [i] + ans + [i]
+                w = s * w
+            else:
+                ans = ans + [i]
+        return tuple(ans)

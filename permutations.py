@@ -1,7 +1,66 @@
 import itertools
 
 
+REDUCED_WORDS = {(): {()}}
+atoms_a_cache = {}
+
+
 class Permutation:
+
+    @classmethod
+    def longest_element(cls, n):
+        return Permutation(tuple(range(n, 0, -1)))
+
+    @classmethod
+    def double_involution_word(cls, word):
+        w = Permutation()
+        ans = []
+        for i in word:
+            assert i not in w.right_descent_set
+            s = Permutation.s_i(i)
+            w *= s
+            if i not in w.left_descent_set:
+                ans = [i] + ans + [i]
+                w = s * w
+            else:
+                ans = ans + [i]
+        return tuple(ans)
+
+    def get_reduced_words(self):
+        oneline = tuple(self.oneline)
+        if oneline not in REDUCED_WORDS:
+            words = set()
+            for i in self.right_descent_set:
+                s = Permutation.s_i(i)
+                words |= {e + (i,) for e in (self * s).get_reduced_words()}
+            REDUCED_WORDS[oneline] = words
+        return REDUCED_WORDS[oneline]
+
+    def get_atoms(self):
+        if self not in atoms_a_cache:
+            atoms_a_cache[self] = list(self._get_atoms())
+        return list(atoms_a_cache[self])
+
+    def _get_atoms(self):
+        def next(oneline):
+            for i in range(len(oneline) - 2):
+                c, a, b = oneline[i:i + 3]
+                if a < b < c:
+                    newline = oneline[:i] + (b, c, a) + oneline[i + 3:]
+                    yield newline
+
+        minimum = tuple(self.get_min_atom().inverse().oneline)
+        add = {minimum}
+        while add:
+            for w in add:
+                yield Permutation(*w).inverse()
+            add = {new for w in add for new in next(w)}
+
+    def get_involution_words(self):
+        assert self.inverse() == self
+        for a in self.get_atoms():
+            for word in a.get_reduced_words():
+                yield word
 
     @classmethod
     def all(cls, n):
@@ -129,46 +188,36 @@ class Permutation:
                 ans += [(i, j)]
         return ans
 
-    def __init__(self, oneline=[]):
+    def __init__(self, *args):
+        if len(args) == 1 and type(args) in [list, tuple]:
+            oneline = [i for i in args[0]]
+        else:
+            oneline = list(args)
         while len(oneline) > 0 and oneline[-1] == len(oneline):
             oneline = oneline[:-1]
         self.oneline = oneline
         self.cycles = self.get_cycles(oneline)
 
-    def is_left_descent(self, i):
+    def is_right_descent(self, i):
         return self(i) > self(i + 1)
 
-    def get_descent_L(self):
-        for i in range(1, len(self.oneline)):
-            if(self(i) > self(i + 1)):
-                return i
-        return 0
-
-    def get_descent_R(self):
-        return (self.inverse()).get_descent_L()
-
-    def get_descentset_T(self):
-        ans = []
-        for i in range(1, len(self.oneline)):
-            if(self(i) > self(i + 1) and self(i) <= i and self(i + 1) < i + 1):
-                ans.append(i)
-        return ans
-
+    @property
     def left_descent_set(self):
         return self.get_descentset_L()
 
+    @property
     def right_descent_set(self):
         return self.get_descentset_R()
 
-    def get_descentset_L(self):
+    def get_descentset_R(self):
         ans = []
         for i in range(1, len(self.oneline)):
             if(self(i) > self(i + 1)):
                 ans.append(i)
         return ans
 
-    def get_descentset_R(self):
-        return (self.inverse()).get_descentset_L()
+    def get_descentset_L(self):
+        return (self.inverse()).get_descentset_R()
 
     def number_two_cycles(self):
         ans = 0
@@ -242,10 +291,11 @@ class Permutation:
 
     # other is a permutation
     def __mul__(self, other):
+        assert type(other) == Permutation
         newline = []
         n = max(len(self.oneline), len(other.oneline))
         for i in range(1, 1 + n):
-            newline.append(other(self(i)))
+            newline.append(self(other(i)))
         while len(newline) > 0 and newline[-1] == len(newline):
             newline = newline[:-1]
         return Permutation(newline)

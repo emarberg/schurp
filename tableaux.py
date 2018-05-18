@@ -67,7 +67,15 @@ class Tableau:
         return Tableau({(i, i + j - 1): self.entry(i, j) for (i, j) in self.mapping})
 
     def transpose(self):
-        return Tableau({(j, i): self.cell(i, j) for i, j in self.mapping})
+        return Tableau({(j, i): self.entry(i, j) for i, j in self.mapping})
+
+    def double(self):
+        assert self.is_shifted()
+        mapping = {(i, j): self.entry(i, j) for i, j in self.mapping}
+        for i, j in self.mapping:
+            if i != j:
+                mapping[(j, i)] = self.entry(i, j)
+        return Tableau(mapping)
 
     def maximum(self):
         if self.mapping:
@@ -91,8 +99,7 @@ class Tableau:
         return tuple(self.entry(i, j) for i in rows)
 
     def is_shifted(self):
-        if any(j < i for i, j in self.mapping):
-            return False
+        return not any(j < i for i, j in self.mapping)
 
     def is_contiguous(self):
         values = {v.weight() for v in self.mapping.values()}
@@ -346,6 +353,30 @@ class Tableau:
             return tab.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
         else:
             return self.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
+
+    def eg_insert(self, p, j=0):
+        if p is None:
+            return (j, self)
+
+        def eg_bump(a, tup):
+            for i, b in enumerate(tup):
+                if a > b:
+                    continue
+                if a == b:
+                    b = tup[i + 1]
+                    new = tup
+                else:
+                    new = tup[:i] + (a,) + tup[i + 1:]
+                return (b, new)
+            return (None, tup + (a,))
+
+        j += 1
+        row = self.get_row(j)
+        p, row = eg_bump(p, row)
+        tab = self.replace_row(j, row, shifted=False)
+
+        assert tab.is_increasing()
+        return tab.eg_insert(p, j)
 
     def involution_insert(self, p, j=0, column_dir=False, verbose=True):
         if p is None:
