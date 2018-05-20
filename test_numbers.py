@@ -3,13 +3,6 @@ from numbers import MarkedNumber
 
 def test_init():
     try:
-        MarkedNumber(0)
-    except:
-        pass
-    else:
-        raise Exception()
-
-    try:
         MarkedNumber('a')
     except:
         pass

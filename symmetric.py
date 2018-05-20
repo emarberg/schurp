@@ -66,7 +66,7 @@ class InvStanleyExpander:
         if len(children) == 0:
             n = len(self.w.oneline)
             c = Permutation.cycle(range(1, n + 2))
-            new_w = c**-1 * self.w * c
+            new_w = c * self.w * c.inverse()
             return InvStanleyExpander(new_w).get_children()
         return children
 
@@ -101,7 +101,7 @@ class InvStanleyExpander:
         a_tup = tuple(sorted(set([i, j, w(i), w(j)])))
         if len(a_tup) == 2 and w(i) == i:
             r = Permutation.cycle([i, j])
-            return w * r
+            return r * w
         elif len(a_tup) == 3:
             a, b, c = a_tup
             if (i, j) in [(b, c), (a, c)] and w(a) == b and w(c) == c:
@@ -118,7 +118,7 @@ class InvStanleyExpander:
             elif (i, j) in [(a, c), (b, d), (a, d)] and w(a) == b and w(c) == d:
                 s = Permutation.cycle([a, b])
                 r = Permutation.cycle([a, c])
-                return r * w * s * r
+                return r * s * w * r
             elif (i, j) in [(a, b), (c, d), (a, d)] and w(a) == c and w(b) == d:
                 r = Permutation.cycle([a, b])
                 return r * w * r
@@ -129,7 +129,7 @@ class InvStanleyExpander:
         a_tup = tuple(sorted(set([i, j, w(i), w(j)])))
         if len(a_tup) == 2 and w(i) == j:
             r = Permutation.cycle([i, j])
-            return w * r
+            return r * w
         elif len(a_tup) == 3:
             a, b, c = a_tup
             if (i, j) in [(b, c), (a, c)] and w(a) == c and w(b) == b:
@@ -146,7 +146,7 @@ class InvStanleyExpander:
             elif (i, j) in [(a, c), (b, d), (a, d)] and w(a) == d and w(b) == b and w(c) == c:
                 s = Permutation.cycle([a, b])
                 r = Permutation.cycle([a, c])
-                return r * w * r * s
+                return s * r * w * r
             elif (i, j) in [(a, b), (c, d), (a, d)] and w(a) == d and w(b) == c:
                 r = Permutation.cycle([a, b])
                 return r * w * r
@@ -177,6 +177,14 @@ class Determinant:
         n = len(matrix)
         assert all(len(matrix[i]) == n for i in range(n))
 
+    def __repr__(self):
+        m = max([len(str(i)) for row in self.matrix for i in row])
+
+        def pad(s):
+            return str(s) + (m - len(str(s))) * ' '
+
+        return '\n'.join([' '.join([pad(s) for s in row]) for row in self.matrix])
+
     def evaluate(self):
         ans = Vector()
         n = len(self.matrix)
@@ -195,6 +203,14 @@ class Pfaffian:
         n = len(matrix)
         assert all(len(matrix[i]) == n for i in range(n))
         assert all(matrix[i][j] == -matrix[j][i] for i in range(n) for j in range(n))
+
+    def __repr__(self):
+        m = max([len(str(i)) for row in self.matrix for i in row])
+
+        def pad(s):
+            return str(s) + (m - len(str(s))) * ' '
+
+        return '\n'.join([' '.join([pad(s) for s in row]) for row in self.matrix])
 
     @classmethod
     def fpf_involutions(cls, n):
@@ -321,7 +337,7 @@ class SchurQ(SchurP):
             args = args[0].parts
         mu = Partition(*args)
         if len(mu) == 0:
-            return Vector({SchurQ(StrictPartition()): 1})
+            return Vector({SchurQ(): 1})
         if mu.parts not in s_lambda_cache:
             n = len(mu)
             matrix = [[Vector() for i in range(n)] for j in range(n)]
@@ -329,8 +345,9 @@ class SchurQ(SchurP):
                 for j in range(1, n + 1):
                     q = mu(i) - i + j
                     if q >= 0:
-                        matrix[i - 1][j - 1] = Vector({SchurQ(StrictPartition(q)): 1})
-            s_lambda_cache[mu.parts] = Determinant(matrix).evaluate()
+                        matrix[i - 1][j - 1] = Vector({SchurQ(q): 1})
+            det = Determinant(matrix)
+            s_lambda_cache[mu.parts] = det.evaluate()
         return s_lambda_cache[mu.parts]
 
     @classmethod
@@ -405,6 +422,8 @@ class SchurQ(SchurP):
         mult = len(self.mu) + len(other.mu)
         u = self.mu.to_grassmannian()
         v = other.mu.to_grassmannian()
+        assert type(self.mu) == StrictPartition
+        assert type(other.mu) == StrictPartition
         n = len(u.oneline)
         w = Permutation(u.oneline + [i + n for i in v.oneline])
         vector = InvStanleyExpander(w).expand()

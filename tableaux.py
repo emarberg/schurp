@@ -18,6 +18,9 @@ class Tableau:
     def __iter__(self):
         return self.mapping.__iter__()
 
+    def shape(self):
+        return Shape(self.mapping.keys())
+
     @classmethod
     def from_string(cls, string):
         def mark(i):
@@ -271,9 +274,6 @@ class Tableau:
     #     def is_row_unimodal(row):
     #         return len(self.decreasing_part(row)) + len(self.increasing_part(row)) == len(row)
 
-    def shape(self):
-        return set(self.mapping.keys())
-
     def replace_row(self, j, newrow, shifted=False):
         dictionary = {(j_, k): self.entry(j_, k) for (j_, k) in self.mapping if j != j_}
         for k_zerobased, v in enumerate(newrow):
@@ -320,6 +320,36 @@ class Tableau:
                 newseq = sequence[:i] + (p,) + sequence[i + 1:]
                 q = sequence[i]
         return q, column_dir, newseq
+
+    def hecke_insert(self, p, j=0):
+        if p is None:
+            return (j, self)
+
+        def hecke_bump(a, tup):
+            if len(tup) == 0 or a > tup[-1]:
+                newtup = tup + (a,)
+                q = None
+            elif p == tup[-1]:
+                newtup = tup
+                q = None
+            else:
+                i = [j for j in range(len(tup)) if a < tup[j]][0]
+                if i > 0 and a == tup[i - 1]:
+                    newtup = tuple(tup)
+                    q = tup[i]
+                else:
+                    newtup = tup[:i] + (a,) + tup[i + 1:]
+                    q = tup[i]
+            return q, newtup
+
+        j += 1
+        row = self.get_row(j)
+        p, row = hecke_bump(p, row)
+        tab = self.replace_row(j, row, shifted=False)
+        if tab.is_increasing():
+            return tab.hecke_insert(p, j)
+        else:
+            return self.hecke_insert(p, j)
 
     def shifted_hecke_insert(self, p, j=0, column_dir=False, verbose=True):
         if p is None:

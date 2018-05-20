@@ -286,16 +286,20 @@ class SignedPermutation:
         newline = v.oneline + (n + 1,)
         v = SignedPermutation(*newline)
         indices += [v * self.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
+        indices = [x.reduce() for x in indices if v_len + 1 == len(x)]
+
+        # print()
+        # print(self, ':', indices)
+        # print()
 
         ans = defaultdict(int)
         for x in indices:
-            if v_len + 1 == len(x):
-                for sh, i in x.stanley_schur_decomposition(bcd_type).items():
-                    ans[sh] += i
+            for sh, i in x.stanley_schur_decomposition(bcd_type).items():
+                ans[sh] += i
         ans = dict(ans)
 
         cache[self] = ans
-        print('  ', bcd_type, ':', len(cache))
+        # print('  ', bcd_type, ':', len(cache))
         return ans
 
     def increasing_shape(self):

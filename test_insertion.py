@@ -4,9 +4,9 @@ from words import (
     FPFCrystalGenerator
 )
 
+n = 4
 
-def test_involution_p_tableaux(n=5, k=4):
-    n = 6
+def test_involution_p_tableaux():
     k = 4
     for w in HopfPermutation.involutions(n):
         cg = ShiftedCrystalGenerator(w.oneline, k)
@@ -18,8 +18,7 @@ def test_involution_p_tableaux(n=5, k=4):
         assert all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
 
 
-def test_fpf_p_tableaux(n=6, k=4):
-    n = 6
+def test_fpf_p_tableaux():
     k = 4
     for w in HopfPermutation.fpf_involutions(n):
         cg = FPFCrystalGenerator(w.oneline, k)
@@ -32,7 +31,7 @@ def test_fpf_p_tableaux(n=6, k=4):
 
 
 def test_involution_insertion():
-    a = list(HopfPermutation.involutions(6))
+    a = list(HopfPermutation.involutions(n))
     for w in a:
         for e in get_involution_words(w.oneline):
             print(e)

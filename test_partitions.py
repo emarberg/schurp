@@ -61,11 +61,6 @@ def test_init_failure():
         raise Exception()
 
 
-def test_repr():
-    assert str(StrictPartition(2, 1)) == '* *\n  *'
-    assert str(StrictPartition()) == ''
-
-
 def test_shape():
     p = StrictPartition(2, 1)
     assert p.shape.positions == {(1, 1), (1, 2), (2, 2)}
@@ -79,6 +74,7 @@ def test_row():
     assert s.row(0) == Shape()
     assert s.row(-1) == Shape()
     assert s.max_row == 2
+
 
 def test_column():
     s = StrictPartition(2, 1).shape
@@ -99,10 +95,10 @@ def test_empty_shape():
 
 def test_corners():
     s = Shape()
-    assert s.corners() == set()
+    assert s.corners() == Shape()
 
     s = Partition(4, 4, 3, 2).shape
-    assert s.corners() == {(2, 4), (3, 3), (4, 2)}
+    assert s.corners() == Shape({(2, 4), (3, 3), (4, 2)})
 
 
 def test_horizontal_border_strips():

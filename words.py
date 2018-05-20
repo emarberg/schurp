@@ -108,6 +108,19 @@ class Word:
         else:
             return Vector()
 
+    def hecke_insert(self):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.hecke_insert(MarkedNumber(a))
+
+            v = MarkedNumber(i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
     def shifted_hecke_insert(self, verbose=False):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):

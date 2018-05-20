@@ -6,8 +6,8 @@ class Shape:
     def __init__(self, positions=None):
         if positions is None:
             positions = set()
-        assert not any(i <= 0 or j <= 0 for i, j in positions)
         self.positions = {(i, j) for i, j in positions}
+        assert not any(i <= 0 or j <= 0 for i, j in self.positions)
         self.rows = defaultdict(set)
         self.columns = defaultdict(set)
         for i, j in self.positions:
@@ -55,10 +55,10 @@ class Shape:
             return min(self.positions, key=lambda x: (x[0], -x[1]))
 
     def corners(self):
-        return {
+        return Shape({
             (i, j) for i, j in self.positions
             if (i + 1, j) not in self.positions and (i, j + 1) not in self.positions
-        }
+        })
 
     def vertical_border_strips(self, exclude_diagonal=False):
         shapes = {x.transpose() for x in self.transpose().horizontal_border_strips()}
