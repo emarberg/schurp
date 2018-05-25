@@ -1,4 +1,5 @@
 import itertools
+import subprocess
 from collections import defaultdict
 from vectors import Vector
 from symmetric import SchurP, SchurQ
@@ -174,6 +175,10 @@ class SignedPermutation:
                 newline[-j - 1] = -i
         return SignedPermutation(*newline)
 
+    def __lt__(self, other):
+        assert type(other) == SignedPermutation
+        return self.oneline < other.oneline
+
     def __eq__(self, other):
         assert type(other) == SignedPermutation
         return self.oneline == other.oneline
@@ -288,10 +293,6 @@ class SignedPermutation:
         indices += [v * self.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
         indices = [x.reduce() for x in indices if v_len + 1 == len(x)]
 
-        # print()
-        # print(self, ':', indices)
-        # print()
-
         ans = defaultdict(int)
         for x in indices:
             for sh, i in x.stanley_schur_decomposition(bcd_type).items():
@@ -301,6 +302,259 @@ class SignedPermutation:
         cache[self] = ans
         # print('  ', bcd_type, ':', len(cache))
         return ans
+
+    @classmethod
+    def queue_stanley_decomposition(cls, n, verbose=True):
+        def get_shape(oneline):
+            while oneline[-1] == len(oneline):
+                oneline = oneline[:-1]
+            oneline = oneline[1:]
+            ans = []
+            while oneline:
+                for i in range(len(oneline)):
+                    a = oneline[i]
+                    if i == 0 and a < 0:
+                        ans += [(a, -a)]
+                        oneline = oneline[1:]
+                        break
+                    if i + 1 >= len(oneline):
+                        continue
+                    b = oneline[i + 1]
+                    if 0 < a < -b:
+                        ans += [(a, -b)]
+                        oneline = oneline[:i] + oneline[i + 2:]
+                        break
+            return ans
+
+        def get_rs(x):
+            r = 0
+            s = n
+            while r < s - 1 and (x(r + 1) == n or x(r + 1) == x(r) - 1):
+                r += 1
+            try:
+                z = SignedPermutation(*x.oneline[r:]).reduce()
+                a = SignedPermutation.longest_element(n - r - 1).get_atoms()
+                assert z in a
+            except:
+                r += 1
+                shape = get_shape(tuple(x(i) for i in range(r, n + 1)))
+                s = x.inverse()(
+                    max([a for a, b in shape if 0 < a < x(r) < b])
+                )
+            return r, s
+
+        ans = []
+        atoms = SignedPermutation.longest_element(n).get_atoms()
+        preatoms = SignedPermutation.longest_element(n - 1).get_atoms()
+        queue = [SignedPermutation(*((n + 1,) + x.oneline + (n,))) for x in preatoms]
+        while queue:
+            print('queue: %s' % len(queue))
+            x = queue.pop(0).reduce()
+            if x in atoms:
+                print('\n*', x, 'is atom\n')
+                ans += [x]
+                continue
+
+            n = x.rank
+            r, s = get_rs(x)
+            v = x * cls.reflection_t(r, s, n)
+            v_len = len(v)
+            assert v_len + 1 == len(x)
+
+            newline = v.oneline + (n + 1,)
+            new_v = SignedPermutation(*newline)
+            lhs = [new_v * cls.reflection_t(r, i, n + 1) for i in range(r + 1, n + 2) if i != s]
+            lhs = sorted([u.reduce() for u in lhs if v_len + 1 == len(u)])
+
+            if lhs != sorted([u.reduce() for u in queue if u.reduce() in lhs]):
+                queue += [x]
+                continue
+
+            yield (x.reduce(), v.reduce())
+            for u in lhs:
+                yield (u, v.reduce())
+
+            queue = [u for u in queue if u.reduce() not in lhs]
+            rhs = [v * cls.reflection_s(r, r, n)]
+            rhs += [v * cls.reflection_t(i, r, n) for i in range(1, r)]
+            rhs += [new_v * cls.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
+            rhs = [u.reduce() for u in rhs if v_len + 1 == len(u)]
+            queue += rhs
+
+            for u in rhs:
+                yield(v.reduce(), u)
+
+        assert sorted(ans) == sorted(atoms)
+
+    # @classmethod
+    # def get_atom_shape(cls, oneline):
+    #     while oneline and oneline[-1] == len(oneline):
+    #         oneline = oneline[:-1]
+    #     oneline = oneline[1:]
+    #     ans = []
+    #     while oneline:
+    #         for i in range(len(oneline)):
+    #             a = oneline[i]
+    #             if i == 0 and a < 0:
+    #                 ans += [(a, -a)]
+    #                 oneline = oneline[1:]
+    #                 break
+    #             if i + 1 >= len(oneline):
+    #                 continue
+    #             b = oneline[i + 1]
+    #             if 0 < a < -b:
+    #                 ans += [(a, -b)]
+    #                 oneline = oneline[:i] + oneline[i + 2:]
+    #                 break
+    #     return ans
+
+    @classmethod
+    def standardize(cls, oneline):
+        distinct = sorted([abs(j) for j in oneline])
+        assert len(set(distinct)) == len(oneline)
+        mapping = {v: i + 1 for i, v in enumerate(distinct)}
+        newline = tuple(mapping[v] if v > 0 else -mapping[-v] for v in oneline)
+        return SignedPermutation(*newline)
+
+        # if i.rank == self.n:
+        #     try:
+        #         assert self.standardize(i.inverse()) in self.sub_atoms
+        #     except:
+        #         print('!', i.inverse())
+
+    def conjectural_stanley_schur_decomposition(self, starting_rank=None, verbose=True, step=0):
+        w = self.reduce()
+        n = w.rank
+
+        if starting_rank is None:
+            starting_rank = n
+
+        space = ((4 + starting_rank) * step) * ' '
+        if w in SignedPermutation.longest_element(starting_rank - 1).get_atoms():
+            print(space, '*', w, 'is atom')
+            print()
+            verbose = False
+            yield (w, 1)
+            return
+
+        sh = w.increasing_shape()
+        if sh is not None:
+            return
+        #    return {sh: 1}
+
+        def get_shape(oneline):
+            while oneline[-1] == len(oneline):
+                oneline = oneline[:-1]
+            oneline = oneline[1:]
+            ans = []
+            while oneline:
+                for i in range(len(oneline)):
+                    a = oneline[i]
+                    if i == 0 and a < 0:
+                        ans += [(a, -a)]
+                        oneline = oneline[1:]
+                        break
+                    if i + 1 >= len(oneline):
+                        continue
+                    b = oneline[i + 1]
+                    if 0 < a < -b:
+                        ans += [(a, -b)]
+                        oneline = oneline[:i] + oneline[i + 2:]
+                        break
+            return ans
+
+        if verbose:
+            r = 0
+            s = n
+            while r < s - 1 and (w(r + 1) == n or w(r + 1) == w(r) - 1):
+                r += 1
+            try:
+                z = SignedPermutation(*w.oneline[r:]).reduce()
+                # print('Computing atoms (B%s). . .' % (n - r - 1))
+                a = SignedPermutation.longest_element(n - r - 1).get_atoms()
+                assert z in a
+            except:
+                try:
+                    r += 1
+                    shape = get_shape(tuple(w(i) for i in range(r, n + 1)))
+                    s = w.inverse()(
+                        max([a for a, b in shape if 0 < a < w(r) < b])
+                    )
+                    print('(r,s) = (%s,%s)' % (r, s))
+                except:
+                    print(space, 'no inversions:', w, '\n')
+                    w, r, s = eval(input('w, r, s = '))
+                    print('(r,s) = (%s,%s)' % (r, s))
+        else:
+            r = w.last_descent()
+            s = w.last_inversion(r)
+
+        # if len(w * self.reflection_t(r, s, n)) != len(w) - 1:
+        #     print('failed')
+        #     r = w.last_descent()
+        #     s = w.last_inversion(r)
+
+        v = w * self.reflection_t(r, s, n)
+
+        v_len = len(v)
+        assert v_len + 1 == len(w)
+
+        indices = [v * self.reflection_s(r, r, n)]
+        indices += [v * self.reflection_t(i, r, n) for i in range(1, r)]
+        newline = v.oneline + (n + 1,)
+        v = SignedPermutation(*newline)
+        indices += [v * self.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
+        indices = [x.reduce() for x in indices if v_len + 1 == len(x)]
+
+        subindices = [v * self.reflection_t(r, i, n + 1) for i in range(r + 1, n + 2) if i != s]
+        subindices = [x.reduce() for x in subindices if v_len + 1 == len(x)]
+
+        if verbose:
+            print(space, self, '->', v.reduce(), '->', indices, ('- ' + str(subindices)) if subindices else '')
+            print()
+
+        for x in indices:
+            for a, coeff in x.conjectural_stanley_schur_decomposition(starting_rank, verbose, step + 1):
+                yield (a, coeff)
+
+        for x in subindices:
+            yield (x, -1)
+        # ans = defaultdict(int)
+        # for x in indices:
+        #     for sh, i in x.stanley_schur_decomposition(bcd_type, starting_rank, verbose, step + 1).items():
+        #         ans[sh] += i
+        # ans = dict(ans)
+
+        # cache[self] = ans
+        # # print('  ', bcd_type, ':', len(cache))
+        # return ans
+
+    @classmethod
+    def get_grassmannian(cls, n):
+        for w in cls.all(n):
+            if w.is_grassmannian():
+                yield w
+
+    @classmethod
+    def get_inv_grassmannian(cls, n):
+        ans = defaultdict(list)
+        for w in cls.involutions(n):
+            s = w.inv_stanley_schur_s_decomposition()
+            keys = list(s.keys())
+            if len(keys) == 1 and s[keys[0]] == 1:
+                ans[keys[0].mu.compact()] += [w]
+        for k, v in sorted(ans.items(), key=lambda x : (len(x[0]), str(x[0]))):
+            if v:
+                print('\n' + k)
+                for w in v:
+                    print('  ', w.reduce(), w.get_min_atom().reduce())
+        return ans
+
+    def is_inv_grassmannian(self):
+        return self == self.inverse() and self.get_min_atom().is_grassmannian()
+
+    def is_grassmannian(self):
+        return self.increasing_shape() is not None
 
     def increasing_shape(self):
         if all(self(i) < self(i + 1) for i in range(1, self.rank)):
@@ -363,6 +617,10 @@ class SignedPermutation:
             minimum += [i]
         return tuple(minimum)
 
+    def get_min_atom(self):
+        assert self == self.inverse()
+        return SignedPermutation(*self._min_inv_atom_oneline())
+
     def get_atoms(self):
         w = self.reduce()
         if w not in atoms_b_cache:
@@ -413,3 +671,80 @@ class SignedPermutation:
             else:
                 ans = ans + [i]
         return tuple(ans)
+
+
+class SignedAtomsGraph:
+
+    DIRECTORY = '/Users/emarberg/Dropbox/schubert-type-b/atoms/'
+
+    @property
+    def _filename(self):
+        return 'atoms_graph_b%s' % self.n
+
+    @property
+    def dot_filename(self):
+        return self.DIRECTORY + 'dot/' + '%s.dot' % self._filename
+
+    @property
+    def png_filename(self):
+        return self.DIRECTORY + 'png/' + '%s.png' % self._filename
+
+    def node_label(self, i):
+        if i.rank != self.n + 1:
+            assert SignedPermutation.standardize(i.oneline[1:]) in self.sub_atoms
+        return str(i)
+        # if i.rank == self.n + 1:
+        #     return str(i.inverse())
+
+        # sh = [(a, b) for (a, b) in i.get_atom_shape(i.oneline) if a + b != 0]
+        # base = ' '.join([str(a) for a in range(1, self.n + 1)])
+
+        # def index(j):
+        #     return (j - 1) * 2
+
+        # lines = []
+        # for a, b in sorted(sh, key=lambda x: x[1] - x[0]):
+        #     j, k = index(a), index(b)
+        #     if not (lines and all(s == ' ' for s in lines[0][j:k])):
+        #         lines = [(2 * self.n) * [' ']] + lines
+        #     lines[0][j] = '\u256D'
+        #     lines[0][k] = '\u256E'
+        #     for l in range(j + 1, k):
+        #         lines[0][l] = '\u2500'
+        #     for l in range(1, len(lines)):
+        #         lines[l][j] = '\u2502'
+        #         lines[l][k] = '\u2502'
+        # base = '\n'.join([''.join(l) for l in lines] + [base])
+
+        # return str(i.inverse()) + '\n\n' + base
+
+    def write_dotfile(self):
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=line;']
+        s += ['    node [shape=box; fontname="courier"];']
+        s += ['    "%s" -> "%s";' % (self.node_label(x), self.node_label(y)) for (x, y) in self.edges]
+        s += ['}']
+        s = '\n'.join(s)
+
+        with open(self.dot_filename, 'w') as f:
+            f.write(s)
+
+    def generate(self):
+        self.write_dotfile()
+        subprocess.run(["dot", "-Tpng", self.dot_filename, "-o", self.png_filename])
+
+    def __init__(self, n):
+        self.n = n
+        self.atoms = SignedPermutation.longest_element(n).get_atoms()
+        self.sub_atoms = SignedPermutation.longest_element(n - 1).get_atoms()
+        self._edges = None
+
+    @property
+    def edges(self):
+        if self._edges is None:
+            self._edges = list(SignedPermutation.queue_stanley_decomposition(self.n))
+        return self._edges
+
+

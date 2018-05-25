@@ -196,7 +196,9 @@ class Partition:
         return self.shape.contains(other.shape)
 
     def compact(self):
-        return ','.join([str(i) for i in self.parts])
+        if self.parts:
+            return ','.join([str(i) for i in self.parts])
+        return '0'
 
     @classmethod
     def all(cls, n, max_part=None):

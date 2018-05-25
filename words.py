@@ -12,6 +12,11 @@ class Word:
         self.elements = tuple(args)
         assert all(i in self.subset for i in args)
 
+    @classmethod
+    def permutations(cls, n):
+        for args in itertools.permutations(range(1, n + 1)):
+            yield Word(*args)
+
     def is_increasing(self):
         for i in range(1, len(self)):
             if self[i - 1] >= self[i]:
@@ -153,11 +158,40 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def clan_insert(self, n, verbose=True):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, column_dir, p = p.clan_insert(n, MarkedNumber(a), verbose=verbose)
+
+            if column_dir:
+                v = MarkedNumber(-i)
+            else:
+                v = MarkedNumber(i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
     def eg_insert(self):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
             j, p = p.eg_insert(MarkedNumber(a))
+
+            v = MarkedNumber(i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
+    def mystery_insert(self, verbose=True):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.mystery_insert(MarkedNumber(a), verbose=verbose)
 
             v = MarkedNumber(i)
             for k, l in p.shape():

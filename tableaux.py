@@ -508,3 +508,52 @@ class Tableau:
 
         assert tab.is_increasing()
         return tab.fpf_insert(p, j, column_dir, verbose=verbose)
+
+    def clan_insert(self, n, p, j=0, column_dir=False, verbose=True):
+        raise NotImplementedError
+
+    def mystery_insert(self, p, j=0, verbose=True):
+        if p is None:
+            return (j, self)
+
+        def mystery_bump(a, tup):
+            if all(a > i for i in tup):
+                return (None, tup + (a,))
+            if len(tup) == 1:
+                return (tup[0], (a,))
+            b, c = tup[-2:]
+            if a < b < c:
+                if all(a < i for i in tup):
+                    return (c, (a,) + tup[:-1])
+                else:
+                    index = max([i for i in range(len(tup)) if tup[i] < a])
+                    a, tup = tup[index], tup[:index] + (a,) + tup[index + 1:-1]
+                    (bumped, new) = mystery_bump(a, tup)
+                    return (bumped, new + (c,))
+            a, b, c = tup[-2], a, tup[-1]
+            if a < b < c:
+                (bumped, new) = mystery_bump(a, tup[:-2] + (b,))
+                return (bumped, new + (c,))
+            raise Exception
+
+        j += 1
+        row = self.get_row(j)
+
+        if verbose:
+            print('Inserting %s into row %s of \n\n%s\n' % (
+                str(p),
+                str(j),
+                self
+            ))
+
+        p, row = mystery_bump(p, row)
+        if verbose:
+            print('New row = %s, new p = %s\n\n' % (
+                str(row),
+                str(p)
+            ))
+
+        tab = self.replace_row(j, row, shifted=False)
+
+        # assert tab.is_increasing()
+        return tab.mystery_insert(p, j, verbose=verbose)
