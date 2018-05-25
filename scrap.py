@@ -347,3 +347,33 @@ def test(n, verbose=False):
         print(qq)
         print()
         print()
+
+
+
+from signed import *
+from collections import defaultdict
+
+def coincidences_d(n):
+    stan = {w: w.stanley_schur_d_decomposition() for w in SignedPermutation.permutations(n)}
+    inv = {w: w.inv_stanley_schur_d_decomposition() for w in SignedPermutation.involutions(n) if w.is_even_signed()}
+    co = defaultdict(set)
+    for w, f in inv.items():
+        for x, g in stan.items():
+            if f == g:
+                co[w.reduce()].add(x.reduce())
+    return co
+
+co = coincidences_d(5)
+for w, l in co.items():
+     print(w,':',l)
+
+
+def coincidences(n):
+    stan = {w: w.stanley_schur_q_decomposition() for w in SignedPermutation.permutations(n)}
+    inv = {w: w.inv_stanley_schur_q_decomposition() for w in SignedPermutation.involutions(n)}
+    co = defaultdict(set)
+    for w, f in inv.items():
+        for x, g in stan.items():
+            if f == g:
+                co[w.reduce()].add(x.reduce())
+    return co

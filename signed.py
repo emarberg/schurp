@@ -53,6 +53,11 @@ class SignedPermutation:
                 yield SignedPermutation(*oneline)
 
     @classmethod
+    def permutations(cls, n):
+        for args in itertools.permutations(range(1, n + 1)):
+            yield SignedPermutation(*args)
+
+    @classmethod
     def involutions(cls, n):
         for w in Permutation.involutions(n):
             oneline = w.oneline
@@ -219,13 +224,12 @@ class SignedPermutation:
     def is_even_signed(self):
         return len([i for i in self.oneline if i < 0]) % 2 == 0
 
-    # def inv_stanley_schur_d_decomposition(self):
-    #     assert self.is_even_signed()
-    #     ans = Vector()
-    #     for x in self.get_atoms(type_d=True):
-    #         for sh, i in x.stanley_schur_d_decomposition().items():
-    #             ans += Vector({SchurP(StrictPartition(*sh)): i})
-    #     return ans
+    def inv_stanley_schur_d_decomposition(self):
+        assert self.is_even_signed()
+        ans = Vector()
+        for x in self.get_atoms_d():
+            ans += x.stanley_schur_d_decomposition()
+        return ans
 
     def stanley_schur_p_decomposition(self):
         ans = Vector()
@@ -622,6 +626,7 @@ class SignedPermutation:
         return SignedPermutation(*self._min_inv_atom_oneline())
 
     def get_atoms(self):
+        assert self == self.inverse()
         w = self.reduce()
         if w not in atoms_b_cache:
             atoms_b_cache[w] = list(w._get_atoms())
@@ -648,6 +653,44 @@ class SignedPermutation:
             for w in add:
                 yield SignedPermutation(*w).inverse()
             add = {new for w in add for new in next(w)}
+
+    def get_atoms_d(self):
+        assert self.is_even_signed()
+        assert self == self.inverse()
+        w = self.reduce()
+        if w not in atoms_d_cache:
+            atoms_d_cache[w] = list(w._get_atoms_d())
+        ans = atoms_d_cache[w]
+        return [x.inflate(self.rank) for x in ans]
+
+    def _get_atoms_d(self):
+        def length(w):
+            ans = 0
+            for i in range(1, w.rank + 1):
+                for j in range(i + 1, w.rank + 1):
+                    if w(i) > w(j):
+                        ans += 1
+                    if -w(i) > w(j):
+                        ans += 1
+            return ans
+
+        if length(self) == 0:
+            yield self
+            return
+
+        def s_i(i, n):
+            return self.s_i(i, n) if i != 0 else self.s_i(0, n) * self.s_i(1, n) * self.s_i(0, n)
+
+        for i in range(self.rank):
+            s = s_i(i, self.rank)
+            w = self * s
+            if length(w) < length(self):
+                if w == s * self:
+                    for a in w.get_atoms_d():
+                        yield a * s
+                else:
+                    for a in (s * w).get_atoms_d():
+                        yield a * s
 
     def involution_words(self):
         for w in self.get_atoms():
