@@ -377,3 +377,14 @@ def coincidences(n):
             if f == g:
                 co[w.reduce()].add(x.reduce())
     return co
+
+
+
+
+from signed import *
+n = 3; w = EvenSignedPermutation.longest_element(n); w.get_atoms()
+
+
+len(list(w.get_flattened_involution_words()))
+
+
