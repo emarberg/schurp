@@ -637,7 +637,23 @@ class SignedPermutation:
         return [x.inflate(self.rank) for x in ans]
 
     def _get_atoms(self):
+        def involution(oneline):
+            word = SignedPermutation(*oneline).get_reduced_word()
+            n = len(oneline)
+            w = self.identity(n)
+            for i in word:
+                s = SignedPermutation.s_i(i, n)
+                if i in w.right_descent_set:
+                    return None
+                elif s * w == w * s:
+                    w = w * s
+                else:
+                    w = s * w * s
+            return w
+
         def next(oneline):
+            y = involution(oneline)
+            assert y is not None
             for i in range(len(oneline) - 2):
                 c, a, b = oneline[i:i + 3]
                 if a < b < c:
@@ -648,7 +664,9 @@ class SignedPermutation:
                 a, b = -a_, -b_
                 if 0 < a < b == min(map(abs, oneline[:i + 1])):
                     newline = oneline[:i] + (a, -b) + oneline[i + 2:]
-                    yield newline
+                    z = involution(newline)
+                    if z and y == z:
+                        yield newline
 
         minimum = self._min_inv_atom_oneline()
         add = {minimum}
