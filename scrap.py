@@ -309,7 +309,7 @@ from signed import *
 
 def test_transitions(n):
     w = SignedPermutation(*list(range(n + 1, 0, -1)))
-    a = w.conjectural_stanley_schur_decomposition()
+    a = w.queue_stanley_decomposition(n)
     a = sorted(list(a), key=str)
     b = sorted(list(SignedPermutation.longest_element(n).get_atoms()), key=str)
 

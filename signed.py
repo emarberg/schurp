@@ -1178,7 +1178,107 @@ class SignedAtomsGraph:
     @property
     def edges(self):
         if self._edges is None:
-            self._edges = list(SignedPermutation.queue_stanley_decomposition(self.n))
+            self._edges = [
+                (a, b)
+                for (a, b) in SignedPermutation.queue_stanley_decomposition(self.n)
+                if a.rank == self.n
+            ]
         return self._edges
 
+    def test(self):
+        """Tests for cgraphs.tex"""
+        def is_even(w):
+            return w(1) < 0 or (w(1) - self.n - 1) % 2 == 0
 
+        def up(w, i):
+            if i + 2 < w.rank:
+                c, a, b = w(i), w(i + 1), w(i + 2)
+                if a < b < c:
+                    s = SignedPermutation.s_i(i, w.rank)
+                    t = SignedPermutation.s_i(i + 1, w.rank)
+                    return w * t * s
+
+        def down(w, i):
+            if i + 2 < w.rank:
+                b, c, a = w(i), w(i + 1), w(i + 2)
+                if a < b < c:
+                    s = SignedPermutation.s_i(i, w.rank)
+                    t = SignedPermutation.s_i(i + 1, w.rank)
+                    return w * s * t
+
+        failures = 0
+
+        # lengths
+        for u, v in self.edges:
+            try:
+                if is_even(u):
+                    assert len(v) == len(u) - 1
+                else:
+                    assert len(u) == len(v) - 1
+            except:
+                failures += 1
+
+        # lemma 4.2(a)
+        for u, v in self.edges:
+            if not is_even(v):
+                continue
+            for i in range(2, self.n):
+                uu = up(u, i)
+                vv = up(v, i)
+                try:
+                    assert (vv is None) or ((uu, vv) in self.edges)
+                except:
+                    failures += 1
+                    print('4.2(a)', u, '->', v, ', ', uu, '->', vv, ', ', i)
+
+        # lemma 4.2(b)
+        for v, w in self.edges:
+            if not is_even(v):
+                continue
+            for i in range(2, self.n):
+                vv = down(v, i)
+                ww = down(w, i)
+                try:
+                    assert (vv is None) or ((vv, ww) in self.edges)
+                except:
+                    failures += 1
+                    print('4.2(b)', v, '->', w, ', ', vv, '->', ww, ', ', i)
+
+        q = {u for u, _ in self.edges} | {v for _, v in self.edges}
+        q_odd = {u for u in q if not is_even(u)}
+
+        # lemma 4.5(a) and theorem 4.8(a)
+        for w in q_odd:
+            b = w(1)
+            for i in range(2, self.n):
+                ww = up(w, i)
+                if ww:
+                    for a in range(1, b):
+                        t = SignedPermutation.reflection_t(a, b, self.n)
+                        if len(w) + 1 == len(t * w):
+                            try:
+                                assert up(t * w, i) == t * ww
+                                assert len(ww) + 1 == len(t * ww)
+                                assert (w, t * w) in self.edges
+                            except:
+                                print('w =', w, ' t =', t, ' w\' =', ww, ' i =', i, ' ? ', up(t * w, i), '!=', t * ww)
+                                failures += 1
+
+        # lemma 4.5(b) and theorem 4.8(b)
+        for w in q_odd:
+            b = w(1)
+            for i in range(2, self.n):
+                ww = down(w, i)
+                if ww:
+                    for c in range(b + 1, self.n + 1):
+                        t = SignedPermutation.reflection_t(b, c, self.n)
+                        if len(w) + 1 == len(t * w):
+                            try:
+                                assert down(t * w, i) == t * ww
+                                assert len(ww) + 1 == len(t * ww)
+                                assert (t * w, w) in self.edges
+                            except:
+                                print('w =', w, ' t =', t, ' w\' =', ww, ' i =', i, ' ? ', down(t * w, i), '!=', t * ww)
+                                failures += 1
+
+        print('failures:', failures)
