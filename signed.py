@@ -1187,19 +1187,60 @@ class SignedAtomsGraph:
 
     def test(self):
         """Tests for cgraphs.tex"""
+        def a_shape(w):
+            oneline = [w(i) for i in range(1, w.rank + 1)]
+            m = set()
+            go = True
+            while go and oneline:
+                for i in range(len(oneline)):
+                    go = False
+                    if i + 1 < len(oneline) and oneline[i] > oneline[i + 1]:
+                        a = oneline[i]
+                        b = -oneline[i + 1]
+                        assert 0 < a < b
+                        m |= {(a, b), (-b, -a)}
+                        oneline = oneline[:i] + oneline[i + 2:]
+                        go = True
+                        break
+            assert all(c < 0 for c in oneline)
+            m |= {(c, -c) for c in oneline}
+            return m
+
+        def q_shape(w):
+            oneline = [w(i) for i in range(2, w.rank + 1)]
+            m = set()
+            go = True
+            while go and oneline:
+                for i in range(len(oneline)):
+                    go = False
+                    if i + 1 < len(oneline) and oneline[i] > oneline[i + 1]:
+                        a = oneline[i]
+                        b = -oneline[i + 1]
+                        assert 0 < a < b
+                        m |= {(a, b), (-b, -a)}
+                        oneline = oneline[:i] + oneline[i + 2:]
+                        go = True
+                        break
+            assert all(c < 0 for c in oneline)
+            m |= {(c, -c) for c in oneline}
+            return m
+
         def is_even(w):
             return w(1) < 0 or (w(1) - self.n - 1) % 2 == 0
 
         def up(w, i):
-            if i + 2 < w.rank:
+            if i + 2 <= w.rank:
                 c, a, b = w(i), w(i + 1), w(i + 2)
                 if a < b < c:
                     s = SignedPermutation.s_i(i, w.rank)
                     t = SignedPermutation.s_i(i + 1, w.rank)
                     return w * t * s
 
+        def is_maximal(w):
+            return all(up(w, i) is None for i in range(1, w.rank))
+
         def down(w, i):
-            if i + 2 < w.rank:
+            if i + 2 <= w.rank:
                 b, c, a = w(i), w(i + 1), w(i + 2)
                 if a < b < c:
                     s = SignedPermutation.s_i(i, w.rank)
@@ -1246,6 +1287,35 @@ class SignedAtomsGraph:
 
         q = {u for u, _ in self.edges} | {v for _, v in self.edges}
         q_odd = {u for u in q if not is_even(u)}
+        q_even = q - q_odd
+        atoms = {u for u in q_even if u(1) < 0 or any(a < u(1) < b == -a for a, b in q_shape(u))}
+        q_even = q_even - atoms
+
+        # lemma 4.3
+        for v in atoms:
+            m = a_shape(v)
+            if v(1) < 0:
+                p = m - {(v(1), -v(1))}
+                b = -v(1)
+            else:
+                a = v(1)
+                b = [y for x, y in m if x == a][0]
+                p = (m - {(a, b), (-b, -a)}) | {(-a, a)}
+            try:
+                assert not any(x < b < y for x, y in p)
+                assert not any(x < c < y < d for x, y in p for c, d in p)
+            except:
+                failures += 1
+            if is_maximal(v):
+                pairs = sorted([(x, -y) for (x, y) in p if 0 < x < y])
+                pairs = [x for pr in pairs for x in pr]
+                fixed = sorted([x for (x, y) in p if x + y == 0])
+                alpha = SignedPermutation(*([b] + fixed + pairs))
+                try:
+                    assert [alpha] == [u for (u, z) in self.edges if z == v]
+                except:
+                    print(alpha, ' v =', v, ' M\' =', p)
+                    failures += 1
 
         # lemma 4.5(a) and theorem 4.8(a)
         for w in q_odd:
@@ -1280,5 +1350,39 @@ class SignedAtomsGraph:
                             except:
                                 print('w =', w, ' t =', t, ' w\' =', ww, ' i =', i, ' ? ', down(t * w, i), '!=', t * ww)
                                 failures += 1
+
+        # lemma 4.6
+        for u in q_odd:
+            p = q_shape(u)
+            assert u(1) > 0
+            m = p | {(-u(1), u(1))}
+            try:
+                assert not any(x < c < y < d for x, y in m for c, d in m)
+                v = u * SignedPermutation.s_i(0, u.rank)
+                assert v in atoms
+                assert (u, v) in self.edges
+            except:
+                print(u, v, p, m)
+                failures += 1
+
+        # lemma 4.7
+        for u in q_odd:
+            p = q_shape(u)
+            b = u(1)
+            for a in range(1, b):
+                if (-a, a) not in p:
+                    continue
+                t = SignedPermutation.reflection_t(a, b, u.rank)
+                v = t * u
+                if len(v) != len(u) + 1:
+                    continue
+                m = (p - {(-a, a)}) | {(a, b), (-b, -a)}
+                try:
+                    assert not any(x < c < y < d for x, y in m for c, d in m)
+                    assert v in atoms
+                    assert (u, v) in self.edges
+                except:
+                    print(u, v, a, b, p, m)
+                    failures += 1
 
         print('failures:', failures)
