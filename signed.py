@@ -21,6 +21,17 @@ atoms_d_cache = {}
 
 class SignedPermutation:
 
+    def tex(self):
+        s = '$'
+        for i in self.oneline:
+            if i > 0:
+                s += str(i) + '\\hs '
+            else:
+                s += '\\bar' + str(-i) + '\\hs '
+        s = s[:-len('\\hs ')]
+        s += '$'
+        return s
+
     def __init__(self, *oneline):
         self.oneline = tuple(oneline)
         self.rank = len(oneline)
@@ -1111,6 +1122,30 @@ class SignedAtomsGraph:
 
     DIRECTORY = '/Users/emarberg/Dropbox/schubert-type-b/atoms/'
 
+    def tikz(self):
+        pre = [
+            '\\begin{center}',
+            '\\begin{tikzpicture}',
+        ]
+
+        vertices = sorted({u for u, _ in self.edges} | {v for _, v in self.edges})
+        labels = {v: str(self.n) + 'node' + str(i) for i, v in enumerate(vertices)}
+
+        nodes = [
+            '\\node (%s) {%s};' % (labels[v], v.tex()) for v in labels
+        ]
+
+        edges = [
+            '\\draw [->] (%s) -- (%s);' % (labels[u], labels[v]) for u, v in self.edges
+        ]
+
+        post = [
+            '\\end{tikzpicture}',
+            '\\end{center}',
+        ]
+
+        return '\n'.join(pre + nodes + edges + post)
+
     @property
     def _filename(self):
         return 'atoms_graph_b%s' % self.n
@@ -1290,6 +1325,8 @@ class SignedAtomsGraph:
         q_even = q - q_odd
         atoms = {u for u in q_even if u(1) < 0 or any(a < u(1) < b == -a for a, b in q_shape(u))}
         q_even = q_even - atoms
+
+        print('atoms:', len(atoms), ' even:', len(q_even), ' odd:', len(q_odd))
 
         # lemma 4.3
         for v in atoms:
