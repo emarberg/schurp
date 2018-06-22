@@ -74,6 +74,12 @@ class Permutation:
             if all(w(w(i)) == i for i in range(1, n + 1)):
                 yield w
 
+    @classmethod
+    def fpf_involutions(cls, n):
+        for w in cls.involutions(n):
+            if all(w(i) != i for i in range(1, n + 1)):
+                yield w
+
     def shift(self, n):
         assert n >= 0
         oneline = [i + 1 for i in range(n)] + [i + n for i in self.oneline]
@@ -186,7 +192,33 @@ class Permutation:
         for i, j in diag:
             if i > j or (not fpf and i == j):
                 ans += [(i, j)]
+
         return ans
+
+    def print_rothe_diagram(self, french=False, sep=' '):
+        print(self.print_diagram(self.rothe_diagram(), french=french, sep=sep))
+
+    def print_fpf_rothe_diagram(self, french=False, sep=' '):
+        print(self.print_diagram(self.involution_rothe_diagram(True), french=french, sep=sep))
+
+    def print_involution_rothe_diagram(self, french=False, sep=' '):
+        print(self.print_diagram(self.involution_rothe_diagram(False), french=french, sep=sep))
+
+    @classmethod
+    def print_diagram(cls, diagram, french=False, sep=' '):
+        if not diagram:
+            return ''
+        rows = max([a[0] for a in diagram])
+        cols = max([a[1] for a in diagram])
+        arr = [[sep for i in range(cols)] for j in range(rows)]
+        for a in diagram:
+            i, j = tuple(a[:2])
+            arr[i - 1][j - 1] = '*'
+        tojoin = [''.join(row) for row in arr]
+        if french:
+            return '\n'.join(reversed(tojoin))
+        else:
+            return '\n'.join([''.join(row) for row in arr])
 
     def __init__(self, *args):
         if len(args) == 1 and type(args) in [list, tuple]:

@@ -6,6 +6,7 @@ import itertools
 
 
 class Word:
+
     def __init__(self, *args, **kwargs):
         self.subset = kwargs.get('subset', None) or set(args)
         self.elements = tuple(args)
@@ -112,6 +113,58 @@ class Word:
         else:
             return Vector()
 
+    def is_multishuffle(self):
+        """Returns true if no adjancent letters are equal."""
+        return not any(self[i] == self[i + 1] for i in range(len(self) - 1))
+
+    def strict_coxeter_knuth_class(self):
+        seen = set()
+        add = {self}
+        while add:
+            newadd = set()
+            for w in add:
+                yield w
+                seen.add(w)
+                for i in range(len(w) - 2):
+                    a, c, b = w[i:i + 3]
+                    if a < b < c:
+                        tup = w.elements[:i] + (c, a, b) + w.elements[i + 3:]
+                        newadd.add(Word(*tup, subset=w.subset))
+                    c, a, b = w[i:i + 3]
+                    if a < b < c:
+                        tup = w.elements[:i] + (a, c, b) + w.elements[i + 3:]
+                        newadd.add(Word(*tup, subset=w.subset))
+                    b, a, c = w[i:i + 3]
+                    if a < b < c:
+                        tup = w.elements[:i] + (b, c, a) + w.elements[i + 3:]
+                        newadd.add(Word(*tup, subset=w.subset))
+                    b, c, a = w[i:i + 3]
+                    if a < b < c:
+                        tup = w.elements[:i] + (b, a, c) + w.elements[i + 3:]
+                        newadd.add(Word(*tup, subset=w.subset))
+                    a, b, c = w[i:i + 3]
+                    if c == a < b:
+                        tup = w.elements[:i] + (b, a, b) + w.elements[i + 3:]
+                        newadd.add(Word(*tup, subset=w.subset))
+                    b, a, c = w[i:i + 3]
+                    if a < b == c:
+                        tup = w.elements[:i] + (a, b, a) + w.elements[i + 3:]
+                        newadd.add(Word(*tup, subset=w.subset))
+            add = newadd - seen
+
+    def modified_hecke_insert(self, verbose=False):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.modified_hecke_insert(MarkedNumber(a), verbose=verbose)
+
+            v = MarkedNumber(i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
     def hecke_insert(self):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
@@ -141,7 +194,7 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
-    def involution_insert(self, verbose=True):
+    def involution_insert(self, verbose=False):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -154,6 +207,20 @@ class Word:
             for k, l in p.shape():
                 if (k, l) not in q.shape():
                     q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
+    def alt_involution_insert(self, verbose=False):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.alt_involution_insert(MarkedNumber(a), verbose=verbose)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    if l == j:
+                        q = q.set(k, l, MarkedNumber(-i))
+                    if k == j:
+                        q = q.set(k, l, MarkedNumber(i))
             assert p.shape() == q.shape()
         return p, q
 
@@ -199,7 +266,7 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
-    def fpf_insert(self, verbose=True):
+    def fpf_insert(self, verbose=False):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -212,6 +279,29 @@ class Word:
             for k, l in p.shape():
                 if (k, l) not in q.shape():
                     q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
+    def alt_fpf_insert(self, verbose=False):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.alt_fpf_insert(MarkedNumber(a), verbose=verbose)
+
+            for k, l in list(p.mapping.keys()):
+                if (k, k + 1) in p.mapping or (k, k - 1) in p.mapping:
+                    p.mapping[(k, k)] = MarkedNumber(0)
+
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    if k == l:
+                        q = q.set(k, l, MarkedNumber(0))
+                        continue
+                    if l == j:
+                        q = q.set(k, l, MarkedNumber(-i))
+                    if k == j:
+                        q = q.set(k, l, MarkedNumber(i))
+
             assert p.shape() == q.shape()
         return p, q
 
@@ -244,6 +334,15 @@ def involution_insert(*words):
 def fpf_insert(*words):
     w, mapping = get_insertion_mapping(words)
     p, q = w.fpf_insert(verbose=False)
+    return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+
+
+def alt_fpf_insert(*words):
+    w, mapping = get_insertion_mapping(words)
+    mapping[MarkedNumber(0)] = MarkedNumber(0)
+    p, q = w.alt_fpf_insert(verbose=False)
+    p = p.halve()
+    q = q.halve()
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
 
 

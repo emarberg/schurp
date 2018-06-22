@@ -388,3 +388,81 @@ n = 3; w = EvenSignedPermutation.longest_element(n); w.get_atoms()
 len(list(w.get_flattened_involution_words()))
 
 
+from permutations import *
+from words import *
+
+def invword(n):
+    for w in Permutation.involutions(n):
+        for word in w.get_involution_words():
+            double = tuple(reversed(word)) + word
+            p = Word(*word).involution_insert()[0]
+            q = Word(*double).hecke_insert()[0]
+            print(p, '\n')
+            print(q, '\n\n')
+            assert p.double() == q or (2 * len(q) - q.count_diagonal_cells()) != len(p)
+            yield word, double, p.double() == q
+
+def fpfword(n):
+    for w in Permutation.fpf_involutions(n):
+        for word in get_fpf_involution_words(tuple(w.oneline)):
+            double = tuple(reversed(word)) + word
+            print(Word(*word).fpf_insert()[0], '\n')
+            print(Word(*double).hecke_insert()[0], '\n\n')
+            yield word, double
+
+
+ans = [(a, b) for (a, b, c) in invword(n) if not c]
+for a, b in ans:
+    p = Word(*a).involution_insert()[0]
+    q = Word(*b).modified_hecke_insert(verbose=False)[0]
+    r = Word(*b).hecke_insert()[0]
+    print(p, '\n')
+    print(r, '\n')
+    print(q, '\n\n')
+    print(a, b)
+
+
+from permutations import *
+from words import *
+
+def test(n):
+    g = Permutation.fpf_involutions(n)
+    for w in g:
+        print(w)
+        for e in get_fpf_involution_words(tuple(w.oneline)):
+            print(''.join(map(str, e)), ':')
+            p, q = Word(*e).fpf_insert()
+            pp, qq = Word(*e).alt_fpf_insert()
+            print()
+            print(p)
+            print()
+            print(pp)
+            print('\n')
+            if p.fpf_double() != pp:
+                print(p.fpf_double())
+                input('?')
+        print()
+
+
+
+from permutations import *
+from words import *
+
+def test(n):
+    g = Permutation.involutions(n)
+    for w in g:
+        print(w)
+        for e in get_involution_words(tuple(w.oneline)):
+            ee = tuple(reversed(e)) + e
+            print(''.join(map(str, e)), ':', ''.join(map(str, ee)))
+            p, q = Word(*e).involution_insert()
+            pp, qq = Word(*ee).hecke_insert()
+            print()
+            print(p)
+            print()
+            print(pp)
+            print('\n')
+            if p.double() != pp:
+                print(p.double())
+                input('?')
+        print()

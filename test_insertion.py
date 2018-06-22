@@ -1,5 +1,10 @@
 from words import (
-    Word, HopfPermutation, get_involution_words, Tableau,
+    Word,
+    HopfPermutation,
+    get_involution_words,
+    Tableau,
+)
+from crystals import (
     ShiftedCrystalGenerator,
     FPFCrystalGenerator
 )

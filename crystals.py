@@ -1,6 +1,7 @@
 from words import (
     involution_insert,
     fpf_insert,
+    alt_fpf_insert,
     HopfPermutation,
     reduce_oneline,
     reduce_fpf,
@@ -257,7 +258,7 @@ class FPFCrystalGenerator(ShiftedCrystalGenerator):
     @classmethod
     def test_insertion_tableaux(cls, n, k):
         for i, w in enumerate(HopfPermutation.fpf_involutions(n)):
-            cg = FPFCrystalGenerator(w.oneline, k)
+            cg = cls(w.oneline, k)
             shapes = [
                 {cg.insertion_tableau(i) for i in comp}
                 for comp in cg.components
@@ -301,7 +302,7 @@ class FPFCrystalGenerator(ShiftedCrystalGenerator):
         for w in HopfPermutation.fpf_involutions(n):
             if w.oneline != reduce_fpf(w.oneline):
                 continue
-            cg = FPFCrystalGenerator(w.oneline, k)
+            cg = cls(w.oneline, k)
             if cg.edges:
                 cg.generate()
 
@@ -334,3 +335,14 @@ class FPFCrystalGenerator(ShiftedCrystalGenerator):
         js = [j for j in range(len(self)) if self[j] == ans]
         assert len(js) == 1
         return js[0]
+
+
+class AltCrystalGenerator(FPFCrystalGenerator):
+
+    DIRECTORY = '/Users/emarberg/Dropbox/shifted_crystals/examples/alt/'
+
+    def insertion_tableau(self, i):
+        return alt_fpf_insert(*self[i])[0]
+
+    def recording_tableau(self, i):
+        return alt_fpf_insert(*self[i])[1]

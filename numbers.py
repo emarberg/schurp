@@ -10,6 +10,9 @@ class MarkedNumber:
     def is_marked(self):
         return self.number < 0
 
+    def is_zero(self):
+        return self.number == 0
+
     def __neg__(self):
         return MarkedNumber(-self.number)
 
@@ -34,6 +37,8 @@ class MarkedNumber:
         return self == other or self < other
 
     def __repr__(self):
+        if self.number == 0:
+            return "*"
         if self.number < 0:
             return str(-self.number) + "'"
         else:
