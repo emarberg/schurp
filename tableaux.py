@@ -110,6 +110,12 @@ class Tableau:
     def entry(self, i, j):
         return self.mapping.get((i, j), None)
 
+    def pop(self, i, j):
+        assert (i, j) in self
+        mapping = self.mapping.copy()
+        del mapping[(i, j)]
+        return self.entry(i, j), Tableau(mapping)
+
     def get_row(self, i):
         columns = sorted([j for (i_, j) in self.mapping if i == i_])
         return tuple(self.entry(i, j) for j in columns)
@@ -265,7 +271,7 @@ class Tableau:
 
     def __repr__(self):
         width = max({len(str(v)) for v in self.mapping.values()} | {0})
-        base = [[width * ' ' for i in range(self.max_column)] for j in range(self.max_row)]
+        base = [['.' + (width - 1) * ' ' for i in range(self.max_column)] for j in range(self.max_row)]
         for i, j in self.mapping:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '

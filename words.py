@@ -417,6 +417,7 @@ def reduce_fpf(oneline):
 
 
 def get_fpf_involution_words(oneline):
+    oneline = tuple(oneline)
     oneline = reduce_fpf(oneline)
     if oneline not in FPF_INVOLUTION_WORDS:
         words = set()
