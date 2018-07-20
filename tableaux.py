@@ -88,13 +88,30 @@ class Tableau:
         mapping = {(i, j + 1): self.entry(i, j) for i, j in self.mapping}
         for i, j in self.mapping:
             mapping[(j + 1, i)] = self.entry(i, j)
+        offset = 0 if (1, 2) not in mapping else (mapping[(1, 2)].number - 2) // 2
         for i, j in list(mapping.keys()):
             if (i, i + 1) in mapping or (i, i - 1) in mapping:
-                mapping[(i, i)] = MarkedNumber(0)
+                mapping[(i, i)] = 2 * (i + offset) - 1
         return Tableau(mapping)
 
     def halve(self):
         mapping = {(i, j): self.entry(i, j) for i, j in self.mapping if i <= j}
+        return Tableau(mapping)
+
+    def lower_half(self):
+        mapping = {(i, j): self.entry(i, j) for i, j in self.mapping if i <= j}
+        return Tableau(mapping)
+
+    def strict_lower_half(self):
+        mapping = {(i, j): self.entry(i, j) for i, j in self.mapping if i < j}
+        return Tableau(mapping)
+
+    def upper_half(self):
+        mapping = {(i, j): self.entry(i, j) for i, j in self.mapping if i >= j}
+        return Tableau(mapping)
+
+    def strict_upper_half(self):
+        mapping = {(i, j): self.entry(i, j) for i, j in self.mapping if i > j}
         return Tableau(mapping)
 
     def maximum(self):
@@ -115,6 +132,9 @@ class Tableau:
         mapping = self.mapping.copy()
         del mapping[(i, j)]
         return self.entry(i, j), Tableau(mapping)
+
+    def get_main_diagonal(self):
+        return tuple(self.entry(i, i) for i in range(1, self.max_row + 1) if (i, i) in self.mapping)
 
     def get_row(self, i):
         columns = sorted([j for (i_, j) in self.mapping if i == i_])

@@ -466,3 +466,53 @@ def test(n):
                 print(p.double())
                 input('?')
         print()
+
+
+from permutations import *
+from words import *
+
+def test(n):
+    def compact(e):
+        return ''.join(map(str, e))
+    g = Permutation.fpf_involutions(n)
+    for w in g:
+        print(w)
+        for e in get_fpf_involution_words(tuple(w.oneline)):
+            if len(e) == 0:
+                continue
+            a, b = min(e), max(e)
+            if any(i not in e and i + 1 not in e for i in range(a, b)):
+                continue
+            p, q = Word(*e).fpf_insert()
+            d = p.fpf_double()
+            middle = tuple(i for i in range(min(e) - 1, max(e) + 2) if i % 2 != 0)
+            # middle += (max(middle) + 2,)
+            ee = tuple(reversed(e)) + middle + e
+            pp, qq = Word(*ee).eg_insert()
+            # if d != pp:
+            #     m = MarkedNumber(middle[-1])
+            #     found = set(pp.find(m).mapping.keys()) - set(d.find(m).mapping.keys())
+            #     if len(found) != 1:
+            #         print(m, 'found:\n', found)
+            #         input('??')
+            #     for (i, j) in found:
+            #         d = d.set(i, j, m)
+            ind = [i for i in range(pp.max_row + 1) if (i, i) in pp.mapping and pp.entry(i, i).number % 2 == 0]
+            if ind:
+                print(compact(e), ':', compact(ee))
+                print(ind)
+                print()
+                print(p)
+                print()
+                print(pp)
+                print('\n')
+            for i in ind:
+                assert (i, i - 1) in pp.mapping and pp.entry(i, i - 1).number + 1 == pp.entry(i, i).number
+                a = pp.entry(i, i).number
+                d = pp.set(i, i, a - 1)
+                d = pp.set(i, i - 1, a)
+                d = pp.set(i - 1, i, a)
+            if d.strict_upper_half() != pp.strict_upper_half():
+                print(d)
+                input('?')
+        print()
