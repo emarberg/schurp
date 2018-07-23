@@ -516,3 +516,17 @@ def test(n):
                 print(d)
                 input('?')
         print()
+
+
+from pipedreams import *
+
+def print_atomic(n):
+    for w in Permutation.involutions(n):
+        print(w.cycle_repr())
+        print('')
+        dreams = [Pipedream.from_word(*e) for e in w.get_pipe_dreams()]
+        for d in dreams:
+            if d.is_atomic():
+                print(d.atomic_part())
+                print('')
+        print('\n\n')

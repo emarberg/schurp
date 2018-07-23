@@ -2,7 +2,9 @@ import itertools
 
 
 REDUCED_WORDS = {(): {()}}
-atoms_a_cache = {}
+PIPE_DREAMS = {(): {((),)}}
+ATOMS_CACHE = {}
+FPF_ATOMS_CACHE = {}
 
 
 class Permutation:
@@ -36,10 +38,29 @@ class Permutation:
             REDUCED_WORDS[oneline] = words
         return REDUCED_WORDS[oneline]
 
+    def get_pipe_dreams(self):
+        for word in self.get_reduced_words():
+            for dream in self.get_pipe_dreams_helper(word):
+                yield dream
+
+    def get_pipe_dreams_helper(self, word, lowerbound=0, upperbound=None):
+        if len(word) == 0:
+            yield ((),)
+            return
+        if word[0] <= lowerbound:
+            return
+        for dream in self.get_pipe_dreams_helper(word, lowerbound + 1):
+            yield ((),) + dream
+        if upperbound is None or word[0] < upperbound:
+            for dream in self.get_pipe_dreams_helper(word[1:], lowerbound, upperbound=word[0]):
+                newdream = list(dream)
+                newdream[0] = (word[0],) + newdream[0]
+                yield tuple(newdream)
+
     def get_atoms(self):
-        if self not in atoms_a_cache:
-            atoms_a_cache[self] = list(self._get_atoms())
-        return list(atoms_a_cache[self])
+        if self not in ATOMS_CACHE:
+            ATOMS_CACHE[self] = list(self._get_atoms())
+        return ATOMS_CACHE[self]
 
     def _get_atoms(self):
         def next(oneline):
@@ -50,6 +71,26 @@ class Permutation:
                     yield newline
 
         minimum = tuple(self.get_min_atom().inverse().oneline)
+        add = {minimum}
+        while add:
+            for w in add:
+                yield Permutation(*w).inverse()
+            add = {new for w in add for new in next(w)}
+
+    def get_fpf_atoms(self):
+        if self not in FPF_ATOMS_CACHE:
+            FPF_ATOMS_CACHE[self] = list(self._get_fpf_atoms())
+        return FPF_ATOMS_CACHE[self]
+
+    def _get_fpf_atoms(self):
+        def next(oneline):
+            for i in range(len(oneline) - 3):
+                a, d, b, c = oneline[i:i + 4]
+                if a < b < c < d:
+                    newline = oneline[:i] + (b, c, a, d) + oneline[i + 4:]
+                    yield newline
+
+        minimum = tuple(self.get_min_fpf_atom().inverse().oneline)
         add = {minimum}
         while add:
             for w in add:
@@ -72,6 +113,12 @@ class Permutation:
         for args in itertools.permutations(range(1, n + 1)):
             w = Permutation(args)
             if all(w(w(i)) == i for i in range(1, n + 1)):
+                yield w
+
+    @classmethod
+    def dominant_involutions(cls, n):
+        for w in cls.involutions(n):
+            if not any(w(i) < w(k) < w(j) for i in range(1, n - 1) for j in range(i + 1, n) for k in range(j + 1, n + 1)):
                 yield w
 
     @classmethod
@@ -246,7 +293,7 @@ class Permutation:
         for i in range(1, len(self.oneline)):
             if(self(i) > self(i + 1)):
                 ans.append(i)
-        return ans
+        return set(ans)
 
     def get_descentset_L(self):
         return (self.inverse()).get_descentset_R()
@@ -267,11 +314,20 @@ class Permutation:
         return self.expr_to_involution(expr).involution_length() == len(expr)
 
     def get_min_atom(self):
+        assert self.is_involution()
         cycles = sorted([list(reversed(sorted(c))) for c in self.cycles], key=lambda x: x[-1])
+        return Permutation([i for cycle in cycles for i in cycle])**-1
+
+    def get_min_fpf_atom(self):
+        assert self.is_fpf_involution()
+        cycles = sorted([list(sorted(c)) for c in self.cycles], key=lambda x: x[0])
         return Permutation([i for cycle in cycles for i in cycle])**-1
 
     def is_involution(self):
         return len(self.cycles) == 0 or max(map(len, self.cycles)) <= 2
+
+    def is_fpf_involution(self):
+        return len(self.cycles) == 0 or max(map(len, self.cycles)) == 2
 
     def is_identity(self):
         return len(self.cycles) == 0 or max(map(len, self.cycles)) <= 1
@@ -390,8 +446,8 @@ class Permutation:
         return True
 
     def __repr__(self):
-        # return str(self.oneline)
-        return self.cycle_repr()
+        return str(self.oneline)
+        #return self.cycle_repr()
 
     def cycle_repr(self):
         if len(self) == 0:
@@ -411,3 +467,12 @@ class Permutation:
 
     def involution_length(self):
         return (self.length() + len(list(filter(lambda i: len(i) > 1, self.cycles)))) // 2
+
+    @classmethod
+    def from_word(cls, *args):
+        if len(args) == 1 and type(args[0]) == tuple:
+            args = args[0]
+        w = Permutation()
+        for i in args:
+            w *= Permutation.s_i(i)
+        return w
