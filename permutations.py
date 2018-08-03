@@ -1,3 +1,4 @@
+from pipedreams import Pipedream
 import itertools
 
 
@@ -38,21 +39,50 @@ class Permutation:
             REDUCED_WORDS[oneline] = words
         return REDUCED_WORDS[oneline]
 
-    def get_pipe_dreams(self):
-        for word in self.get_reduced_words():
-            for dream in self.get_pipe_dreams_helper(word):
-                yield dream
+    def get_bottom_pipe_dream(self):
+        code = self.code()
+        crossings = set()
+        for i, c in enumerate(code):
+            crossings |= {(i + 1, j + 1) for j in range(c)}
+        return Pipedream(crossings)
 
-    def get_pipe_dreams_helper(self, word, lowerbound=0, upperbound=None):
+    def get_pipe_dreams(self):
+        bottom = self.get_bottom_pipe_dream()
+        return bottom.upper_ladder_interval()
+
+    def get_bottom_involution_pipe_dream(self):
+        assert self.is_involution()
+        return self.get_min_atom().get_bottom_pipe_dream()
+
+    def get_involution_pipe_dreams(self):
+        assert self.is_involution()
+        for w in self.get_atoms():
+            for dream in w.get_pipe_dreams():
+                if all(i >= j for (i, j) in dream.crossings):
+                    yield dream
+
+    def get_bottom_fpf_pipe_dream(self):
+        assert self.is_fpf_involution()
+        return self.get_min_fpf_atom().get_bottom_pipe_dream()
+
+    def get_fpf_involution_pipe_dreams(self):
+        assert self.is_fpf_involution()
+        for w in self.get_fpf_atoms():
+            for dream in w.get_pipe_dreams():
+                if all(i > j for (i, j) in dream.crossings):
+                    yield dream
+
+    @classmethod
+    def _get_pipe_dreams_helper(cls, word, lowerbound=0, upperbound=None):
         if len(word) == 0:
             yield ((),)
             return
         if word[0] <= lowerbound:
             return
-        for dream in self.get_pipe_dreams_helper(word, lowerbound + 1):
+        for dream in cls._get_pipe_dreams_helper(word, lowerbound + 1):
             yield ((),) + dream
         if upperbound is None or word[0] < upperbound:
-            for dream in self.get_pipe_dreams_helper(word[1:], lowerbound, upperbound=word[0]):
+            for dream in cls._get_pipe_dreams_helper(word[1:], lowerbound, upperbound=word[0]):
                 newdream = list(dream)
                 newdream[0] = (word[0],) + newdream[0]
                 yield tuple(newdream)

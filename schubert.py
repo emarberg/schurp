@@ -1,4 +1,3 @@
-from permutations import Permutation
 
 
 SCHUBERT_CACHE = {}
@@ -337,7 +336,7 @@ class Schubert(AbstractSchubert):
         if len(w.right_descent_set) == n - 1:
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
-        return w * Permutation.s_i(i), i
+        return w * w.s_i(i), i
 
 
 class DoubleSchubert(AbstractSchubert):
@@ -378,7 +377,7 @@ class FPFSchubert(AbstractSchubert):
         if len(w.right_descent_set) in [0, n - 1]:
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
-        s = Permutation.s_i(i)
+        s = w.s_i(i)
         return s * w * s, i
 
     @classmethod
@@ -409,7 +408,7 @@ class InvSchubert(AbstractSchubert):
         if len(w.right_descent_set) in [0, n - 1]:
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
-        s = Permutation.s_i(i)
+        s = w.s_i(i)
         if s * w == w * s:
             return w * s, i
         else:

@@ -45,7 +45,7 @@ class InvStanleyExpander:
         if self.key in self.cache:
             return self.get_cache()
         else:
-            children = self.get_children()
+            children, _ = self.get_children()
             if children:
                 ans = Vector()
                 for u in children:
@@ -59,7 +59,7 @@ class InvStanleyExpander:
     def get_children(self):
         u, r, s = self.descend()
         if u is None:
-            return []
+            return [], None
         # sanity check
         # assert [w] == cls.phi_plus(u, r) and u(r) <= r
         children = InvStanleyExpander(u).phi_minus(u(r))
@@ -68,7 +68,7 @@ class InvStanleyExpander:
             c = Permutation.cycle(range(1, n + 2))
             new_w = c * self.w * c.inverse()
             return InvStanleyExpander(new_w).get_children()
-        return children
+        return children, u
 
     def descend(self):
         if self.is_grassmannian():

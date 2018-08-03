@@ -1,4 +1,3 @@
-from permutations import Permutation
 from schubert import InvSchubert, FPFSchubert
 from schubert import x as x_var, one as one_var
 import subprocess
@@ -31,36 +30,102 @@ class Pipedream:
             s[i - 1][j - 1] = '+'
         return '\n'.join(' '.join(row) for row in s)
 
+    def __hash__(self):
+        return hash(tuple(sorted(self.crossings)))
+
+    def __eq__(self, other):
+        assert type(other) == Pipedream
+        return self.crossings == other.crossings
+
+    def fpf_involution_ladder_moves(self):
+        for (i, j) in self.crossings:
+            if (i, j + 1) in self.crossings:
+                continue
+            x = i - 1
+            while (x, j) in self.crossings and (x, j + 1) in self.crossings:
+                x = x - 1
+            if x == 0:
+                continue
+            if (x, j) in self.crossings:
+                p = any((x - d, j + 1 + d) in self.crossings for d in range(x))
+                q = any((x - 1 - d, j + 1 + d) in self.crossings for d in range(x - 1))
+                r = any((x - d, j + 2 + d) in self.crossings for d in range(x))
+                s = any((x - d, j - 1 + d) in self.crossings for d in range(x))
+                t = any((x - 1 - d, j - 1 + d) in self.crossings for d in range(x - 1))
+                if j > 1 and not (p or q or r or s or t):
+                    yield Pipedream((self.crossings - {(i, j)}) | {(x, j - 1)})
+            elif x > j + 1:
+                yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
+
+    def upper_fpf_involution_ladder_interval(self):
+        level = {self}
+        while level:
+            new_level = set()
+            for dream in level:
+                yield dream
+                for e in dream.fpf_involution_ladder_moves():
+                    new_level.add(e)
+            level = new_level
+
+    def involution_ladder_moves(self):
+        for (i, j) in self.crossings:
+            if (i, j + 1) in self.crossings:
+                continue
+            x = i - 1
+            while (x, j) in self.crossings and (x, j + 1) in self.crossings:
+                x = x - 1
+            if x == 0 or x < j + 1:
+                continue
+            if (x, j) in self.crossings:
+                p = any((x - d, j + 1 + d) in self.crossings for d in range(x))
+                q = any((x - 1 - d, j + 1 + d) in self.crossings for d in range(x - 1))
+                r = any((x - d, j + 2 + d) in self.crossings for d in range(x))
+                s = any((x - 1 - d, j + d) in self.crossings for d in range(x - 1))
+                if p or q or r or s:
+                    continue
+            yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
+
+    def upper_involution_ladder_interval(self):
+        level = {self}
+        while level:
+            new_level = set()
+            for dream in level:
+                yield dream
+                for e in dream.involution_ladder_moves():
+                    new_level.add(e)
+            level = new_level
+
+    def ladder_moves(self):
+        for (i, j) in self.crossings:
+            if (i, j + 1) in self.crossings:
+                continue
+            x = i - 1
+            while (x, j) in self.crossings and (x, j + 1) in self.crossings:
+                x = x - 1
+            if x == 0 or (x, j) in self.crossings or (x, j + 1) in self.crossings:
+                continue
+            yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
+
+    def upper_ladder_interval(self):
+        level = {self}
+        while level:
+            new_level = set()
+            for dream in level:
+                yield dream
+                for e in dream.ladder_moves():
+                    new_level.add(e)
+            level = new_level
+
     def is_symmetric(self):
         return all((j, i) in self.crossings for (i, j) in self.crossings)
 
-    def is_atomic(self):
-        if not all((j, i) in self.crossings for (i, j) in self.crossings if i < j):
-            return False
-        dream = Pipedream([(i, j) for (i, j) in self.crossings if i >= j])
-        z = self.permutation()
-        w = dream.permutation()
-        return w in z.get_atoms()
-
-    def is_fpf_atomic(self):
-        if not all((i - 1, i - 1) in self.crossings for (i, j) in self.crossings if i == j > 1):
-            return False
-        if not self.is_symmetric():
-            return False
-        dream = Pipedream([(i, j) for (i, j) in self.crossings if i > j])
-        z = self.permutation()
-        w = dream.permutation()
-        return w in z.get_fpf_atoms()
-
-    def atomic_part(self):
+    def lower_part(self):
         return Pipedream({(i, j) for (i, j) in self.crossings if i >= j})
 
-    def fpf_atomic_part(self):
+    def strict_lower_part(self):
         return Pipedream({(i, j) for (i, j) in self.crossings if i > j})
 
     def inv_monomial(self):
-        if not self.is_atomic():
-            return 0
         ans = one_var()
         for (i, j) in self.crossings:
             if i == j:
@@ -70,8 +135,6 @@ class Pipedream:
         return ans
 
     def fpf_monomial(self):
-        if not self.is_fpf_atomic():
-            return 0
         ans = one_var()
         for (i, j) in self.crossings:
             if i > j:
@@ -135,9 +198,6 @@ class Pipedream:
                     word += [j + i - 1]
         return tuple(word)
 
-    def permutation(self):
-        return Permutation.from_word(self.word())
-
     def filename_prefix(self):
         word = []
         for i in range(1, self.n + 1):
@@ -177,44 +237,15 @@ class Pipedream:
             subprocess.run(["rm", self.filename_prefix() + '.aux'], stdout=devnull)
 
     @classmethod
-    def test_involutions(cls, n):
-        for i, perm in enumerate(Permutation.involutions(n)):
-            print('. . .', i, perm)
-            dreams = [Pipedream.from_word(*e) for e in perm.get_pipe_dreams()]
-            test_s = sum([dream.inv_monomial() for dream in dreams])
-            s = InvSchubert.get(perm)
-            if s != test_s:
-                return False
-        return True
-
-    @classmethod
-    def test_fpf_involutions(cls, n):
-        for i, perm in enumerate(Permutation.fpf_involutions(n)):
-            print('. . .', i, perm)
-            dreams = [Pipedream.from_word(*e) for e in perm.get_pipe_dreams()]
-            test_s = sum([dream.fpf_monomial() for dream in dreams])
-            s = FPFSchubert.get(perm)
-            if s != test_s:
-                return False
-        return True
-
-    @classmethod
-    def generate_involutions(cls, n):
-        for perm in Permutation.involutions(n):
-            if perm(n) != n:
-                Pipedream.save_involution(perm)
-
-    @classmethod
     def save_involution(cls, perm):
         if len(perm) == 0:
             return
-        dreams = [Pipedream.from_word(*e) for e in perm.get_pipe_dreams()]
-        dreams = [e for e in dreams if e.is_atomic()]
+        dreams = perm.get_involution_pipe_dreams()
         test_s = sum([dream.inv_monomial() for dream in dreams])
         s = InvSchubert.get(perm)
 
         filename = ''.join(map(str, perm.oneline))
-        directory = cls.DIRECTORY + 'inv/' + (s != test_s) * '_' + str(len(dreams)) + '_' + filename + '/'
+        directory = cls.DIRECTORY + 'inv/' + (test_s != s) * '_' + str(len(dreams)) + '_' + filename + '/'
         with open(os.devnull, 'w') as devnull:
             subprocess.run(["mkdir", directory], stdout=devnull)
         lines = [
@@ -226,9 +257,10 @@ class Pipedream:
             '\\date{}',
             '\\maketitle',
         ]
-        lines += [e.atomic_part().tikz_simple() for e in dreams]
+        lines += [e.tikz() for e in dreams]
         lines += ['']
-        lines += ['\\[w = %s\\]' % ''.join(map(str, perm.oneline))]
+        lines += ['\\[w = %s\\]' % perm.cycle_repr()]
+
         lines += ['\\[\\hat D(w) = \\{%s\\}\\]' % ', '.join([str(ij) for ij in perm.rothe_diagram() if ij[0] >= ij[1]])]
         lines += ['\\[\\hat\\mathfrak{S}_w = %s\\]' % s]
         lines += ['\\[\\hat\\mathfrak{S}_w - \\mathfrak{P}_w = %s\\]' % (s - test_s)]
@@ -244,17 +276,10 @@ class Pipedream:
             subprocess.run(["rm", filename + '.aux'], stdout=devnull)
 
     @classmethod
-    def generate_fpf_involutions(cls, n):
-        for perm in Permutation.fpf_involutions(n):
-            if not (perm(n) == n - 1 and perm(n - 1) == n):
-                Pipedream.save_fpf_involution(perm)
-
-    @classmethod
     def save_fpf_involution(cls, perm):
         if len(perm) == 0:
             return
-        dreams = [Pipedream.from_word(*e) for e in perm.get_pipe_dreams()]
-        dreams = [e for e in dreams if e.is_fpf_atomic()]
+        dreams = perm.get_fpf_pipe_dreams()
         test_s = sum([dream.fpf_monomial() for dream in dreams])
         s = FPFSchubert.get(perm)
 
@@ -271,9 +296,9 @@ class Pipedream:
             '\\date{}',
             '\\maketitle',
         ]
-        lines += [e.fpf_atomic_part().tikz_simple() for e in dreams]
+        lines += [e.tikz_simple() for e in dreams]
         lines += ['']
-        lines += ['\\[w = %s\\]' % ''.join(map(str, perm.oneline))]
+        lines += ['\\[w = %s\\]' % perm.cycle_repr()]
         lines += ['\\[\\hat D_{FPF}(w) = \\{%s\\}\\]' % ', '.join([str(ij) for ij in perm.rothe_diagram() if ij[0] > ij[1]])]
         lines += ['\\[\\hat\\mathfrak{S}^{FPF}_w = %s\\]' % s]
         lines += ['\\[\\hat\\mathfrak{S}^{FPF}_w - \\mathfrak{P}_w = %s\\]' % (s - test_s)]

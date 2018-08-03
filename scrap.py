@@ -530,3 +530,15 @@ def print_atomic(n):
                 print(d.atomic_part())
                 print('')
         print('\n\n')
+
+
+def generate_involutions(n):
+    for perm in Permutation.involutions(n):
+        if perm(n) != n:
+            Pipedream.save_involution(perm)
+
+
+def generate_fpf_involutions(n):
+    for perm in Permutation.fpf_involutions(n):
+        if not (perm(n) == n - 1 and perm(n - 1) == n):
+            Pipedream.save_fpf_involution(perm)
