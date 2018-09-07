@@ -270,6 +270,7 @@ def correct(model, given, word):
         if j < len(word) - 1 and word[j + 1] < word[j]:
             descents.add(find(x, missing) + 1)
 
+
 def test_ab(n):
     w = Permutation.longest_element(n + 1)
     z = SignedPermutation.longest_element(n)
@@ -542,3 +543,116 @@ def generate_fpf_involutions(n):
     for perm in Permutation.fpf_involutions(n):
         if not (perm(n) == n - 1 and perm(n - 1) == n):
             Pipedream.save_fpf_involution(perm)
+
+
+
+
+
+
+
+
+from words import *
+
+schurq = [
+    {(): 1},                                        # Q_0
+    {(1,): 1},                                      # Q_1
+    {(1, 1): 2, (2,): 1},                           # Q_2
+    {(1, 1, 1): 2, (1, 2): 1, (2, 1): 1},           # Q_21
+    {(1, 1, 1): 4, (2, 1): 2, (1, 2): 2, (3,): 1},  # Q_3
+    {(3,): 1},
+    {(1, 1, 1, 1): 8, (2, 1, 1): 4, (1, 2, 1): 4, (1, 1, 2): 4, (2, 2): 2, (3, 1): 1, (1, 3): 1},
+    {(1, 1, 1, 1): 8, (2, 1, 1): 4, (1, 2, 1): 4, (1, 1, 2): 4, (2, 2): 2, (3, 1): 2, (1, 3): 2, (4,): 1},
+    {(3, 1): 1, (1, 3): 1, (4,): 1},
+]
+
+
+def simplify(x):
+    s = {k: v for k, v in x.items()}
+    for q in schurq:
+        while all(s.get(k, 0) >= q[k] for k in q):
+            s = {k: s[k] - q.get(k, 0) for k in s}
+            s = {k: s[k] for k in s if s[k] != 0}
+    return s
+
+
+def span(w, n):
+    # if len(w) < n:
+    #     for i in range(len(w)):
+    #         a = w[i]
+    #         yield Word(*(w[:i] + (a,) + w[i:]))
+    # for i in range(len(w) - 1):
+    #     a, b = w[i], w[i + 1]
+    #     if a == b:
+    #         yield Word(*(w[:i] + (a,) + w[i + 2:]))
+    for i in range(len(w) - 3):
+        b, c, bb, a = w[i], w[i + 1], w[i + 2], w[i + 3]
+        if a <= b == bb < c:
+            yield Word(*(w[:i] + (a, b, c, b) + w[i + 4:]))
+        a, b, c, bb = w[i], w[i + 1], w[i + 2], w[i + 3]
+        if a <= b == bb < c:
+            yield Word(*(w[:i] + (b, c, b, a) + w[i + 4:]))
+    for i in range(len(w) - 2):
+        b, bb, a = w[i], w[i + 1], w[i + 2]
+        if a < b == bb:
+            yield Word(*(w[:i] + (b, a, b) + w[i + 3:]))
+            yield Word(*(w[:i] + (a, b, b) + w[i + 3:]))
+        b, a, bb = w[i], w[i + 1], w[i + 2]
+        if a < b == bb:
+            yield Word(*(w[:i] + (a, b, b) + w[i + 3:]))
+            yield Word(*(w[:i] + (b, b, a) + w[i + 3:]))
+        a, b, bb = w[i], w[i + 1], w[i + 2]
+        if a < b == bb:
+            yield Word(*(w[:i] + (b, b, a) + w[i + 3:]))
+            yield Word(*(w[:i] + (b, a, b) + w[i + 3:]))
+        #
+        c, a, b = w[i], w[i + 1], w[i + 2]
+        if a < b < c:
+            yield Word(*(w[:i] + (a, c, b) + w[i + 3:]))
+        a, c, b = w[i], w[i + 1], w[i + 2]
+        if a < b < c:
+            yield Word(*(w[:i] + (c, a, b) + w[i + 3:]))
+        b, c, a = w[i], w[i + 1], w[i + 2]
+        if a < b < c:
+            yield Word(*(w[:i] + (b, a, c) + w[i + 3:]))
+        b, a, c = w[i], w[i + 1], w[i + 2]
+        if a < b < c:
+            yield Word(*(w[:i] + (b, c, a) + w[i + 3:]))
+
+
+def get_classes(n, k):
+    gen = Word.all(n, k)
+    words = set(gen)
+    while words:
+        seed = {words.pop()}
+        new = set()
+        while seed:
+            add = set()
+            for w in seed:
+                new.add(w)
+                add |= set(span(w, n))
+            seed = add - new
+        q = Vector()
+        for w in new:
+            q += w.quasisymmetrize(Word.weakly_unimodal_zeta)
+        yield new, q
+        words = words - new
+
+
+def simplify(q):
+    s = {
+        k: v - min({q[t] for t in itertools.permutations(k)})
+        for k, v in q.items()
+    }
+    s = {k: v for k, v in s.items() if v}
+    return s
+
+
+def test(n, k):
+    ans = []
+    for a, q in get_classes(n, k):
+        simple, sym = simplify(q)
+        if simple:
+            ans += [(a, simple)]
+    for a, s in sorted(ans, key=lambda w: tuple(sorted(w[1].keys()))):
+        if any(k in w for w in a):
+            print(' '.join(map(str, a)), '\n  ', s, '\n')

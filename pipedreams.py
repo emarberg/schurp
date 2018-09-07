@@ -77,6 +77,13 @@ class Pipedream:
             if x == 0 or x < j + 1:
                 continue
             if (x, j) in self.crossings:
+                #   j j+1
+                #   . .
+                # x + . .
+                #   + +
+                #   + +
+                #   + +
+                # i +
                 p = any((x - d, j + 1 + d) in self.crossings for d in range(x))
                 q = any((x - 1 - d, j + 1 + d) in self.crossings for d in range(x - 1))
                 r = any((x - d, j + 2 + d) in self.crossings for d in range(x))
