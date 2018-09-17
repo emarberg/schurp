@@ -24,6 +24,36 @@ class Word:
                 if all(t == 1 or (t - 1) in args for t in args):
                     yield Word(*args)
 
+    def wiring_diagram_tikz(self, n=None):
+        n = max({0} | set(self.elements)) + 1 if n is None else n
+        #
+        pi = [tuple(range(1, n + 1))]
+        for j in reversed(self.elements):
+            tup = []
+            for i in pi[-1]:
+                if i == j:
+                    tup += [i + 1]
+                elif i == j + 1:
+                    tup += [i - 1]
+                else:
+                    tup += [i] 
+            pi += [tuple(tup)]
+        #
+        s = []
+        s += ['\\begin{center}']
+        s += ['\\begin{tikzpicture}[scale=0.5]']
+        for i in range(n):
+            line = '\\draw (0,%s)' % i
+            for j, x in enumerate(pi):
+                if j == 0:
+                    continue
+                line += ' -- (%s,%s)' % (j, x[i] - 1)
+            line += ';'
+            s += [line]
+        s += ['\\end{tikzpicture}']
+        s += ['\\end{center}']
+        return '\n'.join(s)
+
     @classmethod
     def increasing_zeta(cls, word):
         return 1 if all(word[i] < word[i + 1] for i in range(len(word) - 1)) else 0
