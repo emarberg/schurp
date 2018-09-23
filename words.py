@@ -2,6 +2,7 @@ from vectors import Vector
 from tableaux import Tableau
 from numbers import MarkedNumber
 from collections import defaultdict
+from signed import SignedPermutation, EvenSignedPermutation
 import itertools
 
 
@@ -784,3 +785,183 @@ class HopfPermutation:
         if i < 1 or i > len(self.oneline):
             return i
         return self.oneline[i - 1]
+
+
+class HopfSignedPermutation:
+    def __init__(self, *args):
+        assert len(args) > 0
+        n = max([abs(a) for a in args])
+        s = set(range(n))
+        assert {i + 1 for i in range(n)} | {-i - 1 for i in range(n)} == {a for a in args} | {-a for a in args}
+        self._subset = s
+        self._vector = None
+        self.oneline = tuple(args)
+
+    @property
+    def vector(self):
+        if self._vector is None:
+            self._vector = Vector({
+                Word(*w, subset=self._subset): 1
+                for w in SignedPermutation(*self.oneline).get_reduced_words()
+            })
+        return self._vector
+
+    @classmethod
+    def all(cls, n):
+        for args in EvenSignedPermutation.all(n):
+            yield HopfSignedPermutation(*args.oneline)
+
+    def __eq__(self, other):
+        assert type(other) == HopfSignedPermutation
+        return self.oneline == other.oneline
+
+    def __hash__(self):
+        return hash(self.oneline)
+
+    @property
+    def size(self):
+        return len(self.oneline)
+
+    def __len__(self):
+        return len(next(iter(self.vector)))
+
+    def __repr__(self):
+        return ''.join(str(-i) + '\u0305' if i < 0 else str(i) for i in self.oneline)
+
+    def __add__(self, other):
+        if type(other) == HopfSignedPermutation:
+            return Vector({self: 1}) + Vector({other: 1})
+        elif type(other) == Vector:
+            return Vector({self: 1}) + other
+        assert type(other) in [HopfSignedPermutation, Vector]
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if type(other) == HopfSignedPermutation:
+            return Vector({self: 1}) + Vector({other: -1})
+        elif type(other) == Vector:
+            return Vector({self: 1}) - other
+        assert type(other) in [HopfSignedPermutation, Vector]
+
+    @classmethod
+    def oneline_from_word(cls, word, n):
+        line = list(range(1, n + 1))
+        for i in word:
+            if i == 0:
+                line[0] *= -1
+            else:
+                temp = line[i]
+                line[i] = line[i - 1]
+                line[i - 1] = temp
+        return tuple(line)
+
+    def __mul__(self, other):
+        if type(other) == HopfPermutation:
+            assert self.size >= 1 and other.size >= 1
+            n = self.size + other.size - 1
+            result = self.vector * other._right_shift(self.size - 1).vector
+            answer = Vector()
+            while result:
+                key, value = next(iter(result.items()))
+                sigma = HopfSignedPermutation(*self.oneline_from_word(key, n))
+                answer += Vector({sigma: value})
+                result -= sigma.vector * value
+            return answer
+
+    def __call__(self, i):
+        if i < 1 or i > len(self.oneline):
+            return i
+        return self.oneline[i - 1]
+
+
+class HopfEvenSignedPermutation:
+    def __init__(self, *args):
+        assert len(args) > 0
+        n = max([abs(a) for a in args])
+        s = set(range(n))
+        assert {i + 1 for i in range(n)} | {-i - 1 for i in range(n)} == {a for a in args} | {-a for a in args}
+        assert len([a for a in args if a < 0]) % 2 == 0
+        self._subset = s
+        self._vector = None
+        self.oneline = tuple(args)
+
+    @property
+    def vector(self):
+        if self._vector is None:
+            self._vector = Vector({
+                Word(*w, subset=self._subset): 1
+                for w in EvenSignedPermutation(*self.oneline).get_reduced_words()
+            })
+        return self._vector
+
+    @classmethod
+    def all(cls, n):
+        for args in EvenSignedPermutation.all(n):
+            yield HopfEvenSignedPermutation(*args.oneline)
+
+    def __eq__(self, other):
+        assert type(other) == HopfEvenSignedPermutation
+        return self.oneline == other.oneline
+
+    def __hash__(self):
+        return hash(self.oneline)
+
+    @property
+    def size(self):
+        return len(self.oneline)
+
+    def __len__(self):
+        return len(next(iter(self.vector)))
+
+    def __repr__(self):
+        return ''.join(str(-i) + '\u0305' if i < 0 else str(i) for i in self.oneline)
+
+    def __add__(self, other):
+        if type(other) == HopfEvenSignedPermutation:
+            return Vector({self: 1}) + Vector({other: 1})
+        elif type(other) == Vector:
+            return Vector({self: 1}) + other
+        assert type(other) in [HopfEvenSignedPermutation, Vector]
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if type(other) == HopfEvenSignedPermutation:
+            return Vector({self: 1}) + Vector({other: -1})
+        elif type(other) == Vector:
+            return Vector({self: 1}) - other
+        assert type(other) in [HopfEvenSignedPermutation, Vector]
+
+    @classmethod
+    def oneline_from_word(cls, word, n):
+        line = list(range(1, n + 1))
+        for i in word:
+            if i == 0:
+                line[0:2] = [-line[1], -line[0]]
+            else:
+                temp = line[i]
+                line[i] = line[i - 1]
+                line[i - 1] = temp
+        return tuple(line)
+
+    def __mul__(self, other):
+        if type(other) == HopfPermutation:
+            assert self.size >= 2 and other.size >= 1
+            n = self.size + other.size - 1
+            result = self.vector * other._right_shift(self.size - 1).vector
+            answer = Vector()
+            while result:
+                key, value = next(iter(result.items()))
+                sigma = HopfEvenSignedPermutation(*self.oneline_from_word(key, n))
+                answer += Vector({sigma: value})
+                result -= sigma.vector * value
+            return answer
+
+    def __call__(self, i):
+        if i < 1 or i > len(self.oneline):
+            return i
+        return self.oneline[i - 1]
+

@@ -865,7 +865,6 @@ class EvenSignedPermutation:
                 s = EvenSignedPermutation.s_i(i, w.rank)
                 words += (w * s).count_reduced_words()
             EVEN_SIGNED_REDUCED_COUNTS[oneline] = words
-            print('. . .', len(EVEN_SIGNED_REDUCED_COUNTS))
         return EVEN_SIGNED_REDUCED_COUNTS[oneline]
 
     def get_reduced_words(self):
@@ -877,7 +876,6 @@ class EvenSignedPermutation:
                 s = EvenSignedPermutation.s_i(i, w.rank)
                 words += [e + (i,) for e in (w * s).get_reduced_words()]
             EVEN_SIGNED_REDUCED_WORDS[oneline] = sorted(words, key=lambda x: self.flatten(x))
-            print('. . .', len(EVEN_SIGNED_REDUCED_WORDS))
         return EVEN_SIGNED_REDUCED_WORDS[oneline]
 
     def get_involution_words(self):
@@ -890,7 +888,6 @@ class EvenSignedPermutation:
                 for word in a.get_reduced_words():
                     words.append(word)
             EVEN_SIGNED_INVOLUTION_WORDS[oneline] = sorted(words, key=lambda x: self.flatten(x))
-            print('. . .', len(EVEN_SIGNED_INVOLUTION_WORDS))
         return EVEN_SIGNED_INVOLUTION_WORDS[oneline]
 
     def __call__(self, i):
