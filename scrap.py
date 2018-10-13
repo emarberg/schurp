@@ -650,9 +650,9 @@ def simplify(q):
 def test(n, k):
     ans = []
     for a, q in get_classes(n, k):
-        simple, sym = simplify(q)
-        if simple:
-            ans += [(a, simple)]
+        s = simplify(q)
+        if s:
+            ans += [(a, s)]
     for a, s in sorted(ans, key=lambda w: tuple(sorted(w[1].keys()))):
         if any(k in w for w in a):
             print(' '.join(map(str, a)), '\n  ', s, '\n')

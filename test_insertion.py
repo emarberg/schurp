@@ -2,6 +2,7 @@ from words import (
     Word,
     HopfPermutation,
     get_involution_words,
+    get_fpf_involution_words,
     Tableau,
 )
 from crystals import (
@@ -10,6 +11,13 @@ from crystals import (
 )
 
 n = 4
+
+
+def test_fpf_insertion():
+    for w in get_fpf_involution_words((6, 5, 4, 3, 2, 1)):
+        p, q, = Word(*w).fpf_insert()
+        assert w == Tableau.inverse_fpf(p, q)
+
 
 def test_involution_p_tableaux():
     k = 4

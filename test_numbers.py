@@ -1,4 +1,4 @@
-from numbers import MarkedNumber
+from marked import MarkedNumber
 
 
 def test_init():

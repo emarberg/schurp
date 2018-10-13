@@ -111,11 +111,20 @@ class Partition:
 
         while self.parts and self.parts[-1] == 0:
             self.parts.pop()
-        self.parts = tuple(self.parts)
+        # self.parts = tuple(self.parts)
 
         self.shape = Shape({
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
+
+    def __iter__(self):
+        return self.parts.__iter__()
+
+    def decrement(self, i):
+        assert self(i) > self(i + 1)
+        self.parts[i - 1] -= 1
+        if self.parts[i - 1] == 0:
+            self.parts = self.parts[:i - 1]
 
     def transpose(self):
         if len(self.parts) == 0:
@@ -153,7 +162,7 @@ class Partition:
                 yield delta + (t,)
 
     def __hash__(self):
-        return hash(self.parts)
+        return hash(tuple(self.parts))
 
     def __lt__(self, other):
         assert type(self) == type(other)
@@ -176,7 +185,10 @@ class Partition:
         return len(self.parts)
 
     def __abs__(self):
-        return sum((0,) + self.parts)
+        ans = 0
+        for i in self.parts:
+            ans += i
+        return ans
 
     def __nonzero__(self):
         return len(self.parts) > 0
@@ -224,13 +236,15 @@ class Partition:
 
 class StrictPartition(Partition):
     def __init__(self, *args):
+        if len(args) == 1 and type(args[0]) == Partition:
+            args = args[0].parts
         self.parts = list(sorted(args, reverse=True))
         assert self.parts == list(args)
         assert all(p >= 0 for p in self.parts)
 
         while self.parts and self.parts[-1] == 0:
             self.parts.pop()
-        self.parts = tuple(self.parts)
+        # self.parts = tuple(self.parts)
 
         assert len(set(self.parts)) == len(self.parts)
 

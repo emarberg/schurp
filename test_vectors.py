@@ -4,7 +4,7 @@ from partitions import StrictPartition
 
 def test_repr():
     def printer(x):
-        return 'P' + str(x.parts)
+        return 'P' + str(tuple(x.parts))
 
     mu = StrictPartition(3, 2, 1)
     nu = StrictPartition(2, 1)

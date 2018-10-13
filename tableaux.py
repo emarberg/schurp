@@ -1,5 +1,7 @@
-from partitions import Shape, Partition
-from numbers import MarkedNumber
+from partitions import Shape, Partition, StrictPartition
+from marked import MarkedNumber
+import random
+from collections import defaultdict
 
 
 class Tableau:
@@ -21,6 +23,12 @@ class Tableau:
     def shape(self):
         return Shape(self.mapping.keys())
 
+    def partition(self):
+        rows = defaultdict(int)
+        for i, j in self.mapping:
+            rows[i] += 1
+        return Partition(*sorted(rows.values(), reverse=True))
+
     def count_diagonal_cells(self):
         return len([(i, j) for i, j in self.mapping if i == j])
 
@@ -38,6 +46,11 @@ class Tableau:
             for i in range(len(rows)) for j in range(len(rows[i]))
         }
         return Tableau(dictionary)
+
+    @classmethod
+    def from_partition(cls, mu):
+        mapping = {(i, j): 1 for (i, j) in mu.shape}
+        return Tableau(mapping)
 
     def set(self, i, j, v):
         mapping = self.mapping.copy()
@@ -143,6 +156,196 @@ class Tableau:
     def get_column(self, j):
         rows = sorted([i for (i, j_) in self.mapping if j == j_])
         return tuple(self.entry(i, j) for i in rows)
+
+    def get_hook(self, j, k):
+        ans = {(x, y) for (x, y) in self if x == j and k <= y}
+        ans |= {(x, y) for (x, y) in self if y == k and j < x}
+        return ans
+
+    def get_shifted_hook(self, j, k):
+        assert self.is_shifted()
+        ans = self.get_hook(j, k)
+        if (k, k) in ans:
+            ans |= {(x, y) for (x, y) in self if x == k + 1}
+        return ans
+
+    def hooks(self):
+        return Tableau({(i, j): len(self.get_hook(i, j)) for (i, j) in self})
+
+    def shifted_hooks(self):
+        assert self.is_shifted()
+        return Tableau({(i, j): len(self.get_shifted_hook(i, j)) for (i, j) in self})
+
+    @classmethod
+    def random_shifted(cls, mu):
+        mu = StrictPartition(*mu.parts[:])
+        nu = defaultdict(int)
+        for i, j in mu.shape:
+            nu[j] += 1
+        nu = dict(nu)
+        t = Tableau.from_partition(mu)
+
+        for n in range(abs(mu), 0, -1):
+            m = random.randint(1, abs(mu))
+            i = 1
+            while m > mu(i) and i <= len(mu):
+                m -= mu(i)
+                i += 1
+            j = m + i - 1
+
+            while True:
+                row = mu(i) - j + i - 1
+                col = nu[j] - i
+                res = mu(j + 1)
+                if row == 0 and col == 0 and res == 0:
+                    break
+                m = random.randint(1, row + col + res)
+                if m <= row:
+                    j += m
+                elif row + col < m:
+                    i = j + 1
+                    j = j + m - row - col
+                else:
+                    i += m - row
+
+            t.mapping[(i, j)] = MarkedNumber(-n if i != j and random.random() < 0.5 else n)
+            mu.decrement(i)
+            nu[j] -= 1
+            if n % 1000 == 0:
+                print(n, '. . .')
+        return t
+
+    @classmethod
+    def inverse_fpf(cls, p, q):
+        ans = len(q) * [0]
+
+        p = {k: v.number for k, v in p.mapping.items()}
+        q = {k: v.number for k, v in q.mapping.items()}
+
+        order = len(q) * [0]
+        for (i, j) in q:
+            order[abs(q[(i, j)]) - 1] = (i, j, q[(i, j)] < 0)
+
+        for n in range(len(q), 0, -1):
+            if n % 1000 == 0:
+                print(n, '. . .')
+
+            i, j, signed = order[n - 1]
+            a = p[(i, j)]
+            del p[(i, j)]
+            if signed:
+                for col in range(j - 1, 0, -1):
+                    row = i
+                    while p.get((row + 1, col), a) < a:
+                        row += 1
+                    if row == col:
+                        i, j = col, col
+                        if a % 2 == 0:
+                            a, p[(i, j)] = p[(i, j)], a
+                        else:
+                            a -= 2
+                        break
+                    elif (row + 1, col) in p and p[(row + 1, col)] == a:
+                        a = p[(row, col)]
+                    else:
+                        a, p[(row, col)] = p[(row, col)], a
+            for row in range(i - 1, 0, -1):
+                col = j
+                while p.get((row, col + 1), a + 1) <= a:
+                    col += 1
+                if p[(row, col)] == a:
+                    a = p[(row, col - 1)]
+                else:
+                    a, p[(row, col)] = p[(row, col)], a
+            ans[n - 1] = a
+        return tuple(ans)
+
+    @classmethod
+    def random(cls, mu):
+        mu = Partition(*mu.parts[:])
+        nu = mu.transpose()
+        t = Tableau.from_partition(mu)
+
+        for n in range(abs(mu), 0, -1):
+            m = random.randint(1, abs(mu))
+            i = 1
+            while m > mu(i) and i <= len(mu):
+                m -= mu(i)
+                i += 1
+            j = m
+
+            while True:
+                row = mu(i) - j
+                col = nu(j) - i
+
+                if row == 0 and col == 0:
+                    break
+                m = random.randint(1, row + col)
+
+                if m <= row:
+                    j += m
+                elif row < m:
+                    i += m - row
+            t.mapping[(i, j)] = MarkedNumber(n)
+            mu.decrement(i)
+            nu.decrement(j)
+            if n % 1000 == 0:
+                print(n, '. . .')
+        return t
+
+    @classmethod
+    def inverse_eg(cls, p, q):
+        ans = len(q) * [0]
+
+        p = {k: v.number for k, v in p.mapping.items()}
+        q = {k: v.number for k, v in q.mapping.items()}
+        order = len(q) * [0]
+        for (i, j) in q:
+            order[q[(i, j)] - 1] = (i, j)
+
+        for n in range(len(q), 0, -1):
+            if n % 1000 == 0:
+                print(n, '. . .')
+
+            i, j = order[n - 1]
+            a = p[(i, j)]
+            del p[(i, j)]
+
+            for row in range(i - 1, 0, -1):
+                col = j
+                while p.get((row, col + 1), a + 1) <= a:
+                    col += 1
+                if p[(row, col)] == a:
+                    a = p[(row, col - 1)]
+                else:
+                    a, p[(row, col)] = p[(row, col)], a
+            ans[n - 1] = a
+        return tuple(ans)
+
+    @classmethod
+    def longest_eg_insertion_tableau(cls, n):
+        return Tableau.from_string(';'.join([','.join([str(j) for j in range(i, n)]) for i in range(1, n)]))
+
+    @classmethod
+    def longest_fpf_insertion_tableau(cls, n):
+        partition = StrictPartition(*list(range(n - 2, 0, -2)))
+        t = Tableau.from_partition(partition)
+        for i in range(1, len(partition) + 1):
+            for j in range(i, n - i):
+                t.mapping[(i, j)] = MarkedNumber(i + j)
+        return t
+
+    @classmethod
+    def random_sorting_network(cls, n):
+        p = Tableau.longest_eg_insertion_tableau(n)
+        q = cls.random(p.partition())
+        return cls.inverse_eg(p, q)
+
+    @classmethod
+    def random_fpf_network(cls, n):
+        p = Tableau.longest_fpf_insertion_tableau(n)
+        q = cls.random_shifted(StrictPartition(p.partition()))
+        return cls.inverse_fpf(p, q)
 
     def is_shifted(self):
         return not any(j < i for i, j in self.mapping)
@@ -296,8 +499,8 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        return '\n'.join(reversed(rows))  # French
-        # return '\n'.join(rows)            # English
+        # return '\n'.join(reversed(rows))  # French
+        return '\n'.join(rows)            # English
 
     @classmethod
     def decreasing_part(cls, row):

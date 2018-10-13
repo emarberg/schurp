@@ -13,6 +13,9 @@ class MarkedNumber:
     def is_zero(self):
         return self.number == 0
 
+    def __abs__(self):
+        return abs(self.number)
+
     def __neg__(self):
         return MarkedNumber(-self.number)
 

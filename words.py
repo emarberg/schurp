@@ -1,9 +1,11 @@
 from vectors import Vector
 from tableaux import Tableau
-from numbers import MarkedNumber
+from marked import MarkedNumber
 from collections import defaultdict
 from signed import SignedPermutation, EvenSignedPermutation
 import itertools
+import numpy
+from PIL import Image, ImageDraw
 
 
 class Word:
@@ -11,7 +13,79 @@ class Word:
     def __init__(self, *args, **kwargs):
         self.subset = kwargs.get('subset', None) or set(args)
         self.elements = tuple(args)
+        self._permutations = None
+        self._fpf_involutions = None
         assert all(i in self.subset for i in args)
+
+    @property
+    def permutation_sequence(self):
+        if self._permutations is None:
+            n = max(self.elements) + 1
+            words = [tuple(range(1, n + 1))]
+            for i in self.elements:
+                prev = list(words[-1])
+                prev[i - 1:i + 1] = prev[i], prev[i - 1]
+                words.append(tuple(prev))
+            self._permutations = words
+        return self._permutations
+
+    @property
+    def fpf_sequence(self):
+        if self._fpf_involutions is None:
+            n = max(self.elements) + 1
+            invol = [tuple(i - 1 if i % 2 == 0 else i + 1 for i in range(1, n + 1))]
+            for i in self.elements:
+                prev = list(invol[-1])
+                prev[i - 1:i + 1] = prev[i], prev[i - 1]
+                prev = tuple(j if j not in {i, i + 1} else (i + 1 if j == i else i) for j in prev)
+                invol.append(prev)
+            self._fpf_involutions = [{i + 1: w[i] for i in range(n)} for w in invol]
+        return self._fpf_involutions
+
+    def print_permutation(self, m, filename='test.png'):
+        pi = self.permutation_sequence[m]
+        n = len(pi)
+        image = Image.new('RGBA', (5 * n + 10, 5 * n + 10))
+        draw = ImageDraw.Draw(image)
+
+        for i, a in enumerate(pi):
+            a -= 1
+            x1, y1 = 5 * i, 5 * a
+            x2, y2 = x1 + 15, y1 + 15
+            draw.ellipse((x1, y1, x2, y2), fill='black', outline='black')
+        image.save('images/' + filename)
+
+    def print_all(self):
+        seq = self.permutation_sequence
+        filename = 'test/test%09d.png'
+        incr = max(1, len(seq) // 100)
+        for i in list(range(0, len(seq), incr)) + [len(seq) - 1]:
+            self.print_permutation(i, filename % i)
+            print(i, '. . .')
+
+    def print_fpf(self, m, filename='test.png'):
+        invol = self.fpf_sequence[m]
+        n = len(invol)
+        h = 5 * n + 10
+        image = Image.new('RGBA', (h, h))
+        draw = ImageDraw.Draw(image)
+
+        xcoord = {i + 1: h / 2.0 + (h - 10) / 2 * numpy.cos(numpy.pi * (0.5 + (2 * i + 1.0) / n)) for i in range(n)}
+        ycoord = {i + 1: h / 2.0 - (h - 10) / 2 * numpy.sin(numpy.pi * (0.5 + (2 * i + 1.0) / n)) for i in range(n)}
+        for i, j in invol.items():
+            x1, y1 = xcoord[i], ycoord[i]
+            x2, y2 = xcoord[j], ycoord[j]
+            draw.line((x1, y1, x2, y2), fill='black')
+            #draw.ellipse((x1 - 5, y1 - 5, x2 + 5, y2 + 5), fill='black', outline='black')
+        image.save('images/' + filename)
+
+    def print_all_fpf(self):
+        seq = self.fpf_sequence
+        filename = 'fpf/test%09d.png'
+        incr = max(1, len(seq) // 100)
+        for i in list(range(0, len(seq), incr)) + [len(seq) - 1]:
+            self.print_fpf(i, filename % i)
+            print(i, '. . .')
 
     @classmethod
     def all(cls, n, l=None):
@@ -37,7 +111,7 @@ class Word:
                 elif i == j + 1:
                     tup += [i - 1]
                 else:
-                    tup += [i] 
+                    tup += [i]
             pi += [tuple(tup)]
         #
         s = []
