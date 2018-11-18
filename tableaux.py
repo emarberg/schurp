@@ -85,6 +85,9 @@ class Tableau:
     def shift(self):
         return Tableau({(i, i + j - 1): self.entry(i, j) for (i, j) in self.mapping})
 
+    def translate_left(self, steps=1):
+        return Tableau({(i, j - steps): self.entry(i, j) for i, j in self.mapping})
+
     def transpose(self):
         return Tableau({(j, i): self.entry(i, j) for i, j in self.mapping})
 
