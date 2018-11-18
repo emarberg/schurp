@@ -473,21 +473,25 @@ def subtest(e):
     p, q = Word(*e).fpf_insert()
     pre = tuple(i for i in range(m + 2) if i % 2 != 0 and not (i in e or i - 1 in e or i + 1 in e))
     mid = tuple(i for i in range(m + 2) if i % 2 != 0 and (i in e or i - 1 in e or i + 1 in e))
-    a, b = (Word(*reversed(e)) | Word(*mid) | Word(*e)).eg_insert()
-    r = a.strict_upper_half()
-    s = p.fpf_double().strict_upper_half()
+    a, b = (Word(*reversed(e)) | Word(*reversed(mid)) | Word(*e)).eg_insert()
+    x, y = (Word(*mid) | Word(*e)).involution_insert()
+    r = a.strict_lower_half().translate_left()
+    assert x == a.transpose().lower_half()
     t = Tableau()
-    for i, j in s:
-        t = t.set(i, j, s.entry(i, j) - r.entry(i, j))
-    # for i in range(1, r.max_column + 1):
-    #     if r.entry(i + 1, i).number % 2 != 0:
-    #         r = r.set(i + 1, i, MarkedNumber(r.entry(i + 1, i).number + 1))
-    if s != r:
+    for i, j in p:
+        t = t.set(i, j, p.entry(i, j) - r.entry(i, j))
+    # seen = []
+    # for i, j in sorted(r, key=lambda ij: (-ij[0], ij[1])):
+    #     v = r.entry(i, j).number
+    #     if v % 2 != 0 and not (v - 1 in seen or v in seen or v + 1 in seen):
+    #         r = r.set(i, j, MarkedNumber(v + 1))
+    #     seen += [r.entry(i, j).number]
+    if r != p:
         print(pre)
         print(mid)
         print('word =', ' '.join(map(str, e)))
         print()
-        print(s)
+        print(p)
         print()
         print(r)
         print()
@@ -495,6 +499,12 @@ def subtest(e):
         print()
         print(t)
         print()
+        try:
+            pp, qq = Word(*e).alt_fpf_insert()
+            print(pp)
+            print()
+        except:
+            print('error with alt_fpf_insert')
         input('?\n')
 
 

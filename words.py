@@ -530,22 +530,15 @@ class Word:
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
-            j, p = p.alt_fpf_insert(MarkedNumber(a), verbose=verbose)
+            j, column_dir, p = p.alt_fpf_insert(MarkedNumber(a), verbose=verbose)
 
-            for k, l in list(p.mapping.keys()):
-                if (k, k + 1) in p.mapping or (k, k - 1) in p.mapping:
-                    p.mapping[(k, k)] = MarkedNumber(0)
-
+            if column_dir:
+                v = MarkedNumber(-i)
+            else:
+                v = MarkedNumber(i)
             for k, l in p.shape():
                 if (k, l) not in q.shape():
-                    if k == l:
-                        q = q.set(k, l, MarkedNumber(0))
-                        continue
-                    if l == j:
-                        q = q.set(k, l, MarkedNumber(-i))
-                    if k == j:
-                        q = q.set(k, l, MarkedNumber(i))
-
+                    q = q.set(k, l, v)
             assert p.shape() == q.shape()
         return p, q
 
