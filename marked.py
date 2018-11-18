@@ -19,6 +19,12 @@ class MarkedNumber:
     def __neg__(self):
         return MarkedNumber(-self.number)
 
+    def __add__(self, other):
+        return MarkedNumber(self.number + other.number)
+
+    def __sub__(self, other):
+        return MarkedNumber(self.number - other.number)
+
     def increment(self):
         if self.number > 0:
             return MarkedNumber(self.number + 1)

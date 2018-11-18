@@ -92,7 +92,7 @@ class Tableau:
         assert self.is_shifted()
         mapping = {(i, j + shift): self.entry(i, j) for i, j in self.mapping}
         for i, j in self.mapping:
-            if i != j or shift:
+            if (j, j) not in mapping or shift:
                 mapping[(j, i)] = self.entry(i, j)
         return Tableau(mapping)
 
@@ -101,7 +101,7 @@ class Tableau:
         mapping = {(i, j + 1): self.entry(i, j) for i, j in self.mapping}
         for i, j in self.mapping:
             mapping[(j + 1, i)] = self.entry(i, j)
-        offset = 0 if (1, 2) not in mapping else (mapping[(1, 2)].number - 2) // 2
+        offset = 0 if (1, 1) not in self.mapping else (self.entry(1, 1).number - 2) // 2
         for i, j in list(mapping.keys()):
             if (i, i + 1) in mapping or (i, i - 1) in mapping:
                 mapping[(i, i)] = 2 * (i + offset) - 1
@@ -261,6 +261,49 @@ class Tableau:
         return tuple(ans)
 
     @classmethod
+    def inverse_inv(cls, p, q):
+        ans = len(q) * [0]
+
+        p = {k: v.number for k, v in p.mapping.items()}
+        q = {k: v.number for k, v in q.mapping.items()}
+
+        order = len(q) * [0]
+        for (i, j) in q:
+            order[abs(q[(i, j)]) - 1] = (i, j, q[(i, j)] < 0)
+
+        for n in range(len(q), 0, -1):
+            if n % 1000 == 0:
+                print(n, '. . .')
+
+            i, j, signed = order[n - 1]
+            a = p[(i, j)]
+            del p[(i, j)]
+            if not signed:
+                i = i - 1
+            if signed:
+                for col in range(j - 1, 0, -1):
+                    row = i
+                    while p.get((row + 1, col), a) < a:
+                        row += 1
+                    if row == col:
+                        i, j = col, col
+                        break
+                    if (row + 1, col) in p and p[(row + 1, col)] == a:
+                        a = p[(row, col)]
+                    else:
+                        a, p[(row, col)] = p[(row, col)], a
+            for row in range(i, 0, -1):
+                col = j
+                while p.get((row, col + 1), a) < a:
+                    col += 1
+                if (row, col + 1) in p and p[(row, col + 1)] == a:
+                    a = p[(row, col)]
+                else:
+                    a, p[(row, col)] = p[(row, col)], a
+            ans[n - 1] = a
+        return tuple(ans)
+
+    @classmethod
     def random(cls, mu):
         mu = Partition(*mu.parts[:])
         nu = mu.transpose()
@@ -327,6 +370,15 @@ class Tableau:
         return Tableau.from_string(';'.join([','.join([str(j) for j in range(i, n)]) for i in range(1, n)]))
 
     @classmethod
+    def longest_inv_insertion_tableau(cls, n):
+        partition = StrictPartition(*list(range(n - 1, 0, -2)))
+        t = Tableau.from_partition(partition)
+        for i in range(1, len(partition) + 1):
+            for j in range(i, n - i + 1):
+                t.mapping[(i, j)] = MarkedNumber(i + j - 1)
+        return t
+
+    @classmethod
     def longest_fpf_insertion_tableau(cls, n):
         partition = StrictPartition(*list(range(n - 2, 0, -2)))
         t = Tableau.from_partition(partition)
@@ -340,6 +392,12 @@ class Tableau:
         p = Tableau.longest_eg_insertion_tableau(n)
         q = cls.random(p.partition())
         return cls.inverse_eg(p, q)
+
+    @classmethod
+    def random_inv_network(cls, n):
+        p = Tableau.longest_inv_insertion_tableau(n)
+        q = cls.random_shifted(StrictPartition(p.partition()))
+        return cls.inverse_inv(p, q)
 
     @classmethod
     def random_fpf_network(cls, n):
@@ -499,8 +557,8 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        # return '\n'.join(reversed(rows))  # French
-        return '\n'.join(rows)            # English
+        return '\n'.join(reversed(rows))  # French
+        #return '\n'.join(rows)            # English
 
     @classmethod
     def decreasing_part(cls, row):

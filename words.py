@@ -5,7 +5,8 @@ from collections import defaultdict
 from signed import SignedPermutation, EvenSignedPermutation
 import itertools
 import numpy
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageColor
+import random
 
 
 class Word:
@@ -22,7 +23,9 @@ class Word:
         if self._permutations is None:
             n = max(self.elements) + 1
             words = [tuple(range(1, n + 1))]
-            for i in self.elements:
+            for counter, i in enumerate(self.elements):
+                if counter % 1000 == 0:
+                    print(counter, ':', len(self.elements))
                 prev = list(words[-1])
                 prev[i - 1:i + 1] = prev[i], prev[i - 1]
                 words.append(tuple(prev))
@@ -34,7 +37,9 @@ class Word:
         if self._fpf_involutions is None:
             n = max(self.elements) + 1
             invol = [tuple(i - 1 if i % 2 == 0 else i + 1 for i in range(1, n + 1))]
-            for i in self.elements:
+            for counter, i in enumerate(self.elements):
+                if counter % 1000 == 0:
+                    print(counter, ':', len(self.elements))
                 prev = list(invol[-1])
                 prev[i - 1:i + 1] = prev[i], prev[i - 1]
                 prev = tuple(j if j not in {i, i + 1} else (i + 1 if j == i else i) for j in prev)
@@ -42,26 +47,103 @@ class Word:
             self._fpf_involutions = [{i + 1: w[i] for i in range(n)} for w in invol]
         return self._fpf_involutions
 
+    def draw_trajectories(self, k=10, filename='test.png'):
+        n = max(self.elements) + 1
+        t = random.sample(range(1, n + 1), k)
+        colors = random.sample(list(ImageColor.colormap), k)
+        pixels = {c: [c] for c in t}
+        for counter, i in enumerate(self.elements):
+            for c in t:
+                if pixels[c][-1] == i:
+                    pixels[c] += [i + 1]
+                elif pixels[c][-1] == i + 1:
+                    pixels[c] += [i]
+                else:
+                    pixels[c] += [pixels[c][-1]]
+            if counter % 1000 == 0:
+                print(counter, ':', len(self))
+
+        xy = defaultdict(list)
+        for c in t:
+            for i, j in enumerate(pixels[c]):
+                x, y = int(i * 800.0 / (len(self) + 1)), int((j - 1) * 500.0 / n)
+                if xy[c] and (x, y) == xy[c][-1]:
+                    continue
+                xy[c] += [(x, y)]
+
+        image = Image.new('RGBA', (800, 500))
+        draw = ImageDraw.Draw(image)
+        for c, color in zip(t, colors):
+            for i in range(1, len(xy[c])):
+                x1, y1 = xy[c][i - 1]
+                x2, y2 = xy[c][i]
+                draw.line((x1, y1, x2, y2), fill=color)
+        image.save('images/trajectories/' + filename)
+
+    def draw_fpf_trajectories(self, k=10, filename='test.png'):
+        n = max(self.elements) + 1
+        t = random.sample(range(1, n // 2 + 1), k)
+        t = [(2 * i - 1, 2 * i) for i in t]
+        colors = random.sample(list(ImageColor.colormap), k)
+        pixels = {c: [c] for c in t}
+
+        def toggle(x, i):
+            if x == i:
+                return i + 1
+            elif x == i + 1:
+                return i
+            else:
+                return x
+
+        for counter, i in enumerate(self.elements):
+            for c in t:
+                x, y = pixels[c][-1]
+                pixels[c] += [(toggle(x, i), toggle(y, i))]
+            if counter % 1000 == 0:
+                print(counter, ':', len(self))
+
+        xy = defaultdict(list)
+        for c in t:
+            for i, pair in enumerate(pixels[c]):
+                x = int(i * 800.0 / (len(self) + 1))
+                y = int((pair[0] - 1) * 500.0 / n)
+                z = int((pair[1] - 1) * 500.0 / n)
+                if xy[c] and (x, y, z) == xy[c][-1]:
+                    continue
+                xy[c] += [(x, y, z)]
+
+        image = Image.new('RGBA', (800, 500))
+        draw = ImageDraw.Draw(image)
+        for c, color in zip(t, colors):
+            for i in range(1, len(xy[c])):
+                x1, y1, z1 = xy[c][i - 1]
+                x2, y2, z2 = xy[c][i]
+                draw.line((x1, y1, x2, y2), fill=color)
+                draw.line((x1, z1, x2, z2), fill=color)
+        image.save('images/trajectories/' + filename)
+
     def print_permutation(self, m, filename='test.png'):
         pi = self.permutation_sequence[m]
         n = len(pi)
-        image = Image.new('RGBA', (5 * n + 10, 5 * n + 10))
+        h = 1000
+        image = Image.new('RGBA', (h + 8, h + 8))
         draw = ImageDraw.Draw(image)
 
         for i, a in enumerate(pi):
             a -= 1
-            x1, y1 = 5 * i, 5 * a
-            x2, y2 = x1 + 15, y1 + 15
+            x1, y1 = int(i * h / n), int(a * h / n)
+            x2, y2 = x1 + 8, y1 + 8
             draw.ellipse((x1, y1, x2, y2), fill='black', outline='black')
         image.save('images/' + filename)
 
     def print_all(self):
         seq = self.permutation_sequence
         filename = 'test/test%09d.png'
-        incr = max(1, len(seq) // 100)
-        for i in list(range(0, len(seq), incr)) + [len(seq) - 1]:
-            self.print_permutation(i, filename % i)
-            print(i, '. . .')
+        incr = max(1, len(seq) // 8)
+        indices = list(range(0, len(seq), incr)) + [len(seq) - 1]
+        for m, i in enumerate(indices):
+            self.print_permutation(i, filename % m)
+            print(m, '. . .')
 
     def print_fpf(self, m, filename='test.png'):
         invol = self.fpf_sequence[m]
@@ -76,7 +158,6 @@ class Word:
             x1, y1 = xcoord[i], ycoord[i]
             x2, y2 = xcoord[j], ycoord[j]
             draw.line((x1, y1, x2, y2), fill='black')
-            #draw.ellipse((x1 - 5, y1 - 5, x2 + 5, y2 + 5), fill='black', outline='black')
         image.save('images/' + filename)
 
     def print_all_fpf(self):
@@ -217,13 +298,13 @@ class Word:
 
     def __or__(self, other):
         assert type(other) == Word
-        return Word(self.subset | other.subset, *(self.elements + other.elements))
+        return Word(subset=(self.subset | other.subset), *(self.elements + other.elements))
 
     def __lshift__(self, i):
-        return Word({x - i for x in self.subset}, *[e - i for e in self.elements])
+        return Word(subset={x - i for x in self.subset}, *[e - i for e in self.elements])
 
     def __rshift__(self, i):
-        return Word({x + i for x in self.subset}, *[e + i for e in self.elements])
+        return Word(subset={x + i for x in self.subset}, *[e + i for e in self.elements])
 
     def __eq__(self, other):
         assert type(other) == Word

@@ -1,3 +1,27 @@
+
+from words import *
+
+def braids(word):
+    ans = 0
+    for i in range(len(word) - 2):
+        if len({word[i], word[i + 1], word[i + 2]}) == 2:
+            ans += 1
+    return ans
+
+
+def test(n):
+    w = tuple(reversed(range(1, n + 1)))
+    words = get_fpf_involution_words(w)
+    a = 0
+    for u in words:
+        if len(u) >= 2 and u[1] % 2 != 0:
+            a += 1
+        a += 2 * braids(u)
+    return (a, len(words))
+
+
+
+
 from symmetric import *;
 w=Permutation([4,5,7,1,2,6,3])
 i=InvStanleyExpander(w)
@@ -105,11 +129,8 @@ def test(n, invol=None, skew=None):
                 print(('\u011c_%s = ' % w) + 'NO SKEW SCHUR Q-FUNCTION\n')
     return invol, skew
 
-invol, skew = None, None
-invol, skew = test(3, invol, skew)
 
 
-SignedPermutation(-1, -2, 3, -4, -5)
 
 # number of w is B_n with iF_w = single S-function:
 #   n 0 1 2 3  4  5  6
@@ -144,9 +165,9 @@ def s_test(n):
 
 from signed import *
 from tableaux import *
-n = 3
-w = SignedPermutation.longest_element(n)
-words = list(w.get_involution_words())
+# n = 3
+# w = SignedPermutation.longest_element(n)
+# words = list(w.get_involution_words())
 
 
 def tableau(word, n):
@@ -159,9 +180,6 @@ def tableau(word, n):
     return Tableau.from_string(string)
 
 
-for e in words:
-    print(tableau(e, n))
-    print('')
 
 
 def print_i(n):
@@ -217,6 +235,7 @@ def atoms_view(n):
 
 from permutations import *
 from words import *
+
 
 
 def test_eg_mirror(n):
@@ -313,15 +332,6 @@ def test_transitions(n):
     a = w.queue_stanley_decomposition(n)
     a = sorted(list(a), key=str)
     b = sorted(list(SignedPermutation.longest_element(n).get_atoms()), key=str)
-
-extra = []
-while b:
-    if a[0] == b[0]:
-        a = a[1:]
-        b = b[1:]
-    else:
-        extra + =[a[0]]
-        a = a[1:]
 
 
 
@@ -426,22 +436,76 @@ for a, b in ans:
 from permutations import *
 from words import *
 
+
+def inv_subtest(e):
+    m = max(e) if e else 0
+    p, q = Word(*e).involution_insert()
+    w = tuple(Permutation.double_involution_word(e))
+    a, b = (Word(*w)).eg_insert()
+    r = a.double().upper_half()
+    s = p.double().upper_half()
+    # t = Tableau()
+    # for i, j in s:
+    #     t = t.set(i, j, s.entry(i, j) - r.entry(i, j))
+    if s != r:
+        print('word =', ', '.join(map(str, e)))
+        print(' ext =', ', '.join(map(str, w)))
+        print()
+        print(s)
+        print()
+        print(a)
+        print()
+        input('?\n')
+
+
+def inv_test(n):
+    g = Permutation.involutions(n)
+    for w in g:
+        print(w.cycle_repr())
+        print()
+        for e in get_involution_words(tuple(w.oneline)):
+            inv_subtest(e)
+        print()
+
+
+def subtest(e):
+    m = max(e) if e else 0
+    p, q = Word(*e).fpf_insert()
+    pre = tuple(i for i in range(m + 2) if i % 2 != 0 and not (i in e or i - 1 in e or i + 1 in e))
+    mid = tuple(i for i in range(m + 2) if i % 2 != 0 and (i in e or i - 1 in e or i + 1 in e))
+    a, b = (Word(*reversed(e)) | Word(*mid) | Word(*e)).eg_insert()
+    r = a.strict_upper_half()
+    s = p.fpf_double().strict_upper_half()
+    t = Tableau()
+    for i, j in s:
+        t = t.set(i, j, s.entry(i, j) - r.entry(i, j))
+    # for i in range(1, r.max_column + 1):
+    #     if r.entry(i + 1, i).number % 2 != 0:
+    #         r = r.set(i + 1, i, MarkedNumber(r.entry(i + 1, i).number + 1))
+    if s != r:
+        print(pre)
+        print(mid)
+        print('word =', ' '.join(map(str, e)))
+        print()
+        print(s)
+        print()
+        print(r)
+        print()
+        print(a)
+        print()
+        print(t)
+        print()
+        input('?\n')
+
+
 def test(n):
+    assert n % 2 == 0
     g = Permutation.fpf_involutions(n)
     for w in g:
-        print(w)
+        print(w.cycle_repr())
+        print()
         for e in get_fpf_involution_words(tuple(w.oneline)):
-            print(''.join(map(str, e)), ':')
-            p, q = Word(*e).fpf_insert()
-            pp, qq = Word(*e).alt_fpf_insert()
-            print()
-            print(p)
-            print()
-            print(pp)
-            print('\n')
-            if p.fpf_double() != pp:
-                print(p.fpf_double())
-                input('?')
+            subtest(e)
         print()
 
 
