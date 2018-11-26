@@ -441,13 +441,16 @@ def inv_subtest(e):
     m = max(e) if e else 0
     p, q = Word(*e).involution_insert()
     w = tuple(Permutation.double_involution_word(e))
-    a, b = (Word(*w)).eg_insert()
-    r = a.double().upper_half()
-    s = p.double().upper_half()
+    a, b = Word(*reversed(w)).eg_insert()
+    r = a.lower_half()
+    rr = a.upper_half().transpose()
+    s = p.lower_half()
     # t = Tableau()
     # for i, j in s:
     #     t = t.set(i, j, s.entry(i, j) - r.entry(i, j))
-    if s != r:
+    if all(i - 1 not in e and i + 1 not in e for i in e):
+        return
+    if s != r and s != rr:
         print('word =', ', '.join(map(str, e)))
         print(' ext =', ', '.join(map(str, w)))
         print()
@@ -465,6 +468,31 @@ def inv_test(n):
         print()
         for e in get_involution_words(tuple(w.oneline)):
             inv_subtest(e)
+        print()
+
+
+def fpf_test(n):
+    assert n % 2 == 0
+    g = Permutation.fpf_involutions(n)
+    for w in g:
+        print(w.cycle_repr())
+        print()
+        for e in get_fpf_involution_words(tuple(w.oneline)):
+            m = max(e) if e else 0
+            mid = tuple(i for i in range(m + 2) if i % 2 != 0 and (i in e or i - 1 in e or i + 1 in e))
+            p, q = Word(*e).fpf_insert()
+            x, y = (Word(*mid) | Word(*e)).involution_insert()
+            z = x
+            for i in range(1, len(mid) + 1):
+                l = len(x.get_column(i))
+                _, z = z.pop(l, i)
+            if p == z.translate_left():
+                continue
+            print(p)
+            print()
+            print(x)
+            print()
+            input('\n\n')
         print()
 
 
@@ -495,16 +523,13 @@ def subtest(e):
         print()
         print(r)
         print()
-        print(a)
-        print()
+        for i in range(len(e)):
+            ee = e[:i + 1]
+            a, b = (Word(*reversed(ee)) | Word(*reversed(mid)) | Word(*ee)).eg_insert()
+            print(a)
+            print()
         print(t)
         print()
-        try:
-            pp, qq = Word(*e).alt_fpf_insert()
-            print(pp)
-            print()
-        except:
-            print('error with alt_fpf_insert')
         input('?\n')
 
 

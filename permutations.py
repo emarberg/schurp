@@ -153,9 +153,20 @@ class Permutation:
 
     @classmethod
     def fpf_involutions(cls, n):
-        for w in cls.involutions(n):
-            if all(w(i) != i for i in range(1, n + 1)):
-                yield w
+        s = {i: Permutation.s_i(i) for i in range(1, n)}
+        if n % 2 == 0:
+            start = Permutation()
+            for i in range(1, n, 2):
+                start *= s[i]
+            level = {start}
+            while level:
+                next_level = set()
+                for w in level:
+                    yield w
+                    for i in range(1, n):
+                        if w(i) < w(i + 1):
+                            next_level.add(s[i] * w * s[i])
+                level = next_level
 
     def shift(self, n):
         assert n >= 0
