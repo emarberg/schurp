@@ -257,6 +257,22 @@ class Word:
         return ans
 
     @classmethod
+    def signed_involution_stable_grothendieck(cls, n, sigma, length_bound):
+        ans = Vector()
+        for w in sigma.get_involution_hecke_words(length_bound):
+            ans += cls(*w).quasisymmetrize(cls.right_weakly_unimodal_zeta)
+
+        def sort(t):
+            return tuple(reversed(sorted(t)))
+
+        assert all(ans.dictionary[sort(alpha)] == ans.dictionary[alpha] for alpha in ans.dictionary)
+        ans = Vector({
+            alpha: ans.dictionary[alpha]
+            for alpha in ans.dictionary if sort(alpha) == alpha and len(alpha) <= n
+        }, printer=lambda s: 'm[%s;%s]' % (','.join(map(str, s)), n) if s else '1')
+        return ans
+
+    @classmethod
     def permutations(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
             yield Word(*args)

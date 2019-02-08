@@ -1,4 +1,44 @@
 
+
+
+
+def generate(n):
+    # generates FPF "symplectic" Hecke atoms"
+    assert n % 2 == 0
+    #
+    def next(w):
+        for i in range(0, len(w) - 3, 2):
+            a, d, b, c = w[i: i + 4]
+            if a < b < c < d:
+                yield w[:i] + (b, c, a, d) + w[i + 4:]
+                yield w[:i] + (b, d, a, c) + w[i + 4:]
+            b, c, a, d = w[i:i + 4]
+            if a < b < c < d:
+                yield w[:i] + (a, d, b, c) + w[i + 4:]
+                yield w[:i] + (b, d, a, c) + w[i + 4:]
+            b, d, a, c = w[i:i + 4]
+            if a < b < c < d:
+                yield w[:i] + (a, d, b, c) + w[i + 4:]
+                yield w[:i] + (b, c, a, d) + w[i + 4:]
+    #
+    start = []
+    for i in range(n // 2):
+        start += [i + 1, n - i]
+    start = tuple(start)
+    #
+    seen = set()
+    level = {start}
+    while level:
+        next_level = set()
+        for w in level:
+            seen.add(w)
+            next_level |= set(next(w))
+        level = next_level - seen
+    return seen
+
+
+
+
 from words import *
 
 def braids(word):

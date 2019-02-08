@@ -87,6 +87,35 @@ class SignedPermutation:
                     v = v // 2
                 yield SignedPermutation(*newline)
 
+    @classmethod
+    def involution_hecke_words(cls, n, length_bound=-1):
+        for level in cls.involution_hecke_levels(n, length_bound):
+            for pi, w in level:
+                yield w
+
+    @classmethod
+    def involution_hecke_levels(cls, n, length_bound=-1):
+        start = (cls.identity(n), ())
+        level = {start}
+        while level:
+            next_level = set()
+            yield level
+            for pi, w in level:
+                for i in range(n):
+                    s = SignedPermutation.s_i(i, n)
+                    sigma = s % pi % s
+                    next_level.add((sigma, w + (i,)))
+            level = next_level
+            if length_bound == 0:
+                break
+            length_bound -= 1
+
+    def get_involution_hecke_words(self, length_bound):
+        for level in self.involution_hecke_levels(self.rank, length_bound):
+            for pi, w in level:
+                if self == pi:
+                    yield w
+
     def get_reduced_word(self):
         if self.left_descent_set:
             i = min(self.left_descent_set)
@@ -177,6 +206,19 @@ class SignedPermutation:
             assert inv % 2 == inv_zero % 2
             self._len = (inv + inv_zero) // 2
         return self._len
+
+    def __mod__(self, other):
+        assert type(other) == SignedPermutation
+        assert self.rank == other.rank
+        if other.left_descent_set:
+            i = next(iter(other.left_descent_set))
+            s = SignedPermutation.s_i(i, self.rank)
+            if i in self.right_descent_set:
+                return self * (s * other)
+            else:
+                return (self * s) % (s * other)
+        else:
+            return self
 
     def __mul__(self, other):
         assert type(other) == SignedPermutation
