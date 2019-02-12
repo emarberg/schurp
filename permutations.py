@@ -6,6 +6,7 @@ REDUCED_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
 ATOMS_CACHE = {}
 FPF_ATOMS_CACHE = {}
+SYMPLECTIC_HECKE_ATOMS_CACHE = {}
 
 
 class Permutation:
@@ -114,7 +115,7 @@ class Permutation:
 
     def _get_fpf_atoms(self):
         def next(oneline):
-            for i in range(len(oneline) - 3):
+            for i in range(0, len(oneline) - 3, 2):
                 a, d, b, c = oneline[i:i + 4]
                 if a < b < c < d:
                     newline = oneline[:i] + (b, c, a, d) + oneline[i + 4:]
@@ -126,6 +127,36 @@ class Permutation:
             for w in add:
                 yield Permutation(*w).inverse()
             add = {new for w in add for new in next(w)}
+
+    def get_symplectic_hecke_atoms(self):
+        if self not in SYMPLECTIC_HECKE_ATOMS_CACHE:
+            SYMPLECTIC_HECKE_ATOMS_CACHE[self] = list(self._get_symplectic_hecke_atoms())
+        return SYMPLECTIC_HECKE_ATOMS_CACHE[self]
+
+    def _get_symplectic_hecke_atoms(self):
+        def next(w):
+            for i in range(0, len(w) - 3, 2):
+                a, d, b, c = w[i: i + 4]
+                if a < b < c < d:
+                    yield w[:i] + (b, c, a, d) + w[i + 4:]
+                    yield w[:i] + (b, d, a, c) + w[i + 4:]
+                b, c, a, d = w[i:i + 4]
+                if a < b < c < d:
+                    yield w[:i] + (a, d, b, c) + w[i + 4:]
+                    yield w[:i] + (b, d, a, c) + w[i + 4:]
+                b, d, a, c = w[i:i + 4]
+                if a < b < c < d:
+                    yield w[:i] + (a, d, b, c) + w[i + 4:]
+                    yield w[:i] + (b, c, a, d) + w[i + 4:]
+
+        minimum = tuple(self.get_min_fpf_atom().inverse().oneline)
+        add = {minimum}
+        seen = set()
+        while add:
+            for w in add:
+                seen.add(w)
+                yield Permutation(*w).inverse()
+            add = {new for w in add for new in next(w)} - seen
 
     def get_involution_words(self):
         assert self.inverse() == self
@@ -245,6 +276,15 @@ class Permutation:
                     if self(i) < self(k) < self(j):
                         return False
         return True
+
+    def is_fpf_dominant(self):
+        assert self.is_fpf_involution()
+        diagram = set(self.fpf_rothe_diagram())
+        columns = len({j for i, j in diagram})
+        mu = tuple(len({i for i, j in diagram if j == k}) for k in range(1, columns + 1))
+        return diagram == {
+            (i + j + 1, i) for i in range(1, columns + 1) for j in range(mu[i - 1])
+        }
 
     def rothe_diagram(self):
         ans = []
@@ -509,6 +549,10 @@ class Permutation:
 
     def involution_length(self):
         return (self.length() + len(list(filter(lambda i: len(i) > 1, self.cycles)))) // 2
+
+    def fpf_involution_length(self):
+        assert self.is_fpf_involution()
+        return (self.length() - len(list(filter(lambda i: len(i) > 1, self.cycles)))) // 2
 
     @classmethod
     def from_word(cls, *args):

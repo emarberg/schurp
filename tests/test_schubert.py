@@ -1,4 +1,11 @@
-from schubert import Schubert, InvSchubert, FPFSchubert, MPolynomial
+from schubert import (
+    Schubert,
+    Grothendieck,
+    InvSchubert,
+    FPFSchubert,
+    FPFGrothendieck,
+    MPolynomial
+)
 from permutations import Permutation
 
 
@@ -53,3 +60,25 @@ def test_fpf_schubert():
 
     w = Permutation(4, 3, 2, 1)
     assert FPFSchubert.get(w) == x * x + x * y + x * z + y * z
+
+
+def test_fpf_grothendieck():
+    n = 6
+    g = list(Permutation.fpf_involutions(n))
+
+    for w in g:
+        a = FPFGrothendieck.get(w) == FPFGrothendieck.product(w)
+        b = w.is_fpf_dominant()
+        assert a == b
+        f = FPFGrothendieck.get(w)
+        g = sum([
+            (-1) ** (u.length() - w.fpf_involution_length()) * Grothendieck.get(u)
+            for u in w.get_symplectic_hecke_atoms()
+        ])
+        print(w)
+        print(f)
+        print(g)
+        print()
+        print(list(w.get_symplectic_hecke_atoms()))
+        print()
+        assert f == g

@@ -4,6 +4,8 @@ SCHUBERT_CACHE = {}
 DOUBLE_SCHUBERT_CACHE = {}
 FPF_SCHUBERT_CACHE = {}
 INV_SCHUBERT_CACHE = {}
+GROTHENDIECK_CACHE = {}
+FPF_GROTHENDIECK_CACHE = {}
 
 
 class HashableDict(dict):
@@ -302,6 +304,10 @@ class AbstractSchubert(object):
         raise NotImplementedError
 
     @classmethod
+    def divided_difference(cls, f, i):
+        return f.divided_difference(i)
+
+    @classmethod
     def get(cls, w):
         assert cls.is_valid(w)
         oneline = tuple(w.oneline)
@@ -310,7 +316,7 @@ class AbstractSchubert(object):
             v, i = cls.get_ascent(w)
             if i is not None:
                 s = cls.get(v)
-                s = s.divided_difference(i)
+                s = cls.divided_difference(s, i)
             else:
                 s = cls.top(len(oneline))
             cache[oneline] = s
@@ -333,10 +339,23 @@ class Schubert(AbstractSchubert):
     @classmethod
     def get_ascent(cls, w):
         n = len(w.oneline)
+        if n == 0:
+            return w.s_i(1), 1
         if len(w.right_descent_set) == n - 1:
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
         return w * w.s_i(i), i
+
+
+class Grothendieck(Schubert):
+
+    @classmethod
+    def cache(cls):
+        return GROTHENDIECK_CACHE
+
+    @classmethod
+    def divided_difference(cls, f, i):
+        return (f * (1 - MPolynomial.monomial(i + 1, 1))).divided_difference(i)
 
 
 class DoubleSchubert(AbstractSchubert):
@@ -383,6 +402,31 @@ class FPFSchubert(AbstractSchubert):
     @classmethod
     def is_valid(cls, w):
         return all(len(c) == 2 for c in w.cycles)
+
+
+class FPFGrothendieck(FPFSchubert):
+    @classmethod
+    def cache(cls):
+        return FPF_GROTHENDIECK_CACHE
+
+    @classmethod
+    def top(cls, n):
+        s = one()
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1 - i):
+                s *= (x(i) + x(j) - x(i) * x(j))
+        return s
+
+    @classmethod
+    def product(cls, w):
+        s = one()
+        for i, j in w.fpf_rothe_diagram():
+            s *= (x(i) + x(j) - x(i) * x(j))
+        return s
+
+    @classmethod
+    def divided_difference(cls, f, i):
+        return (f * (1 - MPolynomial.monomial(i + 1, 1))).divided_difference(i)
 
 
 class InvSchubert(AbstractSchubert):
