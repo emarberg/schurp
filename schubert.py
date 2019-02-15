@@ -1,3 +1,5 @@
+from vectors import Vector
+from permutations import Permutation
 
 
 SCHUBERT_CACHE = {}
@@ -9,6 +11,7 @@ FPF_GROTHENDIECK_CACHE = {}
 
 
 class HashableDict(dict):
+
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
 
@@ -71,6 +74,9 @@ class MPolynomial:
                 ans = max(ans, d)
 
         return ans
+
+    def __iter__(self):
+        return self.coeffs.__iter__()
 
     def __getitem__(self, i):
         i = HashableDict(i)
@@ -244,9 +250,11 @@ class MPolynomial:
 
         def sorter(index):
             ans = []
+            c = 0
             for i in sorted(index):
-                ans += abs(index[i]) * [i]
-            return ans
+                c += index[i]
+                ans += abs(index[i]) * [-i]
+            return (c,) + tuple(ans)
 
         for i in sorted(filtered, key=sorter):
             monomial = MPolynomial.index_to_str(i)
@@ -322,6 +330,27 @@ class AbstractSchubert(object):
             cache[oneline] = s
         return cache[oneline]
 
+    @classmethod
+    def from_code(cls, code):
+        raise NotImplementedError
+
+    @classmethod
+    def least_term(cls, f):
+        return min(f, key=lambda s: tuple(-i for k in sorted(s) for i in s[k] * [k]))
+
+    @classmethod
+    def decompose(cls, f):
+        if not f.is_zero():
+            m = cls.least_term(f)
+            code = max(m) * [0] if m else []
+            for i, v in m.items():
+                code[i - 1] = v
+            code = tuple(code)
+            w = cls.from_code(code)
+            return Vector({w: f[m]}) + cls.decompose(f - f[m] * cls.get(w))
+        else:
+            return Vector()
+
 
 class Schubert(AbstractSchubert):
 
@@ -345,6 +374,10 @@ class Schubert(AbstractSchubert):
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
         return w * w.s_i(i), i
+
+    @classmethod
+    def from_code(cls, code):
+        return Permutation.from_code(code)
 
 
 class Grothendieck(Schubert):
@@ -402,6 +435,10 @@ class FPFSchubert(AbstractSchubert):
     @classmethod
     def is_valid(cls, w):
         return all(len(c) == 2 for c in w.cycles)
+
+    @classmethod
+    def from_code(cls, code):
+        return Permutation.from_fpf_involution_code(code)
 
 
 class FPFGrothendieck(FPFSchubert):
@@ -461,3 +498,7 @@ class InvSchubert(AbstractSchubert):
     @classmethod
     def is_valid(cls, w):
         return w.is_involution()
+
+    @classmethod
+    def from_code(cls, code):
+        return Permutation.from_involution_code(code)

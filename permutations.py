@@ -1,4 +1,3 @@
-from pipedreams import Pipedream
 import itertools
 
 
@@ -41,6 +40,7 @@ class Permutation:
         return REDUCED_WORDS[oneline]
 
     def get_bottom_pipe_dream(self):
+        from pipedreams import Pipedream
         code = self.code()
         crossings = set()
         for i, c in enumerate(code):
@@ -265,6 +265,9 @@ class Permutation:
     def max_visible_inversion(self):
         return max(self.get_visible_inversions())
 
+    def max_fpf_visible_inversion(self):
+        return max(self.get_fpf_visible_inversions())
+
     def support(self):
         return [i + 1 for i in range(len(self.oneline)) if self.oneline[i] != i + 1]
 
@@ -300,7 +303,9 @@ class Permutation:
         ans = n * [0]
         for i, j in diag:
             ans[i - 1] += 1
-        return ans
+        while ans and ans[-1] == 0:
+            ans = ans[:-1]
+        return tuple(ans)
 
     def code(self):
         return self.code_helper(self.rothe_diagram())
@@ -308,8 +313,75 @@ class Permutation:
     def involution_code(self):
         return self.code_helper(self.involution_rothe_diagram())
 
-    def involution_code_fpf(self):
-        return self.code_helper(self.involution_rothe_diagram(True))
+    def fpf_involution_code(self):
+        ans = self.code_helper(self.involution_rothe_diagram(True))
+        return ans + (len(self.oneline) - len(ans)) * (0,)
+
+    @classmethod
+    def from_code(cls, *code):
+        if len(code) == 1 and type(code[0]) in [list, tuple]:
+            code = code[0]
+        if len(code) == 0 or code[-1] != 0:
+            code = tuple(code) + (0,)
+        n = len(code)
+        indices = [i for i in range(n - 1) if code[i] != 0 and code[i + 1] == 0]
+        if indices:
+            i = indices[0]
+            newcode = list(code)
+            newcode[i + 1] = newcode[i] - 1
+            newcode[i] = 0
+            return cls.from_code(newcode) * Permutation.s_i(i + 1)
+        else:
+            return Permutation()
+
+    @classmethod
+    def from_involution_code(cls, *code):
+        if len(code) == 1 and type(code[0]) in [list, tuple]:
+            code = code[0]
+        if len(code) == 0 or code[-1] != 0:
+            code = tuple(code) + (0,)
+        n = len(code)
+        indices = [i for i in range(n - 1) if code[i] != 0 and code[i + 1] == 0]
+        if indices:
+            i = indices[0]
+            newcode = list(code)
+            newcode[i + 1] = newcode[i] - 1
+            newcode[i] = 0
+            s = Permutation.s_i(i + 1)
+            w = cls.from_involution_code(newcode)
+            return w * s if s * w == w * s else s * w * s
+        else:
+            return Permutation()
+
+    @classmethod
+    def from_fpf_involution_code(cls, *code):
+        if len(code) == 1 and type(code[0]) in [list, tuple]:
+            code = code[0]
+        if len(code) % 2 != 0:
+            code = tuple(code) + (0,)
+        r = len(code)
+        if len(code) == 0 or code[-1] != 0:
+            code = tuple(code) + (0, 0)
+        n = len(code)
+        indices = [i for i in range(n - 1) if code[i] != 0 and code[i + 1] == 0]
+        if indices:
+            i = indices[0]
+            newcode = list(code)
+            newcode[i + 1] = newcode[i] - 1
+            newcode[i] = 0
+            s = Permutation.s_i(i + 1)
+            ans = s * cls.from_fpf_involution_code(newcode) * s
+            while len(ans.oneline) < r:
+                ans *= Permutation.s_i(len(ans.oneline) + 1)
+            return ans
+        else:
+            return Permutation.shortest_fpf_involution(r)
+
+    @classmethod
+    def shortest_fpf_involution(cls, rank):
+        assert rank % 2 == 0
+        oneline = [i + 2 * ((i + 1) % 2) for i in range(rank)]
+        return Permutation(oneline)
 
     def fpf_rothe_diagram(self, fpf=False):
         return self.involution_rothe_diagram(True)
@@ -440,6 +512,10 @@ class Permutation:
     def s_i(cls, i):
         return cls.cycle([i, i + 1])
 
+    @classmethod
+    def transposition(cls, i, j):
+        return cls.cycle([i, j])
+
     def inverse(self):
         oneline = list(range(1, 1 + len(self.oneline)))
         for i in range(1, 1 + len(self.oneline)):
@@ -527,9 +603,9 @@ class Permutation:
         return True
 
     def __repr__(self):
-        sep = '' if len(self.oneline) < 10 else ','
-        return sep.join([str(i) for i in self.oneline])
-        #return self.cycle_repr()
+        #sep = '' if len(self.oneline) < 10 else ','
+        #return sep.join([str(i) for i in self.oneline])
+        return self.cycle_repr()
 
     def cycle_repr(self):
         if len(self) == 0:

@@ -6,6 +6,7 @@ from schubert import (
     FPFGrothendieck,
     MPolynomial
 )
+import schubert
 from permutations import Permutation
 
 
@@ -82,3 +83,74 @@ def test_fpf_grothendieck():
         print(list(w.get_symplectic_hecke_atoms()))
         print()
         assert f == g
+
+
+def test_min():
+    w = Permutation(3, 5, 1, 6, 2, 4)
+    f = FPFSchubert.get(w)
+    assert FPFSchubert.least_term(f) == {2: 1, 4: 1}
+
+
+def test_fpf_transitions():
+    n = 4
+
+    def terms(w, j):
+        queue = [(w, n + 1)]
+        while queue:
+            y, k = queue[0]
+            queue = queue[1:]
+
+            if k <= j:
+                continue
+
+            s = Permutation.transposition(j, k)
+            z = s * y * s
+            if z.fpf_involution_length() == y.fpf_involution_length() + 1:
+                yield z
+                queue.append((z, k - 1))
+            queue.append((y, k - 1))
+
+    g = list(Permutation.fpf_involutions(n))
+    for w in g:
+        cyc = [
+            (i, j) for i, j in w.cycles
+            if not any(k < i and l < j for k, l in w. cycles)
+        ]
+        w = w * Permutation.s_i(n + 1)
+        for i, j in cyc:
+            v = schubert.x(i) + schubert.x(j) - schubert.x(i) * schubert.x(j)
+            f = FPFGrothendieck.get(w) * v
+            a = 0
+            print(list(terms(w, j)))
+            for z in terms(w, j):
+                if (z.fpf_involution_length() - w.fpf_involution_length()) % 2 == 0:
+                    sgn = -1
+                else:
+                    sgn = 1
+                a += FPFGrothendieck.get(z) * sgn
+            print('G_%s * (%s)' % (w, v))
+            print(f)
+            print()
+            print(a)
+            print()
+            print()
+            assert f == a
+
+    g = list(Permutation.fpf_involutions(6))
+    for v in g[1:]:
+        c = max(v.get_fpf_visible_inversions())
+        t = Permutation.cycle(c)
+        u = t * v * t
+        print(v, c)
+        v.print_fpf_rothe_diagram()
+        u.print_fpf_rothe_diagram()
+        print()
+        print(set(v.fpf_rothe_diagram()) - set(u.fpf_rothe_diagram()))
+        print()
+
+        f = FPFGrothendieck.get(v)
+        g = FPFGrothendieck.get(u)
+
+        print(g - f)
+        print()
+    assert False

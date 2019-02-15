@@ -1,4 +1,35 @@
 
+from schubert import *
+
+
+def dtest(n):
+    g = list(Permutation.all(n))
+    var = [x(i) for i in range(1, n)]
+    for w in g:
+        for i, v in enumerate(var):
+            print('G_%s * x_%s' % (w, i + 1))
+            f = Grothendieck.get(w)
+            print(Grothendieck.decompose(f * v))
+            print()
+
+
+def fpftest(n):
+    clss = FPFGrothendieck
+    g = list(Permutation.fpf_involutions(n))
+    for w in g:
+        var = [
+            x(i) + x(j) - x(i) * x(j) for i, j in w.cycles
+            if not any(k < i and l < j for k, l in w. cycles)
+        ]
+        for v in var:
+            print('G_%s * (%s)' % (w, v))
+            f = clss.get(w)
+            try:
+                print(clss.decompose(f * v))
+            except RecursionError:
+                print('* Recursion error')
+            print()
+
 
 
 
@@ -37,9 +68,8 @@ def generate(n):
     return seen
 
 
-
-
 from words import *
+
 
 def braids(word):
     ans = 0
