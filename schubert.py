@@ -78,6 +78,28 @@ class MPolynomial:
     def __iter__(self):
         return self.coeffs.__iter__()
 
+    @classmethod
+    def one(cls):
+        return cls.monomial(1, 0)
+
+    def substitute(self, i, e):
+        ans = 0
+        for ind in self.coeffs:
+            term = self.one() * self.coeffs[ind]
+            for j in ind:
+                if i != j:
+                    term *= self.monomial(j, ind[j])
+                else:
+                    assert ind[j] >= 0
+                    term *= e ** ind[j]
+            ans = ans + term
+        return ans
+
+    def divide_linear(self, i, c):
+        # divide by x(i) + c
+        ans = self.substitute(i, x(i) - c) * self.monomial(i, -1)
+        return ans.substitute(i, x(i) + c)
+
     def __getitem__(self, i):
         i = HashableDict(i)
         if i in self.coeffs:

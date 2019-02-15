@@ -110,47 +110,66 @@ def test_fpf_transitions():
                 queue.append((z, k - 1))
             queue.append((y, k - 1))
 
-    g = list(Permutation.fpf_involutions(n))
-    for w in g:
-        cyc = [
-            (i, j) for i, j in w.cycles
-            if not any(k < i and l < j for k, l in w. cycles)
-        ]
-        w = w * Permutation.s_i(n + 1)
-        for i, j in cyc:
-            v = schubert.x(i) + schubert.x(j) - schubert.x(i) * schubert.x(j)
-            f = FPFGrothendieck.get(w) * v
-            a = 0
-            print(list(terms(w, j)))
-            for z in terms(w, j):
-                if (z.fpf_involution_length() - w.fpf_involution_length()) % 2 == 0:
-                    sgn = -1
-                else:
-                    sgn = 1
-                a += FPFGrothendieck.get(z) * sgn
-            print('G_%s * (%s)' % (w, v))
-            print(f)
-            print()
-            print(a)
-            print()
-            print()
-            assert f == a
+    # g = list(Permutation.fpf_involutions(n))
+    # for w in g:
+    #     cyc = [
+    #         (i, j) for i, j in w.cycles
+    #         if not any(k < i and l < j for k, l in w. cycles)
+    #     ]
+    #     w = w * Permutation.s_i(n + 1)
+    #     for i, j in cyc:
+    #         v = schubert.x(i) + schubert.x(j) - schubert.x(i) * schubert.x(j)
+    #         f = FPFGrothendieck.get(w) * v
+    #         a = 0
+    #         print(list(terms(w, j)))
+    #         for z in terms(w, j):
+    #             if (z.fpf_involution_length() - w.fpf_involution_length()) % 2 == 0:
+    #                 sgn = -1
+    #             else:
+    #                 sgn = 1
+    #             a += FPFGrothendieck.get(z) * sgn
+    #         print('G_%s * (%s)' % (w, v))
+    #         print(f)
+    #         print()
+    #         print(a)
+    #         print()
+    #         print()
+    #         assert f == a
 
     g = list(Permutation.fpf_involutions(6))
     for v in g[1:]:
         c = max(v.get_fpf_visible_inversions())
         t = Permutation.cycle(c)
         u = t * v * t
+        s = set(v.fpf_rothe_diagram()) - set(u.fpf_rothe_diagram())
+
         print(v, c)
         v.print_fpf_rothe_diagram()
         u.print_fpf_rothe_diagram()
         print()
-        print(set(v.fpf_rothe_diagram()) - set(u.fpf_rothe_diagram()))
+        print(s)
         print()
+
+        assert len(s) == 1
+        i, j = s.pop()
 
         f = FPFGrothendieck.get(v)
         g = FPFGrothendieck.get(u)
+        d = g - f
 
-        print(g - f)
+        # print(f)
+        # print()
+        # print(g)
+        # print()
+        # print(d)
+        # print()
+
+        e = d.divide_linear(i, -1).divide_linear(j, -1)
+        #print(e)
+        #print()
+        print('G_u - G_v = (1 - x_%i) (1 - x_%i) [' % (i, j), FPFGrothendieck.decompose(e), ']')
+        print()
+        print()
+        print()
         print()
     assert False

@@ -480,10 +480,13 @@ class Permutation:
         return len(self.cycles) == 0 or max(map(len, self.cycles)) <= 2
 
     def is_fpf_involution(self):
-        return len(self.cycles) == 0 or max(map(len, self.cycles)) == 2
+        return all(self(i) != i and self(self(i)) == i for i in self)
 
     def is_identity(self):
         return len(self.cycles) == 0 or max(map(len, self.cycles)) <= 1
+
+    def __iter__(self):
+        return self.oneline.__iter__()
 
     # Input is [i_1, i_2, ... , i_k], returns permutation (i_1 i_2 ... i_k)
     @staticmethod
@@ -629,6 +632,11 @@ class Permutation:
     def fpf_involution_length(self):
         assert self.is_fpf_involution()
         return (self.length() - len(list(filter(lambda i: len(i) > 1, self.cycles)))) // 2
+
+    def fpf_trim(self):
+        assert self.is_fpf_involution()
+        n = len(self.oneline)
+        return self if (n == 0 or self(n - 1) != n) else (self * self.s_i(n - 1)).fpf_trim()
 
     @classmethod
     def from_word(cls, *args):

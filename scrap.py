@@ -1,5 +1,111 @@
 
 from schubert import *
+import schubert
+
+
+def test_fpf_transitions(n):
+    def terms(w, j):
+        queue = [(w, n + 1)]
+        while queue:
+            y, k = queue[0]
+            queue = queue[1:]
+
+            if k <= j:
+                continue
+
+            s = Permutation.transposition(j, k)
+            z = s * y * s
+            if z.fpf_involution_length() == y.fpf_involution_length() + 1:
+                yield z
+                queue.append((z, k - 1))
+            queue.append((y, k - 1))
+
+    g = list(Permutation.fpf_involutions(n))
+    for w in g:
+        cyc = [
+            (i, j) for i, j in w.cycles
+            # if not any(k < i and l < j for k, l in w. cycles)
+        ]
+        w = w * Permutation.s_i(n + 1)
+        for i, j in cyc:
+            v = 1 - schubert.x(i) - schubert.x(j) + schubert.x(i) * schubert.x(j)
+            f = FPFGrothendieck.get(w) * v
+            # a = 0
+            # print(list(terms(w, j)))
+            # for z in terms(w, j):
+            #     if (z.fpf_involution_length() - w.fpf_involution_length()) % 2 == 0:
+            #         sgn = -1
+            #     else:
+            #         sgn = 1
+            #     a += FPFGrothendieck.get(z) * sgn
+            print('G_%s * (%s)' % (w, v))
+            try:
+                print(FPFGrothendieck.decompose(f))
+            except:
+                print('* Recursion error:', v)
+            print()
+            # print(a)
+            print()
+            print()
+            # assert f == a
+
+
+def ftest(n):
+    g = list(Permutation.fpf_involutions(n))
+    for v in g[1:]:
+        c = max(v.get_fpf_visible_inversions())
+        t = Permutation.cycle(c)
+        u = t * v * t
+        s = set(v.fpf_rothe_diagram()) - set(u.fpf_rothe_diagram())
+        #
+        #
+        assert len(s) == 1
+        i, j = s.pop()
+        k, l = c
+        assert i == k
+        #
+        ts = []
+        for h in range(1, k):
+            t = Permutation.cycle((h, k))
+            if (t * u * t).fpf_involution_length() == u.fpf_involution_length() + 1:
+                ts.append(t)
+        #
+        terms = [(u, 1)]
+        for t in ts:
+            terms = terms + [(t * w * t, -a) for w, a in terms]
+        terms = Vector({w.fpf_trim(): a for w, a in terms})
+        #
+        f = FPFGrothendieck.get(v)
+        g = FPFGrothendieck.get(u)
+        d = g - f
+        #
+        # print(f)
+        # print()
+        # print(g)
+        # print()
+        # print(d)
+        # print()
+        e = d.divide_linear(i, -1).divide_linear(j, -1)
+        # print(e)
+        # print()
+        decomp = FPFGrothendieck.decompose(e)
+        print('u =', u)
+        print('v =', v)
+        print()
+        print('(k, l) =', c)
+        v.print_fpf_rothe_diagram()
+        u.print_fpf_rothe_diagram()
+        print()
+        print(ts)
+        print()
+        print('G_v = G_u - (1 - x_%i) (1 - x_%i) [' % (i, j), decomp, ']')
+        print('                                 ', terms)
+        assert decomp == terms
+        print()
+        print()
+        print()
+        print()
+        print()
 
 
 def dtest(n):
@@ -444,9 +550,9 @@ def coincidences_d(n):
                 co[w.reduce()].add(x.reduce())
     return co
 
-co = coincidences_d(5)
-for w, l in co.items():
-     print(w,':',l)
+# co = coincidences_d(5)
+# for w, l in co.items():
+#      print(w,':',l)
 
 
 def coincidences(n):
@@ -463,10 +569,10 @@ def coincidences(n):
 
 
 from signed import *
-n = 3; w = EvenSignedPermutation.longest_element(n); w.get_atoms()
+# n = 3; w = EvenSignedPermutation.longest_element(n); w.get_atoms()
 
 
-len(list(w.get_flattened_involution_words()))
+# len(list(w.get_flattened_involution_words()))
 
 
 from permutations import *
@@ -492,15 +598,15 @@ def fpfword(n):
             yield word, double
 
 
-ans = [(a, b) for (a, b, c) in invword(n) if not c]
-for a, b in ans:
-    p = Word(*a).involution_insert()[0]
-    q = Word(*b).modified_hecke_insert(verbose=False)[0]
-    r = Word(*b).hecke_insert()[0]
-    print(p, '\n')
-    print(r, '\n')
-    print(q, '\n\n')
-    print(a, b)
+# ans = [(a, b) for (a, b, c) in invword(n) if not c]
+# for a, b in ans:
+#     p = Word(*a).involution_insert()[0]
+#     q = Word(*b).modified_hecke_insert(verbose=False)[0]
+#     r = Word(*b).hecke_insert()[0]
+#     print(p, '\n')
+#     print(r, '\n')
+#     print(q, '\n\n')
+#     print(a, b)
 
 
 from permutations import *
