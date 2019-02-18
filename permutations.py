@@ -516,8 +516,70 @@ class Permutation:
         return cls.cycle([i, i + 1])
 
     @classmethod
+    def t_ij(cls, i, j):
+        return cls.transposition(i, j)
+
+    @classmethod
     def transposition(cls, i, j):
         return cls.cycle([i, j])
+
+    def tau_ij(self, i, j):
+        assert self.is_involution() and i < j
+        w = self
+        a_tup = tuple(sorted(set([i, j, w(i), w(j)])))
+        if len(a_tup) == 2 and w(i) == i:
+            r = Permutation.t_ij(i, j)
+            return r * w
+        elif len(a_tup) == 3:
+            a, b, c = a_tup
+            if (i, j) in [(b, c), (a, c)] and w(a) == b and w(c) == c:
+                r = Permutation.t_ij(b, c)
+                return r * w * r
+            elif (i, j) in [(a, b), (a, c)] and w(a) == a and w(b) == c:
+                r = Permutation.t_ij(a, b)
+                return r * w * r
+        elif len(a_tup) == 4:
+            a, b, c, d = a_tup
+            if (i, j) == (b, c) and w(a) == b and w(c) == d:
+                r = Permutation.t_ij(i, j)
+                return r * w * r
+            elif (i, j) in [(a, c), (b, d), (a, d)] and w(a) == b and w(c) == d:
+                s = Permutation.t_ij(a, b)
+                r = Permutation.t_ij(a, c)
+                return r * s * w * r
+            elif (i, j) in [(a, b), (c, d), (a, d)] and w(a) == c and w(b) == d:
+                r = Permutation.t_ij(a, b)
+                return r * w * r
+        return w
+
+    def inverse_tau_ij(self, i, j):
+        assert self.is_involution() and i < j
+        w = self
+        a_tup = tuple(sorted(set([i, j, w(i), w(j)])))
+        if len(a_tup) == 2 and w(i) == j:
+            r = Permutation.t_ij(i, j)
+            return r * w
+        elif len(a_tup) == 3:
+            a, b, c = a_tup
+            if (i, j) in [(b, c), (a, c)] and w(a) == c and w(b) == b:
+                r = Permutation.t_ij(b, c)
+                return r * w * r
+            elif (i, j) in [(a, b), (a, c)] and w(a) == c and w(b) == b:
+                r = Permutation.t_ij(a, b)
+                return r * w * r
+        elif len(a_tup) == 4:
+            a, b, c, d = a_tup
+            if (i, j) == (b, c) and w(a) == c and w(b) == d:
+                r = Permutation.t_ij(i, j)
+                return r * w * r
+            elif (i, j) in [(a, c), (b, d), (a, d)] and w(a) == d and w(b) == b and w(c) == c:
+                s = Permutation.t_ij(a, b)
+                r = Permutation.t_ij(a, c)
+                return s * r * w * r
+            elif (i, j) in [(a, b), (c, d), (a, d)] and w(a) == d and w(b) == c:
+                r = Permutation.t_ij(a, b)
+                return r * w * r
+        return w
 
     def inverse(self):
         oneline = list(range(1, 1 + len(self.oneline)))
@@ -625,7 +687,7 @@ class Permutation:
         return s
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(tuple(self.oneline))
 
     def involution_length(self):
         return (self.length() + len(list(filter(lambda i: len(i) > 1, self.cycles)))) // 2

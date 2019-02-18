@@ -144,6 +144,14 @@ class MPolynomial:
     def __rsub__(self, other):
         return -(self - other)
 
+    def __lt__(self, other):
+        other = MPolynomial.one() * other if type(other) == int else other
+        return all(v > 0 for v in (other - self).coeffs.values())
+
+    def __gt__(self, other):
+        other = MPolynomial.one() * other if type(other) == int else other
+        return all(v > 0 for v in (self - other).coeffs.values())
+
     def isobaric_divided_difference(self, i):
         return (self * MPolynomial.monomial(i, 1)).divided_difference(i)
 
