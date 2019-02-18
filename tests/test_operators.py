@@ -1,4 +1,8 @@
-from operators import raising, lowering, diagonal, i_raising, i_diagonal, i_lowering
+from operators import (
+    raising, lowering, diagonal, 
+    i_raising, i_diagonal, i_lowering,
+    f_raising, f_diagonal, f_lowering,
+)
 from vectors import Vector
 from permutations import Permutation
 
@@ -44,14 +48,14 @@ def test_sl_repn():
 
 
 def test_sl_i_repn():
-    for n in range(4):
+    for n in range(4, 5):
         for w in Permutation.involutions(n):
-            if w.length() > 1:
-                continue
             a = i_diagonal(i_raising(w, n), n)
             b = i_raising(i_diagonal(w, n), n)
             c = 2 * i_raising(w, n)
-            print('n =', n, 'w =', w)
+
+            print()
+            print('n =', n, ', w =', w, ':', w.length(), w.involution_length())
 
             # print()
             # print('raising:')
@@ -79,17 +83,63 @@ def test_sl_i_repn():
             b = i_lowering(i_raising(w, n), n)
             c = i_diagonal(w, n)
 
+            # print()
+            # print('diagonal:')
+            # print()
+            # print(i_raising(w, n))
+            # print(i_lowering(i_raising(w, n), n))
+            # print()
+            # print(a)
+            # print(b)
+            print()
+            print(a - b, '=?=', c)
+            print()
+    # assert False
+
+
+def test_sl_f_repn():
+    for n in range(6, 8, 2):
+        for w in Permutation.fpf_involutions(n):
+            a = f_diagonal(f_raising(w, n), n)
+            b = f_raising(f_diagonal(w, n), n)
+            c = 2 * f_raising(w, n)
+
+            print()
+            print('n =', n, ', w =', w, ':', w.length(), w.fpf_involution_length())
+
+            # print()
+            # print('raising:')
+            # print()
+            # print(a)
+            # print(b)
+            # print(c)
+            # print()
+            assert a - b == c
+
+            a = f_diagonal(f_lowering(w, n), n)
+            b = f_lowering(f_diagonal(w, n), n)
+            c = -2 * f_lowering(w, n)
+
+            # print()
+            # print('lowering:')
+            # print()
+            # print(a)
+            # print(b)
+            # print(c)
+            # print()
+            assert a - b == c
+
+            a = f_raising(f_lowering(w, n), n)
+            b = f_lowering(f_raising(w, n), n)
+            c = f_diagonal(w, n)
+
             print()
             print('diagonal:')
-            print()
-            print(i_raising(w, n))
-            print(raising(w, n))
-            print(lowering(raising(w, n), n))
-            print(i_lowering(i_raising(w, n), n))
             print()
             print(a)
             print(b)
             print()
             print(a - b, '=?=', c)
             print()
+            print(a - b == c)
     assert False
