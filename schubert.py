@@ -338,18 +338,23 @@ class AbstractSchubert(object):
         return f.divided_difference(i)
 
     @classmethod
+    def reduce(cls, oneline):
+        return tuple(oneline)
+
+    @classmethod
     def get(cls, w):
         assert cls.is_valid(w)
-        oneline = tuple(w.oneline)
+        oneline = cls.reduce(w.oneline)
         cache = cls.cache()
         if oneline not in cache:
-            v, i = cls.get_ascent(w)
+            v, i = cls.get_ascent(Permutation(*oneline))
             if i is not None:
                 s = cls.get(v)
                 s = cls.divided_difference(s, i)
             else:
                 s = cls.top(len(oneline))
             cache[oneline] = s
+            print(' . . .', cls.__name__, 'cache:', len(cache))
         return cache[oneline]
 
     @classmethod
@@ -381,6 +386,12 @@ class Schubert(AbstractSchubert):
         return SCHUBERT_CACHE
 
     @classmethod
+    def reduce(cls, oneline):
+        while oneline and oneline[-1] == len(oneline):
+            oneline = oneline[:-1]
+        return tuple(oneline)
+
+    @classmethod
     def top(cls, n):
         s = one()
         for i in range(1, n):
@@ -400,6 +411,13 @@ class Schubert(AbstractSchubert):
     @classmethod
     def from_code(cls, code):
         return Permutation.from_code(code)
+
+    @classmethod
+    def product(cls, w):
+        s = one()
+        for i, j in w.rothe_diagram():
+            s *= x(i)
+        return s
 
 
 class Grothendieck(Schubert):
@@ -433,9 +451,16 @@ class DoubleSchubert(AbstractSchubert):
 
 
 class FPFSchubert(AbstractSchubert):
+
     @classmethod
     def cache(cls):
         return FPF_SCHUBERT_CACHE
+
+    @classmethod
+    def reduce(cls, oneline):
+        while len(oneline) >= 2 and oneline[-2] == len(oneline) and oneline[-1] == len(oneline) - 1:
+            oneline = oneline[:-2]
+        return tuple(oneline)
 
     @classmethod
     def top(cls, n):

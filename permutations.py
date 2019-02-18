@@ -606,9 +606,10 @@ class Permutation:
         return True
 
     def __repr__(self):
-        #sep = '' if len(self.oneline) < 10 else ','
-        #return sep.join([str(i) for i in self.oneline])
-        return self.cycle_repr()
+        sep = '' if len(self.oneline) < 10 else ','
+        ans = sep.join([str(i) for i in self.oneline])
+        return ans if ans else '()'
+        # return self.cycle_repr()
 
     def cycle_repr(self):
         if len(self) == 0:

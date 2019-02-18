@@ -3,6 +3,67 @@ from schubert import *
 import schubert
 
 
+def test_grothendieck_transitions(n):
+    def terms(w, j):
+        queue = [(w, n + 1)]
+        while queue:
+            y, k = queue[0]
+            queue = queue[1:]
+
+            if k <= j:
+                continue
+
+            s = Permutation.transposition(j, k)
+            z = y * s
+            if z.length() == y.length() + 1:
+                yield z
+                queue.append((z, k - 1))
+            queue.append((y, k - 1))
+
+    g = list(Permutation.all(n))
+    for w in g:
+        for i in range(1, n + 1):
+            var = 1 - schubert.x(i)
+
+            ts = []
+            for k in range(1, i):
+                t = Permutation.cycle([k, i])
+                v = w * t
+                if v.length() == w.length() + 1:
+                    ts.append(k)
+
+            ttt = [(w, 1)]
+            for k in ts:
+                t = Permutation.cycle([k, i])
+                ttt += [(v * t, -a) for v, a in ttt]
+
+            f = 0
+            for v, a in ttt:
+                f += Grothendieck.get(v) * a
+            f = f * var
+
+            sp = ''.join(['(1 - t_{%s,%s})' % (k, i) for k in ts]) if ts else '1'
+            print('G_%s * %s * (%s) = ' % (w, sp, var))
+            print()
+            try:
+                dec = Grothendieck.decompose(f)
+                print()
+                print('    ', dec)
+                print()
+
+                a = Grothendieck.get(w)
+                for z in terms(w, i):
+                    if (z.length() - w.length()) % 2 == 0:
+                        a += Grothendieck.get(z)
+                    else:
+                        a -= Grothendieck.get(z)
+                assert f == a
+            except:
+                print('     halted computation')
+            print()
+            print()
+
+
 def test_fpf_transitions(n):
     def terms(w, j):
         queue = [(w, n + 1)]
@@ -28,26 +89,44 @@ def test_fpf_transitions(n):
         ]
         w = w * Permutation.s_i(n + 1)
         for i, j in cyc:
-            v = 1 - schubert.x(i) - schubert.x(j) + schubert.x(i) * schubert.x(j)
-            f = FPFGrothendieck.get(w) * v
-            # a = 0
-            # print(list(terms(w, j)))
-            # for z in terms(w, j):
-            #     if (z.fpf_involution_length() - w.fpf_involution_length()) % 2 == 0:
-            #         sgn = -1
-            #     else:
-            #         sgn = 1
-            #     a += FPFGrothendieck.get(z) * sgn
-            print('G_%s * (%s)' % (w, v))
+            var = 1 - schubert.x(i) - schubert.x(j) + schubert.x(i) * schubert.x(j)
+            ts = []
+            for k in range(1, i):
+                t = Permutation.cycle([k, i])
+                v = t * w * t
+                if v.fpf_involution_length() == w.fpf_involution_length() + 1:
+                    ts.append(k)
+            ttt = [(w, 1)]
+            for k in ts:
+                t = Permutation.cycle([k, i])
+                ttt += [(t * v * t, -a) for v, a in ttt]
+            f = 0
+            for v, a in ttt:
+                f += FPFGrothendieck.get(v) * a
+            # ttt = Vector({w.fpf_trim(): a for w, a in ttt})
+            f = f * var
+            sp = ''.join(['(1 - t_{%s,%s})' % (k, i) for k in ts]) if ts else '1'
+            print('G_%s * %s * (%s) = ' % (w, sp, var))
+            print()
             try:
-                print(FPFGrothendieck.decompose(f))
+                dec = FPFGrothendieck.decompose(f)
+                print()
+                print('    ', dec)
+                print()
+                a = FPFGrothendieck.get(w)
+                # print('    ', list(terms(w, j)))
+                for z in terms(w, j):
+                    if (z.fpf_involution_length() - w.fpf_involution_length()) % 2 == 0:
+                        a += FPFGrothendieck.get(z)
+                    else:
+                        a -= FPFGrothendieck.get(z)
+                # print('    ', a - f)
+                assert f == a
             except:
-                print('* Recursion error:', v)
-            print()
-            # print(a)
+                print('     halted computation')
             print()
             print()
-            # assert f == a
+
 
 
 def ftest(n):
@@ -63,6 +142,7 @@ def ftest(n):
         i, j = s.pop()
         k, l = c
         assert i == k
+        assert list(sorted([i, j])) in u.cycles
         #
         ts = []
         for h in range(1, k):
@@ -92,7 +172,8 @@ def ftest(n):
         print('u =', u)
         print('v =', v)
         print()
-        print('(k, l) =', c)
+        print('i, j =', (i, j))
+        print('k, l =', c)
         v.print_fpf_rothe_diagram()
         u.print_fpf_rothe_diagram()
         print()
