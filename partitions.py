@@ -1,5 +1,4 @@
 from collections import defaultdict
-from permutations import Permutation
 
 
 class Shape:
@@ -194,6 +193,7 @@ class Partition:
         return len(self.parts) > 0
 
     def to_grassmannian(self):
+        from permutations import Permutation
         if len(self.parts) == 0:
             return Permutation()
         oneline = []
@@ -259,6 +259,7 @@ class StrictPartition(Partition):
         return [i] + [self(j) - self(j + 1) - 1 for j in range(1, len(self) + 1)]
 
     def to_grassmannian(self):
+        from permutations import Permutation
         n = self.parts[0] if self.parts else 0
         w = Permutation()
         for i in range(len(self.parts)):

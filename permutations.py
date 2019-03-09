@@ -329,6 +329,10 @@ class Permutation:
         ans = self.code_helper(self.involution_rothe_diagram(True))
         return ans + (len(self.oneline) - len(ans)) * (0,)
 
+    def fpf_involution_shape(self):
+        from partitions import Partition
+        return Partition(*list(reversed(sorted(self.fpf_involution_code())))).transpose()
+
     @classmethod
     def from_code(cls, *code):
         if len(code) == 1 and type(code[0]) in [list, tuple]:

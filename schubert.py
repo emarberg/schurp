@@ -10,6 +10,14 @@ GROTHENDIECK_CACHE = {}
 FPF_GROTHENDIECK_CACHE = {}
 
 
+def X(i):
+    return MPolynomial.monomial(i)
+
+
+def D(i):
+    return Operator.create(i)
+
+
 class HashableDict(dict):
 
     def __hash__(self):
