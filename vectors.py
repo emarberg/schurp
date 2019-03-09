@@ -34,8 +34,8 @@ class Vector:
         if other == 0:
             return self.is_zero()
         else:
-            assert type(other) == Vector
-            return len((self - other).dictionary) == 0
+            # assert type(other) == Vector
+            return (self - other).is_zero()
 
     def __iter__(self):
         return self.dictionary.__iter__()
@@ -46,14 +46,20 @@ class Vector:
     def __add__(self, other):
         if type(other) == Vector:
             keys = self.keys() | other.keys()
-            return Vector({key: self[key] + other[key] for key in keys}, self.printer or other.printer)
+            return Vector({
+                key: self[key] + other[key]
+                for key in keys if self[key] + other[key]
+            }, self.printer or other.printer)
         else:
             return other.__radd__(self)
 
     def __sub__(self, other):
         if type(other) == Vector:
             keys = self.keys() | other.keys()
-            return Vector({key: self[key] - other[key] for key in keys}, self.printer or other.printer)
+            return Vector({
+                key: self[key] - other[key]
+                for key in keys if self[key] - other[key]
+            }, self.printer or other.printer)
         else:
             return other.__rsub__(self)
 
@@ -70,7 +76,16 @@ class Vector:
             return self * Vector.base(other)
 
     def __rmul__(self, other):
-        return self.__mul__(other)
+        if self.is_scalar(other):
+            return Vector({key: self[key] * other for key in self.keys()}, self.printer)
+        elif type(other) == Vector:
+            ans = Vector(printer=self.printer or other.printer)
+            for a, x in other.items():
+                for b, y in self.items():
+                    ans += (x * y) * (a * b)
+            return ans
+        else:
+            return self * Vector.base(other)
 
     def __neg__(self):
         return self.__mul__(-1)

@@ -4,10 +4,83 @@ from schubert import (
     InvSchubert,
     FPFSchubert,
     FPFGrothendieck,
-    MPolynomial
+    MPolynomial,
+    Operator
 )
-import schubert
 from permutations import Permutation
+import pytest
+
+
+def test_formal_operators():
+    D = Operator.create(1) # noqa
+    x1 = MPolynomial.monomial(1)
+    x2 = MPolynomial.monomial(2)
+    x3 = MPolynomial.monomial(3)
+
+    (x1 * x2).toggle(2) == x1 * x3
+    (x1 * x2).toggle(1) == x1 * x2
+    x1.toggle(1) == x2
+    x2.toggle(1) == x1
+
+    E = D * x1 # noqa
+    F = x1 * D # noqa
+
+    print('1:', D, type(D))
+    print('2:', E, type(E))
+    print('3:', F, type(F))
+    print()
+
+    D + D
+    D - D
+    D * D
+    assert D * x1 != x1 * D
+    assert D * x2 != x2 * D
+    assert x3 * D == D * x3
+
+    assert D * x1 == Operator.create() + x2 * D
+
+    A = Operator.create(1) * x1 # noqa
+    B = Operator.create(2) * x2 # noqa
+
+    print(A)
+    print(Operator.create(1) * x2 * Operator.create(1))
+    print(A * Operator.create(1))
+    print(A * Operator.create(1) - Operator.create(1))
+    print()
+
+    assert A * Operator.create() == A
+    assert Operator.create() * A == A
+    assert A * Operator.create(1) == Operator.create(1)
+    assert Operator.create(1) * A == 0
+    assert A * A == A
+    assert B * B == B
+    assert A * B * A == B * A * B
+
+    a = Operator.create(1) * (1 - x2)
+    b = Operator.create(2) * (1 - x3)
+    assert a * a == a
+    assert b * b == b
+    assert a * b * a == b * a * b
+
+    A = Operator.create(1) * x1 * (1 - x2) # noqa
+    B = Operator.create(2) * x2 * (1 - x3) # noqa
+    print(A * B * A)
+    print(B * A * B)
+    print()
+
+    assert A * A == A
+    assert B * B == B
+    assert A * B * A == B * A * B
+
+
+def test_formal_operators_experiments():
+    x = lambda i: MPolynomial.monomial(i) # noqa
+    A = lambda i: Operator.create(i) * x(i) * (1 - x(i + 1)) # noqa
+    a = lambda i: Operator.create(i) * (1 - x(i + 1)) # noqa
+    print(A(2) * A(1) - a(2) * a(1) * x(1)**2)
+    print()
+    print(a(1) * x(1))
+    assert False
 
 
 def test_divided_differences():
@@ -63,6 +136,7 @@ def test_fpf_schubert():
     assert FPFSchubert.get(w) == x * x + x * y + x * z + y * z
 
 
+@pytest.mark.slow
 def test_product_grothendieck():
     n = 6
     g = list(Permutation.all(n))
@@ -75,6 +149,7 @@ def test_product_grothendieck():
         assert b == c
 
 
+@pytest.mark.slow
 def test_fpf_grothendieck():
     n = 6
     g = list(Permutation.fpf_involutions(n))

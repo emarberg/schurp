@@ -16,6 +16,135 @@ class HashableDict(dict):
         return hash(tuple(sorted(self.items())))
 
 
+class Operator:
+
+    class Monomial:
+
+        def __init__(self, index):
+            if type(index) == int:
+                index = (index,)
+            assert type(index) == tuple
+            assert all(type(i) == int for i in index)
+            self.index = Permutation.from_word(index).get_reduced_word()
+
+        def __repr__(self):
+            return ' '.join(['D_%s' % i for i in self.index]) if self.index else 'I'
+
+        def __hash__(self):
+            return hash(self.index)
+
+        def __eq__(self, other):
+            assert type(other) == type(self)
+            return self.index == other.index
+
+        def __lt__(self, other):
+            assert type(other) == type(self)
+            return self.index < other.index
+
+        def matches(self, other):
+            return self.index and other.index and self.index[-1] == other.index[0]
+
+    def __init__(self):
+        self.dictionary = {}
+
+    def __repr__(self):
+        s = [
+            '%s' % k if v == 1 else
+            '(%s) * %s' % (v, k)
+            for k, v in self.items()
+        ]
+        return ' + '.join(s) if s else '0'
+
+    def __eq__(self, other):
+        if other == 0:
+            return len(self.dictionary) == 0
+        assert type(other) == Operator
+        return (self - other) == 0
+
+    @classmethod
+    def create(cls, *args):
+        if len(args) == 1 and type(args[0]) in [tuple, list]:
+            args = tuple(args[0])
+        if len(args) == 1 and type(args[0]) == Operator.Monomial:
+            args = args[0].index
+        assert all(type(i) == int for i in args)
+        ans = Operator()
+        if not any(args[i] == args[i + 1] for i in range(len(args) - 1)):
+            ans.dictionary[Operator.Monomial(tuple(args))] = 1
+        return ans
+
+    def __getitem__(self, item):
+        return self.dictionary.get(item, 0)
+
+    def keys(self):
+        return self.dictionary.keys()
+
+    def items(self):
+        return self.dictionary.items()
+
+    def __iter__(self):
+        return self.dictionary.__iter__()
+
+    def __add__(self, other):
+        assert type(other) == Operator
+        dictionary = {i: self[i] + other[i] for i in self.keys() | other.keys()}
+        dictionary = {i: v for i, v in dictionary.items() if v}
+        ans = Operator()
+        ans.dictionary = dictionary
+        return ans
+
+    def __sub__(self, other):
+        assert type(other) == Operator
+        dictionary = {i: self[i] - other[i] for i in self.keys() | other.keys()}
+        dictionary = {i: v for i, v in dictionary.items() if v}
+        ans = Operator()
+        ans.dictionary = dictionary
+        return ans
+
+    def __mul__(self, other):
+        if type(other) == Operator:
+            ans = Operator()
+            for i in self:
+                for j in other:
+                    term = self[i] * Operator.create(i) * other[j]
+                    dictionary = {Operator.Monomial(k.index + j.index): term[k] for k in term if not k.matches(j)}
+                    term = Operator()
+                    term.dictionary = dictionary
+                    ans += term
+            return ans
+
+        if type(other) == int:
+            other = MPolynomial.one() * other
+
+        if type(other) in [MPolynomial]:
+            queue = [(len(i.index) + 1, self[i],) + i.index + (other,) for i in self]
+            ans = Operator()
+            while queue:
+                tup, queue = queue[0], queue[1:]
+                i, tup = tup[0], tup[1:]
+                if i == 0:
+                    ans += tup[0] * Operator.create(tup[1:])
+                if i == 1:
+                    ans += (tup[0] * tup[1]) * Operator.create(tup[2:])
+                else:
+                    j = tup[i - 1]
+                    one = (i - 1,) + tup[:i - 1] + (tup[i].divided_difference(j),) + tup[i + 1:]
+                    two = (i - 1,) + tup[:i - 1] + (tup[i].toggle(j), j) + tup[i + 1:]
+                    queue += [one, two]
+            return ans
+
+        raise Exception
+
+    def __rmul__(self, other):
+        if type(other) == Operator:
+            other.__mul__(self)
+        if type(other) in [int, MPolynomial]:
+            ans = Operator()
+            ans.dictionary = {i: other * v for i, v in self.items() if other * v}
+            return ans
+        raise Exception
+
+
 class MPolynomial:
 
     """
@@ -39,6 +168,9 @@ class MPolynomial:
 
 
     """
+
+    def __bool__(self):
+        return not self.is_zero()
 
     def __init__(self, coeffs={}):
         self.coeffs = coeffs
@@ -155,6 +287,21 @@ class MPolynomial:
     def isobaric_divided_difference(self, i):
         return (self * MPolynomial.monomial(i, 1)).divided_difference(i)
 
+    def toggle(self, i):
+        ans = MPolynomial()
+        for index, coeff in self.coeffs.items():
+            new_index = HashableDict(index.copy())
+            if i + 1 in index:
+                new_index[i] = index[i + 1]
+            elif i in new_index:
+                del new_index[i]
+            if i in index:
+                new_index[i + 1] = index[i]
+            elif i + 1 in new_index:
+                del new_index[i + 1]
+            ans += MPolynomial({new_index: coeff})
+        return ans
+
     @classmethod
     def divided_difference_helper(cls, i, index, coeff):
         a = index.get(i, 0)
@@ -187,6 +334,8 @@ class MPolynomial:
     def __mul__(self, f):
         if type(f) == int:
             return self * MPolynomial({HashableDict({}): f})
+        if type(f) != MPolynomial:
+            return f.__rmul__(self)
         newcoeffs = {}
         for i in self.coeffs:
             for j in f.coeffs:
@@ -200,7 +349,11 @@ class MPolynomial:
                     del newcoeffs[k]
         return MPolynomial(newcoeffs)
 
-    __rmul__ = __mul__
+    def __rmul__(self, other):
+        if type(other) not in [MPolynomial, int]:
+            return other.__mul__(self)
+        else:
+            return self.__mul__(other)
 
     def __pow__(self, i):
         if i == 0:

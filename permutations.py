@@ -29,6 +29,18 @@ class Permutation:
                 ans = ans + [i]
         return tuple(ans)
 
+    def reduced_word(self):
+        return self.get_reduced_word()
+
+    def get_reduced_word(self):
+        w = self
+        ans = ()
+        while len(w) > 0:
+            i = min(w.left_descent_set)
+            ans += (i,)
+            w = Permutation.s_i(i) * w
+        return ans
+
     def get_reduced_words(self):
         oneline = tuple(self.oneline)
         if oneline not in REDUCED_WORDS:
