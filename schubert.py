@@ -15,7 +15,7 @@ def X(i):
 
 
 def D(i):
-    return Operator.create(i)
+    return Operator.create(i) * (1 + 10 * X(i + 1))
 
 
 class HashableDict(dict):
@@ -660,6 +660,9 @@ class FPFSchubert(AbstractSchubert):
 
 
 class FPFGrothendieck(FPFSchubert):
+
+    beta = 10
+
     @classmethod
     def cache(cls):
         return FPF_GROTHENDIECK_CACHE
@@ -669,19 +672,19 @@ class FPFGrothendieck(FPFSchubert):
         s = one()
         for i in range(1, n + 1):
             for j in range(i + 1, n + 1 - i):
-                s *= (x(i) + x(j) - x(i) * x(j))
+                s *= (x(i) + x(j) + cls.beta * x(i) * x(j))
         return s
 
     @classmethod
     def product(cls, w):
         s = one()
         for i, j in w.fpf_rothe_diagram():
-            s *= (x(i) + x(j) - x(i) * x(j))
+            s *= (x(i) + x(j) + cls.beta * x(i) * x(j))
         return s
 
     @classmethod
     def divided_difference(cls, f, i):
-        return (f * (1 - MPolynomial.monomial(i + 1, 1))).divided_difference(i)
+        return (f * (1 + cls.beta * MPolynomial.monomial(i + 1))).divided_difference(i)
 
 
 class InvSchubert(AbstractSchubert):

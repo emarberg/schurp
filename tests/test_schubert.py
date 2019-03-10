@@ -128,6 +128,74 @@ def test_fpf_schubert():
 
 
 @pytest.mark.slow
+def test_fpf_transitions():
+    beta = FPFGrothendieck.beta
+
+    for n in [2, 4, 6]:
+        def terms(w, j):
+            queue = [(w, n + 1)]
+            while queue:
+                y, k = queue[0]
+                queue = queue[1:]
+
+                if k <= j:
+                    continue
+
+                s = Permutation.transposition(j, k)
+                z = s * y * s
+                if z.fpf_involution_length() == y.fpf_involution_length() + 1:
+                    yield z
+                    queue.append((z, k - 1))
+                queue.append((y, k - 1))
+
+        g = list(Permutation.fpf_involutions(n))
+        for w in g:
+            cyc = [
+                (i, j) for i, j in w.cycles
+                # if not any(k < i and l < j for k, l in w. cycles)
+            ]
+            w = w * Permutation.s_i(n + 1)
+            for i, j in cyc:
+                var = (1 + beta * schubert.x(i)) * (1 + beta * schubert.x(j))
+                ts = []
+                for k in range(1, i):
+                    t = Permutation.cycle([k, i])
+                    v = t * w * t
+                    if v.fpf_involution_length() == w.fpf_involution_length() + 1:
+                        ts.append(k)
+                ttt = [(w, 1)]
+                for k in ts:
+                    t = Permutation.cycle([k, i])
+                    ttt += [(t * v * t, beta * a) for v, a in ttt]
+                f = 0
+                for v, a in ttt:
+                    f += FPFGrothendieck.get(v) * a
+                # ttt = Vector({w.fpf_trim(): a for w, a in ttt})
+                f = f * var
+                sp = ''.join(['(1 + beta t_{%s,%s})' % (k, i) for k in ts]) if ts else '1'
+                print('G_%s * %s * (%s) = ' % (w, sp, var))
+                print()
+                try:
+                    print('    ', f)
+                    dec = FPFGrothendieck.decompose(f)
+                except:
+                    print('     halted computation')
+                    assert False
+
+                print()
+                print('    ', dec)
+                print()
+                a = FPFGrothendieck.get(w)
+                for z in terms(w, j):
+                    len_diff = z.fpf_involution_length() - w.fpf_involution_length()
+                    a += FPFGrothendieck.get(z) * beta**len_diff
+                assert f == a
+
+                print()
+                print()
+
+
+@pytest.mark.slow
 def test_lenart_grothendieck_transitions():
     for n in [1, 2, 3, 4, 5, 6]:
         def terms(w, j):
