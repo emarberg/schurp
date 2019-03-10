@@ -583,13 +583,15 @@ class Schubert(AbstractSchubert):
 
 class Grothendieck(Schubert):
 
+    beta = 10
+
     @classmethod
     def cache(cls):
         return GROTHENDIECK_CACHE
 
     @classmethod
     def divided_difference(cls, f, i):
-        return (f * (1 - MPolynomial.monomial(i + 1, 1))).divided_difference(i)
+        return (f * (1 + cls.beta * MPolynomial.monomial(i + 1))).divided_difference(i)
 
 
 class DoubleSchubert(AbstractSchubert):

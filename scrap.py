@@ -3,6 +3,15 @@ from schubert import *
 import schubert
 
 
+def test_formal_operators_experiments():
+    x = lambda i: MPolynomial.monomial(i) # noqa
+    A = lambda i: Operator.create(i) * x(i) * (1 - x(i + 1)) # noqa
+    a = lambda i: Operator.create(i) * (1 - x(i + 1)) # noqa
+    print(A(2) * A(1) - a(2) * a(1) * x(1)**2)
+    print()
+    print(a(1) * x(1))
+
+
 def test_grothendieck_transitions(n):
     def terms(w, j):
         queue = [(w, n + 1)]

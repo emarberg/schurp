@@ -8,6 +8,7 @@ from schubert import (
     Operator
 )
 from permutations import Permutation
+import schubert
 import pytest
 
 
@@ -73,16 +74,6 @@ def test_formal_operators():
     assert A * B * A == B * A * B
 
 
-def test_formal_operators_experiments():
-    x = lambda i: MPolynomial.monomial(i) # noqa
-    A = lambda i: Operator.create(i) * x(i) * (1 - x(i + 1)) # noqa
-    a = lambda i: Operator.create(i) * (1 - x(i + 1)) # noqa
-    print(A(2) * A(1) - a(2) * a(1) * x(1)**2)
-    print()
-    print(a(1) * x(1))
-    assert False
-
-
 def test_divided_differences():
     x = MPolynomial.monomial(3)
     y = MPolynomial.monomial(4)
@@ -134,6 +125,108 @@ def test_fpf_schubert():
 
     w = Permutation(4, 3, 2, 1)
     assert FPFSchubert.get(w) == x * x + x * y + x * z + y * z
+
+
+@pytest.mark.slow
+def test_lenart_grothendieck_transitions():
+    for n in [1, 2, 3, 4, 5, 6]:
+        def terms(w, j):
+            queue = [(w, j - 1, 0)]
+            while queue:
+                y, i, q = queue[0]
+                queue = queue[1:]
+                if i <= 0:
+                    queue.append((y, n + 1, q))
+                    continue
+                if i == j:
+                    continue
+                s = Permutation.transposition(i, j)
+                z = y * s
+                if z.length() == y.length() + 1:
+                    b = q + 1 if i < j else q
+                    yield z, (-1)**b * Grothendieck.beta**(z.length() - w.length() - 1)
+                    queue.append((z, i - 1, b))
+                queue.append((y, i - 1, q))
+
+        g = list(Permutation.all(n))
+        for w in g:
+            for i in range(1, n + 1):
+                f = Grothendieck.get(w) * schubert.x(i)
+
+                print('w =', w, 'i =', i)
+                print([(z, c, Grothendieck.get(z)) for z, c in terms(w, i)])
+                print(f)
+                g = 0
+                for z, c in terms(w, i):
+                    g += Grothendieck.get(z) * c
+                print(g)
+                print()
+                assert f == g
+
+
+@pytest.mark.slow
+def test_grothendieck_transitions():
+    for n in [1, 2, 3, 4, 5, 6]:
+        def terms(w, j):
+            queue = [(w, n + 1)]
+            while queue:
+                y, k = queue[0]
+                queue = queue[1:]
+
+                if k <= j:
+                    continue
+
+                s = Permutation.transposition(j, k)
+                z = y * s
+                if z.length() == y.length() + 1:
+                    yield z
+                    queue.append((z, k - 1))
+                queue.append((y, k - 1))
+
+        g = list(Permutation.all(n))
+        for w in g:
+            for i in range(1, n + 1):
+                var = 1 + Grothendieck.beta * schubert.x(i)
+
+                ts = []
+                for k in range(1, i):
+                    t = Permutation.cycle([k, i])
+                    v = w * t
+                    if v.length() == w.length() + 1:
+                        ts.append(k)
+
+                ttt = [(w, 1)]
+                for k in ts:
+                    t = Permutation.cycle([k, i])
+                    ttt += [(v * t, Grothendieck.beta * a) for v, a in ttt]
+
+                f = 0
+                for v, a in ttt:
+                    f += Grothendieck.get(v) * a
+                f = f * var
+
+                sp = ''.join(['(1 + beta t_{%s,%s})' % (k, i) for k in ts]) if ts else '1'
+                print('G_%s * %s * (%s) = ' % (w, sp, var))
+                print()
+
+                try:
+                    dec = Grothendieck.decompose(f)
+                except:
+                    print('     halted computation')
+                    assert False
+
+                print()
+                print('    ', dec)
+                print()
+
+                a = Grothendieck.get(w)
+                for z in terms(w, i):
+                    len_diff = z.length() - w.length()
+                    a += Grothendieck.beta**len_diff * Grothendieck.get(z)
+                assert f == a
+
+                print()
+                print()
 
 
 @pytest.mark.slow
