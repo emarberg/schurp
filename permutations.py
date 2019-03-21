@@ -1,5 +1,5 @@
 import itertools
-
+from tableaux import Tableau
 
 REDUCED_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
@@ -9,6 +9,18 @@ SYMPLECTIC_HECKE_ATOMS_CACHE = {}
 
 
 class Permutation:
+
+    @classmethod
+    def random_reduced_word(cls, n):
+        return Tableau.random_sorting_network(n)
+
+    @classmethod
+    def random_involution_word(cls, n):
+        return Tableau.random_inv_network(n)
+
+    @classmethod
+    def random_fpf_involution_word(cls, n):
+        return Tableau.random_fpf_network(n)
 
     @classmethod
     def longest_element(cls, n):

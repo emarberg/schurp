@@ -774,32 +774,58 @@ def subtest(e):
     t = Tableau()
     for i, j in p:
         t = t.set(i, j, p.entry(i, j) - r.entry(i, j))
-    # seen = []
-    # for i, j in sorted(r, key=lambda ij: (-ij[0], ij[1])):
-    #     v = r.entry(i, j).number
-    #     if v % 2 != 0 and not (v - 1 in seen or v in seen or v + 1 in seen):
-    #         r = r.set(i, j, MarkedNumber(v + 1))
-    #     seen += [r.entry(i, j).number]
-    if r != p:
-        print(pre)
-        print(mid)
-        print('word =', ' '.join(map(str, e)))
+    #
+    # correct r
+    seen = []
+    corrections = 0
+    for i, j in sorted(r, key=lambda ij: (-ij[0], ij[1])):
+        v = r.entry(i, j).number
+        if v % 2 != 0 and not (v - 1 in seen or v in seen or v + 1 in seen):
+            r = r.set(i, j, MarkedNumber(v + 1))
+            corrections += 1
+        seen += [r.entry(i, j).number]
+    if corrections == 0 and a != a.transpose():
+        print(tuple(reversed(e)), tuple(reversed(mid)), e)
+        print()
+        print(a)
         print()
         print(p)
         print()
-        print(r)
+        print(x.transpose())
         print()
-        for i in range(len(e)):
-            ee = e[:i + 1]
-            a, b = (Word(*reversed(ee)) | Word(*reversed(mid)) | Word(*ee)).eg_insert()
-            print(a)
-            print()
-        print(t)
         print()
-        input('?\n')
+        print()
+    #
+    #
+    assert r == p
+    # if r != p:
+    #     print(pre)
+    #     print(mid)
+    #     print('word =', ' '.join(map(str, e)))
+    #     print()
+    #     print(p)
+    #     print()
+    #     print(r)
+    #     print()
+    #     # for i in range(len(e)):
+    #     #     ee = e[:i + 1]
+    #     #     a, b = (Word(*reversed(ee)) | Word(*reversed(mid)) | Word(*ee)).eg_insert()
+    #     #     print(a)
+    #     #     print()
+    #     print(t)
+    #     print()
+    #     input('?\n')
 
 
-def test(n):
+def test_hecke_doubling_random(n):
+    e = Permutation.random_fpf_involution_word(n)
+    for i in range(n):
+        print(i, 'of', n)
+        subtest(e[:i])
+        print()
+
+
+def test_hecke_doubling(n):
     assert n % 2 == 0
     g = Permutation.fpf_involutions(n)
     for w in g:
