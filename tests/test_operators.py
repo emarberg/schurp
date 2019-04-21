@@ -94,7 +94,6 @@ def test_sl_i_repn():
             print()
             print(a - b, '=?=', c)
             print()
-    # assert False
 
 
 def test_sl_f_repn():
@@ -142,4 +141,3 @@ def test_sl_f_repn():
             print(a - b, '=?=', c)
             print()
             print(a - b == c)
-    assert False

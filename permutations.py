@@ -314,13 +314,10 @@ class Permutation:
         }
 
     def rothe_diagram(self):
-        ans = []
         n = len(self.oneline)
-        for i in range(1, n + 1):
-            for j in range(i + 1, n + 1):
-                if self(i) > self(j):
-                    ans += [(i, self(j))]
-        return sorted(ans)
+        return sorted([
+            (i, self(j)) for i in range(1, n + 1) for j in range(i + 1, n + 1) if self(i) > self(j)
+        ])
 
     def code_helper(self, diag):
         n = len(self.oneline)
@@ -415,13 +412,7 @@ class Permutation:
         return self.involution_rothe_diagram(True)
 
     def involution_rothe_diagram(self, fpf=False):
-        diag = self.rothe_diagram()
-        ans = []
-        for i, j in diag:
-            if i > j or (not fpf and i == j):
-                ans += [(i, j)]
-
-        return ans
+        return [(i, j) for (i, j) in self.rothe_diagram() if i > j or (not fpf and i == j)]
 
     def print_rothe_diagram(self, french=False, sep=' '):
         print(self.print_diagram(self.rothe_diagram(), french=french, sep=sep))
