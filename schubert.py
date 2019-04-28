@@ -413,8 +413,10 @@ class MPolynomial:
         #     return "s"
         # if i == 8:
         #     return "r"
-        if i >= 0:
+        if i > 0:
             return "x_" + str(i)
+        elif i == 0:
+            return "\u03B2"
         else:
             return "y_" + str(-i)
 
@@ -591,7 +593,7 @@ class Schubert(AbstractSchubert):
 
 class Grothendieck(Schubert):
 
-    beta = 10
+    beta = X(0)
 
     @classmethod
     def cache(cls):
@@ -661,7 +663,7 @@ class FPFSchubert(AbstractSchubert):
 
 class FPFGrothendieck(FPFSchubert):
 
-    beta = 10
+    beta = X(0)
 
     @classmethod
     def cache(cls):
