@@ -131,7 +131,7 @@ def test_fpf_schubert():
 def test_fpf_transitions():
     beta = FPFGrothendieck.beta
 
-    for n in [2, 4, 6]:
+    for n in [2, 4, 6, 8]:
         def terms(w, j):
             queue = [(w, n + 1)]
             while queue:
@@ -152,7 +152,6 @@ def test_fpf_transitions():
         for w in g:
             cyc = [
                 (i, j) for i, j in w.cycles
-                # if not any(k < i and l < j for k, l in w. cycles)
             ]
             w = w * Permutation.s_i(n + 1)
             for i, j in cyc:
@@ -170,21 +169,21 @@ def test_fpf_transitions():
                 f = 0
                 for v, a in ttt:
                     f += FPFGrothendieck.get(v) * a
-                # ttt = Vector({w.fpf_trim(): a for w, a in ttt})
                 f = f * var
                 sp = ''.join(['(1 + beta t_{%s,%s})' % (k, i) for k in ts]) if ts else '1'
                 print('G_%s * %s * (%s) = ' % (w, sp, var))
                 print()
-                try:
-                    print('    ', f)
-                    dec = FPFGrothendieck.decompose(f)
-                except:
-                    print('     halted computation')
-                    assert False
 
-                print()
-                print('    ', dec)
-                print()
+                # try:
+                #     print('    ', f)
+                #     dec = FPFGrothendieck.decompose(f)
+                # except:
+                #     print('     halted computation')
+                #     assert False
+                # print()
+                # print('    ', dec)
+                # print()
+
                 a = FPFGrothendieck.get(w)
                 for z in terms(w, j):
                     len_diff = z.fpf_involution_length() - w.fpf_involution_length()
