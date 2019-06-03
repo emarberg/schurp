@@ -363,6 +363,11 @@ class MPolynomial:
         else:
             return self.__mul__(other)
 
+    def __floordiv__(self, other):
+        assert type(other) in [int]
+        coeffs = {m: c // other for (m, c) in self.coeffs.items() if c / other}
+        return MPolynomial(coeffs)
+
     def __pow__(self, i):
         if i == 0:
             return MPolynomial.monomial(0, 0)

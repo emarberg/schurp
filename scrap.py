@@ -1,4 +1,29 @@
 
+
+
+from schubert import *
+
+ANTIPODES = {}
+
+def antipode(n):
+    assert n >= 0
+    if n not in ANTIPODES:
+        if n == 0:
+            ans = MPolynomial.one()
+        else:
+            a = antipode(n - 1)
+            ans = a * X(0) * (n - 1)
+            for i in range(a.total_degree() + 1):
+                c = a.coefficient(1, i)
+                f = (i + 1) * X(1)**(i + 1) + i * X(0) * X(1)**i
+                ans += f * c
+            ans *= -1
+        ANTIPODES[n] = ans
+    return ANTIPODES[n]
+
+
+
+
 from schubert import *
 import schubert
 
