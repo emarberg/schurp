@@ -12,8 +12,8 @@ X(3) * (1,3,4,5,2) == \
 \[
 (1 + \beta x_3) \fkG_{13452} =
 \fkG_{13452} +
-\beta\fkG_{13542} - \beta\fkG_{14352} - 
-\beta^2\fkG_{14532} + \beta^2\fkG_{34152} + 
+\beta\fkG_{13542} - \beta\fkG_{14352} -
+\beta^2\fkG_{14532} + \beta^2\fkG_{34152} +
 \beta^3\fkG_{34512} + \beta^3\fkG_{34251} +
 \beta^4\fkG_{34521}
 \]
@@ -43,7 +43,7 @@ def grothendieck_transition_terms(w, j):
     increases by exactly one upon multiplication by each transposition.
     """
     beta = X(0)
-    n = len(w.oneline)
+    n = max(j, len(w.oneline))
     yield w, beta**0
     queue = [(w, j - 1, 0)]
     while queue:
@@ -128,3 +128,44 @@ def fpf_transition_lower_terms(w, j):
             yield z, beta ** (z.fpf_involution_length() - w.fpf_involution_length())
             queue.append((z, k + 1))
         queue.append((y, k + 1))
+
+
+def multiply_via_grothendieck_transitions(w, j):
+    if type(w) == Permutation:
+        w = Vector({w: X(0)**0})
+    assert type(w) == Vector
+    ans = Vector()
+    for y, b in w.items():
+        for z, c in grothendieck_transition_terms(y, j):
+            ans += Vector({z: b * c})
+    return ans
+
+
+def test_fpf_transitions(n=8):
+    beta = X(0)
+    for z in Permutation.fpf_involutions(n):
+        for j, k in z.cycles:
+            print('n =', n)
+            print('z =', z)
+            print('j =', j)
+            print('k =', k)
+            print()
+
+            f = Vector()
+            for y, c in fpf_transition_lower_terms(z, j):
+                for w in y.get_symplectic_hecke_atoms():
+                    f += Vector({w: c * beta ** (len(w) - y.fpf_involution_length())})
+            f = multiply_via_grothendieck_transitions(f, j)
+            f = multiply_via_grothendieck_transitions(f, k)
+            print('LHS =', f)
+
+            g = Vector()
+            for y, c in fpf_transition_upper_terms(z, k):
+                for w in y.get_symplectic_hecke_atoms():
+                    g += Vector({w: c * beta ** (len(w) - y.fpf_involution_length())})
+            print('RHS =', g)
+            print()
+
+            print()
+            assert f == g
+
