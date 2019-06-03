@@ -78,14 +78,20 @@ def test_grothendieck_transition_terms():
     }
 
 
-def fpf_grothendieck_transition_terms(w, j, k):
-    """
-    Yields pairs (z, sign * beta**n) where . . .
-    """
+def fpf_transition_upper_terms(w, j):
+    assert w(j) < j
+
+    def trim(z):
+        m = len(z.oneline)
+        if m % 2 == 0 and z(m) == m - 1:
+            return trim(z * Permutation.s_i(m - 1))
+        return z
+
     beta = X(0)
     n = len(w.oneline)
-    yield w, beta**0
+    yield trim(w), beta**0
 
+    w *= Permutation.s_i(n + 1)
     queue = [(w, n + 1)]
     while queue:
         y, k = queue[0]
@@ -97,6 +103,28 @@ def fpf_grothendieck_transition_terms(w, j, k):
         s = Permutation.transposition(j, k)
         z = s * y * s
         if z.fpf_involution_length() == y.fpf_involution_length() + 1:
-            yield z
+            yield trim(z), beta ** (z.fpf_involution_length() - w.fpf_involution_length())
             queue.append((z, k - 1))
         queue.append((y, k - 1))
+
+
+def fpf_transition_lower_terms(w, j):
+    assert j < w(j)
+
+    beta = X(0)
+    yield w, beta**0
+
+    queue = [(w, 1)]
+    while queue:
+        y, k = queue[0]
+        queue = queue[1:]
+
+        if k >= j:
+            continue
+
+        s = Permutation.transposition(j, k)
+        z = s * y * s
+        if z.fpf_involution_length() == y.fpf_involution_length() + 1:
+            yield z, beta ** (z.fpf_involution_length() - w.fpf_involution_length())
+            queue.append((z, k + 1))
+        queue.append((y, k + 1))
