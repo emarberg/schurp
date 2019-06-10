@@ -1159,7 +1159,7 @@ class EvenSignedPermutation:
 
 class SignedAtomsGraph:
 
-    DIRECTORY = '/Users/emarberg/Dropbox/schubert-type-b/atoms/'
+    DIRECTORY = '/Users/emarberg/Dropbox/stanley-type-c/atoms/'
 
     def tikz(self):
         pre = [
