@@ -1,3 +1,153 @@
+from symmetric import *
+from partitions import *
+
+
+cache = {}
+for n in range(13):
+    print(' . . .', n)
+    for mu, nu in StrictPartition.skew_pairs(n):
+        cache[(mu, nu)] = SchurP(mu).skew(nu)
+
+
+icache = {}
+for n in range(13):
+    print(' . . .', n)
+    for mu, nu in StrictPartition.skew_pairs(n):
+        icache[(mu, nu)] = SchurQ(mu).skew(nu)
+
+
+def skew_shape(w, transpose=False, inv=False):
+    d = w.fpf_rothe_diagram() if not inv else w.involution_rothe_diagram()
+    if transpose:
+        d = [(j, i) for (i, j) in d]
+    k = sorted({i for i, j in d})
+    l = len(k)
+    m = max(k) if k else 0
+    c = [len({j for i, j in d if i == index}) for index in range(1, m + 1)]
+    shape = [
+        (i, j + (1 + i - k[i - 1] - c[k[i - 1] - 1]))
+        for i in range(1, l + 1)
+        for j in range(c[k[i - 1] - 1])
+    ]
+    offset = (1 - min([j for i, j in shape])) if shape else 0
+    shape = [(i, j + offset) for i, j in shape]
+    return shape
+
+
+def count_se_property(n):
+    c = 0
+    for w in Permutation.fpf_involutions(n):
+        d = w.fpf_rothe_diagram()
+        if all((j, k) in d for (i, k) in d for (j, l) in d if i < j and k > l):
+            c += 1
+    return c
+
+
+def test(n):
+    for w in Permutation.fpf_involutions(n):
+        if w.fpf_involution_length() > 4:
+            continue
+        f = FPFStanleyExpander(w).expand()
+        pairs = [pr for pr, g in cache.items() if f == g]
+        if len(pairs) == 0:
+            # if has_se_property(w):
+            #     print('z =', w)
+            #     print('fpf code =', w.fpf_involution_code())
+            #     w.print_fpf_rothe_diagram()
+            #     input('?')
+            continue
+        if not has_se_property(w):
+            continue
+        modified = pairs #[(mu, nu) for (mu, nu) in pairs if mu != nu and len(nu) > 0]
+        if len(f) == 1:
+            continue
+        print('z =', w)
+        print('fpf code =', w.fpf_involution_code())
+        w.print_fpf_rothe_diagram(sep='.')
+        print()
+        sh = skew_shape(w, True)
+        print(w.print_diagram(sh, sep='.'))
+        print()
+        print(f)
+        for mu, nu in modified:
+            print(mu.shape - nu.shape)
+            print('\n', mu, nu, '\n')
+        print()
+        print()
+        print()
+
+
+def itest(n):
+    for w in Permutation.involutions(n):
+        f = SchurP.to_q_basis(InvStanleyExpander(w).expand() * 2**w.number_two_cycles())
+        pairs = [pr for pr, g in icache.items() if f == g]
+        if len(pairs) == 0:
+            continue
+        if not has_se_property(w, inv=True):
+            continue
+        modified = pairs
+        if len(modified) > 8:
+            continue
+        if len(f) == 1:
+            continue
+        print('z =', w)
+        print('inv code =', w.involution_code())
+        w.print_involution_rothe_diagram()
+        #print('\n.\n')
+        #sh = Shape(skew_shape(w, True, inv=True))
+        #print(sh)
+        print()
+        print(f)
+        for mu, nu in modified[:]:
+            print(mu.shape - nu.shape)
+            print('\n', mu, nu, '\n')
+        print()
+        print()
+        print()
+
+
+def has_se_property(w, inv=False):
+    d = w.fpf_rothe_diagram() if not inv else w.involution_rothe_diagram()
+    return all((j, k) in d for (i, k) in d for (j, l) in d if i < j and k > l)
+
+
+def get_se_property(n):
+    for w in Permutation.fpf_involutions(n):
+        d = w.fpf_rothe_diagram()
+        if all((j, k) in d for (i, k) in d for (j, l) in d if i < j and k > l):
+            yield w
+
+
+def Ffpf(w):
+    return FPFStanleyExpander(w).expand()
+
+
+def test_stanley(n):
+    for w in Permutation.fpf_involutions(n):
+        f = SchurP.to_schur_basis(FPFStanleyExpander(w).expand())
+        g = Vector()
+        for x in w.get_fpf_atoms():
+            g += StanleyExpander(x).expand()
+        assert f == g
+
+
+def P(mu, nu):
+    ans = SchurQ(*mu).skew(StrictPartition(*nu))
+    ans = SchurQ.to_p_basis(ans) / 2**(len(mu) - len(nu))
+    return ans
+
+
+def print_se_property(n):
+    for w in get_se_property(n):
+        print(w)
+        print(w.fpf_involution_code())
+        print(w.print_diagram(skew_shape(w)))
+        w.print_fpf_rothe_diagram()
+        print()
+        print(Ffpf(w))
+        print()
+        print()
+        print()
 
 
 

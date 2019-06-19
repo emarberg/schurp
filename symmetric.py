@@ -4,6 +4,241 @@ from vectors import Vector
 
 
 involution_stanley_cache = {(): {(): 1}}
+fpf_stanley_cache = {(): {(): 1}}
+stanley_cache = {(): {(): 1}}
+
+
+class StanleyExpander:
+
+    @property
+    def cache(self):
+        return stanley_cache
+
+    def __init__(self, w):
+        assert type(w) == Permutation
+        self.w = w
+        self._key = None
+
+    def __repr__(self):
+        return 'Expand[ %s ]' % str(self.w)
+
+    @property
+    def key(self):
+        if self._key is None:
+            k = self.w.oneline
+            while k and k[-1] == len(k):
+                k = k[:-1]
+            self._key = tuple(k)
+        return self._key
+
+    def set_cache(self, vector):
+        self.cache[self.key] = {
+            tuple(q.mu.parts): v
+            for q, v in vector.items()
+        }
+
+    def get_cache(self):
+        return Vector({
+            Schur(Partition(*k)): v
+            for k, v in self.cache[self.key].items()
+        })
+
+    def expand(self):
+        if self.key in self.cache:
+            return self.get_cache()
+        else:
+            children, _ = self.get_children()
+            if children:
+                ans = Vector()
+                for u in children:
+                    ans += StanleyExpander(u).expand()
+            else:
+                q = Schur(self.get_grassmannian_shape())
+                ans = Vector({q: 1})
+            self.set_cache(ans)
+            return ans
+
+    def get_children(self):
+        u, r, s = self.descend()
+        if u is None:
+            return [], None
+        children = StanleyExpander(u).phi_minus(r)
+        if len(children) == 0:
+            n = len(self.w.oneline)
+            c = Permutation.cycle(range(1, n + 2))
+            new_w = c * self.w * c.inverse()
+            return StanleyExpander(new_w).get_children()
+        return children, u
+
+    def descend(self):
+        if self.is_grassmannian():
+            return None, None, None
+        n = len(self.w.oneline)
+        for r in reversed(range(1, n + 1)):
+            for s in reversed(range(r + 1, n + 1)):
+                if self.w(s) < self.w(r):
+                    t = Permutation.cycle([r, s])
+                    y = self.w * t
+                    return y, r, s
+
+    def get_descents(self):
+        n = len(self.w.oneline)
+        for i in range(1, n + 1):
+            if self.w(i) > self.w(i + 1):
+                yield i
+
+    def is_grassmannian(self):
+        return len(list(self.get_descents())) <= 1
+
+    def get_grassmannian_shape(self):
+        des = list(self.get_descents())
+        assert len(des) <= 1
+        n = des[0] if des else 0
+        return Partition(*reversed(sorted([self.w(i) - i for i in range(1, n + 1)])))
+
+    def phi_plus(self, r):
+        ans = []
+        n = max(r, len(self.w.oneline))
+        for i in range(r + 1, n + 2):
+            tau = self.tau(r, i)
+            if (tau.length() - self.w.length()) == 1:
+                ans += [tau]
+        return sorted(set(ans))
+
+    def phi_minus(self, r):
+        ans = []
+        for i in range(1, r):
+            tau = self.tau(i, r)
+            if (tau.length() - self.w.length()) == 1:
+                ans += [tau]
+        return sorted(set(ans))
+
+    def tau(self, i, j):
+        t = Permutation.cycle([i, j])
+        return self.w * t
+
+
+class FPFStanleyExpander:
+
+    @property
+    def cache(self):
+        return fpf_stanley_cache
+
+    def __init__(self, w):
+        assert type(w) == Permutation
+        assert w.is_fpf_involution()
+        self.w = w
+        self._key = None
+
+    def __repr__(self):
+        return 'FPF Expand[ %s ]' % str(self.w)
+
+    @property
+    def key(self):
+        if self._key is None:
+            k = self.w.oneline
+            while k and k[-2] == len(k) and k[-1] == len(k) - 1:
+                k = k[:-2]
+            self._key = tuple(k)
+        return self._key
+
+    def set_cache(self, vector):
+        self.cache[self.key] = {
+            tuple(q.mu.parts): v
+            for q, v in vector.items()
+        }
+
+    def get_cache(self):
+        return Vector({
+            SchurP(StrictPartition(*k)): v
+            for k, v in self.cache[self.key].items()
+        })
+
+    def expand(self):
+        if self.key in self.cache:
+            return self.get_cache()
+        else:
+            children, _ = self.get_children()
+            if children:
+                ans = Vector()
+                for u in children:
+                    ans += FPFStanleyExpander(u).expand()
+            else:
+                q = SchurP(self.get_grassmannian_shape())
+                ans = Vector({q: 1})
+            self.set_cache(ans)
+            return ans
+
+    def get_children(self):
+        u, r, s = self.descend()
+        if u is None:
+            return [], None
+        # sanity check
+        # assert [w] == cls.phi_plus(u, r) and u(r) <= r
+        children = FPFStanleyExpander(u).phi_minus(u(r))
+        if len(children) == 0:
+            n = len(self.w.oneline)
+            c = Permutation.cycle(range(1, n + 3)) ** 2
+            new_w = c * self.w * c.inverse() * Permutation.s_i(1)
+            return FPFStanleyExpander(new_w).get_children()
+        return children, u
+
+    def descend(self):
+        if self.is_grassmannian():
+            return None, None, None
+        n = len(self.w.oneline)
+        for r in reversed(range(1, n + 1)):
+            for s in reversed(range(r + 1, n + 1)):
+                if self.w(s) < min([self.w(r), r]):
+                    t = Permutation.cycle([r, s])
+                    y = t * self.w * t
+                    return y, r, s
+
+    def get_dearc_descents(self):
+        v = self.dearc()
+        n = len(v.oneline)
+        for i in range(1, n + 1):
+            if v(i) > v(i + 1) and v(i + 1) <= i:
+                yield i
+
+    def dearc(self):
+        cycles = [tuple(sorted(c)) for c in self.w.cycles]
+        cycles = [(p, q) for (p, q) in cycles if any((a, b) for (a, b) in cycles if p < b < q)]
+        v = Permutation()
+        for p, q in cycles:
+            v *= Permutation.cycle((p, q))
+        return v
+
+    def is_grassmannian(self):
+        return len(list(self.get_dearc_descents())) <= 1
+
+    def get_grassmannian_shape(self):
+        des = list(self.get_dearc_descents())
+        assert len(des) <= 1
+        n = des[0] if des else 0
+        r = max(self.dearc().support()) - n if des else 0
+        return StrictPartition(*[n - self.dearc()(n + 1 + i) for i in range(r)])
+
+    def phi_plus(self, r):
+        ans = []
+        n = max(r, len(self.w.oneline))
+        for i in range(r + 1, n + 2):
+            tau = self.tau(r, i)
+            if (tau.involution_length() - self.w.involution_length()) == 1:
+                ans += [tau]
+        return sorted(set(ans))
+
+    def phi_minus(self, r):
+        ans = []
+        for i in range(1, r):
+            tau = self.tau(i, r)
+            if (tau.involution_length() - self.w.involution_length()) == 1:
+                ans += [tau]
+        return sorted(set(ans))
+
+    def tau(self, i, j):
+        t = Permutation.cycle([i, j])
+        return t * self.w * t
 
 
 class InvStanleyExpander:
@@ -18,7 +253,7 @@ class InvStanleyExpander:
         self._key = None
 
     def __repr__(self):
-        return 'Expand[ %s ]' % str(self.w)
+        return 'Inv Expand[ %s ]' % str(self.w)
 
     @property
     def key(self):
@@ -306,7 +541,7 @@ class SchurP:
 
     @classmethod
     def _check_vector(cls, vector):
-        if type(vector) == SchurS:
+        if type(vector) == cls:
             vector = Vector({vector: 1})
         assert type(vector) == Vector
         assert all(type(k) == cls for k in vector.keys())
@@ -325,6 +560,21 @@ class SchurP:
             ans += Vector({SchurQ(s.mu): v // 2**len(s.mu)})
         return ans
 
+    @classmethod
+    def to_schur_basis(cls, vector):
+        vector = cls._check_vector(vector)
+        ans = Vector()
+        for s, val in vector.items():
+            assert type(s.mu) == StrictPartition
+            for w in s.mu.to_grassmannian().get_atoms():
+                ans += StanleyExpander(w).expand() * val
+        return ans
+
+    def skew(self, nu, verbose=False):
+        mu = self.mu
+        ans = SchurQ(mu).skew(nu, verbose)
+        e = len(mu) - len(nu)
+        return SchurQ.to_p_basis(ans) / 2**e
 
 s_lambda_cache = {}
 
@@ -361,6 +611,10 @@ class SchurQ(SchurP):
     @classmethod
     def to_s_basis(cls, vector):
         return cls.decompose_s_lambda(vector)
+
+    @classmethod
+    def to_schur_basis(cls, vector):
+        return SchurP.to_schur_basis(cls.to_p_basis(vector))
 
     @classmethod
     def decompose_s_lambda(cls, vector):
@@ -471,3 +725,40 @@ class SchurS(SchurP):
             for x, u in SchurQ.s_lambda(s.mu).items():
                 ans += Vector({x: u * v})
         return ans
+
+    @classmethod
+    def to_schur_basis(cls, vector):
+        return SchurP.to_schur_basis(cls.to_p_basis(vector))
+
+
+class Schur(SchurP):
+
+    def __init__(self, *args):
+        if len(args) == 1 and type(args[0]) in [Partition, StrictPartition]:
+            args = args[0].parts
+        self.mu = Partition(*args)
+
+    def __repr__(self):
+        return 'schur(%s)' % ', '.join(str(i) for i in self.mu.parts)
+
+    def __mul__(self, other):
+        if type(other) == int:
+            return Vector({self: other})
+        assert type(other) == type(self)
+        u = self.mu.to_grassmannian()
+        v = other.mu.to_grassmannian()
+        assert type(self.mu) == Partition
+        assert type(other.mu) == Partition
+        n = len(u.oneline)
+        w = Permutation(u.oneline + [i + n for i in v.oneline])
+        return StanleyExpander(w).expand()
+
+    def __add__(self, other):
+        if type(other) == Vector:
+            return Vector.base(self) + other
+        else:
+            assert type(other) == type(self)
+            return Vector.base(self) + other.to_schur_basis(other)
+
+    def __radd__(self, other):
+        return self.__add__(other)

@@ -90,6 +90,12 @@ class Vector:
     def __neg__(self):
         return self.__mul__(-1)
 
+    def __truediv__(self, c):
+        assert type(c) == int
+        assert c != 0
+        assert all(v % c == 0 for v in self.values())
+        return Vector(dictionary={k: v // c for k, v in self.items()}, printer=self.printer)
+
     def is_scalar(self, other):
         return type(other) == int
 

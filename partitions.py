@@ -222,7 +222,7 @@ class Partition:
         else:
             for i in range(1, 1 + min(max_part, n)):
                 for p in cls.all(n - i, i):
-                    parts = (i,) + p.parts
+                    parts = [i] + p.parts
                     yield Partition(*parts)
 
     @classmethod
@@ -281,6 +281,5 @@ class StrictPartition(Partition):
         else:
             for i in range(1, 1 + min(max_part, n)):
                 for p in cls.all(n - i, i - 1):
-                    parts = (i,) + p.parts
+                    parts = [i] + p.parts
                     yield StrictPartition(*parts)
-
