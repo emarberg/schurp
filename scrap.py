@@ -63,10 +63,15 @@ def test(n):
             continue
         print('z =', w)
         print('fpf code =', w.fpf_involution_code())
-        w.print_fpf_rothe_diagram(sep='.')
+        w.print_fpf_rothe_diagram(sep='-')
+        print('\n.\n')
+        FPFStanleyExpander(w).dearc().print_involution_rothe_diagram(sep='-')
+        print('\n.\n')
+        w.get_min_fpf_atom().inverse().print_rothe_diagram(sep='-')
+        print('\n.\n')
         print()
         sh = skew_shape(w, True)
-        print(w.print_diagram(sh, sep='.'))
+        print(w.print_diagram(sh, sep='-'))
         print()
         print(f)
         for mu, nu in modified:
