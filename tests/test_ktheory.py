@@ -141,7 +141,7 @@ def multiply_via_grothendieck_transitions(w, j):
     return ans
 
 
-def test_fpf_transitions(n=8):
+def test_fpf_transitions(n=6):
     beta = X(0)
     for z in Permutation.fpf_involutions(n):
         for j, k in z.cycles:

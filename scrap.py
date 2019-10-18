@@ -2,18 +2,18 @@ from symmetric import *
 from partitions import *
 
 
-cache = {}
-for n in range(13):
-    print(' . . .', n)
-    for mu, nu in StrictPartition.skew_pairs(n):
-        cache[(mu, nu)] = SchurP(mu).skew(nu)
+# cache = {}
+# for n in range(13):
+#     print(' . . .', n)
+#     for mu, nu in StrictPartition.skew_pairs(n):
+#         cache[(mu, nu)] = SchurP(mu).skew(nu)
 
 
-icache = {}
-for n in range(13):
-    print(' . . .', n)
-    for mu, nu in StrictPartition.skew_pairs(n):
-        icache[(mu, nu)] = SchurQ(mu).skew(nu)
+# icache = {}
+# for n in range(13):
+#     print(' . . .', n)
+#     for mu, nu in StrictPartition.skew_pairs(n):
+#         icache[(mu, nu)] = SchurQ(mu).skew(nu)
 
 
 def skew_shape(w, transpose=False, inv=False):
@@ -947,7 +947,8 @@ def subtest(e):
     p, q = Word(*e).fpf_insert()
     pre = tuple(i for i in range(m + 2) if i % 2 != 0 and not (i in e or i - 1 in e or i + 1 in e))
     mid = tuple(i for i in range(m + 2) if i % 2 != 0 and (i in e or i - 1 in e or i + 1 in e))
-    a, b = (Word(*reversed(e)) | Word(*reversed(mid)) | Word(*e)).eg_insert()
+    doubled = Word(*reversed(e)) | Word(*reversed(mid)) | Word(*e)
+    a, b = doubled.eg_insert()
     x, y = (Word(*mid) | Word(*e)).involution_insert()
     r = a.strict_lower_half().translate_left()
     assert x == a.transpose().lower_half()
@@ -977,6 +978,17 @@ def subtest(e):
         print()
     #
     #
+    print(e, '->', doubled)
+    print()
+    print(p)
+    print()
+    print(q)
+    print()
+    print(a)
+    print()
+    print(b)
+    print()
+    input('?')
     assert r == p
     # if r != p:
     #     print(pre)

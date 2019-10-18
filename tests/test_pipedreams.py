@@ -103,6 +103,9 @@ def test_involution_ladder_moves_span():
         assert b.issubset(a)
         assert a == b
 
+        a = set(w.get_involution_pipe_dreams(extended=True))
+        b = set(w.get_bottom_involution_pipe_dream().upper_involution_ladder_interval(extended=True))
+
 
 def test_fpf_ladder_moves():
     p = Pipedream({(3, 2), (4, 2)})

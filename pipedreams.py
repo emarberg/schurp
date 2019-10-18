@@ -37,44 +37,54 @@ class Pipedream:
         assert type(other) == Pipedream
         return self.crossings == other.crossings
 
-    def fpf_involution_ladder_moves(self):
-        for (i, j) in self.crossings:
-            if (i, j + 1) in self.crossings:
+    def fpf_involution_ladder_moves(self, extended=False):
+        cr = self.crossings
+        for (i, j) in cr:
+            if (i, j + 1) in cr:
                 continue
             x = i - 1
-            while (x, j) in self.crossings and (x, j + 1) in self.crossings:
+            while (x, j) in cr and (x, j + 1) in cr:
                 x = x - 1
             if x == 0:
                 continue
-            if (x, j) in self.crossings:
+            if (x - 1, j) not in cr and (x - 1, j + 1) in cr and (x, j) not in cr and (x, j + 1) not in cr:
+                x = x - 1
+                #   j j+1
+                #   . . .
+                # x . + .
+                #   . . .
+                #   + +
+                #   + +
+                #   + +
+                # i +
                 p = any((x - d, j + 1 + d) in self.crossings for d in range(x))
                 q = any((x - 1 - d, j + 1 + d) in self.crossings for d in range(x - 1))
                 r = any((x - d, j + 2 + d) in self.crossings for d in range(x))
                 s = any((x - d, j - 1 + d) in self.crossings for d in range(x))
                 t = any((x - 1 - d, j - 1 + d) in self.crossings for d in range(x - 1))
-                if j > 1 and not (p or q or r or s or t):
-                    yield Pipedream((self.crossings - {(i, j)}) | {(x, j - 1)})
-            elif x > j + 1:
+                if not (p or q or r or s or t):
+                    yield Pipedream((self.crossings - {(i, j)}) | {(x, j)})
+            elif (x, j) not in cr and (extended or x > j + 1):
                 yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
 
-    def upper_fpf_involution_ladder_interval(self):
+    def upper_fpf_involution_ladder_interval(self, extended=False):
         level = {self}
         while level:
             new_level = set()
             for dream in level:
                 yield dream
-                for e in dream.fpf_involution_ladder_moves():
+                for e in dream.fpf_involution_ladder_moves(extended):
                     new_level.add(e)
             level = new_level
 
-    def involution_ladder_moves(self):
+    def involution_ladder_moves(self, extended=False):
         for (i, j) in self.crossings:
             if (i, j + 1) in self.crossings:
                 continue
             x = i - 1
             while (x, j) in self.crossings and (x, j + 1) in self.crossings:
                 x = x - 1
-            if x == 0 or x < j + 1:
+            if x == 0 or (not extended and x < j + 1):
                 continue
             if (x, j) in self.crossings:
                 #   j j+1
@@ -92,13 +102,13 @@ class Pipedream:
                     continue
             yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
 
-    def upper_involution_ladder_interval(self):
+    def upper_involution_ladder_interval(self, extended=False):
         level = {self}
         while level:
             new_level = set()
             for dream in level:
                 yield dream
-                for e in dream.involution_ladder_moves():
+                for e in dream.involution_ladder_moves(extended):
                     new_level.add(e)
             level = new_level
 

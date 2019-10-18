@@ -79,22 +79,22 @@ class Permutation:
         assert self.is_involution()
         return self.get_min_atom().get_bottom_pipe_dream()
 
-    def get_involution_pipe_dreams(self):
+    def get_involution_pipe_dreams(self, extended=False):
         assert self.is_involution()
         for w in self.get_atoms():
             for dream in w.get_pipe_dreams():
-                if all(i >= j for (i, j) in dream.crossings):
+                if extended or all(i >= j for (i, j) in dream.crossings):
                     yield dream
 
     def get_bottom_fpf_pipe_dream(self):
         assert self.is_fpf_involution()
         return self.get_min_fpf_atom().get_bottom_pipe_dream()
 
-    def get_fpf_involution_pipe_dreams(self):
+    def get_fpf_involution_pipe_dreams(self, extended=False):
         assert self.is_fpf_involution()
         for w in self.get_fpf_atoms():
             for dream in w.get_pipe_dreams():
-                if all(i > j for (i, j) in dream.crossings):
+                if extended or all(i > j for (i, j) in dream.crossings):
                     yield dream
 
     @classmethod
