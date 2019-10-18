@@ -728,3 +728,33 @@ class Permutation:
         for i in args:
             w *= Permutation.s_i(i)
         return w
+
+    @classmethod
+    def from_involution_word(cls, *word):
+        w = Permutation()
+        for i in word:
+            s = Permutation.s_i(i)
+            if i in w.right_descent_set:
+                raise Exception
+            elif s * w == w * s:
+                w = w * s
+            else:
+                w = s * w * s
+        return w
+
+    @classmethod
+    def from_fpf_involution_word(cls, *word):
+        n = (1 + max(word)) if word else 0
+        n = n if n % 2 == 0 else n + 1
+        w = Permutation()
+        for i in range(1, n, 2):
+            w *= cls.s_i(i)
+        for i in word:
+            s = Permutation.s_i(i)
+            if i in w.right_descent_set:
+                raise Exception
+            elif s * w == w * s:
+                raise Exception
+            else:
+                w = s * w * s
+        return w

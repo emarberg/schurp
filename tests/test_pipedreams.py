@@ -1,6 +1,7 @@
 from permutations import Permutation
 from pipedreams import Pipedream
 from schubert import InvSchubert, FPFSchubert
+import pytest
 
 
 def test_bottom_pipedream():
@@ -81,34 +82,41 @@ def test_involution_ladder_moves():
     assert q in p.involution_ladder_moves()
 
 
+def print_discrepancy(a, b, w):
+    if a != b:
+        print(w)
+        print()
+        # for p in a & b:
+        #     print(p)
+        #     print()
+        print('Extra:\n')
+        for p in b - a:
+            print(p)
+            print()
+        print('Missing:\n')
+        for p in a - b:
+            print(p)
+            print()
+        print()
+
+
 def test_involution_ladder_moves_span():
     n = 6
     for w in Permutation.involutions(n):
         a = set(w.get_involution_pipe_dreams())
         b = set(w.get_bottom_involution_pipe_dream().upper_involution_ladder_interval())
-        if a != b:
-            print(w)
-            for p in a & b:
-                print(p)
-                print()
-            print('Extra:\n')
-            for p in b - a:
-                print(p)
-                print()
-            print('Missing:\n')
-            for p in a - b:
-                print(p)
-                print()
-            print()
+        print_discrepancy(a, b, w)
         assert b.issubset(a)
         assert a == b
 
         a = set(w.get_involution_pipe_dreams(extended=True))
         b = set(w.get_bottom_involution_pipe_dream().upper_involution_ladder_interval(extended=True))
+        print_discrepancy(a, b, w)
+        assert a == b
 
 
 def test_fpf_ladder_moves():
-    p = Pipedream({(3, 2), (4, 2)})
+    p = Pipedream({(3, 2), (5, 1)})
     q = Pipedream({(3, 1), (3, 2)})
     print(p)
     print()
@@ -131,23 +139,18 @@ def test_fpf_ladder_moves():
 
 
 def test_fpf_ladder_moves_span():
-    n = 6
-    for w in Permutation.fpf_involutions(n):
+    n = 8
+    for w in [
+        Permutation.from_fpf_involution_word(4, 3, 6, 5, 4),
+        Permutation.from_fpf_involution_word(2, 1, 4, 3, 2)
+    ]: # + list(Permutation.fpf_involutions(n)):
         a = set(w.get_fpf_involution_pipe_dreams())
         b = set(w.get_bottom_fpf_pipe_dream().upper_fpf_involution_ladder_interval())
-        if a != b:
-            print(w)
-            for p in a & b:
-                print(p)
-                print()
-            print('Extra:\n')
-            for p in b - a:
-                print(p)
-                print()
-            print('Missing:\n')
-            for p in a - b:
-                print(p)
-                print()
-            print()
+        print_discrepancy(a, b, w)
         assert b.issubset(a)
+        assert a == b
+
+        a = set(w.get_fpf_involution_pipe_dreams(extended=True))
+        b = set(w.get_bottom_fpf_pipe_dream().upper_fpf_involution_ladder_interval(extended=True))
+        print_discrepancy(a, b, w)
         assert a == b

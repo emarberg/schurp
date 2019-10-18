@@ -57,14 +57,15 @@ class Pipedream:
                 #   + +
                 #   + +
                 # i +
-                p = any((x - d, j + 1 + d) in self.crossings for d in range(x))
-                q = any((x - 1 - d, j + 1 + d) in self.crossings for d in range(x - 1))
-                r = any((x - d, j + 2 + d) in self.crossings for d in range(x))
-                s = any((x - d, j - 1 + d) in self.crossings for d in range(x))
-                t = any((x - 1 - d, j - 1 + d) in self.crossings for d in range(x - 1))
+                p = any((x - d, j - 1 + d) in self.crossings for d in range(1, x))
+                q = any((x - d, j + d) in self.crossings for d in range(1, x))
+                r = any((x - d, j + 1 + d) in self.crossings for d in range(1, x))
+                s = any((x + 1 - d, j + 1 + d) in self.crossings for d in range(1, x + 1))
+                t = any((x + 2 - d, j + 1 + d) in self.crossings for d in range(1, x + 2))
                 if not (p or q or r or s or t):
                     yield Pipedream((self.crossings - {(i, j)}) | {(x, j)})
-            elif (x, j) not in cr and (extended or x > j + 1):
+                x = x + 1
+            if (x, j) not in cr and (extended or x > j + 1):
                 yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
 
     def upper_fpf_involution_ladder_interval(self, extended=False):
