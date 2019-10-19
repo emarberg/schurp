@@ -81,14 +81,18 @@ def test_involution_ladder_moves():
         print()
     assert q in p.involution_ladder_moves()
 
+    p = Pipedream({(3, 1), (3, 3), (4, 1)})
+    q = Pipedream({(3, 1), (3, 2), (3, 3)})
+    assert q not in p.involution_ladder_moves()
+
 
 def print_discrepancy(a, b, w):
     if a != b:
         print(w)
         print()
-        # for p in a & b:
-        #     print(p)
-        #     print()
+        for p in a & b:
+            print(p)
+            print()
         print('Extra:\n')
         for p in b - a:
             print(p)
@@ -101,7 +105,7 @@ def print_discrepancy(a, b, w):
 
 
 def test_involution_ladder_moves_span():
-    n = 6
+    n = 7
     for w in Permutation.involutions(n):
         a = set(w.get_involution_pipe_dreams())
         b = set(w.get_bottom_involution_pipe_dream().upper_involution_ladder_interval())
@@ -116,7 +120,7 @@ def test_involution_ladder_moves_span():
 
 
 def test_fpf_ladder_moves():
-    p = Pipedream({(3, 2), (5, 1)})
+    p = Pipedream({(3, 2), (4, 2)})
     q = Pipedream({(3, 1), (3, 2)})
     print(p)
     print()
@@ -139,11 +143,11 @@ def test_fpf_ladder_moves():
 
 
 def test_fpf_ladder_moves_span():
-    n = 8
+    n = 10
     for w in [
         Permutation.from_fpf_involution_word(4, 3, 6, 5, 4),
         Permutation.from_fpf_involution_word(2, 1, 4, 3, 2)
-    ]: # + list(Permutation.fpf_involutions(n)):
+    ] + list(Permutation.fpf_involutions(n)):
         a = set(w.get_fpf_involution_pipe_dreams())
         b = set(w.get_bottom_fpf_pipe_dream().upper_fpf_involution_ladder_interval())
         print_discrepancy(a, b, w)

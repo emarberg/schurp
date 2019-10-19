@@ -47,24 +47,40 @@ class Pipedream:
                 x = x - 1
             if x == 0:
                 continue
-            if (x - 1, j) not in cr and (x - 1, j + 1) in cr and (x, j) not in cr and (x, j + 1) not in cr:
-                x = x - 1
-                #   j j+1
-                #   . . .
+            if j > 1 and (x, j - 1) not in cr and (x, j) in cr and (x, j + 1) not in cr and (x, j + 2) not in cr:
+                #     j j+1
                 # x . + .
-                #   . . .
-                #   + +
-                #   + +
-                #   + +
-                # i +
-                p = any((x - d, j - 1 + d) in self.crossings for d in range(1, x))
-                q = any((x - d, j + d) in self.crossings for d in range(1, x))
-                r = any((x - d, j + 1 + d) in self.crossings for d in range(1, x))
-                s = any((x + 1 - d, j + 1 + d) in self.crossings for d in range(1, x + 1))
-                t = any((x + 2 - d, j + 1 + d) in self.crossings for d in range(1, x + 2))
+                #   . + +
+                #   . + +
+                #   . + +
+                # i . + .
+                p = any((x - d, j - 2 + d) in self.crossings for d in range(1, x))
+                q = any((x - d, j - 1 + d) in self.crossings for d in range(1, x))
+                r = any((x - d, j + d) in self.crossings for d in range(1, x))
+                s = any((x - d, j + 1 + d) in self.crossings for d in range(1, x))
+                t = any((x - d, j + 2 + d) in self.crossings for d in range(1, x))
                 if not (p or q or r or s or t):
-                    yield Pipedream((self.crossings - {(i, j)}) | {(x, j)})
-                x = x + 1
+                    yield Pipedream((self.crossings - {(i, j)}) | {(x, j - 1)})
+
+            # if (x - 1, j) not in cr and (x - 1, j + 1) in cr and (x, j) not in cr and (x, j + 1) not in cr:
+            #     x = x - 1
+            #     #   j j+1
+            #     #   . . .
+            #     # x . + .
+            #     #   . . .
+            #     #   + +
+            #     #   + +
+            #     #   + +
+            #     # i +
+            #     p = any((x - d, j - 1 + d) in self.crossings for d in range(1, x))
+            #     q = any((x - d, j + d) in self.crossings for d in range(1, x))
+            #     r = any((x - d, j + 1 + d) in self.crossings for d in range(1, x))
+            #     s = any((x + 1 - d, j + 1 + d) in self.crossings for d in range(1, x + 1))
+            #     t = any((x + 2 - d, j + 1 + d) in self.crossings for d in range(1, x + 2))
+            #     if not (p or q or r or s or t):
+            #         yield Pipedream((self.crossings - {(i, j)}) | {(x, j)})
+            #     x = x + 1
+
             if (x, j) not in cr and (extended or x > j + 1):
                 yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
 
@@ -85,9 +101,9 @@ class Pipedream:
             x = i - 1
             while (x, j) in self.crossings and (x, j + 1) in self.crossings:
                 x = x - 1
-            if x == 0 or (not extended and x < j + 1):
+            if x == 0:
                 continue
-            if (x, j) in self.crossings:
+            if (x, j) in self.crossings and (x, j + 1) not in self.crossings and (x, j + 2) not in self.crossings:
                 #   j j+1
                 #   . .
                 # x + . .
@@ -95,13 +111,15 @@ class Pipedream:
                 #   + +
                 #   + +
                 # i +
-                p = any((x - d, j + 1 + d) in self.crossings for d in range(x))
-                q = any((x - 1 - d, j + 1 + d) in self.crossings for d in range(x - 1))
-                r = any((x - d, j + 2 + d) in self.crossings for d in range(x))
-                s = any((x - 1 - d, j + d) in self.crossings for d in range(x - 1))
-                if p or q or r or s:
-                    continue
-            yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
+                p = any((x - d, j - 1 + d) in self.crossings for d in range(1, x))
+                q = any((x - d, j + d) in self.crossings for d in range(1, x))
+                r = any((x - d, j + 1 + d) in self.crossings for d in range(1, x))
+                s = any((x - d, j + 2 + d) in self.crossings for d in range(1, x))
+                if not (p or q or r or s) and (extended or x >= j + 1):
+                    yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
+
+            if (x, j) not in self.crossings and (extended or x >= j + 1):
+                yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
 
     def upper_involution_ladder_interval(self, extended=False):
         level = {self}
