@@ -71,6 +71,9 @@ class Permutation:
             crossings |= {(i + 1, j + 1) for j in range(c)}
         return Pipedream(crossings)
 
+    def get_top_pipe_dream(self):
+        return self.inverse().get_bottom_pipe_dream().transpose()
+
     def get_pipe_dreams(self):
         bottom = self.get_bottom_pipe_dream()
         return bottom.upper_ladder_interval()
@@ -490,9 +493,19 @@ class Permutation:
         cycles = sorted([list(reversed(sorted(c))) for c in self.cycles], key=lambda x: x[-1])
         return Permutation([i for cycle in cycles for i in cycle])**-1
 
+    def get_max_atom(self):
+        assert self.is_involution()
+        cycles = sorted([list(reversed(sorted(c))) for c in self.cycles], key=lambda x: x[0])
+        return Permutation([i for cycle in cycles for i in cycle])**-1
+
     def get_min_fpf_atom(self):
         assert self.is_fpf_involution()
         cycles = sorted([list(sorted(c)) for c in self.cycles], key=lambda x: x[0])
+        return Permutation([i for cycle in cycles for i in cycle])**-1
+
+    def get_max_fpf_atom(self):
+        assert self.is_fpf_involution()
+        cycles = sorted([list(sorted(c)) for c in self.cycles], key=lambda x: x[-1])
         return Permutation([i for cycle in cycles for i in cycle])**-1
 
     def is_involution(self):
