@@ -22,6 +22,9 @@ class Pipedream:
         self.crossings = {(i, j) for (i, j) in crossings}
         self.n = max([i + j for (i, j) in self.crossings]) if self.crossings else 1
 
+    def __iter__(self):
+        return self.crossings.__iter__()
+
     def transpose(self):
         return Pipedream({(j, i) for (i, j) in self.crossings})
 

@@ -16,6 +16,32 @@ from partitions import *
 #         icache[(mu, nu)] = SchurQ(mu).skew(nu)
 
 
+
+from permutations import *
+
+def count_pipe_dreams(shift, w):
+    if type(w) != Permutation:
+        w = Permutation.longest_element(w)
+    oneline = list(range(1, shift + 1)) + [i + shift for i in w.oneline]
+    return Permutation(*oneline).count_pipe_dreams()
+
+
+def count_involution_pipe_dreams(shift, w):
+    if type(w) != Permutation:
+        w = Permutation.longest_element(w)
+    oneline = list(range(1, shift + 1)) + [i + shift for i in w.oneline]
+    return Permutation(*oneline).count_involution_pipe_dreams()
+
+def count_fpf_pipe_dreams(shift, w):
+    if type(w) != Permutation:
+        w = Permutation.longest_element(w)
+    oneline = list(range(1, shift + 1)) + [i + shift for i in w.oneline]
+    w = Permutation(*oneline)
+    for i in range(1, shift, 2):
+        w *= Permutation.s_i(i)
+    return w.count_fpf_involution_pipe_dreams()
+
+
 def skew_shape(w, transpose=False, inv=False):
     d = w.fpf_rothe_diagram() if not inv else w.involution_rothe_diagram()
     if transpose:

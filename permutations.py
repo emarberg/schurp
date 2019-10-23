@@ -78,27 +78,51 @@ class Permutation:
         bottom = self.get_bottom_pipe_dream()
         return bottom.upper_ladder_interval()
 
+    def count_pipe_dreams(self):
+        ans = 0
+        for p in self.get_bottom_pipe_dream().upper_ladder_interval():
+            ans += 1
+        return ans
+
     def get_bottom_involution_pipe_dream(self):
         assert self.is_involution()
         return self.get_min_atom().get_bottom_pipe_dream()
 
-    def get_involution_pipe_dreams(self, extended=False):
+    def _get_involution_pipe_dreams_slow(self, extended=False):
         assert self.is_involution()
         for w in self.get_atoms():
             for dream in w.get_pipe_dreams():
                 if extended or all(i >= j for (i, j) in dream.crossings):
                     yield dream
 
+    def get_involution_pipe_dreams(self, extended=False):
+        return self.get_bottom_involution_pipe_dream().upper_involution_ladder_interval(extended)
+
+    def count_involution_pipe_dreams(self):
+        ans = 0
+        for p in self.get_bottom_involution_pipe_dream().upper_involution_ladder_interval():
+            ans += 2**(len([i for i in self.oneline if self(i) < i]) - len([a for a in p if a[0] == a[1]]))
+        return ans
+
     def get_bottom_fpf_pipe_dream(self):
         assert self.is_fpf_involution()
         return self.get_min_fpf_atom().get_bottom_pipe_dream()
 
-    def get_fpf_involution_pipe_dreams(self, extended=False):
+    def _get_fpf_involution_pipe_dreams_slow(self, extended=False):
         assert self.is_fpf_involution()
         for w in self.get_fpf_atoms():
             for dream in w.get_pipe_dreams():
                 if extended or all(i > j for (i, j) in dream.crossings):
                     yield dream
+
+    def get_fpf_involution_pipe_dreams(self, extended=False):
+        return self.get_bottom_fpf_pipe_dream().upper_fpf_involution_ladder_interval(extended)
+
+    def count_fpf_involution_pipe_dreams(self):
+        ans = 0
+        for p in self.get_bottom_fpf_pipe_dream().upper_fpf_involution_ladder_interval():
+            ans += 1
+        return ans
 
     @classmethod
     def _get_pipe_dreams_helper(cls, word, lowerbound=0, upperbound=None):
