@@ -1,6 +1,13 @@
 from permutations import Permutation
 
 
+def test_init():
+    w = Permutation(1)
+    v = Permutation([1])
+    u = Permutation(*[1])
+    assert u == v == w
+
+
 def test_fpf_atoms():
     z = Permutation.cycles([[1, 8], [2, 6], [3, 10], [4, 7], [5, 9]])
     assert tuple(z.get_min_fpf_atom().inverse().oneline) == (1, 8, 2, 6, 3, 10, 4, 7, 5, 9)

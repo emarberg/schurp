@@ -100,8 +100,10 @@ class Permutation:
 
     def count_involution_pipe_dreams(self):
         ans = 0
+        kappa = len([i for i in self.oneline if self(i) < i])
         for p in self.get_bottom_involution_pipe_dream().upper_involution_ladder_interval():
-            ans += 2**(len([i for i in self.oneline if self(i) < i]) - len([a for a in p if a[0] == a[1]]))
+            diagonal_entries = len([a for a in p if a[0] == a[1]])
+            ans += 2**(kappa - diagonal_entries)
         return ans
 
     def get_bottom_fpf_pipe_dream(self):
@@ -467,7 +469,7 @@ class Permutation:
             return '\n'.join([''.join(row) for row in arr])
 
     def __init__(self, *args):
-        if len(args) == 1 and type(args) in [list, tuple]:
+        if len(args) == 1 and type(args[0]) in [list, tuple]:
             oneline = [i for i in args[0]]
         else:
             oneline = list(args)
@@ -726,8 +728,8 @@ class Permutation:
     def __repr__(self):
         sep = '' if len(self.oneline) < 10 else ','
         ans = sep.join([str(i) for i in self.oneline])
-        #return ans if ans else '()'
-        return self.cycle_repr()
+        return ans if ans else '()'
+        # return self.cycle_repr()
 
     def cycle_repr(self):
         if len(self) == 0:
