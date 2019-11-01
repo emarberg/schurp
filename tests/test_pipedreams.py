@@ -27,7 +27,7 @@ def count_fpf_pipe_dreams(shift, w):
     w = Permutation(*oneline)
     for i in range(1, shift, 2):
         w *= Permutation.s_i(i)
-    return w.count_fpf_involution_pipe_dreams()
+    return w.count_fpf_involution_pipe_dreams(), w
 
 
 def test_pipe_dream_counts():
@@ -53,29 +53,57 @@ def test_pipe_dream_counts():
 
 def test_inv_pipe_dream_counts():
     def expected(k, n):
-        p = (n - 1) // 2
-        q = p if n % 2 != 0 else p + 1
+        p = n // 2
+        q = p if n % 2 == 0 else p + 1
         ans = 1
-        for i in range(1, k + 1):
-            for j in range(1, p + 1):
-                for k in range(1, q + 1):
-                    ans *= i + j + k - 1
-        for i in range(1, k + 1):
-            for j in range(1, p + 1):
-                for k in range(1, q + 1):
-                    assert ans % (i + j + k - 2) == 0
-                    ans = ans // (i + j + k - 2)
+        for i in range(1, p + 1):
+            for j in range(1, q + 1):
+                ans *= i + j + k - 1
+        for i in range(1, p + 1):
+            for j in range(1, q + 1):
+                assert ans % (i + j - 1) == 0
+                ans = ans // (i + j - 1)
         return ans
 
     for n in range(6):
         print()
+        print('n =', n)
         for k in range(6):
             e = expected(k, n)
             f, w = count_involution_pipe_dreams(k, n)
             s = ''.join([str(i) for i in range(n, 0, -1)])
             print('1^%i x %s =' % (k, s), w, ':', e, '=', f)
-            #assert e == f
-    assert False
+            assert e == f
+
+
+def test_fpf_pipe_dream_counts():
+    def expected(k, n):
+        k = k // 2
+        n = n // 2
+        c, _ = count_pipe_dreams(k, n)
+        ans = 1
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
+                if i != j:
+                    ans *= 2 * k + i + j - 1
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
+                if i != j:
+                    ans = ans // (i + j - 1)
+        assert ans == c ** 2
+        return ans
+
+    up = 7
+    for n in range(0, up, 2):
+        print()
+        print('n =', n)
+        for k in range(0, up, 2):
+            e = expected(k, n)
+            f, w = count_fpf_pipe_dreams(k, n)
+            s = ''.join([str(i) for i in range(n, 0, -1)])
+            print('1^%i x %s =' % (k, s), w, ':', e, '=', f)
+            assert e == f
+
 
 def test_bottom_pipedream():
     w = Permutation(3, 1, 4, 6, 5, 2)
