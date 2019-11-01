@@ -76,6 +76,26 @@ def test_inv_pipe_dream_counts():
             assert e == f
 
 
+def test_gr_inv_pipe_dream_counts():
+    def expected(k, n):
+        k = k // 2 if k % 2 == 0 else (k - 1) // 2
+        n = n + 1
+        return count_pipe_dreams(k, n)[0]
+
+    for n in range(6):
+        print()
+        print('n =', n)
+        for k in range(6):
+            w = Permutation()
+            for i in range(1, n + 1):
+                w *= Permutation.transposition(i + k, n + i + k)
+            e = expected(k, n)
+            f = len(list(w.get_involution_pipe_dreams()))
+            s = ''.join([str(i) for i in w.oneline[k:]])
+            print('1^%i x %s =' % (k, s), w, ':', e, '=', f)
+            assert e == f
+
+
 def test_fpf_pipe_dream_counts():
     def expected(k, n):
         k = k // 2
