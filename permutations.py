@@ -10,6 +10,36 @@ SYMPLECTIC_HECKE_ATOMS_CACHE = {}
 
 class Permutation:
 
+    @property
+    def rank(self):
+        return len(self.oneline)
+
+    @classmethod
+    def get_grassmannian(cls, *mu):
+        oneline = tuple(i + 1 + a for i, a in enumerate(sorted(mu)))
+        if oneline:
+            missing = set(range(1, oneline[-1] + 1)) - set(oneline)
+            oneline += tuple(sorted(missing))
+        return Permutation(*oneline).inverse()
+
+    @classmethod
+    def get_inv_grassmannian(cls, *mu):
+        ans = Permutation()
+        for i in range(len(mu)):
+            ans *= Permutation.transposition(1 + mu[0] - mu[i], i + 1 + mu[0])
+        return ans
+
+    @classmethod
+    def get_fpf_grassmannian(cls, *mu):
+        ans = Permutation()
+        o = 1 if mu and (len(mu) + 1 + mu[0]) % 2 != 0 else 0
+        for i in range(len(mu)):
+            ans *= Permutation.transposition(o + 1 + mu[0] - mu[i], o + i + 2 + mu[0])
+        while not ans.is_fpf_involution():
+            f = [i for i in range(1, ans.rank + 2) if ans(i) == i]
+            ans *= Permutation.transposition(f[0], f[1])
+        return ans
+
     @classmethod
     def random_reduced_word(cls, n):
         return Tableau.random_sorting_network(n)
@@ -366,6 +396,14 @@ class Permutation:
     def fpf_involution_code(self):
         ans = self.code_helper(self.involution_rothe_diagram(True))
         return ans + (len(self.oneline) - len(ans)) * (0,)
+
+    def shape(self):
+        from partitions import Partition
+        return Partition(*list(reversed(sorted(self.code())))).transpose()
+
+    def involution_shape(self):
+        from partitions import Partition
+        return Partition(*list(reversed(sorted(self.involution_code())))).transpose()
 
     def fpf_involution_shape(self):
         from partitions import Partition

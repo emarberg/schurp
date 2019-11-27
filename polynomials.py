@@ -40,7 +40,6 @@ class Polynomial:
      + * ** [] () == != %
 
     """
-
     def __hash__(self):
         return hash(str(self))
 
@@ -240,7 +239,6 @@ class MPolynomial:
 
 
     """
-
     def __init__(self, coeffs={}):
         self.coeffs = coeffs
 

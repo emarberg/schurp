@@ -176,6 +176,8 @@ class MPolynomial:
 
 
     """
+    def truncate(self, nvar):
+        return MPolynomial({m: v for m, v in self.coeffs.items() if not any(i > nvar for i in m)})
 
     def __bool__(self):
         return not self.is_zero()
