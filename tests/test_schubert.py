@@ -4,6 +4,8 @@ from schubert import (
     InvSchubert,
     FPFSchubert,
     FPFGrothendieck,
+)
+from polynomials import (
     MPolynomial,
     Operator
 )

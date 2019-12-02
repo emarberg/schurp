@@ -1,219 +1,147 @@
+from permutations import Permutation
 
 
-def gcd(*args):
-    if len(args) == 0:
-        return 1
-    if len(args) == 1:
-        return args[0]
-    if len(args) == 2:
-        a, b = tuple(args)
-        a = abs(a)
-        b = abs(b)
-        if b == 0:
-            return a
-        return gcd(b, a % b)
-    else:
-        return gcd(args[0], gcd(args[1:]))
+def X(i):
+    return MPolynomial.monomial(i)
 
 
-class Polynomial:
-    """
-    Polynomial
-    ----------
-
-    Attributes:
-     coeffs
-
-    Methods:
-     Constructor - takes dictionary of integer key/value pairs
-     monomial
-     divide - self and d must be polynomials;
-              returns [q=pol,r=pol,c=nonzero int] such that (c*self) = q*d + r
-     is_invertible
-     is_zero
-     nnz
-     degree
-     leading_coefficient
-
-
-    Overloaded Operators:
-     + * ** [] () == != %
-
-    """
-    def __hash__(self):
-        return hash(str(self))
-
-    def __init__(self, coeffs={}):
-        self.coeffs = coeffs
-
-    @staticmethod
-    def monomial(i):
-        return Polynomial({i: 1})
-
-    @staticmethod
-    def gcd(f, g):
-        if g == 0:
-            return f
-        return Polynomial.gcd(g, f.divide(g)[1])
-
-    def divide(self, pol):
-        if self.is_zero():
-            return (Polynomial(), Polynomial(), 1)
-        if type(pol) == int:
-            pol = Polynomial.monomial(0) * pol
-        if pol == 0 or min(pol.coeffs) < 0 or min(self.coeffs) < 0:
-            return None
-        if self == 0:
-            return (Polynomial(), Polynomial(), 1)
-        remainder = self
-        quotient = Polynomial()
-
-        b = pol.leading_coefficient()
-        c = 1
-
-        x = Polynomial.monomial(1)
-        e = pol.degree()
-        while remainder.degree() >= e and remainder != 0:
-            deg = remainder.degree()
-            a = remainder[deg]
-            d = gcd(a, b)
-            c *= b // d
-            quotient *= b // d
-            remainder *= b // d
-            quotient += a // d * x**(deg - e)
-            remainder += -a // d * x**(deg - e) * pol
-        if c < 0:
-            return (-quotient, -remainder, -c)
-        else:
-            return (quotient, remainder, c)
-
-    def __mod__(self, m):
-        newcoeffs = {}
-        for i in self.coeffs:
-            c = self.coeffs[i] % m
-            if c != 0:
-                newcoeffs[i] = c
-        return Polynomial(newcoeffs)
-
-    def __getitem__(self, i):
-        if i in self.coeffs:
-            return self.coeffs[i]
-        return 0
-
-    def __call__(self, x):
-        return sum(map(lambda i: x**i * self[i], self.coeffs))
-
-    def __eq__(self, other):
-        if other is None:
-            return False
-        return (self - other).nnz() == 0
-
-    def __ne__(self, other):
-        return not (self == other)
-
-    def __add__(self, other):
-        if isinstance(other, int):
-            other = other * Polynomial.monomial(0)
-
-        newcoeffs = self.coeffs.copy()
-        for i in other.coeffs:
-            newcoeffs[i] = self[i] + other[i]
-            if newcoeffs[i] == 0:
-                del newcoeffs[i]
-
-        return Polynomial(newcoeffs)
-
-    __radd__ = __add__
-
-    def __neg__(self):
-        return self * (-1)
-
-    def __sub__(self, other):
-        return self + -other
-
-    def __rsub__(self, other):
-        return -(self - other)
-
-    def __div__(self, int):
-        newcoeffs = {}
-        for i in self.coeffs:
-            c = self.coeffs[i] / int
-            if c != 0:
-                newcoeffs[i] = c
-        return Polynomial(newcoeffs)
-
-    def __mul__(self, f):
-        if type(f) == int:
-            return self * Polynomial({0: f})
-
-        newcoeffs = {}
-        for i in self.coeffs:
-            for j in f.coeffs:
-                if i + j in newcoeffs:
-                    newcoeffs[i + j] = newcoeffs[i + j] + self[i] * f[j]
-                else:
-                    newcoeffs[i + j] = self[i] * f[j]
-
-                if newcoeffs[i + j] == 0:
-                    del newcoeffs[i + j]
-        return Polynomial(newcoeffs)
-
-    __rmul__ = __mul__
-
-    def __pow__(self, i):
-        if i == 0:
-            return Polynomial.monomial(0)
-        if i < 0:
-            if self.is_invertible():
-                return Polynomial({-self.coeffs.keys()[0]: int(self.coeffs.values()[0]**-1)})**-i
-            return None
-
-        return self * (self**(i - 1))
-
-    def degree(self):
-        if self.is_zero():
-            return 0
-        return max(max(self.coeffs), -min(self.coeffs))
-
-    def leading_coefficient(self):
-        if self.is_zero():
-            return 0
-        return self.coeffs[max(self.coeffs)]
-
-    def nnz(self):
-        nonzeros = 0
-        for i in self.coeffs:
-            if self[i] != 0:
-                nonzeros += 1
-        return nonzeros
-
-    def is_zero(self):
-        return self.nnz() == 0
-
-    def repr_helper(self):
-        coeffs = lambda x: (' + ')*(x > 0) + (' - ')*(x < 0) + (str(abs(x)) + '*')*(x != 0 and abs(x) !=1)
-        exps = lambda x: ('q' + ('**' + str(x))*(x != 1))*(x != 0)
-        next = lambda i: (coeffs(self[i]) + exps(i)) * (self[i] != 0)
-
-        s = ''
-        for i in filter(lambda x: self[x] != 0, self.coeffs):
-            if i == 0:
-                x = self[0]
-                t = str(abs(x))
-                s = s + (' + ') * (x > 0) + (' - ') * (x < 0) + t
-            else:
-                s = s + next(i)
-        return s[1] * (s[1] == '-') + s[3:]
-
-    def __repr__(self):
-        if self.nnz() == 0:
-            return '0'
-        return self.repr_helper()
+def D(i):
+    return Operator.create(i) * (1 + 10 * X(i + 1))
 
 
 class HashableDict(dict):
+
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
+
+
+class Operator:
+
+    class Monomial:
+
+        def __init__(self, index):
+            if type(index) == int:
+                index = (index,)
+            assert type(index) == tuple
+            assert all(type(i) == int for i in index)
+            self.index = Permutation.from_word(index).get_reduced_word()
+
+        def __repr__(self):
+            return ' '.join(['D_%s' % i for i in self.index]) if self.index else 'I'
+
+        def __hash__(self):
+            return hash(self.index)
+
+        def __eq__(self, other):
+            assert type(other) == type(self)
+            return self.index == other.index
+
+        def __lt__(self, other):
+            assert type(other) == type(self)
+            return self.index < other.index
+
+        def matches(self, other):
+            return self.index and other.index and self.index[-1] == other.index[0]
+
+    def __init__(self):
+        self.dictionary = {}
+
+    def __repr__(self):
+        s = [
+            '%s' % k if v == 1 else
+            '(%s) * %s' % (v, k)
+            for k, v in self.items()
+        ]
+        return ' + '.join(s) if s else '0'
+
+    def __eq__(self, other):
+        if other == 0:
+            return len(self.dictionary) == 0
+        assert type(other) == Operator
+        return (self - other) == 0
+
+    @classmethod
+    def create(cls, *args):
+        if len(args) == 1 and type(args[0]) in [tuple, list]:
+            args = tuple(args[0])
+        if len(args) == 1 and type(args[0]) == Operator.Monomial:
+            args = args[0].index
+        assert all(type(i) == int for i in args)
+        ans = Operator()
+        if not any(args[i] == args[i + 1] for i in range(len(args) - 1)):
+            ans.dictionary[Operator.Monomial(tuple(args))] = 1
+        return ans
+
+    def __getitem__(self, item):
+        return self.dictionary.get(item, 0)
+
+    def keys(self):
+        return self.dictionary.keys()
+
+    def items(self):
+        return self.dictionary.items()
+
+    def __iter__(self):
+        return self.dictionary.__iter__()
+
+    def __add__(self, other):
+        assert type(other) == Operator
+        dictionary = {i: self[i] + other[i] for i in self.keys() | other.keys()}
+        dictionary = {i: v for i, v in dictionary.items() if v}
+        ans = Operator()
+        ans.dictionary = dictionary
+        return ans
+
+    def __sub__(self, other):
+        assert type(other) == Operator
+        dictionary = {i: self[i] - other[i] for i in self.keys() | other.keys()}
+        dictionary = {i: v for i, v in dictionary.items() if v}
+        ans = Operator()
+        ans.dictionary = dictionary
+        return ans
+
+    def __mul__(self, other):
+        if type(other) == Operator:
+            ans = Operator()
+            for i in self:
+                for j in other:
+                    term = self[i] * Operator.create(i) * other[j]
+                    dictionary = {Operator.Monomial(k.index + j.index): term[k] for k in term if not k.matches(j)}
+                    term = Operator()
+                    term.dictionary = dictionary
+                    ans += term
+            return ans
+
+        if type(other) == int:
+            other = MPolynomial.one() * other
+
+        if type(other) in [MPolynomial]:
+            queue = [(len(i.index) + 1, self[i],) + i.index + (other,) for i in self]
+            ans = Operator()
+            while queue:
+                tup, queue = queue[0], queue[1:]
+                i, tup = tup[0], tup[1:]
+                if i == 0:
+                    ans += tup[0] * Operator.create(tup[1:])
+                if i == 1:
+                    ans += (tup[0] * tup[1]) * Operator.create(tup[2:])
+                else:
+                    j = tup[i - 1]
+                    one = (i - 1,) + tup[:i - 1] + (tup[i].divided_difference(j),) + tup[i + 1:]
+                    two = (i - 1,) + tup[:i - 1] + (tup[i].toggle(j), j) + tup[i + 1:]
+                    queue += [one, two]
+            return ans
+
+        raise Exception
+
+    def __rmul__(self, other):
+        if type(other) == Operator:
+            other.__mul__(self)
+        if type(other) in [int, MPolynomial]:
+            ans = Operator()
+            ans.dictionary = {i: other * v for i, v in self.items() if other * v}
+            return ans
+        raise Exception
 
 
 class MPolynomial:
@@ -239,6 +167,12 @@ class MPolynomial:
 
 
     """
+    def truncate(self, nvar):
+        return MPolynomial({m: v for m, v in self.coeffs.items() if not any(i > nvar for i in m)})
+
+    def __bool__(self):
+        return not self.is_zero()
+
     def __init__(self, coeffs={}):
         self.coeffs = coeffs
 
@@ -273,6 +207,31 @@ class MPolynomial:
                 ans = max(ans, d)
 
         return ans
+
+    def __iter__(self):
+        return self.coeffs.__iter__()
+
+    @classmethod
+    def one(cls):
+        return cls.monomial(1, 0)
+
+    def substitute(self, i, e):
+        ans = 0
+        for ind in self.coeffs:
+            term = self.one() * self.coeffs[ind]
+            for j in ind:
+                if i != j:
+                    term *= self.monomial(j, ind[j])
+                else:
+                    assert ind[j] >= 0
+                    term *= e ** ind[j]
+            ans = ans + term
+        return ans
+
+    def divide_linear(self, i, c):
+        # divide by x(i) + c
+        ans = self.substitute(i, x(i) - c) * self.monomial(i, -1)
+        return ans.substitute(i, x(i) + c)
 
     def __getitem__(self, i):
         i = HashableDict(i)
@@ -318,8 +277,37 @@ class MPolynomial:
     def __rsub__(self, other):
         return -(self - other)
 
+    def __lt__(self, other):
+        other = MPolynomial.one() * other if type(other) == int else other
+        return all(v > 0 for v in (other - self).coeffs.values())
+
+    def __gt__(self, other):
+        other = MPolynomial.one() * other if type(other) == int else other
+        return all(v > 0 for v in (self - other).coeffs.values())
+
+    def is_positive(self):
+        return self > 0
+
+    def is_not_laurent_polynomial(self):
+        return not any(v < 0 for c in self.coeffs for v in c.values())
+
     def isobaric_divided_difference(self, i):
         return (self * MPolynomial.monomial(i, 1)).divided_difference(i)
+
+    def toggle(self, i):
+        ans = MPolynomial()
+        for index, coeff in self.coeffs.items():
+            new_index = HashableDict(index.copy())
+            if i + 1 in index:
+                new_index[i] = index[i + 1]
+            elif i in new_index:
+                del new_index[i]
+            if i in index:
+                new_index[i + 1] = index[i]
+            elif i + 1 in new_index:
+                del new_index[i + 1]
+            ans += MPolynomial({new_index: coeff})
+        return ans
 
     @classmethod
     def divided_difference_helper(cls, i, index, coeff):
@@ -353,6 +341,8 @@ class MPolynomial:
     def __mul__(self, f):
         if type(f) == int:
             return self * MPolynomial({HashableDict({}): f})
+        if type(f) != MPolynomial:
+            return f.__rmul__(self)
         newcoeffs = {}
         for i in self.coeffs:
             for j in f.coeffs:
@@ -366,7 +356,16 @@ class MPolynomial:
                     del newcoeffs[k]
         return MPolynomial(newcoeffs)
 
-    __rmul__ = __mul__
+    def __rmul__(self, other):
+        if type(other) not in [MPolynomial, int]:
+            return other.__mul__(self)
+        else:
+            return self.__mul__(other)
+
+    def __floordiv__(self, other):
+        assert type(other) in [int]
+        coeffs = {m: c // other for (m, c) in self.coeffs.items() if c / other}
+        return MPolynomial(coeffs)
 
     def __pow__(self, i):
         if i == 0:
@@ -418,8 +417,10 @@ class MPolynomial:
         #     return "s"
         # if i == 8:
         #     return "r"
-        if i >= 0:
+        if i > 0:
             return "x_" + str(i)
+        elif i == 0:
+            return "\u03B2"
         else:
             return "y_" + str(-i)
 
@@ -446,9 +447,11 @@ class MPolynomial:
 
         def sorter(index):
             ans = []
+            c = 0
             for i in sorted(index):
-                ans += abs(index[i]) * [i]
-            return ans
+                c += index[i]
+                ans += abs(index[i]) * [-i]
+            return (c,) + tuple(ans)
 
         for i in sorted(filtered, key=sorter):
             monomial = MPolynomial.index_to_str(i)
@@ -473,3 +476,15 @@ class MPolynomial:
 
     def __hash__(self):
         return hash(str(self))
+
+
+def x(i):
+    return MPolynomial.monomial(i)
+
+
+def y(i):
+    return MPolynomial.monomial(-i)
+
+
+def one():
+    return x(1)**0
