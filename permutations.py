@@ -1,5 +1,6 @@
 import itertools
 from tableaux import Tableau
+from partitions import Partition
 
 REDUCED_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
@@ -353,6 +354,17 @@ class Permutation:
 
     def support(self):
         return [i + 1 for i in range(len(self.oneline)) if self.oneline[i] != i + 1]
+
+    def is_vexillary(self):
+        n = self.rank
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1):
+                for k in range(j + 1, n + 1):
+                    for l in range(k + 1, n + 1):
+                        b, a, d, c = self(i), self(j), self(k), self(l)
+                        if a < b < c < d:
+                            return False
+        return True
 
     def is_dominant(self):
         n = len(self.oneline)
@@ -835,3 +847,22 @@ class Permutation:
             else:
                 w = s * w * s
         return w
+
+    @classmethod
+    def grassmannians(cls, rank):
+        delta = tuple(range(rank - 1, 0, -1))
+        for mu in Partition.subpartitions(delta):
+            yield cls.get_grassmannian(*mu)
+
+    @classmethod
+    def inv_grassmannians(cls, rank):
+        delta = tuple(range(rank - 1, 0, -2))
+        for mu in Partition.subpartitions(delta, strict=True):
+            yield cls.get_inv_grassmannian(*mu)
+
+    @classmethod
+    def fpf_grassmannians(cls, rank):
+        assert rank % 2 == 0
+        delta = tuple(range(rank - 2, 0, -2))
+        for mu in Partition.subpartitions(delta, strict=True):
+            yield cls.get_fpf_grassmannian(*mu)

@@ -233,6 +233,28 @@ class Partition:
                     if mu.contains(nu):
                         yield mu, nu
 
+    @classmethod
+    def trim(cls, mu):
+        while mu and mu[-1] == 0:
+            mu = mu[:-1]
+        return tuple(mu)
+
+    @classmethod
+    def subpartitions(cls, mu, strict=False):
+
+        def _subpartitions(mu, strict):
+            if mu:
+                for nu in _subpartitions(mu[1:], strict):
+                    lb = (nu[0] + (1 if strict else 0)) if (nu and nu[0] > 0) else 0
+                    ub = mu[0]
+                    for a in range(lb, ub + 1):
+                        yield (a,) + nu
+            else:
+                yield ()
+
+        for nu in _subpartitions(mu, strict):
+            yield cls.trim(nu)
+
 
 class StrictPartition(Partition):
     def __init__(self, *args):

@@ -1,58 +1,27 @@
-from schubert import *
+from key import (
+    weak_compositions,
+    monomial,
+    sorting_permutation,
+    strict_weak_compositions,
+    key, atom,
+    p_key, p_atom,
+    q_key, q_atom,
+    has_distinct_parts,
+)
+from schubert import Schubert, InvSchubert, FPFSchubert, X
+from permutations import Permutation
 
 
-def monomial(weak_composition):
-    ans = X(0)**0
-    for i, e in enumerate(weak_composition):
-        ans *= X(i + 1) ** e
-    return ans
-
-
-def leading_monomial(weak_composition):
-    return monomial(reversed(sorted(weak_composition)))
-
-
-def has_distinct_parts(mu):
-    if any(mu[i] == mu[i + 1] for i in range(len(mu) - 1)):
-        raise Exception('Weak composition has repeated parts')
-
-
-def shifted_monomial(weak_composition):
-    mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-    has_distinct_parts(mu)
-    ans = X(0)**0
-    for i in range(1, 1 + len(mu)):
-        for j in range(1, mu[i - 1] + 1):
-            ans *= (X(i) + X(i + j - 1)) if j > 1 else X(i)
-    for i, e in enumerate(mu):
-        ans *= X(i + 1) ** (e - i)
-    return ans
-
-
-def sorting_permutation(weak_comp):
-    word = []
-    n = len(weak_comp)
-    weak_comp = list(weak_comp)
-    for i in range(n):
-        for j in range(i, 0, -1):
-            if weak_comp[j] > weak_comp[j - 1]:
-                word += [j]
-                weak_comp[j - 1], weak_comp[j] = weak_comp[j], weak_comp[j - 1]
-    return tuple(word)
+def test_weak_compositions():
+    assert set(weak_compositions(0, 0)) == {()}
+    assert set(weak_compositions(4, 2)) == {(4, 0), (1, 3), (2, 2), (3, 1), (0, 4)}
+    assert len(list(weak_compositions(4, 2))) == 5
 
 
 def test_sorting_permutation():
     assert sorting_permutation((1, 0, 2, 1)) == (2, 1, 3)
     assert sorting_permutation((0, 0, 0, 0)) == tuple()
     assert sorting_permutation((1, 2, 3)) == (1, 2, 1)
-
-
-def key(weak_composition):
-    ans = leading_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.isobaric_divided_difference(i)
-    return ans
 
 
 def test_ordinary_key():
@@ -73,12 +42,28 @@ def test_ordinary_key():
     assert expected_key == actual_key
 
 
-def shifted_key(weak_composition):
-    ans = shifted_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.isobaric_divided_difference(i)
-    return ans
+def test_atom():
+    for n in range(5):
+        for k in range(5):
+            for alpha in weak_compositions(n, k):
+                kappa = atom(alpha)
+                print(alpha, kappa)
+                assert kappa.is_positive()
+
+
+def test_p_atom():
+    for n in range(5):
+        for k in range(7):
+            for alpha in weak_compositions(n, k):
+                kappa = p_atom(alpha)
+                if not kappa.is_positive():
+                    assert not has_distinct_parts(alpha)
+                elif not has_distinct_parts(alpha):
+                    print(alpha, kappa)
+                    print()
+                assert kappa.is_not_laurent_polynomial()
+    print('success')
+#    assert False
 
 
 def schur(partition):
@@ -93,10 +78,29 @@ def test_schur():
     assert schur((3, 1, 1)) == key((1, 1, 3, 0, 0))
 
 
-
 def schurp(partition):
     assert all(partition[i] > partition[i + 1] for i in range(len(partition) - 1))
     w = Permutation.get_inv_grassmannian(*partition)
     n = len(partition)
     w = w.shift(w.rank)
     return InvSchubert.get(w)
+
+
+def test_inv_schubert(n=4):
+    i = set(Permutation.involutions(n))
+    s = {w: InvSchubert.get(w) * 2**w.number_two_cycles() for w in i}
+    m = max({w.involution_length() for w in i})
+    e = {alpha: q_key(alpha) for l in range(m + 1) for alpha in strict_weak_compositions(l, n)}
+    v = set(e.values())
+    x = {w for w in s if s[w] in v}
+    return i, s, x, e
+
+
+def test_fpf_schubert(n=4):
+    i = set(Permutation.fpf_involutions(n))
+    s = {w: FPFSchubert.get(w) for w in i}
+    m = max({w.fpf_involution_length() for w in i})
+    e = {alpha: p_key(alpha) for l in range(m + 1) for alpha in strict_weak_compositions(l, n)}
+    v = set(e.values())
+    x = {w for w in s if s[w] in v}
+    return i, s, x, e

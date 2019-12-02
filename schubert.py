@@ -294,6 +294,12 @@ class MPolynomial:
         other = MPolynomial.one() * other if type(other) == int else other
         return all(v > 0 for v in (self - other).coeffs.values())
 
+    def is_positive(self):
+        return self > 0
+
+    def is_not_laurent_polynomial(self):
+        return not any(v < 0 for c in self.coeffs for v in c.values())
+
     def isobaric_divided_difference(self, i):
         return (self * MPolynomial.monomial(i, 1)).divided_difference(i)
 
