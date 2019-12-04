@@ -21,7 +21,7 @@ class Permutation:
         if oneline:
             missing = set(range(1, oneline[-1] + 1)) - set(oneline)
             oneline += tuple(sorted(missing))
-        return Permutation(*oneline).inverse()
+        return Permutation(*oneline)
 
     @classmethod
     def get_inv_grassmannian(cls, *mu):

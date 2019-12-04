@@ -2,7 +2,16 @@ from schubert import X
 import itertools
 
 
-def weak_compositions(n, parts, allow_repeated_parts=True):
+KEY_POLYNOMIAL_CACHE = {}
+PKEY_POLYNOMIAL_CACHE = {}
+QKEY_POLYNOMIAL_CACHE = {}
+
+KEY_ATOM_CACHE = {}
+PKEY_ATOM_CACHE = {}
+QKEY_ATOM_CACHE = {}
+
+
+def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
     assert n >= 0 and parts >= 0
     if parts == 0:
         if n == 0:
@@ -13,6 +22,8 @@ def weak_compositions(n, parts, allow_repeated_parts=True):
         c = (0,) + c + (n + parts,)
         alpha = tuple(c[i] - c[i - 1] - 1 for i in range(1, len(c)))
         if not allow_repeated_parts and len({i for i in alpha if i != 0}) < len([i for i in alpha if i != 0]):
+            continue
+        if reduced and alpha and alpha[-1] == 0:
             continue
         yield alpha
 
@@ -70,49 +81,49 @@ def sorting_permutation(weak_comp):
     return tuple(word)
 
 
-def key(weak_composition):
-    ans = leading_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.isobaric_divided_difference(i)
-    return ans
+def sorting_descent(weak_comp):
+    for i in range(1, len(weak_comp)):
+        if weak_comp[i] > weak_comp[i - 1]:
+            new_comp = list(weak_comp)
+            new_comp[i - 1], new_comp[i] = new_comp[i], new_comp[i - 1]
+            return tuple(new_comp), i
+    return weak_comp, None
 
 
-def atom(weak_composition):
-    ans = leading_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.isobaric_divided_difference(i) - ans
-    return ans
+def _generic_key(weak_comp, cache, name, atomic, monomial_fn):
+    while weak_comp and weak_comp[-1] == 0:
+        weak_comp = weak_comp[:-1]
+    if weak_comp not in cache:
+        new_comp, i = sorting_descent(weak_comp)
+        if i is None:
+            cache[weak_comp] = monomial_fn(weak_comp)
+        else:
+            f = _generic_key(new_comp, cache, name, atomic, monomial_fn)
+            cache[weak_comp] = f.isobaric_divided_difference(i) - (f if atomic else 0)
+        if len(cache) % 100 == 0:
+            print(' . . .', name, 'cache:', len(cache))
+    return cache[weak_comp]
 
 
-def p_key(weak_composition):
-    ans = p_shifted_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.divided_difference(i)
-    return ans
+def key(weak_comp):
+    return _generic_key(weak_comp, KEY_POLYNOMIAL_CACHE, 'Key Polynomial', False, leading_monomial)
 
 
-def p_atom(weak_composition):
-    ans = p_shifted_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.isobaric_divided_difference(i) - ans
-    return ans
+def atom(weak_comp):
+    return _generic_key(weak_comp, KEY_ATOM_CACHE, 'Key Atom', True, leading_monomial)
 
 
-def q_key(weak_composition):
-    ans = q_shifted_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.divided_difference(i)
-    return ans
+def p_key(weak_comp):
+    return _generic_key(weak_comp, PKEY_POLYNOMIAL_CACHE, 'PKey Polynomial', False, p_shifted_monomial)
 
 
-def q_atom(weak_composition):
-    ans = q_shifted_monomial(weak_composition)
-    word = sorting_permutation(weak_composition)
-    for i in reversed(word):
-        ans = ans.isobaric_divided_difference(i) - ans
-    return ans
+def p_atom(weak_comp):
+    return _generic_key(weak_comp, PKEY_ATOM_CACHE, 'PKey Atom', True, p_shifted_monomial)
+
+
+def q_key(weak_comp):
+    return _generic_key(weak_comp, QKEY_POLYNOMIAL_CACHE, 'QKey Polynomial', False, q_shifted_monomial)
+
+
+def q_atom(weak_comp):
+    return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', True, q_shifted_monomial)
