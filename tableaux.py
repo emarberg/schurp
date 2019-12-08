@@ -20,6 +20,33 @@ class Tableau:
     def __iter__(self):
         return self.mapping.__iter__()
 
+    @classmethod
+    def from_composition(cls, alpha):
+        ans = Tableau()
+        for i, a in enumerate(alpha):
+            for col in range(1, a + 1):
+                row = 1
+                while (row, col) in ans:
+                    row += 1
+                ans = ans.set(row, col, i + 1)
+        return ans
+
+    def weight(self, as_dict=False):
+        ans = {}
+        for v in self.mapping.values():
+            v = v.weight()
+            if v not in ans:
+                ans[v] = 0
+            ans[v] += 1
+        if as_dict:
+            return ans
+        assert all(type(m) == int and m > 0 for m in ans)
+        m = max(ans) if ans else 0
+        alpha = m * [0]
+        for v in ans:
+            alpha[v - 1] = ans[v]
+        return tuple(alpha)
+
     def shape(self):
         return Shape(self.mapping.keys())
 
@@ -560,8 +587,8 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        return '\n'.join(reversed(rows))  # French
-        #return '\n'.join(rows)            # English
+        return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
+        #return '\n'.join(rows) + '\n'            # English
 
     @classmethod
     def decreasing_part(cls, row):
@@ -576,10 +603,6 @@ class Tableau:
         if row:
             rev = cls.decreasing_part(list(reversed(row)))
             return tuple(reversed(rev))[1:]
-
-    # def is_decomposition_tableau(self):
-    #     def is_row_unimodal(row):
-    #         return len(self.decreasing_part(row)) + len(self.increasing_part(row)) == len(row)
 
     def replace_row(self, j, newrow, shifted=False):
         dictionary = {(j_, k): self.entry(j_, k) for (j_, k) in self.mapping if j != j_}
@@ -627,45 +650,6 @@ class Tableau:
                 newseq = sequence[:i] + (p,) + sequence[i + 1:]
                 q = sequence[i]
         return q, column_dir, newseq
-
-    def modified_hecke_insert(self, p, j=0, verbose=True):
-        if p is None:
-            return (j, self)
-
-        def hecke_bump(a, tup):
-            if len(tup) == 0 or a > tup[-1]:
-                newtup = tup + (a,)
-                q = None
-            elif a == tup[-1]:
-                newtup = tup
-                q = a
-            else:
-                i = [j for j in range(len(tup)) if a < tup[j]][0]
-                if i > 0 and a == tup[i - 1]:
-                    newtup = tuple(tup)
-                    q = tup[i]
-                else:
-                    newtup = tup[:i] + (a,) + tup[i + 1:]
-                    q = tup[i]
-            return q, newtup
-
-        j += 1
-        row = self.get_row(j)
-        new_p, row = hecke_bump(p, row)
-
-        if verbose:
-            print('Inserting %s into row %s of \n%s\n' % (
-                str(p),
-                str(j),
-                self
-            ))
-            print('New row:', str(new_p), ' <- ', str(row), '\n\n')
-
-        tab = self.replace_row(j, row, shifted=False)
-        #if tab.is_increasing():
-        return tab.modified_hecke_insert(new_p, j, verbose=verbose)
-        #else:
-        #    return self.hecke_insert(p, j)
 
     def hecke_insert(self, p, j=0):
         if p is None:
@@ -803,69 +787,6 @@ class Tableau:
         assert tab.is_increasing()
         return tab.involution_insert(p, j, column_dir, verbose=verbose)
 
-    def alt_involution_insert(self, p, j=0, offset=False, verbose=True):
-        raise NotImplementedError
-        # if p is None:
-        #     return (j, self)
-
-        # def bump(a, tup, index, offset):
-        #     for i, b in enumerate(tup):
-        #         if a > b:
-        #             continue
-        #         if a == b:
-        #             b = tup[i + 1]
-        #             new = tup
-        #             cdir = cdir or (i == 0)
-        #         elif not cdir and i == 0:
-        #             new = (a,) + tup[1:]
-        #             cdir = True
-        #         else:
-        #             new = tup[:i] + (a,) + tup[i + 1:]
-        #         return (b, cdir, new)
-        #     return (None, cdir, tup + (a,))
-
-        # j += 1
-        # row = self.get_row(j)
-
-        # p, row, offset = bump(p, row, j)
-        # tab = self.replace_row(j, row)
-        # tab = self.replace_column(j + offset, row)
-        # return tab.alt_involution_insert(p, j, offset, verbose=verbose)
-
-    def alt_fpf_insert(self, p, j=0, verbose=False):
-        if p is None:
-            return (j, self)
-
-        def bump(a, tup, index):
-            if not tup or max(tup) < a:
-                return (None, tup + (a,), False)
-            i = min([i for i, b in enumerate(tup) if a < b])
-            b = tup[i]
-            if i > 0 and tup[i - 1].is_zero():
-                if a.number % 2 != 0:
-                    assert b == a.increment()
-                    return (b.increment(), tup, True)
-                else:
-                    new = tup[:i] + (a,) + tup[i + 1:]
-                    return (b, new, True)
-            elif i > 0 and tup[i - 1] == a:
-                return (b, tup, False)
-            else:
-                new = tup[:i] + (a,) + tup[i + 1:]
-                return (b, new, False)
-
-        j += 1
-        row = self.get_row(j)
-        if len(row) == j - 1:
-            row += (MarkedNumber(0),)
-
-        p, row, add = bump(p, row, j)
-        tab = self.replace_row(j, row)
-        tab = tab.replace_column(j, row)
-
-        j += (1 if add else 0)
-        return tab.alt_fpf_insert(p, j, verbose=verbose)
-
     def fpf_insert(self, p, j=0, column_dir=False, verbose=False):
         if p is None:
             return (j, column_dir, self)
@@ -963,6 +884,4 @@ class Tableau:
             ))
 
         tab = self.replace_row(j, row, shifted=False)
-
-        # assert tab.is_increasing()
         return tab.mystery_insert(p, j, verbose=verbose)

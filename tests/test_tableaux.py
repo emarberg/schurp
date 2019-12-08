@@ -181,3 +181,18 @@ def test_inverse_inv():
     ]:
         p, q = Word(*w).involution_insert()
         assert Tableau.inverse_inv(p, q) == w
+
+
+def test_from_composition():
+    assert Tableau.from_composition(()) == Tableau()
+    assert Tableau().weight() == ()
+
+    alpha = (1, 0, 3, 2, 5, 0, 3)
+    assert Tableau.from_composition(alpha) == Tableau({
+        (1, 1): 1, (1, 2): 3, (1, 3): 3, (1, 4): 5, (1, 5): 5,
+        (2, 1): 3, (2, 2): 4, (2, 3): 5,
+        (3, 1): 4, (3, 2): 5, (3, 3): 7,
+        (4, 1): 5, (4, 2): 7,
+        (5, 1): 7
+    })
+    assert Tableau.from_composition(alpha).weight() == alpha

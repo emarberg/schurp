@@ -1,4 +1,6 @@
 from schubert import X
+from partitions import Partition
+from tableaux import Tableau
 import itertools
 
 
@@ -9,6 +11,93 @@ QKEY_POLYNOMIAL_CACHE = {}
 KEY_ATOM_CACHE = {}
 PKEY_ATOM_CACHE = {}
 QKEY_ATOM_CACHE = {}
+
+
+def symmetric_composition_from_row_column_counts(row_counts, col_counts):
+    def helper(rc, cc):
+        if len(rc) == 0 or max(rc) == 0:
+            return set()
+        m = max(rc)
+        i = [i for i, a in enumerate(rc) if a == m][-1]
+        # print(rc, cc, i)
+        assert len([c for j, c in enumerate(cc) if c > 0 and j >= i]) == m
+        new_rc = rc[:i] + (0,) + rc[i + 1:]
+        new_cc = cc[:i] + tuple(max(a - 1, 0) for a in cc[i:])
+        ans = helper(new_rc, new_cc)
+        # print(new_rc, new_cc, '\n', Tableau({k: 1 for k in ans}))
+        for j, a in enumerate(cc):
+            if a > 0 and j >= i:
+                ans |= {(i + 1, j + 1), (j + 1, i + 1)}
+        return ans
+
+    n = max(len(row_counts), len(col_counts))
+    row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
+    col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
+    assert sum(row_counts) == sum(col_counts)
+    ans = n * [0]
+    bns = helper(row_counts, col_counts)
+    for i, j in bns:
+        ans[i - 1] += 1
+    ans = tuple(ans)
+    while ans and ans[-1] == 0:
+        ans = ans[:-1]
+    return ans
+
+
+def symmetric_double(alpha):
+    word = sorting_permutation(alpha)
+    mu = sorted(alpha, reverse=True)
+    shape = {(i, j) for i in range(1, len(mu) + 1) for j in range(i, i + mu[i - 1])}
+    shape |= {(j, i) for (i, j) in shape}
+    t = Tableau({a: 1 for a in shape})
+    mu = t.partition().parts
+    for i in reversed(word):
+        if i == len(mu):
+            mu += [0]
+        mu[i - 1], mu[i] = mu[i], mu[i - 1]
+    ans = tuple(mu)
+    while ans and ans[-1] == 0:
+        ans = ans[:-1]
+    return ans
+
+
+def symmetric_half(alpha):
+    standardize = sorted(
+        [(i, a) for i, a in enumerate(alpha) if a != 0],
+        key=lambda x: (-x[1], x[0])
+    )
+    ans = list(alpha)
+    for diff, pair in enumerate(standardize):
+        i, _ = pair
+        ans[i] = max(ans[i] - diff, 0)
+    ans = tuple(ans)
+    while ans and ans[-1] == 0:
+        ans = ans[:-1]
+    return ans
+
+
+def symmetric_halves(alpha):
+    def s(i):
+        def f(x):
+            return (x + 1) if x == i else (x - 1) if x == i + 1 else x
+        return f
+
+    word = sorting_permutation(alpha)
+    mu = sorted(alpha, reverse=True)
+    diagram = {(i, j) for i in range(1, 1 + len(mu)) for j in range(1, 1 + mu[i - 1])}
+    for i in reversed(word):
+        diagram = {(s(i)(a), s(i)(b)) for (a, b) in diagram}
+    n = max([0] + [max(p) for p in diagram])
+    rows, cols = n * [0], n * [0]
+    for a, b in diagram:
+        if a <= b:
+            rows[a - 1] += 1
+            cols[b - 1] += 1
+    while rows and rows[-1] == 0:
+        rows = rows[:-1]
+    while cols and cols[-1] == 0:
+        cols = cols[:-1]
+    return tuple(rows), tuple(cols)
 
 
 def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
@@ -28,9 +117,23 @@ def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
         yield alpha
 
 
-def strict_weak_compositions(n, parts):
-    for alpha in weak_compositions(n, parts, False):
+def symmetric_weak_compositions(n, parts, reduced=False):
+    for alpha in weak_compositions(n, parts, True, reduced):
+        if Partition(*sorted(alpha, reverse=True)).is_symmetric():
+            yield alpha
+
+
+def strict_weak_compositions(n, parts, reduced=False):
+    for alpha in weak_compositions(n, parts, False, reduced):
         yield alpha
+
+
+def q_power(alpha):
+    mu = tuple(sorted(alpha, reverse=True))
+    i = 0
+    while i < len(mu) and mu[i] > i:
+        i += 1
+    return i
 
 
 def monomial(weak_composition):
@@ -54,8 +157,8 @@ def p_shifted_monomial(weak_composition):
     # has_distinct_parts(mu)
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
-        for j in range(1, mu[i - 1] + 1):
-            ans *= X(i) + X(i + j)
+        for j in range(i + 1, mu[i - 1] + 1):
+            ans *= X(i) + X(j)
     return ans
 
 
@@ -64,8 +167,8 @@ def q_shifted_monomial(weak_composition):
     # has_distinct_parts(mu)
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
-        for j in range(1, mu[i - 1] + 1):
-            ans *= X(i) + X(i + j - 1)
+        for j in range(i, mu[i - 1] + 1):
+            ans *= X(i) + X(j)
     return ans
 
 
@@ -127,3 +230,46 @@ def q_key(weak_comp):
 
 def q_atom(weak_comp):
     return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', True, q_shifted_monomial)
+
+
+def tuplize(g):
+    beta = []
+    for i in g:
+        while i > len(beta):
+            beta += [0]
+        beta[i - 1] = g[i]
+    beta = tuple(beta)
+    return beta
+
+
+def get_exponents(kappa):
+    return sorted([tuplize(g) for g in kappa])
+
+
+def dict_from_tuple(beta):
+    mon = X(0)**0
+    for i, a in enumerate(beta):
+        mon *= X(i + 1)**a
+    return max(mon)
+
+
+def decompose_into_keys(kappa):
+    ans = {}
+    while kappa != 0:
+        betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
+        beta = betas[0]
+        coeff = kappa[dict_from_tuple(beta)]
+        kappa = kappa - coeff * key(beta)
+        ans[beta] = ans.get(beta, 0) + coeff
+    return {k: v for k, v in ans.items() if v}
+
+
+def decompose_into_atoms(kappa):
+    ans = {}
+    while kappa != 0:
+        betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
+        beta = betas[0]
+        coeff = kappa[dict_from_tuple(beta)]
+        kappa = kappa - coeff * atom(beta)
+        ans[beta] = ans.get(beta, 0) + coeff
+    return {k: v for k, v in ans.items() if v}

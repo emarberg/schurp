@@ -116,6 +116,9 @@ class Partition:
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    def is_symmetric(self):
+        return self == self.transpose()
+
     def __iter__(self):
         return self.parts.__iter__()
 

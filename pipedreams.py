@@ -1,5 +1,5 @@
 from schubert import InvSchubert, FPFSchubert
-from schubert import x as x_var, one as one_var
+from polynomials import x as x_var, one as one_var
 import subprocess
 import os
 
@@ -259,6 +259,12 @@ class Pipedream:
 
     def strict_lower_part(self):
         return Pipedream({(i, j) for (i, j) in self.crossings if i > j})
+
+    def monomial(self):
+        ans = one_var()
+        for (i, j) in self.crossings:
+            ans *= x_var(i)
+        return ans
 
     def inv_monomial(self):
         ans = one_var()
