@@ -16,32 +16,40 @@ QKEY_ATOM_CACHE = {}
 def symmetric_composition_from_row_column_counts(row_counts, col_counts):
     def helper(rc, cc):
         if len(rc) == 0 or max(rc) == 0:
-            return set()
+            yield set()
+            return
         m = max(rc)
         i = [i for i, a in enumerate(rc) if a == m][-1]
-        # print(rc, cc, i)
-        assert len([c for j, c in enumerate(cc) if c > 0 and j >= i]) == m
-        new_rc = rc[:i] + (0,) + rc[i + 1:]
-        new_cc = cc[:i] + tuple(max(a - 1, 0) for a in cc[i:])
-        ans = helper(new_rc, new_cc)
-        # print(new_rc, new_cc, '\n', Tableau({k: 1 for k in ans}))
-        for j, a in enumerate(cc):
-            if a > 0 and j >= i:
-                ans |= {(i + 1, j + 1), (j + 1, i + 1)}
-        return ans
-
+        columns = [j for j, c in enumerate(cc) if c > 0 and j >= i]
+        for subset in itertools.combinations(columns, m):
+            new_rc = rc[:i] + (0,) + rc[i + 1:]
+            new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
+            for ans in helper(new_rc, new_cc):
+                # print(new_rc, new_cc, '\n', Tableau({k: 1 for k in ans}))
+                for j in subset:
+                    ans |= {(i + 1, j + 1), (j + 1, i + 1)}
+                yield ans
+    #
     n = max(len(row_counts), len(col_counts))
     row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
     col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
     assert sum(row_counts) == sum(col_counts)
-    ans = n * [0]
-    bns = helper(row_counts, col_counts)
-    for i, j in bns:
-        ans[i - 1] += 1
-    ans = tuple(ans)
-    while ans and ans[-1] == 0:
-        ans = ans[:-1]
-    return ans
+    #
+    answers = []
+    for bns in helper(row_counts, col_counts):
+        ans = n * [0]
+        for i, j in bns:
+            ans[i - 1] += 1
+        ans = tuple(ans)
+        while ans and ans[-1] == 0:
+            ans = ans[:-1]
+        if Partition(*sorted(ans, reverse=True)).is_symmetric():
+            answers.append(ans)
+    if len(answers) > 1:
+        raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
+    if len(answers) == 0:
+        raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
+    return answers[0]
 
 
 def symmetric_double(alpha):
@@ -100,6 +108,79 @@ def symmetric_halves(alpha):
     return tuple(rows), tuple(cols)
 
 
+def skew_symmetric_double(alpha):
+    pass
+
+
+def skew_symmetric_halves(alpha):
+    def s(i):
+        def f(x):
+            return (x + 1) if x == i else (x - 1) if x == i + 1 else x
+        return f
+
+    word = sorting_permutation(alpha)
+    mu = sorted(alpha, reverse=True)
+    diagram = {(i, j) for i in range(1, 1 + len(mu)) for j in range(1, 1 + mu[i - 1])}
+    for i in reversed(word):
+        diagram = {(s(i)(a), s(i)(b)) for (a, b) in diagram}
+    n = max([0] + [max(p) for p in diagram])
+    rows, cols = n * [0], n * [0]
+    for a, b in diagram:
+        if a < b:
+            rows[a - 1] += 1
+            cols[b - 1] += 1
+    while rows and rows[-1] == 0:
+        rows = rows[:-1]
+    while cols and cols[-1] == 0:
+        cols = cols[:-1]
+    return tuple(rows), tuple(cols)
+
+
+def skew_symmetric_composition_from_row_column_counts(row_counts, col_counts):
+    def helper(rc, cc):
+        if len(rc) == 0 or max(rc) == 0:
+            yield set()
+            return
+        m = max(rc)
+        i = [i for i, a in enumerate(rc) if a == m][-1]
+        columns = [j for j, c in enumerate(cc) if c > 0 and j > i]
+        for subset in itertools.combinations(columns, m):
+            new_rc = rc[:i] + (0,) + rc[i + 1:]
+            new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
+            for ans in helper(new_rc, new_cc):
+                for j in subset:
+                    ans |= {(i + 1, j + 1), (j + 1, i + 1)}
+                yield ans
+    #
+    n = max(len(row_counts), len(col_counts))
+    row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
+    col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
+    assert sum(row_counts) == sum(col_counts)
+    #
+    answers = []
+    for cns in helper(row_counts, col_counts):
+        s = list(range(1, n + 1))
+        for k in range(n + 1):
+            for diagonal in itertools.combinations(s, k):
+                bns = cns.copy()
+                for i in diagonal:
+                    bns.add((i, i))
+                # print(Tableau({box: 1 for box in bns}))
+                ans = n * [0]
+                for i, j in bns:
+                    ans[i - 1] += 1
+                ans = tuple(ans)
+                while ans and ans[-1] == 0:
+                    ans = ans[:-1]
+                if is_skew_symmetric_composition(ans):
+                    answers.append(ans)
+    if len(answers) > 1:
+        raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
+    if len(answers) == 0:
+        raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
+    return answers[0]
+
+
 def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
     assert n >= 0 and parts >= 0
     if parts == 0:
@@ -120,6 +201,28 @@ def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
 def symmetric_weak_compositions(n, parts, reduced=False):
     for alpha in weak_compositions(n, parts, True, reduced):
         if Partition(*sorted(alpha, reverse=True)).is_symmetric():
+            yield alpha
+
+
+def is_skew_symmetric_composition(alpha):
+    mu = sorted(alpha, reverse=True) + [0]
+    if not Partition(*mu).is_symmetric():
+        return False
+    mu += [0]
+    if any(mu[i] == i and mu[i + 1] < i for i in range(len(mu) - 1)):
+        return False
+    if any(mu[i] == i + 1 and mu[i + 1] == i for i in range(len(mu) - 1)):
+        return False
+    if alpha and alpha[0] == 0:
+        a = [a for a in alpha if a > 0]
+        if a and a[0] == min(a):
+            return False
+    return True
+
+
+def skew_symmetric_weak_compositions(n, parts, reduced=False):
+    for alpha in symmetric_weak_compositions(n, parts, reduced):
+        if is_skew_symmetric_composition(alpha):
             yield alpha
 
 
@@ -154,7 +257,6 @@ def has_distinct_parts(mu):
 
 def p_shifted_monomial(weak_composition):
     mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-    # has_distinct_parts(mu)
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
         for j in range(i + 1, mu[i - 1] + 1):
@@ -164,7 +266,6 @@ def p_shifted_monomial(weak_composition):
 
 def q_shifted_monomial(weak_composition):
     mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-    # has_distinct_parts(mu)
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
         for j in range(i, mu[i - 1] + 1):

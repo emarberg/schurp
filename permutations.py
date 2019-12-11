@@ -493,6 +493,11 @@ class Permutation:
     def involution_rothe_diagram(self, fpf=False):
         return [(i, j) for (i, j) in self.rothe_diagram() if i > j or (not fpf and i == j)]
 
+    def print_essential_set(self, french=False, sep=' '):
+        rothe = self.rothe_diagram()
+        ess = [(i, j) for (i, j) in rothe if (i + 1, j) not in rothe and (i, j + 1) not in rothe]
+        print(self.print_diagram(ess, french=french, sep=sep))
+
     def print_rothe_diagram(self, french=False, sep=' '):
         print(self.print_diagram(self.rothe_diagram(), french=french, sep=sep))
 
