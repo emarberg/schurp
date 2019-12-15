@@ -116,6 +116,13 @@ class Partition:
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    def tuple(self):
+        return tuple(self.parts)
+
+    @classmethod
+    def is_strict_partition(cls, mu):
+        return all(mu[i - 1] > mu[i] for i in range(1, len(mu)))
+
     def is_symmetric(self):
         return self == self.transpose()
 
@@ -210,6 +217,13 @@ class Partition:
         assert type(other) == type(self)
         return self.shape.contains(other.shape)
 
+    @classmethod
+    def _contains(cls, bigger, smaller):
+        """Returns true if mu subseteq nu as partitions."""
+        if len(smaller) > len(bigger):
+            return False
+        return all(0 <= smaller[i] <= bigger[i] for i in range(len(smaller)))
+
     def compact(self):
         if self.parts:
             return ','.join([str(i) for i in self.parts])
@@ -241,6 +255,10 @@ class Partition:
         while mu and mu[-1] == 0:
             mu = mu[:-1]
         return tuple(mu)
+
+    @classmethod
+    def is_partition(cls, mu):
+        return all(mu[i - 1] >= mu[i] for i in range(1, len(mu))) and (mu == () or mu[-1] >= 0)
 
     @classmethod
     def subpartitions(cls, mu, strict=False):

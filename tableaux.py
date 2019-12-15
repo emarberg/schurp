@@ -1,7 +1,12 @@
+from cached import cached_value
 from partitions import Shape, Partition, StrictPartition
 from marked import MarkedNumber
 import random
 from collections import defaultdict
+
+
+STANDARD_CACHE = {}
+STANDARD_SHIFTED_MARKED_CACHE = {}
 
 
 class Tableau:
@@ -79,6 +84,9 @@ class Tableau:
         mapping = {(i, j): 1 for (i, j) in mu.shape}
         return Tableau(mapping)
 
+    def add(self, i, j, v):
+        return self.set(i, j, v)
+
     def set(self, i, j, v):
         mapping = self.mapping.copy()
         mapping[(i, j)] = v
@@ -107,7 +115,8 @@ class Tableau:
         return self
 
     def find(self, *args):
-        return Tableau({key: value for key, value in self.mapping.items() if value in list(args)})
+        args = [MarkedNumber(v) if type(v) == int else v for v in args]
+        return Tableau({key: value for key, value in self.mapping.items() if value in args})
 
     def shift(self):
         return Tableau({(i, i + j - 1): self.entry(i, j) for (i, j) in self.mapping})
@@ -651,6 +660,74 @@ class Tableau:
                 q = sequence[i]
         return q, column_dir, newseq
 
+    def remove(self, i, j):
+        assert (i, j) in self
+        return Tableau({a: b for a, b in self.mapping.items() if a != (i, j)})
+
+    def row_reading_word(self):
+        return tuple(
+            self.mapping[key].number for key in sorted(self.mapping, key=lambda x: (-x[0], x[1]))
+        )
+
+    @classmethod
+    def inverse_sagan_worley(cls, p, q):
+        n = len(p)
+        if n == 0:
+            return ()
+        if q.find(n):
+            i, j = next(iter(q.find(n).mapping))
+            a, p = p.entry(i, j), p.remove(i, j)
+            cdir = False
+        else:
+            i, j = next(iter(q.find(-n).mapping))
+            a, p = p.entry(i, j), p.remove(i, j)
+            cdir = True
+        while i > 1 or cdir:
+            if cdir:
+                j = j - 1
+                i = max([k for (k, l) in p if l == j and p.entry(k, l) <= a])
+                a, p = p.entry(i, j), p.set(i, j, a)
+                cdir = (i != j)
+            else:
+                i = i - 1
+                j = max([l for (k, l) in p if k == i and p.entry(k, l) < a])
+                a, p = p.entry(i, j), p.set(i, j, a)
+        return cls.inverse_sagan_worley(p, q) + (a.number,)
+
+    @classmethod
+    def inverse_rsk(cls, p, q):
+        n = len(p)
+        if n == 0:
+            return ()
+        i, j = next(iter(q.find(n).mapping))
+        a = p.entry(i, j)
+        p = p.remove(i, j)
+        while i > 1:
+            i = i - 1
+            j = max([l for (k, l) in p if k == i and p.entry(k, l) < a])
+            a, p = p.entry(i, j), p.set(i, j, a)
+        return cls.inverse_rsk(p, q) + (a.number,)
+
+    def rsk_insert(self, p, j=0):
+        if p is None:
+            return (j, self)
+
+        def rsk_bump(a, tup):
+            if len(tup) == 0 or a >= tup[-1]:
+                newtup = tup + (a,)
+                q = None
+            else:
+                i = [j for j in range(len(tup)) if a < tup[j]][0]
+                newtup = tup[:i] + (a,) + tup[i + 1:]
+                q = tup[i]
+            return q, newtup
+
+        j += 1
+        row = self.get_row(j)
+        p, row = rsk_bump(p, row)
+        tab = self.replace_row(j, row, shifted=False)
+        return tab.rsk_insert(p, j)
+
     def hecke_insert(self, p, j=0):
         if p is None:
             return (j, self)
@@ -737,6 +814,35 @@ class Tableau:
 
         assert tab.is_increasing()
         return tab.eg_insert(p, j)
+
+    def sagan_worley_insert(self, p, j=0, column_dir=False, verbose=True):
+        if p is None:
+            return (j, column_dir, self)
+
+        def bump(a, cdir, tup):
+            for i, b in enumerate(tup):
+                if a > b:
+                    continue
+                if not cdir and a == b:
+                    continue
+                if not cdir and i == 0:
+                    new = (a,) + tup[1:]
+                    cdir = True
+                else:
+                    new = tup[:i] + (a,) + tup[i + 1:]
+                return (b, cdir, new)
+            return (None, cdir, tup + (a,))
+
+        j += 1
+        row, col = self.get_row(j), self.get_column(j)
+
+        if column_dir:
+            p, column_dir, col = bump(p, column_dir, col)
+            tab = self.replace_column(j, col)
+        else:
+            p, column_dir, row = bump(p, column_dir, row)
+            tab = self.replace_row(j, row, shifted=True)
+        return tab.sagan_worley_insert(p, j, column_dir, verbose=verbose)
 
     def involution_insert(self, p, j=0, column_dir=False, verbose=True):
         if p is None:
@@ -839,49 +945,47 @@ class Tableau:
         assert tab.is_increasing()
         return tab.fpf_insert(p, j, column_dir, verbose=verbose)
 
-    def clan_insert(self, n, p, j=0, column_dir=False, verbose=True):
-        raise NotImplementedError
+    @classmethod
+    def standard(cls, mu, nu=()):  # noqa
+        return cls._standard(mu, nu)
 
-    def mystery_insert(self, p, j=0, verbose=True):
-        if p is None:
-            return (j, self)
+    @cached_value(STANDARD_CACHE)
+    def _standard(cls, mu, lam):  # noqa
+        ans = set()
+        if mu == lam:
+            ans = {Tableau()}
+        elif Partition._contains(mu, lam):
+            n = sum(mu) - sum(lam)
+            for i in range(len(mu)):
+                row, col = (i + 1), mu[i]
+                nu = list(mu)
+                nu[i] -= 1
+                nu = Partition.trim(nu)
+                if Partition.is_partition(nu):
+                    for tab in cls._standard(nu, lam):
+                        ans.add(tab.add(row, col, n))
+        return ans
 
-        def mystery_bump(a, tup):
-            if all(a > i for i in tup):
-                return (None, tup + (a,))
-            if len(tup) == 1:
-                return (tup[0], (a,))
-            b, c = tup[-2:]
-            if a < b < c:
-                if all(a < i for i in tup):
-                    return (c, (a,) + tup[:-1])
-                else:
-                    index = max([i for i in range(len(tup)) if tup[i] < a])
-                    a, tup = tup[index], tup[:index] + (a,) + tup[index + 1:-1]
-                    (bumped, new) = mystery_bump(a, tup)
-                    return (bumped, new + (c,))
-            a, b, c = tup[-2], a, tup[-1]
-            if a < b < c:
-                (bumped, new) = mystery_bump(a, tup[:-2] + (b,))
-                return (bumped, new + (c,))
-            raise Exception
+    @classmethod
+    def standard_shifted_marked(cls, mu, nu=(), diagonal_primes=False):  # noqa
+        return cls._standard_shifted_marked(mu, nu, diagonal_primes)
 
-        j += 1
-        row = self.get_row(j)
-
-        if verbose:
-            print('Inserting %s into row %s of \n\n%s\n' % (
-                str(p),
-                str(j),
-                self
-            ))
-
-        p, row = mystery_bump(p, row)
-        if verbose:
-            print('New row = %s, new p = %s\n\n' % (
-                str(row),
-                str(p)
-            ))
-
-        tab = self.replace_row(j, row, shifted=False)
-        return tab.mystery_insert(p, j, verbose=verbose)
+    @cached_value(STANDARD_SHIFTED_MARKED_CACHE)
+    def _standard_shifted_marked(cls, mu, lam, diagonal_primes):  # noqa
+        assert Partition.is_strict_partition(mu)
+        ans = set()
+        if mu == lam:
+            ans = {Tableau()}
+        elif Partition._contains(mu, lam):
+            n = sum(mu) - sum(lam)
+            for i in range(len(mu)):
+                row, col = (i + 1), (i + mu[i])
+                nu = list(mu)
+                nu[i] -= 1
+                nu = Partition.trim(nu)
+                if Partition.is_strict_partition(nu):
+                    for tab in cls._standard_shifted_marked(nu, lam, diagonal_primes):
+                        ans.add(tab.add(row, col, n))
+                        if diagonal_primes or row != col:
+                            ans.add(tab.add(row, col, -n))
+        return ans

@@ -213,10 +213,10 @@ def is_skew_symmetric_composition(alpha):
         return False
     if any(mu[i] == i + 1 and mu[i + 1] == i for i in range(len(mu) - 1)):
         return False
-    if alpha and alpha[0] == 0:
-        a = [a for a in alpha if a > 0]
-        if a and a[0] == min(a):
-            return False
+    # if alpha and alpha[0] == 0:
+    #     a = [a for a in alpha if a > 0]
+    #     if a and a[0] == min(a):
+    #         return False
     return True
 
 
@@ -239,7 +239,7 @@ def q_power(alpha):
     return i
 
 
-def monomial(weak_composition):
+def monomial_from_composition(weak_composition):
     ans = X(0)**0
     for i, e in enumerate(weak_composition):
         ans *= X(i + 1) ** e
@@ -247,7 +247,7 @@ def monomial(weak_composition):
 
 
 def leading_monomial(weak_composition):
-    return monomial(reversed(sorted(weak_composition)))
+    return monomial_from_composition(reversed(sorted(weak_composition)))
 
 
 def has_distinct_parts(mu):

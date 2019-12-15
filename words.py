@@ -425,6 +425,18 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def rsk_insert(self):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.rsk_insert(MarkedNumber(a))
+            v = MarkedNumber(i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
     def hecke_insert(self):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
@@ -454,16 +466,24 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def sagan_worley_insert(self, verbose=False):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, column_dir, p = p.sagan_worley_insert(MarkedNumber(a), verbose=verbose)
+            v = MarkedNumber(-i if column_dir else i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
     def involution_insert(self, verbose=False):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
             j, column_dir, p = p.involution_insert(MarkedNumber(a), verbose=verbose)
-
-            if column_dir:
-                v = MarkedNumber(-i)
-            else:
-                v = MarkedNumber(i)
+            v = MarkedNumber(-i if column_dir else i)
             for k, l in p.shape():
                 if (k, l) not in q.shape():
                     q = q.set(k, l, v)

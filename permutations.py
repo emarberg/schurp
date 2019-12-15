@@ -192,6 +192,12 @@ class Permutation:
                 yield Permutation(*w).inverse()
             add = {new for w in add for new in next(w)}
 
+    def get_fpf_involution_words(self):
+        assert self.is_fpf_involution()
+        for a in self.get_fpf_atoms():
+            for word in a.get_reduced_words():
+                yield word
+
     def get_fpf_atoms(self):
         if self not in FPF_ATOMS_CACHE:
             FPF_ATOMS_CACHE[self] = list(self._get_fpf_atoms())
