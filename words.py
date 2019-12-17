@@ -18,6 +18,9 @@ class Word:
         self._fpf_involutions = None
         assert all(i in self.subset for i in args)
 
+    def tuple(self):
+        return self.elements
+
     @property
     def permutation_sequence(self):
         if self._permutations is None:

@@ -1,6 +1,9 @@
 from permutations import Permutation
 
 
+DIVIDED_DIFFERENCE_CACHE = {}
+
+
 def X(i):
     return MPolynomial.monomial(i)
 
@@ -313,32 +316,34 @@ class MPolynomial:
         return ans
 
     @classmethod
-    def divided_difference_helper(cls, i, index, coeff):
-        a = index.get(i, 0)
-        b = index.get(i + 1, 0)
-        d = max(a, b) - min(a, b)
+    def divided_difference_helper(cls, i, index):
+        if (i, index) not in DIVIDED_DIFFERENCE_CACHE:
+            a = index.get(i, 0)
+            b = index.get(i + 1, 0)
+            d = max(a, b) - min(a, b)
 
-        x = MPolynomial.monomial(i, 1)
-        y = MPolynomial.monomial(i + 1, 1)
-        ans = MPolynomial()
+            x = MPolynomial.monomial(i, 1)
+            y = MPolynomial.monomial(i + 1, 1)
+            ans = MPolynomial()
 
-        new_index = HashableDict(index.copy())
-        new_index[i] = min(a, b)
-        new_index[i + 1] = min(a, b)
-        tmp = MPolynomial({new_index: coeff})
+            new_index = HashableDict(index.copy())
+            new_index[i] = min(a, b)
+            new_index[i + 1] = min(a, b)
+            tmp = MPolynomial({new_index: 1})
 
-        if a == max(a, b):
-            sgn = 1
-        else:
-            sgn = -1
-        for i in range(d):
-            ans += sgn * tmp * x**i * y**(d - 1 - i)
-        return ans
+            sgn = 1 if a == max(a, b) else -1
+            for j in range(d):
+                ans += sgn * tmp * x**j * y**(d - 1 - j)
+            DIVIDED_DIFFERENCE_CACHE[(i, index)] = ans
+            ell = len(DIVIDED_DIFFERENCE_CACHE)
+            if ell % 100 == 0:
+                print(' . . . Divided Differences cache:', ell)
+        return DIVIDED_DIFFERENCE_CACHE[(i, index)]
 
     def divided_difference(self, i):
         ans = MPolynomial()
         for index, coeff in self.coeffs.items():
-            ans += self.divided_difference_helper(i, index, coeff)
+            ans += self.divided_difference_helper(i, index) * coeff
         return ans
 
     def __mul__(self, f):

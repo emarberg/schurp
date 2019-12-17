@@ -1,6 +1,7 @@
 from schubert import X
 from partitions import Partition
 from tableaux import Tableau
+from words import Word
 import itertools
 
 
@@ -11,6 +12,97 @@ QKEY_POLYNOMIAL_CACHE = {}
 KEY_ATOM_CACHE = {}
 PKEY_ATOM_CACHE = {}
 QKEY_ATOM_CACHE = {}
+
+REDUCED_TABLEAU_CACHE = {}
+O_REDUCED_TABLEAU_CACHE = {}
+SP_REDUCED_TABLEAU_CACHE = {}
+
+
+def _get_key_maps(tab, shape, get_class, get_factors):
+    left_keys, right_keys = {}, {}
+    for w in get_class(tab):
+        f = get_factors(w)
+        mu = tuple(sorted(map(len, f), reverse=True))
+        if mu == shape:
+            j, k = len(f[0]), len(f[-1])
+            assert j not in left_keys or left_keys[j] == f[0]
+            assert k not in right_keys or right_keys[k] == f[-1]
+            left_keys[j] = f[0]
+            right_keys[k] = f[-1]
+    return left_keys, right_keys
+
+
+def _map_to_key(shape, key_map):
+    ans = []
+    for k in shape:
+        w = key_map[k]
+        for a in w:
+            while a > len(ans):
+                ans.append(0)
+            ans[a - 1] += 1
+    return tuple(ans)
+
+
+def orthogonal_key_maps(p):
+    nu = p.partition().tuple()
+    increasing_left_keys, increasing_right_keys = _get_key_maps(p, nu, o_knuth_class, maximal_increasing_factors)
+    decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, nu, o_knuth_class, maximal_decreasing_factors)
+    return (_map_to_key(nu, increasing_left_keys),
+            _map_to_key(nu, increasing_right_keys),
+            _map_to_key(nu, decreasing_left_keys),
+            _map_to_key(nu, decreasing_right_keys))
+
+
+def symplectic_key_maps(p):
+    nu = p.partition().tuple()
+    increasing_left_keys, increasing_right_keys = _get_key_maps(p, nu, sp_knuth_class, maximal_increasing_factors)
+    decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, nu, sp_knuth_class, maximal_decreasing_factors)
+    return (_map_to_key(nu, increasing_left_keys),
+            _map_to_key(nu, increasing_right_keys),
+            _map_to_key(nu, decreasing_left_keys),
+            _map_to_key(nu, decreasing_right_keys))
+
+
+def nil_key_maps(p):
+    mu = p.partition().tuple()
+    nu = p.partition().transpose().tuple()
+    increasing_left_keys, increasing_right_keys = _get_key_maps(p, mu, coxeter_knuth_class, maximal_increasing_factors)
+    decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, nu, coxeter_knuth_class, maximal_decreasing_factors)
+    return (_map_to_key(mu, increasing_left_keys),
+            _map_to_key(mu, increasing_right_keys),
+            _map_to_key(nu, decreasing_left_keys),
+            _map_to_key(nu, decreasing_right_keys))
+
+
+def key_maps(p):
+    mu = p.partition().tuple()
+    nu = p.partition().transpose().tuple()
+    increasing_left_keys, increasing_right_keys = _get_key_maps(p, mu, knuth_class, maximal_weakly_increasing_factors)
+    decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, nu, knuth_class, maximal_decreasing_factors)
+    return (_map_to_key(mu, increasing_left_keys),
+            _map_to_key(mu, increasing_right_keys),
+            _map_to_key(nu, decreasing_left_keys),
+            _map_to_key(nu, decreasing_right_keys))
+
+
+# def key_maps(p):
+#     left_columns = {}
+#     right_columns = {}
+#     for w in key_words(p):
+#         f = maximal_decreasing_factors(w)
+#         a, b = f[0], f[-1]
+#         if len(a) in left_columns:
+#             assert left_columns[len(a)] == a
+#         if len(b) in right_columns:
+#             assert right_columns[len(b)] == b
+#         left_columns[len(a)] = a
+#         right_columns[len(b)] = b
+#     right_word = ()
+#     left_word = ()
+#     for part in p.partition().transpose().tuple():
+#         right_word += right_columns[part]
+#         left_word += left_columns[part]
+#     return rsk_insert(left_word)[0], rsk_insert(right_word)[0]
 
 
 def symmetric_composition_from_row_column_counts(row_counts, col_counts):
@@ -374,3 +466,156 @@ def decompose_into_atoms(kappa):
         kappa = kappa - coeff * atom(beta)
         ans[beta] = ans.get(beta, 0) + coeff
     return {k: v for k, v in ans.items() if v}
+
+
+def maximal_weakly_increasing_factors(w):
+    factors = [[]]
+    for a in w:
+        if len(factors[-1]) == 0 or factors[-1][-1] <= a:
+            factors[-1].append(a)
+        else:
+            factors.append([a])
+    return tuple(tuple(a) for a in factors)
+
+
+def maximal_increasing_factors(w):
+    factors = [[]]
+    for a in w:
+        if len(factors[-1]) == 0 or factors[-1][-1] < a:
+            factors[-1].append(a)
+        else:
+            factors.append([a])
+    return tuple(tuple(a) for a in factors)
+
+
+def maximal_decreasing_factors(w):
+    factors = [[]]
+    for a in w:
+        if len(factors[-1]) == 0 or factors[-1][-1] > a:
+            factors[-1].append(a)
+        else:
+            factors.append([a])
+    return tuple(tuple(a) for a in factors)
+
+
+def colform(w):
+    return Partition(*sorted([len(a) for a in maximal_decreasing_factors(w)], reverse=True)).tuple()
+
+
+def is_key_word(p, w):
+    return p == w.rsk_insert(w)[0] and colform(w) == p.partition().tuple()
+
+
+def key_words(p):
+    for w in knuth_class(p):
+        if colform(w) == p.partition().transpose().tuple():
+            yield w
+
+
+def key_tableau(alpha):
+    from permutations import Permutation
+    w = Permutation()
+    for i in sorting_permutation(alpha):
+        w *= Permutation.s_i(i)
+    word = []
+    for part in Partition(*sorted(alpha, reverse=True)).transpose().parts:
+        word += sorted([w(i) for i in range(part, 0, -1)], reverse=True)
+    return rsk_insert(word)[0]
+
+
+def compatible_sequences(seq, i_min=1):
+    if len(seq) == 0:
+        yield (), X(0)**0
+    else:
+        a, seq = seq[0], seq[1:]
+        for i in range(i_min, a + 1):
+            j_min = (i + 1) if (seq and a < seq[0]) else i
+            for p, q in compatible_sequences(seq, j_min):
+                yield (a,) + p, X(i) * q
+
+
+def rsk_insert(sequence):
+    return Word(*sequence).rsk_insert()
+
+
+def inverse_rsk(p, q):
+    return Tableau.inverse_rsk(p, q)
+
+
+def knuth_class(p):
+    if type(p) != Tableau:
+        p = rsk_insert(p)[0]
+    mu = p.partition().tuple()
+    for q in Tableau.standard(mu):
+        yield inverse_rsk(p, q)
+
+
+def _equivalence_class(p, cache, toggle_fn):
+    if p in cache:
+        return cache[p]
+    seen = set()
+    add = {p}
+    ans = []
+    while add:
+        nextadd = set()
+        for v in add:
+            if v not in seen:
+                seen.add(v)
+                for u in toggle_fn(v):
+                    if u not in seen:
+                        nextadd.add(u)
+                ans.append(v)
+        add = nextadd
+    cache[p] = ans
+    return ans
+
+
+def coxeter_knuth_class(p):
+    def toggle(w):
+        for i in range(len(w) - 2):
+            if w[i] == w[i + 2]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 1]) + w[i + 3:]
+            if w[i] < w[i + 2] < w[i + 1] or w[i + 1] < w[i + 2] < w[i]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 2]) + w[i + 3:]
+            if w[i + 2] < w[i] < w[i + 1] or w[i + 1] < w[i] < w[i + 2]:
+                yield w[:i] + (w[i], w[i + 2], w[i + 1]) + w[i + 3:]
+
+    p = p.row_reading_word() if type(p) == Tableau else p
+    return _equivalence_class(p, REDUCED_TABLEAU_CACHE, toggle)
+
+
+def sp_knuth_class(p):
+    def toggle(w):
+        if len(w) >= 2:
+            if w[0] % 2 == w[1] % 2:
+                yield (w[1], w[0]) + w[2:]
+            if w[1] == w[0] - 1:
+                yield (w[0], w[0] + 1) + w[2:]
+            if w[1] == w[0] + 1:
+                yield (w[0], w[0] - 1) + w[2:]
+        for i in range(len(w) - 2):
+            if w[i] == w[i + 2]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 1]) + w[i + 3:]
+            if w[i] < w[i + 2] < w[i + 1] or w[i + 1] < w[i + 2] < w[i]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 2]) + w[i + 3:]
+            if w[i + 2] < w[i] < w[i + 1] or w[i + 1] < w[i] < w[i + 2]:
+                yield w[:i] + (w[i], w[i + 2], w[i + 1]) + w[i + 3:]
+
+    p = p.row_reading_word() if type(p) == Tableau else p
+    return _equivalence_class(p, SP_REDUCED_TABLEAU_CACHE, toggle)
+
+
+def o_knuth_class(p):
+    def toggle(w):
+        if len(w) >= 2:
+            yield (w[1], w[0]) + w[2:]
+        for i in range(len(w) - 2):
+            if w[i] == w[i + 2]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 1]) + w[i + 3:]
+            if w[i] < w[i + 2] < w[i + 1] or w[i + 1] < w[i + 2] < w[i]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 2]) + w[i + 3:]
+            if w[i + 2] < w[i] < w[i + 1] or w[i + 1] < w[i] < w[i + 2]:
+                yield w[:i] + (w[i], w[i + 2], w[i + 1]) + w[i + 3:]
+
+    p = p.row_reading_word() if type(p) == Tableau else p
+    return _equivalence_class(p, O_REDUCED_TABLEAU_CACHE, toggle)
