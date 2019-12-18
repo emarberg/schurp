@@ -16,6 +16,7 @@ QKEY_ATOM_CACHE = {}
 REDUCED_TABLEAU_CACHE = {}
 O_REDUCED_TABLEAU_CACHE = {}
 SP_REDUCED_TABLEAU_CACHE = {}
+SHIFTED_REDUCED_TABLEAU_CACHE = {}
 
 
 def _get_key_maps(tab, shape, get_class, get_factors):
@@ -32,35 +33,44 @@ def _get_key_maps(tab, shape, get_class, get_factors):
     return left_keys, right_keys
 
 
-def _map_to_key(shape, key_map):
-    ans = []
-    for k in shape:
-        w = key_map[k]
-        for a in w:
-            while a > len(ans):
-                ans.append(0)
-            ans[a - 1] += 1
-    return tuple(ans)
+def _map_to_shifted_key(shape, key_map):
+    return _map_to_key(shape, key_map, True)
+
+
+def _map_to_key(shape, key_map, shifted=False):
+    ans = Tableau()
+    for i in range(len(shape)):
+        if i + 1 < len(shape):
+            a = key_map[shape[i + 1]]
+            b = key_map[shape[i]][1:] if shifted else key_map[shape[i]]
+            assert set(a).issubset(set(b))
+        if shifted:
+            for j, a in enumerate(key_map[shape[i]]):
+                ans = ans.add(i + 1, i + j + 1, a)
+        else:
+            for j, a in enumerate(key_map[shape[i]]):
+                ans = ans.add(j + 1, i + 1, a)
+    return ans
 
 
 def orthogonal_key_maps(p):
     nu = p.partition().tuple()
     increasing_left_keys, increasing_right_keys = _get_key_maps(p, nu, o_knuth_class, maximal_increasing_factors)
     decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, nu, o_knuth_class, maximal_decreasing_factors)
-    return (_map_to_key(nu, increasing_left_keys),
-            _map_to_key(nu, increasing_right_keys),
-            _map_to_key(nu, decreasing_left_keys),
-            _map_to_key(nu, decreasing_right_keys))
+    return (_map_to_shifted_key(nu, increasing_left_keys),
+            _map_to_shifted_key(nu, increasing_right_keys),
+            _map_to_shifted_key(nu, decreasing_left_keys),
+            _map_to_shifted_key(nu, decreasing_right_keys))
 
 
 def symplectic_key_maps(p):
     nu = p.partition().tuple()
     increasing_left_keys, increasing_right_keys = _get_key_maps(p, nu, sp_knuth_class, maximal_increasing_factors)
     decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, nu, sp_knuth_class, maximal_decreasing_factors)
-    return (_map_to_key(nu, increasing_left_keys),
-            _map_to_key(nu, increasing_right_keys),
-            _map_to_key(nu, decreasing_left_keys),
-            _map_to_key(nu, decreasing_right_keys))
+    return (_map_to_shifted_key(nu, increasing_left_keys),
+            _map_to_shifted_key(nu, increasing_right_keys),
+            _map_to_shifted_key(nu, decreasing_left_keys),
+            _map_to_shifted_key(nu, decreasing_right_keys))
 
 
 def nil_key_maps(p):
@@ -85,24 +95,14 @@ def key_maps(p):
             _map_to_key(nu, decreasing_right_keys))
 
 
-# def key_maps(p):
-#     left_columns = {}
-#     right_columns = {}
-#     for w in key_words(p):
-#         f = maximal_decreasing_factors(w)
-#         a, b = f[0], f[-1]
-#         if len(a) in left_columns:
-#             assert left_columns[len(a)] == a
-#         if len(b) in right_columns:
-#             assert right_columns[len(b)] == b
-#         left_columns[len(a)] = a
-#         right_columns[len(b)] = b
-#     right_word = ()
-#     left_word = ()
-#     for part in p.partition().transpose().tuple():
-#         right_word += right_columns[part]
-#         left_word += left_columns[part]
-#     return rsk_insert(left_word)[0], rsk_insert(right_word)[0]
+def shifted_key_maps(p):
+    mu = p.partition().tuple()
+    increasing_left_keys, increasing_right_keys = _get_key_maps(p, mu, shifted_knuth_class, maximal_weakly_increasing_factors)
+    decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, mu, shifted_knuth_class, maximal_decreasing_factors)
+    return (_map_to_shifted_key(mu, increasing_left_keys),
+            _map_to_shifted_key(mu, increasing_right_keys),
+            _map_to_shifted_key(mu, decreasing_left_keys),
+            _map_to_shifted_key(mu, decreasing_right_keys))
 
 
 def symmetric_composition_from_row_column_counts(row_counts, col_counts):
@@ -290,17 +290,20 @@ def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
         yield alpha
 
 
+def is_symmetric_composition(alpha):
+    return Partition(*sorted(alpha, reverse=True)).is_symmetric()
+
+
 def symmetric_weak_compositions(n, parts, reduced=False):
     for alpha in weak_compositions(n, parts, True, reduced):
-        if Partition(*sorted(alpha, reverse=True)).is_symmetric():
+        if is_symmetric_composition(alpha):
             yield alpha
 
 
 def is_skew_symmetric_composition(alpha):
-    mu = sorted(alpha, reverse=True) + [0]
-    if not Partition(*mu).is_symmetric():
+    if not is_symmetric_composition(alpha):
         return False
-    mu += [0]
+    mu = sorted(alpha, reverse=True) + [0]
     if any(mu[i] == i and mu[i + 1] < i for i in range(len(mu) - 1)):
         return False
     if any(mu[i] == i + 1 and mu[i + 1] == i for i in range(len(mu) - 1)):
@@ -529,7 +532,7 @@ def compatible_sequences(seq, i_min=1):
     else:
         a, seq = seq[0], seq[1:]
         for i in range(i_min, a + 1):
-            j_min = (i + 1) if (seq and a < seq[0]) else i
+            j_min = (i + 1) if (seq and a <= seq[0]) else i
             for p, q in compatible_sequences(seq, j_min):
                 yield (a,) + p, X(i) * q
 
@@ -568,6 +571,20 @@ def _equivalence_class(p, cache, toggle_fn):
         add = nextadd
     cache[p] = ans
     return ans
+
+
+def shifted_knuth_class(p):
+    def toggle(w):
+        for i in range(len(w) - 2):
+            if w[i] <= w[i + 2] < w[i + 1] or w[i + 1] <= w[i + 2] < w[i]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 2]) + w[i + 3:]
+            if w[i + 1] < w[i] <= w[i + 2] or w[i + 2] < w[i] <= w[i + 1]:
+                yield w[:i] + (w[i], w[i + 2], w[i + 1]) + w[i + 3:]
+        if len(w) >= 2:
+            yield (w[1], w[0]) + w[2:]
+
+    p = p.row_reading_word() if type(p) == Tableau else p
+    return _equivalence_class(p, SHIFTED_REDUCED_TABLEAU_CACHE, toggle)
 
 
 def coxeter_knuth_class(p):

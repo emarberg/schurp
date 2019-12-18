@@ -172,7 +172,7 @@ class Word:
             print(i, '. . .')
 
     @classmethod
-    def all(cls, n, l=None):
+    def all(cls, n, l=None, packed=True):
         l = n if l is None else l
         for i in range(n + 1):
             for j in range(l**i):
@@ -180,7 +180,7 @@ class Word:
                 for k in range(i):
                     args += [(j % l) + 1]
                     j = j // l
-                if all(t == 1 or (t - 1) in args for t in args):
+                if not packed or all(t == 1 or (t - 1) in args for t in args):
                     yield Word(*args)
 
     def wiring_diagram_tikz(self, n=None):

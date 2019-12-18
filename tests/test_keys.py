@@ -12,13 +12,15 @@ from keys import (
     decompose_into_keys, decompose_into_atoms, dict_from_tuple,
     symmetric_composition_from_row_column_counts, symmetric_halves,
     skew_symmetric_composition_from_row_column_counts, skew_symmetric_halves,
-    symmetric_double,
     maximal_decreasing_factors,
     maximal_increasing_factors,
     compatible_sequences,
     sp_knuth_class, o_knuth_class, coxeter_knuth_class, knuth_class,
     orthogonal_key_maps, symplectic_key_maps, nil_key_maps, key_maps,
-    rsk_insert
+    rsk_insert, key_tableau,
+    shifted_knuth_class,
+    shifted_key_maps,
+    is_symmetric_composition
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -27,6 +29,7 @@ from collections import defaultdict
 from words import Word
 from tableaux import Tableau
 import pyperclip
+import pytest
 
 
 q_alphas_cache = {}
@@ -90,8 +93,8 @@ def test_schubert_compatible_sequences(n=3):
         assert Schubert.get(w) == schubert(w)
 
 
-def words(n, k):
-    for w in Word.all(n, k):
+def words(n, k=None):
+    for w in Word.all(n, k, packed=False):
         yield w.tuple()
 
 
@@ -142,6 +145,42 @@ def test_nil_key_compatible_sequences(m=3):
             alpha = list(d)[0]
             keys[alpha] = keys.get(alpha, []) + [p]
     return keys
+
+
+# def test_shifted_key_compatible_sequences(m=4, l=4):
+#     def test_shifted_key(p):
+#         ans = 0
+#         for seq in shifted_knuth_class(p):
+#             assert sagan_worley_insert(seq)[0] == p
+#             for a, x in compatible_sequences(seq):
+#                 ans += x
+#         return ans
+#     #
+#     seen = set()
+#     keys = {}
+#     for n in range(m + 1):
+#         for k in range(l + 1):
+#             for w in words(n, k):
+#                 p = sagan_worley_insert(w)[0]
+#                 if p in seen:
+#                     continue
+#                 e = len(p.partition())
+#                 kappa = test_shifted_key(p) * 2**e
+#                 print(p)
+#                 dec = decompose_into_keys(kappa)
+#                 print('kappa  =', dec)
+#                 d = try_to_decompose_q(kappa, positive=False, multiple=False)
+#                 for decomp in d:
+#                     print('      ->', decomp)
+#                 print()
+#                 seen.add(p)
+#                 assert all(v > 0 for v in dec.values())
+#                 if len(d) == 1:
+#                     d = list(d)[0]
+#                     if len(d) == 1 and list(d.values()) == [1]:
+#                         alpha = list(d)[0]
+#                         keys[alpha] = keys.get(alpha, []) + [p]
+#     return keys
 
 
 def test_p_key_compatible_sequences(m=4):
@@ -206,10 +245,20 @@ def inverse_sagan_worley(p, q):
 
 
 def test_inverse_sagan_worley(n=5):
-    for word in Word.all(n):
-        w = word.elements
+    for w in words(n):
         p, q = sagan_worley_insert(w)
         assert w == inverse_sagan_worley(p, q)
+
+
+def test_shifted_knuth_class(n=4):
+    for w in words(n):
+        p, q = sagan_worley_insert(w)
+        for v in shifted_knuth_class(w):
+            print(w, '~', v)
+            print(p)
+            t = sagan_worley_insert(v)[0]
+            print(t)
+            assert t == p
 
 
 def eg_insert(sequence):
@@ -291,10 +340,32 @@ def test_q_insertion_definition(n=2, positive=True, multiple=True):
     return keys
 
 
+# def print_shifted_keys(n=4):
+#     keys = test_shifted_key_compatible_sequences(n, n)
+#     for alpha in keys:
+#         x, y = symmetric_halves(alpha)
+#         print('alpha =', alpha, '->', x, y)
+#         print()
+#         for p in keys[alpha]:
+#             a, b, c, d = shifted_key_maps(p)
+#             dec = decompose_into_keys(q_key(alpha))
+#             print(p)
+#             print('increasing keys:', a, b)
+#             print('decreasing keys:', c, d)
+#             print('decomposition:', dec)
+#             print(b == y)
+#             if b != y:
+#                 input('\n?')
+#             print()
+#         print()
+#         assert is_symmetric_composition(alpha)
+
+
 def print_keys(n=4):
     keys = test_key_compatible_sequences(n, n)
     for alpha in keys:
         print('alpha =', alpha)
+        print()
         for p in keys[alpha]:
             a, b, c, d = key_maps(p)
             print(p)
@@ -311,6 +382,7 @@ def print_nil_keys(n=4):
     keys = test_insertion_definition(n)
     for alpha in keys:
         print('alpha =', alpha)
+        print()
         for p in keys[alpha]:
             a, b, c, d = nil_key_maps(p)
             print(p)
@@ -323,55 +395,126 @@ def print_nil_keys(n=4):
         print()
 
 
+def _summarize(alpha, p, x, y, a, b, c, d, dec, last=False):
+    if last:
+        print('alpha =', alpha, '->', x, y)
+        print()
+    print(p)
+    print('increasing keys:')
+    print(a)
+    print(a.weight())
+    print()
+    print(b)
+    print(b.weight())
+    print()
+    print('decreasing keys:')
+    print(c)
+    print(c.weight())
+    print()
+    print(d)
+    print(d.weight())
+    print()
+    print('decomposition:', dec)
+    if b.weight() != y:
+        print()
+        print(b.weight(), '!=', y)
+    print()
+    print()
+    print()
+    print()
+
+
+def _discrepancies(discrep):
+    if discrep:
+        print('DISCREPANCIES:')
+        print()
+        for alpha, p in discrep:
+            x, y, a, b, c, d, dec = discrep[(alpha, p)]
+            _summarize(alpha, p, x, y, a, b, c, d, dec, True)
+        print()
+
+
 def print_o_keys(n=2, positive=True, multiple=True):
     keys = test_q_insertion_definition(n, positive, multiple)
+    discrep = {}
+    increasing_seen, decreasing_seen = set(), set()
+    results = {}
     for alpha in keys:
         x, y = symmetric_halves(alpha)
-        print(alpha, '->', x, y)
+        print('alpha =', alpha, '->', x, y)
         for p in keys[alpha]:
             a, b, c, d = orthogonal_key_maps(p)
             dec = decompose_into_keys(q_key(alpha))
-            print(p)
-            print('increasing keys:', a, b)
-            print('decreasing keys:', c, d)
-            print('decomposition:', dec)
-            print('exponents:', get_exponents(q_key(alpha)))
-            print()
-            print(b == y)
-            if b != y:
-                input('?')
-            print()
-            assert b in dec
+            _summarize(alpha, p, x, y, a, b, c, d, dec)
+            if b.weight() != y:
+                discrep[(alpha, p)] = (x, y, a, b, c, d, dec)
+            assert b.weight() in dec
+            assert (a, b) not in increasing_seen
+            assert (c, d) not in decreasing_seen
+            increasing_seen.add((a, b))
+            decreasing_seen.add((c, d))
+            results[p] = (a, b)
         print()
+    _discrepancies(discrep)
+    print_keys_table(results)
 
 
 def print_sp_keys(n=2, positive=True, multiple=True):
     keys = test_p_insertion_definition(n, positive, multiple)
+    discrep = {}
+    increasing_seen, decreasing_seen = set(), set()
+    results = {}
     for alpha in keys:
         x, y = skew_symmetric_halves(alpha)
-        print(alpha, '->', x, y)
+        print('alpha =', alpha, '->', x, y)
         for p in keys[alpha]:
             a, b, c, d = symplectic_key_maps(p)
             dec = decompose_into_keys(p_key(alpha))
-            print(p)
-            print('increasing keys:', a, b)
-            print('decreasing keys:', c, d)
-            print('decomposition:', dec)
-            print('exponents:', get_exponents(p_key(alpha)))
-            print()
-            print(b == y)
-            if b != y:
-                input('?')
-            print()
-            assert b in dec
+            _summarize(alpha, p, x, y, a, b, c, d, dec)
+            if b.weight() != y:
+                discrep[(alpha, p)] = (x, y, a, b, c, d, dec)
+            assert b.weight() in dec
+            assert (a, b) not in increasing_seen
+            assert (c, d) not in decreasing_seen
+            increasing_seen.add((a, b))
+            decreasing_seen.add((c, d))
+            results[p] = (a, b)
         print()
+    _discrepancies(discrep)
+    print_keys_table(results)
+
+
+def print_keys_table(results):
+    s = []
+    for p in sorted(results, key=lambda x: (len(x), x.row_reading_word())):
+        if len(p) == 0:
+            continue
+        left_key, right_key = results[p]
+        s += [shifted_tableau_tex(p), '&']
+        s += [shifted_tableau_tex(left_key), '&']
+        s += [shifted_tableau_tex(right_key), '\\\\ & \\\\']
+    s = '\n'.join(s[:-1])
+    s = """
+\\begin{figure}[h]
+\\begin{center}
+\\begin{tabular}{llllllll}
+\\begin{tabular}[t]{l|l|l}
+$T$ & $K_-(T)$ & $K_+(T)$ \\\\ \\hline \\\\
+""" + s + """
+\\end{tabular}
+\\end{tabular}
+\\end{center}
+\\caption{TODO}
+\\end{figure}
+"""
+    pyperclip.copy(s)
 
 
 def tableau_tex(p, shifted=False):
     s = []
     for i, j in sorted(p.mapping):
         if len(s) < i:
-            s += [(i - 1) * ['\\none[\\cdot]']] if shifted else [[]]
+            s += [(i - 1) * ['\\none']] if shifted else [[]]
         s[i - 1] += [str(p.entry(i, j))]
     s = '\\\\\n'.join(' & '.join(row) for row in reversed(s))
     return '\\begin{ytableau}\n' + s + '\n\\end{ytableau}'
@@ -445,7 +588,7 @@ def _print_keywords_tex(keys, get_class_fn, get_halves_fn, shifted=True):
     for alpha in sorted(keys, key=lambda t: (sorted(t, reverse=True), len(sorting_permutation(t)))):
         if sum(alpha) == 0:
             continue
-        clip += ['\\newpage\n\\begin{tabular}[t]{cc}']
+        clip += ['\\newpage\n\\begin{tabular}[t]{ll}']
         clip += ['$T$ & $\\alpha$ \\\\ \\hline \\\\']
         for i, p in enumerate(sorted(keys[alpha], key=lambda t: t.row_reading_word())):
             clip += [tableau_with_keywords_tex(p, get_class_fn, shifted)]
@@ -483,7 +626,7 @@ def print_shifted_table_tex(keys, halves_fn):
 \\begin{figure}[h]
 \\begin{center}
 \\begin{tabular}{llllllll}
-\\begin{tabular}[t]{cc}
+\\begin{tabular}[t]{ll}
 $T$ & $\\alpha$ \\\\ \\hline \\\\
 """ + '\n'.join(s) + """
 \\end{tabular}
@@ -516,15 +659,15 @@ def print_table_tex(n=4):
             s += [tableau_tex(p)]
             s += ['&']
             if i == 0:
-                s += [cstr(alpha)]
+                s += [tableau_tex(key_tableau(alpha))]
             s += ['\\\\ \\\\']
     s = s[:-1]
     s = """
 \\begin{figure}[h]
 \\begin{center}
 \\begin{tabular}{lcr}
-\\begin{tabular}[t]{cc}
-$T$ & $\\alpha$ \\\\ \\hline \\\\
+\\begin{tabular}[t]{ll}
+$T$ & $K_\\alpha$ \\\\ \\hline \\\\
 """ + '\n'.join(s) + """
 \\end{tabular}
 \\end{tabular}
@@ -694,7 +837,8 @@ def is_power_of_two(x):
     return is_power_of_two(x // 2)
 
 
-def test_leading_p_key(m=10, l=4):
+@pytest.mark.slow
+def test_leading_p_key(m=30, l=4):
     toprint = {}
     valuesdict = defaultdict(list)
     for n in range(m + 1):
@@ -719,6 +863,8 @@ def test_leading_p_key(m=10, l=4):
                 b, c = skew_symmetric_halves(a)
                 print('  ', a, '->', c, b)
             print()
+    print()
+    print('values:', len(valuesdict))
     assert not any(len(v) > 1 for v in valuesdict.values())
     prev = None
     for betas in sorted(toprint):
@@ -783,7 +929,11 @@ def test_decompose_q():
     ]
 
 
-def try_to_decompose_q(f, halves={}, alphas={}, positive=True, multiple=False):
+def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False):
+    if halves is None:
+        halves = q_halves_cache
+    if alphas is None:
+        alphas = q_alphas_cache
     if f == 0:
         return [{}]
     if positive and not f.is_positive():
@@ -851,7 +1001,11 @@ def p_update(targets, exponents, halves, alphas):
                 halves[e] = halves.get(e, []) + [(alphas[a], a)]
 
 
-def try_to_decompose_p(f, halves, alphas, positive=True, multiple=False):
+def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False):
+    if halves is None:
+        halves = p_halves_cache
+    if alphas is None:
+        alphas = p_alphas_cache
     if f == 0:
         return [{}]
     if positive and not f.is_positive():
