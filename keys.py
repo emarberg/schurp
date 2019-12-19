@@ -34,7 +34,7 @@ def _get_key_maps(tab, shape, get_class, get_factors):
 
 
 def _map_to_shifted_key(shape, key_map):
-    return _map_to_key(shape, key_map, True)
+    return _map_to_key(shape, key_map, False)
 
 
 def _map_to_key(shape, key_map, shifted=False):
@@ -98,11 +98,8 @@ def key_maps(p):
 def shifted_key_maps(p):
     mu = p.partition().tuple()
     increasing_left_keys, increasing_right_keys = _get_key_maps(p, mu, shifted_knuth_class, maximal_weakly_increasing_factors)
-    decreasing_left_keys, decreasing_right_keys = _get_key_maps(p, mu, shifted_knuth_class, maximal_decreasing_factors)
     return (_map_to_shifted_key(mu, increasing_left_keys),
-            _map_to_shifted_key(mu, increasing_right_keys),
-            _map_to_shifted_key(mu, decreasing_left_keys),
-            _map_to_shifted_key(mu, decreasing_right_keys))
+            _map_to_shifted_key(mu, increasing_right_keys))
 
 
 def symmetric_composition_from_row_column_counts(row_counts, col_counts):

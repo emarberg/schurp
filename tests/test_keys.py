@@ -407,15 +407,17 @@ def _summarize(alpha, p, x, y, a, b, c, d, dec, last=False):
     print(b)
     print(b.weight())
     print()
-    print('decreasing keys:')
-    print(c)
-    print(c.weight())
-    print()
-    print(d)
-    print(d.weight())
-    print()
-    print('decomposition:', dec)
-    if b.weight() != y:
+    if c and d:
+        print('decreasing keys:')
+        print(c)
+        print(c.weight())
+        print()
+        print(d)
+        print(d.weight())
+        print()
+    if dec:
+        print('decomposition:', dec)
+    if y is not None and b.weight() != y:
         print()
         print(b.weight(), '!=', y)
     print()
@@ -484,22 +486,37 @@ def print_sp_keys(n=2, positive=True, multiple=True):
     print_keys_table(results)
 
 
+def print_shifted_keys(n=2, positive=True, multiple=True):
+    increasing_seen = set()
+    results = {}
+    for w in words(n):
+        p = sagan_worley_insert(w)[0]
+        if p not in results:
+            a, b = shifted_key_maps(p)
+            _summarize(None, p, None, None, a, b, None, None, None)
+            assert (a, b) not in increasing_seen
+            increasing_seen.add((a, b))
+            results[p] = (a, b)
+
+
 def print_keys_table(results):
     s = []
     for p in sorted(results, key=lambda x: (len(x), x.row_reading_word())):
         if len(p) == 0:
             continue
         left_key, right_key = results[p]
+        if sorted(left_key.mapping.values()) == sorted(p.mapping.values()):
+            continue
         s += [shifted_tableau_tex(p), '&']
-        s += [shifted_tableau_tex(left_key), '&']
-        s += [shifted_tableau_tex(right_key), '\\\\ & \\\\']
+        s += [tableau_tex(left_key), '&']
+        s += [tableau_tex(right_key), '\\\\ & \\\\']
     s = '\n'.join(s[:-1])
     s = """
 \\begin{figure}[h]
 \\begin{center}
 \\begin{tabular}{llllllll}
 \\begin{tabular}[t]{l|l|l}
-$T$ & $K_-(T)$ & $K_+(T)$ \\\\ \\hline \\\\
+$T$ & $K_-(T)$ & $K_+(T)$ \\\\ \\hline & \\\\
 """ + s + """
 \\end{tabular}
 \\end{tabular}
