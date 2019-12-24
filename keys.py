@@ -291,6 +291,12 @@ def is_symmetric_composition(alpha):
     return Partition(*sorted(alpha, reverse=True)).is_symmetric()
 
 
+def symmetric_partitions(n):
+    for alpha in Partition.all(n):
+        if alpha.is_symmetric():
+            yield tuple(alpha.parts)
+
+
 def symmetric_weak_compositions(n, parts, reduced=False):
     for alpha in weak_compositions(n, parts, True, reduced):
         if is_symmetric_composition(alpha):
@@ -444,6 +450,23 @@ def dict_from_tuple(beta):
     for i, a in enumerate(beta):
         mon *= X(i + 1)**a
     return max(mon)
+
+
+def decompose_into_compositions(kappa):
+    def xbeta(beta):
+        mon = X(0)**0
+        for i, a in enumerate(beta):
+            mon *= X(i + 1)**a
+        return mon
+
+    ans = {}
+    while kappa != 0:
+        betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
+        beta = betas[0]
+        coeff = kappa[dict_from_tuple(beta)]
+        kappa = kappa - coeff * xbeta(beta)
+        ans[beta] = ans.get(beta, 0) + coeff
+    return {k: v for k, v in ans.items() if v}
 
 
 def decompose_into_keys(kappa):

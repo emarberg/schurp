@@ -9,6 +9,7 @@ from keys import (
     p_key, p_atom,
     q_key, q_atom,
     get_exponents,
+    decompose_into_compositions,
     decompose_into_keys, decompose_into_atoms, dict_from_tuple,
     symmetric_composition_from_row_column_counts, symmetric_halves,
     skew_symmetric_composition_from_row_column_counts, skew_symmetric_halves,
@@ -20,7 +21,8 @@ from keys import (
     rsk_insert, key_tableau,
     shifted_knuth_class,
     shifted_key_maps,
-    is_symmetric_composition
+    is_symmetric_composition,
+    symmetric_partitions
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -395,26 +397,33 @@ def print_nil_keys(n=4):
         print()
 
 
+def _print_composition(base, alpha):
+    s = []
+    for i, q in enumerate(alpha):
+        s += [q * '* ' + ((base[i] - q) if i < len(base) else 0) * '. ']
+    print('\n'.join(s))
+
+
 def _summarize(alpha, p, x, y, a, b, c, d, dec, last=False):
     if last:
         print('alpha =', alpha, '->', x, y)
         print()
     print(p)
     print('increasing keys:')
-    print(a)
-    print(a.weight())
-    print()
+    # print(a)
+    # print(a.weight())
+    # print()
     print(b)
     print(b.weight())
     print()
-    if c and d:
-        print('decreasing keys:')
-        print(c)
-        print(c.weight())
-        print()
-        print(d)
-        print(d.weight())
-        print()
+    # if c and d:
+    #     print('decreasing keys:')
+    #     print(c)
+    #     print(c.weight())
+    #     print()
+    #     print(d)
+    #     print(d.weight())
+    #     print()
     if dec:
         print('decomposition:', dec)
     if y is not None and b.weight() != y:
@@ -451,8 +460,8 @@ def print_o_keys(n=2, positive=True, multiple=True):
             if b.weight() != y:
                 discrep[(alpha, p)] = (x, y, a, b, c, d, dec)
             assert b.weight() in dec
-            assert (a, b) not in increasing_seen
-            assert (c, d) not in decreasing_seen
+            # assert (a, b) not in increasing_seen
+            # assert (c, d) not in decreasing_seen
             increasing_seen.add((a, b))
             decreasing_seen.add((c, d))
             results[p] = (a, b)
@@ -835,14 +844,157 @@ def test_p_key_decomposition(m=5):
 
 
 def test_q_key_decomposition(m=5):
-    for n in range(m + 3):
-        for k in range(m):
+    for n in range(m + 1):
+        for k in range(m + 1):
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
                 kappa = q_key(alpha)
                 dec = decompose_into_keys(kappa)
                 ex = min({0} | set(dec.values()))
                 assert ex >= 0
                 assert kappa != 0
+
+
+def _naive_next(w, base):
+    ell = len(base)
+    values = sorted(set(w) - {0})
+    y = 0
+    for v in values:
+        inds = [i for i in range(len(w)) if w[i] == v]
+        i, inds = inds[0], inds[1:]
+        if i < ell:
+            u = list(w)
+            for j in inds:
+                u[i], u[j] = u[i] + 1, u[j] - 1
+
+                if u[i] > base[i]:
+                    break
+                if j < ell and u[j] < base[j]:
+                    break
+                if any(u[k] == 0 for k in range(i + 1, j)):
+                    break
+
+                tu = tuple(u)
+                while tu and tu[-1] == 0:
+                    tu = tu[:-1]
+                yield tu
+                y += 1
+    if y == 0:
+        pass
+
+
+# def _naive_next(w):
+#     values = sorted(a[-1] for a in w if a)
+#     for v in values:
+#         inds = [i for i in range(len(w)) if w[i] and w[i][-1] == v]
+#         u = [list(a) for a in w]
+#         i = inds[0]
+#         inds = inds[1:]
+#         while inds:
+#             j, inds = inds[0], inds[1:]
+#             u[i], u[j] = u[i] + [u[j][-1] + 1], u[j][:-1]
+#             for k in inds:
+#                 u[k] = u[k][:-1] + [u[k][-1] + 1]
+#             yield tuple(tuple(a) for a in u)
+
+
+# def _naive_comp(w):
+#     comp = tuple(len(a) for a in w)
+#     while comp and comp[-1] == 0:
+#         comp = comp[:-1]
+#     return comp
+
+
+# def _naive_string(w):
+#     s = []
+#     for a in w:
+#         s += [((1 + max(a)) if a else 0) * ['  ']]
+#         for i in a:
+#             s[-1][i] = '* '
+#         s[-1] = ''.join(s[-1])
+#     s = '\n'.join(s)
+#     return s
+
+
+def naive_generator(alpha, base):
+    _, start = symmetric_halves(alpha)
+    # start = tuple(tuple(j for j in range(a)) for a in start)
+    seen = set()
+    add = {start}
+    while add:
+        next_to_add = set()
+        for w in add:
+            yield w  # , _naive_comp(w), _naive_string(w)
+            seen.add(w)
+            for v in _naive_next(w, base):
+                if v not in seen:
+                    next_to_add.add(v)
+        add = next_to_add
+
+
+def test_q_partition_key_expansion(m=5):
+    success, failure = 0, 0
+    for n in range(m + 1):
+        for alpha in symmetric_partitions(n):
+            kappa = q_key(alpha)
+            dec = decompose_into_keys(kappa)
+            ex = min({0} | set(dec.values()))
+            assert ex >= 0
+            assert kappa != 0
+            a, b = symmetric_halves(alpha)
+            dec, val = set(dec), set(dec.values())
+            naive = set(naive_generator(alpha, max(dec)))
+            #naive = {x for _, x, _ in trips}
+            if naive != dec:
+                print('alpha =', alpha, '->', a, b)
+                print()
+                print('ACTUAL KEY DECOMPOSITION:', dec, val)
+                # dec = decompose_into_compositions(kappa)
+                # print()
+                # print('monomial decomposition:', dec)
+                for z in sorted(dec):
+                    print('\ncomposition =', z)
+                    print()
+                    _print_composition(max(dec), z)
+                    print()
+                print()
+                print()
+                print('NAIVE GUESS:')
+                for z in sorted(naive):
+                    print('\ncomposition =', z)
+                    print()
+                    _print_composition(max(dec), z)
+                    print()
+                # for _, c, s in sorted(trips, key=lambda t: t[1]):
+                #     print('\ncomposition =', c)
+                #     print()
+                #     print(s)
+                #     print()
+                print('WORKS?')
+                print()
+                print(dec == naive, dec.issubset(naive), naive.issubset(dec))
+                for z in sorted(naive - dec):
+                    print('\ncomposition =', z)
+                    print()
+                    _print_composition(a, z)
+                    print()
+                print()
+                # print('---------')
+                # print()
+                # for z in sorted(dec - naive):
+                #     print('\ncomposition =', z)
+                #     print()
+                #     _print_composition(a, z)
+                #     print()
+                print()
+                print()
+                print()
+            success += dec == naive
+            failure += dec != naive
+            assert naive.issubset(dec)
+    print()
+    print('success:', success)
+    print('failure', failure)
+    print()
 
 
 def is_power_of_two(x):
