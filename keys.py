@@ -34,7 +34,7 @@ def _get_key_maps(tab, shape, get_class, get_factors):
 
 
 def _map_to_shifted_key(shape, key_map):
-    return _map_to_key(shape, key_map, False)
+    return _map_to_key(shape, key_map, True)
 
 
 def _map_to_key(shape, key_map, shifted=False):
@@ -45,10 +45,10 @@ def _map_to_key(shape, key_map, shifted=False):
             b = key_map[shape[i]][1:] if shifted else key_map[shape[i]]
             assert set(a).issubset(set(b))
         if shifted:
-            for j, a in enumerate(key_map[shape[i]]):
+            for j, a in enumerate(sorted(key_map[shape[i]])):
                 ans = ans.add(i + 1, i + j + 1, a)
         else:
-            for j, a in enumerate(key_map[shape[i]]):
+            for j, a in enumerate(sorted(key_map[shape[i]])):
                 ans = ans.add(j + 1, i + 1, a)
     return ans
 
@@ -297,6 +297,12 @@ def symmetric_partitions(n):
             yield tuple(alpha.parts)
 
 
+def skew_symmetric_partitions(n):
+    for alpha in symmetric_partitions(n):
+        if is_skew_symmetric_composition(alpha):
+            yield alpha
+
+
 def symmetric_weak_compositions(n, parts, reduced=False):
     for alpha in weak_compositions(n, parts, True, reduced):
         if is_symmetric_composition(alpha):
@@ -367,7 +373,7 @@ def q_shifted_monomial(weak_composition):
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
         for j in range(i, mu[i - 1] + 1):
-            ans *= X(i) + X(j)
+            ans *= X(i) if i == j else (X(i) + X(j))
     return ans
 
 
@@ -552,7 +558,7 @@ def compatible_sequences(seq, i_min=1):
     else:
         a, seq = seq[0], seq[1:]
         for i in range(i_min, a + 1):
-            j_min = (i + 1) if (seq and a <= seq[0]) else i
+            j_min = (i + 1) if (seq and a < seq[0]) else i
             for p, q in compatible_sequences(seq, j_min):
                 yield (a,) + p, X(i) * q
 

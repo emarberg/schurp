@@ -22,7 +22,8 @@ from keys import (
     shifted_knuth_class,
     shifted_key_maps,
     is_symmetric_composition,
-    symmetric_partitions
+    symmetric_partitions,
+    skew_symmetric_partitions
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -318,6 +319,91 @@ def test_p_insertion_definition(n=4, positive=True, multiple=True):
     return keys
 
 
+def test_q_inv_pipe_dream_definition(n=5, positive=True, multiple=True):
+    commutation_classes = {}
+
+    def toggle(w):
+        if len(w) >= 2:
+            yield (w[1], w[0]) + w[2:]
+        for i in range(len(w) - 1):
+            if w[i] - w[i + 1] not in [-1, 0, 1]:
+                yield w[:i] + (w[i + 1], w[i]) + w[i + 2:]
+        for i in range(len(w) - 2):
+            if w[i] == w[i + 2]:
+                yield w[:i] + (w[i + 1], w[i], w[i + 1]) + w[i + 3:]
+
+    def get_class(word):
+        if word not in commutation_classes:
+            label = len(set(commutation_classes.values()))
+            add, seen = {word}, set()
+            while add:
+                next_add = set()
+                for w in add:
+                    commutation_classes[w] = label
+                    seen.add(w)
+                    next_add |= set(toggle(w))
+                add = next_add - seen
+        return commutation_classes[word]
+
+    q_insertion_cache.clear()
+    invol = list(Permutation.involutions(n))
+    for i, w in enumerate(invol):
+        print('. . .', len(invol) - i)
+        for dream in w.get_involution_pipe_dreams():
+            word = dream.word()
+            p, q = o_eg_insert(word)
+            label = get_class(word)
+            key = (w, label)
+            if key not in q_insertion_cache:
+                q_insertion_cache[key] = {}
+            q_insertion_cache[key][p] = q_insertion_cache[key].get(p, 0) + dream.inv_monomial()
+
+    keys = {}
+    failures = 0
+    for key in sorted(q_insertion_cache):
+        w, label = key
+        e = w.number_two_cycles()
+        f = sum(q_insertion_cache[key].values())
+        d = decompose_into_keys(f)
+        failed = any(v < 0 for v in d.values())
+        failures += int(failed)
+        qd = try_to_decompose_q(f, q_halves_cache, q_alphas_cache, positive=positive, multiple=multiple)
+        tabs = tuple(q_insertion_cache[key])
+        if len(q_insertion_cache[key]) > 1 or len(qd) == 0 or len(qd[0]) > 1 or max(qd[0].values()) > 1:
+            klass = {word for word in commutation_classes if commutation_classes[word] == label}
+            print('involution', w.cycle_repr(), ': commutation class #', label, '( size =', len(klass), ')')
+            print()
+            print('key decomposition =', d, set(d.values()))
+            print()
+            for p in tabs:
+                print(p)
+            print('key sub-decompositions:')
+            print()
+            for p in tabs:
+                td = decompose_into_keys(q_insertion_cache[key][p])
+                print('  ', td, set(td.values()))
+            print()
+            print('qkey decompositions:', 'NONE' if not qd else '')
+            print()
+            for x in qd:
+                print('  ', x, set(x.values()))
+            print()
+            print()
+            if failed:
+                print('failed!')
+            print()
+            print()
+            print()
+        assert not failed and qd
+        assert len(qd) == 1
+        alpha, coeff = list(qd[0].items())[0]
+        if len(qd[0]) == 1:
+            assert coeff == 1
+            keys[tabs] = (alpha, coeff)
+    assert failures == 0
+    return keys
+
+
 def test_q_insertion_definition(n=2, positive=True, multiple=True):
     q_insertion_cache.clear()
     invol = list(Permutation.involutions(n))
@@ -364,6 +450,7 @@ def test_q_insertion_definition(n=2, positive=True, multiple=True):
 
 
 def print_keys(n=4):
+    results = {}
     keys = test_key_compatible_sequences(n, n)
     for alpha in keys:
         print('alpha =', alpha)
@@ -373,14 +460,17 @@ def print_keys(n=4):
             print(p)
             print('increasing keys:', a, b)
             print('decreasing keys:', c, d)
-            print(c == alpha)
-            if c != alpha:
+            print(c.weight() == alpha)
+            if c.weight() != alpha:
                 input('\n?')
             print()
+            results[p] = (c, d)
         print()
+    print_keys_table(results, unshifted=True)
 
 
 def print_nil_keys(n=4):
+    results = {}
     keys = test_insertion_definition(n)
     for alpha in keys:
         print('alpha =', alpha)
@@ -390,14 +480,18 @@ def print_nil_keys(n=4):
             print(p)
             print('increasing keys:', a, b)
             print('decreasing keys:', c, d)
-            print(c == alpha)
-            if c != alpha:
+            print(c.weight() == alpha)
+            if c.weight() != alpha:
                 input('\n?')
             print()
+            results[p] = (c, d)
         print()
+    print_keys_table(results, unshifted=True)
 
 
 def _print_composition(base, alpha):
+    if base is None:
+        base = alpha
     s = []
     for i, q in enumerate(alpha):
         s += [q * '* ' + ((base[i] - q) if i < len(base) else 0) * '. ']
@@ -508,17 +602,18 @@ def print_shifted_keys(n=2, positive=True, multiple=True):
             results[p] = (a, b)
 
 
-def print_keys_table(results):
+def print_keys_table(results, unshifted=False):
     s = []
-    for p in sorted(results, key=lambda x: (len(x), x.row_reading_word())):
+    for p in sorted(results, key=lambda x: (len(x), x.partition(), x.row_reading_word())):
         if len(p) == 0:
             continue
         left_key, right_key = results[p]
         if sorted(left_key.mapping.values()) == sorted(p.mapping.values()):
             continue
-        s += [shifted_tableau_tex(p), '&']
-        s += [tableau_tex(left_key), '&']
-        s += [tableau_tex(right_key), '\\\\ & \\\\']
+        tex = tableau_tex if unshifted else shifted_tableau_tex
+        s += [tex(p), '&']
+        s += [tex(left_key), '&']
+        s += [tex(right_key), '\\\\ & \\\\']
     s = '\n'.join(s[:-1])
     s = """
 \\begin{figure}[h]
@@ -832,6 +927,40 @@ def test_q_atom_decomposition(m=5):
                 assert min({0} | set(dec.values())) >= 0
 
 
+def test_p_key_start_decomposition(m=25):
+    # FAILS
+    for n in range(m + 3):
+        for alpha in symmetric_partitions(n):
+            kappa = p_key(alpha)
+            dec = decompose_into_keys(kappa)
+            ex = min({0} | set(dec.values()))
+            assert ex >= 0
+            assert kappa != 0
+            if set(dec.values()) != {1}:
+                a, b = skew_symmetric_halves(alpha)
+                print('alpha =', alpha, '->', a, b)
+                print('decomposition =', dec)
+                print('decomposition =', dec.values())
+            assert set(dec.values()) == {1}
+
+
+def test_q_key_start_decomposition(m=25):
+    # FAILS
+    for n in range(m + 1):
+        for alpha in symmetric_partitions(n):
+            kappa = q_key(alpha)
+            dec = decompose_into_keys(kappa)
+            ex = min({0} | set(dec.values()))
+            assert ex >= 0
+            assert kappa != 0
+            if set(dec.values()) != {2**q_power(alpha)}:
+                a, b = symmetric_halves(alpha)
+                print('alpha =', alpha, '->', a, b)
+                print('decomposition =', dec)
+                print('decomposition =', dec.values())
+            assert set(dec.values()) == {2**q_power(alpha)}
+
+
 def test_p_key_decomposition(m=5):
     for n in range(m + 3):
         for k in range(m):
@@ -854,32 +983,32 @@ def test_q_key_decomposition(m=5):
                 assert kappa != 0
 
 
-def _naive_next(w, base):
-    ell = len(base)
-    values = sorted(set(w) - {0})
-    y = 0
-    for v in values:
-        inds = [i for i in range(len(w)) if w[i] == v]
-        i, inds = inds[0], inds[1:]
-        if i < ell:
-            u = list(w)
-            for j in inds:
-                u[i], u[j] = u[i] + 1, u[j] - 1
+# def _naive_next(w, base):
+#     ell = len(base)
+#     values = sorted(set(w) - {0})
+#     y = 0
+#     for v in values:
+#         inds = [i for i in range(len(w)) if w[i] == v]
+#         i, inds = inds[0], inds[1:]
+#         if i < ell:
+#             u = list(w)
+#             if inds and any(u[k] == 0 for k in range(i + 1, inds[0])):
+#                 continue
+#             for j in inds:
+#                 u[i], u[j] = u[i] + 1, u[j] - 1
 
-                if u[i] > base[i]:
-                    break
-                if j < ell and u[j] < base[j]:
-                    break
-                if any(u[k] == 0 for k in range(i + 1, j)):
-                    break
+#                 if u[i] > base[i]:
+#                     break
+#                 if j < ell and u[j] < base[j]:
+#                     break
 
-                tu = tuple(u)
-                while tu and tu[-1] == 0:
-                    tu = tu[:-1]
-                yield tu
-                y += 1
-    if y == 0:
-        pass
+#                 tu = tuple(u)
+#                 while tu and tu[-1] == 0:
+#                     tu = tu[:-1]
+#                 yield tu
+#                 y += 1
+#     if y == 0:
+#         pass
 
 
 # def _naive_next(w):
@@ -915,20 +1044,182 @@ def _naive_next(w, base):
 #     return s
 
 
-def naive_generator(alpha, base):
-    _, start = symmetric_halves(alpha)
-    # start = tuple(tuple(j for j in range(a)) for a in start)
+def _naive_next(w, base):
+    for j in range(len(w)):
+        for i in range(j + 1, len(w)):
+            u = [list(a) for a in w]
+            if w[i][j] == '*' and i == j + 1:
+                k = i
+                while w[j][k] == '*':
+                    k += 1
+                u[i][j], u[j][k] = '.', '*'
+                yield tuple(tuple(a) for a in u)
+            elif w[i][j] == '*' and i > j + 1 and w[i - 1][j] != '*':
+                u[i][j], u[i - 1][j] = '.', '*'
+                #u[i][j], u[j][i] = '.', '*'
+                #u[i - 1][j], u[j][i - 1] = '*', '.'
+                yield tuple(tuple(a) for a in u)
+
+
+def _naive_comp(w):
+    comp = tuple(len([i for i in a if i == '*']) for a in w)
+    while comp and comp[-1] == 0:
+        comp = comp[:-1]
+    return comp
+
+
+def _naive_string(w):
+    def row(a):
+        return ('',)
+        # return (str(len([i for i in a if i == '*'])),)
+
+    def col(w):
+        ans = len(w) * [0]
+        for i in range(len(w)):
+            for j in range(len(w)):
+                ans[j] += w[i][j] == '*'
+        # return '\n' + ' '.join(map(str, ans))
+        return ''
+
+    # n = len(w)
+    # v = [n * [' '] for _ in range(n)]
+    # for i in range(n):
+    #     for j in range(n):
+    #         if w[i][j] == '*':
+    #             if i == j:
+    #                 v[i][0] = '*'
+    #             elif i < j:
+    #                 v[i][j] = '*'
+    #             else:
+    #                 v[i][j + 1] = '*'
+    # w = tuple(tuple(a) for a in v)
+    return '\n'.join([' '.join(a + row(a)) for a in w]) + col(w)
+
+
+def p_naive_generator(alpha, base):
+    _, x = symmetric_halves(alpha)
+    n = max([0] + list(alpha))
+    # start = tuple(tuple(j for j in range(a)) for a in x)
+    start = [n * ['.'] for a in range(n)]
+    for i in range(len(x)):
+        for j in range(x[i]):
+            if i != j:
+                start[i][j] = '*'
+    start = tuple(tuple(a) for a in start)
     seen = set()
     add = {start}
     while add:
         next_to_add = set()
         for w in add:
-            yield w  # , _naive_comp(w), _naive_string(w)
+            yield w, _naive_comp(w), _naive_string(w)
             seen.add(w)
             for v in _naive_next(w, base):
                 if v not in seen:
                     next_to_add.add(v)
         add = next_to_add
+
+
+def naive_generator(alpha, base):
+    _, x = symmetric_halves(alpha)
+    n = max([0] + list(alpha))
+    # start = tuple(tuple(j for j in range(a)) for a in x)
+    start = [n * ['.'] for a in range(n)]
+    for i in range(len(x)):
+        for j in range(x[i]):
+            start[i][j] = '*'
+    start = tuple(tuple(a) for a in start)
+    seen = set()
+    add = {start}
+    while add:
+        next_to_add = set()
+        for w in add:
+            yield w, _naive_comp(w), _naive_string(w)
+            seen.add(w)
+            for v in _naive_next(w, base):
+                if v not in seen:
+                    next_to_add.add(v)
+        add = next_to_add
+
+
+def test_p_partition_key_expansion(m=5):
+    success, failure = 0, 0
+    for n in range(m + 1):
+        for alpha in skew_symmetric_partitions(n):
+            kappa = p_key(alpha)
+            dec = decompose_into_keys(kappa)
+            ex = min({0} | set(dec.values()))
+            assert ex >= 0
+            assert kappa != 0
+            a, b = symmetric_halves(alpha)
+            dec, val = set(dec), set(dec.values())
+            trips = set(p_naive_generator(alpha, max(dec)))
+            print('alpha =', alpha, '->', a, b)
+            print()
+            print('ACTUAL KEY DECOMPOSITION:', dec, val)
+            # print('monomial decomposition:', dec)
+            # for z in sorted(dec):
+            #     print('\ncomposition =', z)
+            #     print()
+            #     _print_composition(max(dec), z)
+            #     print()
+            print()
+            print()
+            print('NAIVE GUESS:')
+            dec = decompose_into_compositions(kappa)
+            naive = {}
+            for w, c, s in sorted(trips, key=lambda i: i[1]):
+                naive[c] = naive.get(c, 0) + 1
+                print('\ncomposition =', c)
+                print()
+                ss = [line + '  ->' for line in s.split('\n')]
+                for v in _naive_next(w, None):
+                    for i, line in enumerate(_naive_string(v).split('\n')):
+                        ss[i] += '   ' + line
+                s = '\n'.join(ss)
+                print(s)
+                print()
+                # print('NAIVE GUESS:')
+                # for z in sorted(naive):
+                #     print('\ncomposition =', z)
+                #     print()
+                #     _print_composition(max(dec), z)
+                #     print()
+                # for _, c, s in sorted(trips, key=lambda t: t[1]):
+                #     print('\ncomposition =', c)
+                #     print()
+                #     print(s)
+                #     print()
+                # print('WORKS?')
+                # print()
+                # print(dec == naive, dec.issubset(naive), naive.issubset(dec))
+                # for z in sorted(naive - dec):
+                #     print('\ncomposition =', z)
+                #     print()
+                #     _print_composition(a, z)
+                #     print()
+                # print()
+                # print('---------')
+                # print()
+                # for z in sorted(dec - naive):
+                #     print('\ncomposition =', z)
+                #     print()
+                #     _print_composition(max(dec), z)
+                #     print()
+                # print()
+                # print()
+                # print()
+            success += dec == naive
+            failure += dec != naive
+            if dec != naive:
+                print('dec =', dec)
+                print('nai =', naive)
+                print()
+                input('')
+            # assert naive.issubset(dec)
+    print()
+    print('success:', success)
+    print('failure', failure)
+    print()
 
 
 def test_q_partition_key_expansion(m=5):
@@ -942,55 +1233,72 @@ def test_q_partition_key_expansion(m=5):
             assert kappa != 0
             a, b = symmetric_halves(alpha)
             dec, val = set(dec), set(dec.values())
-            naive = set(naive_generator(alpha, max(dec)))
-            #naive = {x for _, x, _ in trips}
-            if naive != dec:
-                print('alpha =', alpha, '->', a, b)
+            trips = set(naive_generator(alpha, max(dec)))
+            print('alpha =', alpha, '->', a, b)
+            print()
+            print('ACTUAL KEY DECOMPOSITION:', sorted(dec), val)
+            # print('monomial decomposition:', dec)
+            # for z in sorted(dec):
+            #     print('\ncomposition =', z)
+            #     print()
+            #     _print_composition(max(dec), z)
+            #     print()
+            print()
+            print()
+            print('NAIVE GUESS:')
+            mon = decompose_into_compositions(kappa)
+            naive = {}
+            for w, c, s in sorted(trips, key=lambda i: i[1]):
+                naive[c] = naive.get(c, 0) + 2 ** len([i for i in range(len(w)) if w[i][i] == '*'])
+                if c not in dec:
+                    continue
+                print('\ncomposition =', c)
                 print()
-                print('ACTUAL KEY DECOMPOSITION:', dec, val)
-                # dec = decompose_into_compositions(kappa)
-                # print()
-                # print('monomial decomposition:', dec)
-                for z in sorted(dec):
-                    print('\ncomposition =', z)
-                    print()
-                    _print_composition(max(dec), z)
-                    print()
+                ss = [line + '  ->' for line in s.split('\n')]
+                for v in _naive_next(w, None):
+                    for i, line in enumerate(_naive_string(v).split('\n')):
+                        ss[i] += '   ' + line
+                s = '\n'.join(ss)
+                print(s)
                 print()
-                print()
-                print('NAIVE GUESS:')
-                for z in sorted(naive):
-                    print('\ncomposition =', z)
-                    print()
-                    _print_composition(max(dec), z)
-                    print()
+                # print('NAIVE GUESS:')
+                # for z in sorted(naive):
+                #     print('\ncomposition =', z)
+                #     print()
+                #     _print_composition(max(dec), z)
+                #     print()
                 # for _, c, s in sorted(trips, key=lambda t: t[1]):
                 #     print('\ncomposition =', c)
                 #     print()
                 #     print(s)
                 #     print()
-                print('WORKS?')
-                print()
-                print(dec == naive, dec.issubset(naive), naive.issubset(dec))
-                for z in sorted(naive - dec):
-                    print('\ncomposition =', z)
-                    print()
-                    _print_composition(a, z)
-                    print()
-                print()
+                # print('WORKS?')
+                # print()
+                # print(dec == naive, dec.issubset(naive), naive.issubset(dec))
+                # for z in sorted(naive - dec):
+                #     print('\ncomposition =', z)
+                #     print()
+                #     _print_composition(a, z)
+                #     print()
+                # print()
                 # print('---------')
                 # print()
                 # for z in sorted(dec - naive):
                 #     print('\ncomposition =', z)
                 #     print()
-                #     _print_composition(a, z)
+                #     _print_composition(max(dec), z)
                 #     print()
+                # print()
+                # print()
+                # print()
+            success += mon == naive
+            failure += mon != naive
+            if mon != naive:
+                print('dec =', dec)
+                print('nai =', naive)
                 print()
-                print()
-                print()
-            success += dec == naive
-            failure += dec != naive
-            assert naive.issubset(dec)
+                input('')
+            # assert naive.issubset(dec)
     print()
     print('success:', success)
     print('failure', failure)

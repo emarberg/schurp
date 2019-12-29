@@ -6,7 +6,9 @@ from collections import defaultdict
 
 
 STANDARD_CACHE = {}
+SEMISTANDARD_CACHE = {}
 STANDARD_SHIFTED_MARKED_CACHE = {}
+HORIZONTAL_STRIPS_CACHE = {}
 
 
 class Tableau:
@@ -509,6 +511,8 @@ class Tableau:
 
     @classmethod
     def get_semistandard(cls, shape):
+        if type(shape) in [tuple, list]:
+            shape = Partition(*shape)
         if isinstance(shape, Partition):
             shape = shape.shape
 
@@ -575,6 +579,11 @@ class Tableau:
                     mapping[(i, j)] = MarkedNumber(-n)
                 ans.add(Tableau(mapping))
         return ans
+
+    def __le__(self, other):
+        assert type(other) == Tableau
+        assert set(other.mapping) == set(self.mapping)
+        return all(a <= other.mapping[x] for x, a in self.mapping.items())
 
     def __len__(self):
         return len(self.mapping)
@@ -944,6 +953,62 @@ class Tableau:
 
         assert tab.is_increasing()
         return tab.fpf_insert(p, j, column_dir, verbose=verbose)
+
+    @cached_value(HORIZONTAL_STRIPS_CACHE)
+    def _horizontal_strips(cls, mu, lam):  # noqa
+        if not Partition._contains(mu, lam):
+            return []
+
+        core = [mu[i + 1] if i + 1 < len(mu) else 0 for i in range(len(mu))]
+        for i in range(len(lam)):
+            core[i] = max(core[i], lam[i])
+        core = tuple(core)
+
+        ans = []
+        level = {core}
+        while level:
+            for nu in level:
+                diff = {(i + 1, j + 1) for i in range(len(mu)) for j in range(nu[i], mu[i])}
+                nu = nu if nu and nu[-1] > 0 else nu[:-1]
+                corners = [(i + 1, nu[i]) for i in range(len(nu)) if core[i] < nu[i]]
+                ans.append((nu, diff, corners))
+            level = {
+                nu[:i] + (nu[i] + 1,) + nu[i + 1:]
+                for i in range(len(mu))
+                for nu in level
+                if nu[i] < mu[i]
+            }
+        return ans
+
+    @classmethod
+    def _subsets(cls, diff, corners, setvalued):
+        if setvalued:
+            for v in range(2**len(corners)):
+                thisdiff = diff
+                for i in range(len(corners)):
+                    thisdiff = thisdiff if v % 2 == 0 else thisdiff | {corners[i]}
+                    v = v // 2
+                yield thisdiff
+        else:
+            yield diff
+
+    @classmethod
+    def semistandard(cls, max_entry, mu, nu=(), setvalued=False):  # noqa
+        return cls._semistandard(max_entry, mu, nu, setvalued)
+
+    @cached_value(SEMISTANDARD_CACHE)
+    def _semistandard(cls, max_entry, mu, lam, setvalued):  # noqa
+        ans = set()
+        if mu == lam:
+            ans = {Tableau()}
+        elif Partition._contains(mu, lam) and max_entry > 0:
+            for nu, diff, corners in cls._horizontal_strips(mu, lam):
+                for aug in cls._subsets(diff, corners, setvalued):
+                    for tab in cls._semistandard(max_entry - 1, nu, lam, setvalued):
+                        for (i, j) in aug:
+                            tab = tab.add(i, j, max_entry)
+                        ans.add(tab)
+        return ans
 
     @classmethod
     def standard(cls, mu, nu=()):  # noqa

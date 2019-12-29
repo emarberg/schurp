@@ -761,8 +761,10 @@ class Permutation:
 
     # Lexicographic order on one-line representation
     def __lt__(self, other):
-        for i in range(1, 1 + max(max(self.oneline), max(other.oneline))):
-            if self(i) >= other(i):
+        for i in range(1, 1 + max(len(self.oneline), len(other.oneline))):
+            if self(i) < other(i):
+                return True
+            if self(i) > other(i):
                 return False
         return True
 

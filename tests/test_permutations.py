@@ -8,6 +8,11 @@ def test_init():
     assert u == v == w
 
 
+def test_lt():
+    assert Permutation(1, 3, 2) < Permutation(2, 1)
+    assert Permutation() < Permutation(2, 1)
+
+
 def test_fpf_atoms():
     z = Permutation.cycles([[1, 8], [2, 6], [3, 10], [4, 7], [5, 9]])
     assert tuple(z.get_min_fpf_atom().inverse().oneline) == (1, 8, 2, 6, 3, 10, 4, 7, 5, 9)
