@@ -373,7 +373,7 @@ def q_shifted_monomial(weak_composition):
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
         for j in range(i, mu[i - 1] + 1):
-            ans *= X(i) if i == j else (X(i) + X(j))
+            ans *= X(i) + X(j)
     return ans
 
 

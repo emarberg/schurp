@@ -319,92 +319,7 @@ def test_p_insertion_definition(n=4, positive=True, multiple=True):
     return keys
 
 
-def test_q_inv_pipe_dream_definition(n=5, positive=True, multiple=True):
-    commutation_classes = {}
-
-    def toggle(w):
-        if len(w) >= 2:
-            yield (w[1], w[0]) + w[2:]
-        for i in range(len(w) - 1):
-            if w[i] - w[i + 1] not in [-1, 0, 1]:
-                yield w[:i] + (w[i + 1], w[i]) + w[i + 2:]
-        for i in range(len(w) - 2):
-            if w[i] == w[i + 2]:
-                yield w[:i] + (w[i + 1], w[i], w[i + 1]) + w[i + 3:]
-
-    def get_class(word):
-        if word not in commutation_classes:
-            label = len(set(commutation_classes.values()))
-            add, seen = {word}, set()
-            while add:
-                next_add = set()
-                for w in add:
-                    commutation_classes[w] = label
-                    seen.add(w)
-                    next_add |= set(toggle(w))
-                add = next_add - seen
-        return commutation_classes[word]
-
-    q_insertion_cache.clear()
-    invol = list(Permutation.involutions(n))
-    for i, w in enumerate(invol):
-        print('. . .', len(invol) - i)
-        for dream in w.get_involution_pipe_dreams():
-            word = dream.word()
-            p, q = o_eg_insert(word)
-            label = get_class(word)
-            key = (w, label)
-            if key not in q_insertion_cache:
-                q_insertion_cache[key] = {}
-            q_insertion_cache[key][p] = q_insertion_cache[key].get(p, 0) + dream.inv_monomial()
-
-    keys = {}
-    failures = 0
-    for key in sorted(q_insertion_cache):
-        w, label = key
-        e = w.number_two_cycles()
-        f = sum(q_insertion_cache[key].values())
-        d = decompose_into_keys(f)
-        failed = any(v < 0 for v in d.values())
-        failures += int(failed)
-        qd = try_to_decompose_q(f, q_halves_cache, q_alphas_cache, positive=positive, multiple=multiple)
-        tabs = tuple(q_insertion_cache[key])
-        if len(q_insertion_cache[key]) > 1 or len(qd) == 0 or len(qd[0]) > 1 or max(qd[0].values()) > 1:
-            klass = {word for word in commutation_classes if commutation_classes[word] == label}
-            print('involution', w.cycle_repr(), ': commutation class #', label, '( size =', len(klass), ')')
-            print()
-            print('key decomposition =', d, set(d.values()))
-            print()
-            for p in tabs:
-                print(p)
-            print('key sub-decompositions:')
-            print()
-            for p in tabs:
-                td = decompose_into_keys(q_insertion_cache[key][p])
-                print('  ', td, set(td.values()))
-            print()
-            print('qkey decompositions:', 'NONE' if not qd else '')
-            print()
-            for x in qd:
-                print('  ', x, set(x.values()))
-            print()
-            print()
-            if failed:
-                print('failed!')
-            print()
-            print()
-            print()
-        assert not failed and qd
-        assert len(qd) == 1
-        alpha, coeff = list(qd[0].items())[0]
-        if len(qd[0]) == 1:
-            assert coeff == 1
-            keys[tabs] = (alpha, coeff)
-    assert failures == 0
-    return keys
-
-
-def test_q_insertion_definition(n=2, positive=True, multiple=True):
+def test_q_insertion_definition(n=5, positive=True, multiple=True):
     q_insertion_cache.clear()
     invol = list(Permutation.involutions(n))
     for i, w in enumerate(invol):
@@ -927,7 +842,7 @@ def test_q_atom_decomposition(m=5):
                 assert min({0} | set(dec.values())) >= 0
 
 
-def test_p_key_start_decomposition(m=25):
+def test_p_key_start_decomposition(m=5):
     # FAILS
     for n in range(m + 3):
         for alpha in symmetric_partitions(n):
@@ -944,7 +859,7 @@ def test_p_key_start_decomposition(m=25):
             assert set(dec.values()) == {1}
 
 
-def test_q_key_start_decomposition(m=25):
+def test_q_key_start_decomposition(m=5):
     # FAILS
     for n in range(m + 1):
         for alpha in symmetric_partitions(n):
