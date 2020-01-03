@@ -337,6 +337,12 @@ def test_q_insertion_definition(n=5, positive=True, multiple=True):
         assert len(d) >= 1
         assert all(len(decomp) == 1 for decomp in d)
         alpha = list(list(d)[0].keys())[0]
+        a, b = symmetric_halves(alpha)
+        print(w)
+        print(p)
+        print('key:', alpha, '->', a, b)
+        print()
+        print()
         if alpha not in keys:
             keys[alpha] = []
         keys[alpha] += [p]
@@ -434,7 +440,7 @@ def _summarize(alpha, p, x, y, a, b, c, d, dec, last=False):
     #     print(d.weight())
     #     print()
     if dec:
-        print('decomposition:', dec)
+        print('key decomposition:', dec)
     if y is not None and b.weight() != y:
         print()
         print(b.weight(), '!=', y)
@@ -494,8 +500,9 @@ def print_sp_keys(n=2, positive=True, multiple=True):
             if b.weight() != y:
                 discrep[(alpha, p)] = (x, y, a, b, c, d, dec)
             assert b.weight() in dec
-            assert (a, b) not in increasing_seen
-            assert (c, d) not in decreasing_seen
+            assert dec[b.weight()] == 1
+            # assert (a, b) not in increasing_seen
+            # assert (c, d) not in decreasing_seen
             increasing_seen.add((a, b))
             decreasing_seen.add((c, d))
             results[p] = (a, b)
