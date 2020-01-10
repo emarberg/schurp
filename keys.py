@@ -560,6 +560,17 @@ def key_tableau(alpha):
     return rsk_insert(word)[0]
 
 
+def weak_compatible_sequences(seq, i_min=1):
+    if len(seq) == 0:
+        yield (), X(0)**0
+    else:
+        a, seq = seq[0], seq[1:]
+        for i in range(i_min, a + 1):
+            j_min = (i + 1) if (seq and a <= seq[0]) else i
+            for p, q in weak_compatible_sequences(seq, j_min):
+                yield (a,) + p, X(i) * q
+
+
 def compatible_sequences(seq, i_min=1):
     if len(seq) == 0:
         yield (), X(0)**0

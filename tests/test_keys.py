@@ -16,6 +16,7 @@ from keys import (
     maximal_decreasing_factors,
     maximal_increasing_factors,
     compatible_sequences,
+    weak_compatible_sequences,
     sp_knuth_class, o_knuth_class, coxeter_knuth_class, knuth_class,
     orthogonal_key_maps, symplectic_key_maps, nil_key_maps, key_maps,
     rsk_insert, key_tableau,
@@ -28,6 +29,7 @@ from keys import (
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
 from permutations import Permutation
+from partitions import Partition
 from collections import defaultdict
 from words import Word
 from tableaux import Tableau
@@ -45,8 +47,63 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def test_brion_construction(n=4, m=10):
+    def brion_key(z, mu):
+        ans = 0
+        mu += (z.rank - len(mu)) * (0,)
+        alphas = set()
+        for w in z.get_fpf_atoms():
+            w = Permutation.longest_element(z.rank) * w
+            alpha = tuple(mu[w(i + 1) - 1] for i in range(len(mu)))
+            alphas.add(alpha)
+        for alpha in alphas:
+            ans += key(alpha)
+        return ans
+
+    failures, successes = 0, 0
+    for z in Permutation.fpf_involutions(n):
+        for r in range(m + 1):
+            for mu in Partition.all(r):
+                mu = tuple(mu.parts)
+                f = brion_key(z, mu)
+                d = try_to_decompose_p(f)
+                if not d:
+                    failures += 1
+                    continue
+                successes += 1
+                print('z =', z, 'atoms:', list(z.get_fpf_atoms()))
+                print('mu =', mu)
+                print('brion key =', decompose_into_keys(f))
+                print()
+                print('decompositions:' + (' NONE' if not d else ''))
+                print()
+                for dec in d:
+                    print('  ', d)
+                print()
+                print()
+                print()
+                print('failures:', failures, 'vs successes', successes)
+                print()
+
+
+def test_atom_operators_on_keys(k=3):
+    for n in range(3 * k + 1):
+        for alpha in weak_compositions(n, k, reduced=False):
+            print('. . .', alpha)
+            for w in Permutation.all(k):
+                f = key(alpha)
+                word = w.get_reduced_word()
+                for i in reversed(word):
+                    f = f.isobaric_divided_difference(i) - f
+                dec = decompose_into_atoms(f)
+                assert all(v > 0 for v in dec.values())
+
+
 def test_linear_dependence():
+    assert len({q_key((1, 2, 3)), q_key((0, 3, 2, 1)), q_key((1, 3, 2)), q_key((0, 2, 3, 1))}) == 4
     assert q_key((1, 2, 3)) + q_key((0, 3, 2, 1)) == q_key((1, 3, 2)) + q_key((0, 2, 3, 1))
+
+    assert len({q_key((3, 3, 4, 0, 0, 1)), q_key((3, 4, 3, 0, 0, 0, 1)), q_key((3, 4, 3, 0, 0, 1)), q_key((3, 3, 4, 0, 0, 0, 1))})
     assert q_key((3, 3, 4, 0, 0, 1)) + q_key((3, 4, 3, 0, 0, 0, 1)) == q_key((3, 4, 3, 0, 0, 1)) + q_key((3, 3, 4, 0, 0, 0, 1))
 
 
@@ -150,40 +207,65 @@ def test_nil_key_compatible_sequences(m=3):
     return keys
 
 
-# def test_shifted_key_compatible_sequences(m=4, l=4):
-#     def test_shifted_key(p):
-#         ans = 0
-#         for seq in shifted_knuth_class(p):
-#             assert sagan_worley_insert(seq)[0] == p
-#             for a, x in compatible_sequences(seq):
-#                 ans += x
-#         return ans
-#     #
-#     seen = set()
-#     keys = {}
-#     for n in range(m + 1):
-#         for k in range(l + 1):
-#             for w in words(n, k):
-#                 p = sagan_worley_insert(w)[0]
-#                 if p in seen:
-#                     continue
-#                 e = len(p.partition())
-#                 kappa = test_shifted_key(p) * 2**e
-#                 print(p)
-#                 dec = decompose_into_keys(kappa)
-#                 print('kappa  =', dec)
-#                 d = try_to_decompose_q(kappa, positive=False, multiple=False)
-#                 for decomp in d:
-#                     print('      ->', decomp)
-#                 print()
-#                 seen.add(p)
-#                 assert all(v > 0 for v in dec.values())
-#                 if len(d) == 1:
-#                     d = list(d)[0]
-#                     if len(d) == 1 and list(d.values()) == [1]:
-#                         alpha = list(d)[0]
-#                         keys[alpha] = keys.get(alpha, []) + [p]
-#     return keys
+def test_shifted_key_compatible_sequences(m=4, l=4):
+    def test_shifted_key(p):
+        ans = 0
+        for seq in shifted_knuth_class(p):
+            assert sagan_worley_insert(seq)[0] == p
+            # seq = tuple(reversed(seq))
+            for a, x in weak_compatible_sequences(seq):
+                ans += x
+        return ans
+    #
+    seen = set()
+    keys = {}
+    functions = set()
+    successes, failures = 0, 0
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for w in words(n, k):
+                p = sagan_worley_insert(w)[0]
+                #
+                # try:
+                #     if o_eg_insert(w)[0] == p:
+                #         seen.add(p)
+                # except:
+                #     pass
+                #
+                if p in seen:
+                    continue
+                seen.add(p)
+                e = len(p.partition())
+                kappa = test_shifted_key(p) * 2**e
+                if kappa in functions:
+                    continue
+                functions.add(kappa)
+                dec = decompose_into_keys(kappa)
+                assert all(v > 0 for v in dec.values())
+                d = try_to_decompose_q(kappa, positive=True, multiple=False)
+                if not d:
+                    failures += 1
+                    continue
+                else:
+                    successes += 1
+                print(p)
+                print('kappa  =', dec)
+                for decomp in d:
+                    print('      ->', decomp)
+                print()
+                if len(d) == 1:
+                    d = list(d)[0]
+                    if len(d) == 1:
+                        assert list(d.values()) == [1]
+                        alpha = list(d)[0]
+                        keys[alpha] = keys.get(alpha, []) + [p]
+                print()
+                print()
+                print(sorted(keys))
+                print()
+                print('failures:', failures, 'vs successes', successes)
+                print()
+    return keys
 
 
 def test_p_key_compatible_sequences(m=4):
@@ -196,6 +278,7 @@ def test_p_key_compatible_sequences(m=4):
         return ans
     #
     seen = set()
+    keys = set()
     for z in Permutation.fpf_involutions(m):
         for w in z.get_fpf_involution_words():
             p = sp_eg_insert(w)[0]
@@ -212,6 +295,8 @@ def test_p_key_compatible_sequences(m=4):
             assert len(d) > 0
             assert all(len(dec) == 1 for dec in d)
             assert all(v == 1 for dec in d for v in dec.values())
+            keys.add(list(d[0].keys())[0])
+    return keys
 
 
 def test_q_key_compatible_sequences(m=4):
@@ -224,6 +309,7 @@ def test_q_key_compatible_sequences(m=4):
         return ans
     #
     seen = set()
+    keys = set()
     for z in Permutation.involutions(m):
         for w in z.get_involution_words():
             p = o_eg_insert(w)[0]
@@ -236,6 +322,8 @@ def test_q_key_compatible_sequences(m=4):
             assert len(d) > 0
             assert all(len(dec) == 1 for dec in d)
             assert all(v == 1 for dec in d for v in dec.values())
+            keys.add(list(d[0].keys())[0])
+    return keys
 
 
 def sagan_worley_insert(sequence):
@@ -425,9 +513,9 @@ def _summarize(alpha, p, x, y, a, b, c, d, dec, last=False):
         print()
     print(p)
     print('increasing keys:')
-    # print(a)
-    # print(a.weight())
-    # print()
+    print(a)
+    print(a.weight())
+    print()
     print(b)
     print(b.weight())
     print()
