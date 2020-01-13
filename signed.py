@@ -135,6 +135,17 @@ class SignedPermutation:
             SIGNED_REDUCED_WORDS[oneline] = words
         return SIGNED_REDUCED_WORDS[oneline]
 
+    def get_signed_reduced_words(self):
+        for w in self.get_reduced_words():
+            e = [i for i, a in enumerate(w) if a != 0]
+            for v in range(2**len(e)):
+                a = list(w)
+                for i in e:
+                    if v % 2:
+                        a[i] *= -1
+                    v = v // 2
+                yield tuple(a)
+
     def get_involution_words(self):
         w = self.reduce()
         assert w.inverse() == w
@@ -648,6 +659,9 @@ class SignedPermutation:
     def inflate(self, rank):
         newline = self.oneline + tuple(range(self.rank + 1, rank + 1))
         return SignedPermutation(*newline)
+
+    def ell_zero(self):
+        return len([i for i in range(1, self.rank + 1) if self(i) < 0])
 
     def pair(self):
         n = self.rank
