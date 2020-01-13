@@ -146,6 +146,25 @@ class SignedPermutation:
                     v = v // 2
                 yield tuple(a)
 
+    def get_fpf_involution_words(self):
+        w = self
+        n = w.rank
+        assert w.inverse() == w
+
+        if any(w(i) == i for i in range(1, n + 1)):
+            return
+        z = w.ell_zero()
+
+        if all(w(i) == -i for i in range(1, z + 1)) and all(w(i) == i + 1 for i in range(z + 1, n, 2)):
+            yield ()
+        else:
+            for i in w.right_descent_set:
+                s = SignedPermutation.s_i(i, w.rank)
+                if s * w != w * s:
+                    v = s * w * s
+                    for word in v.get_fpf_involution_words():
+                        yield word + (i,)
+
     def get_involution_words(self):
         w = self.reduce()
         assert w.inverse() == w
@@ -371,7 +390,6 @@ class SignedPermutation:
         ans = dict(ans)
 
         cache[self] = ans
-        # print('  ', bcd_type, ':', len(cache))
         return ans
 
     @classmethod
@@ -457,28 +475,6 @@ class SignedPermutation:
 
         assert sorted(ans) == sorted(atoms)
 
-    # @classmethod
-    # def get_atom_shape(cls, oneline):
-    #     while oneline and oneline[-1] == len(oneline):
-    #         oneline = oneline[:-1]
-    #     oneline = oneline[1:]
-    #     ans = []
-    #     while oneline:
-    #         for i in range(len(oneline)):
-    #             a = oneline[i]
-    #             if i == 0 and a < 0:
-    #                 ans += [(a, -a)]
-    #                 oneline = oneline[1:]
-    #                 break
-    #             if i + 1 >= len(oneline):
-    #                 continue
-    #             b = oneline[i + 1]
-    #             if 0 < a < -b:
-    #                 ans += [(a, -b)]
-    #                 oneline = oneline[:i] + oneline[i + 2:]
-    #                 break
-    #     return ans
-
     @classmethod
     def standardize(cls, oneline):
         distinct = sorted([abs(j) for j in oneline])
@@ -486,12 +482,6 @@ class SignedPermutation:
         mapping = {v: i + 1 for i, v in enumerate(distinct)}
         newline = tuple(mapping[v] if v > 0 else -mapping[-v] for v in oneline)
         return SignedPermutation(*newline)
-
-        # if i.rank == self.n:
-        #     try:
-        #         assert self.standardize(i.inverse()) in self.sub_atoms
-        #     except:
-        #         print('!', i.inverse())
 
     def conjectural_stanley_schur_decomposition(self, starting_rank=None, verbose=True, step=0):
         w = self.reduce()
@@ -511,7 +501,6 @@ class SignedPermutation:
         sh = w.increasing_shape()
         if sh is not None:
             return
-        #    return {sh: 1}
 
         def get_shape(oneline):
             while oneline[-1] == len(oneline):
@@ -541,7 +530,6 @@ class SignedPermutation:
                 r += 1
             try:
                 z = SignedPermutation(*w.oneline[r:]).reduce()
-                # print('Computing atoms (B%s). . .' % (n - r - 1))
                 a = SignedPermutation.longest_element(n - r - 1).get_atoms()
                 assert z in a
             except:
@@ -559,11 +547,6 @@ class SignedPermutation:
         else:
             r = w.last_descent()
             s = w.last_inversion(r)
-
-        # if len(w * self.reflection_t(r, s, n)) != len(w) - 1:
-        #     print('failed')
-        #     r = w.last_descent()
-        #     s = w.last_inversion(r)
 
         v = w * self.reflection_t(r, s, n)
 
@@ -590,15 +573,6 @@ class SignedPermutation:
 
         for x in subindices:
             yield (x, -1)
-        # ans = defaultdict(int)
-        # for x in indices:
-        #     for sh, i in x.stanley_schur_decomposition(bcd_type, starting_rank, verbose, step + 1).items():
-        #         ans[sh] += i
-        # ans = dict(ans)
-
-        # cache[self] = ans
-        # # print('  ', bcd_type, ':', len(cache))
-        # return ans
 
     @classmethod
     def get_grassmannian(cls, n):
