@@ -1,5 +1,5 @@
 from permutations import Permutation
-from signed import SignedPermutation
+from signed import SignedPermutation, EvenSignedPermutation
 from polynomials import X
 
 
@@ -30,10 +30,46 @@ def principal_specialization(w, degree_cutoff):
 
 
 def type_c_principal_specialization(w, degree_cutoff):
+    assert type(w) == SignedPermutation
     ans = 0
     for a_seq in w.get_signed_reduced_words():
         ans += principal_specialization_summand(a_seq, degree_cutoff)
     return ans * 2**w.ell_zero()
+
+
+def type_d_principal_specialization(w, degree_cutoff):
+    assert type(w) == EvenSignedPermutation
+    ans = 0
+    for a_seq in w.get_signed_reduced_words():
+        ans += principal_specialization_summand(a_seq, degree_cutoff)
+    return ans
+
+
+def type_d_comaj_formula_summand(a_seq, degree_cutoff):
+    def generate(expon, i):
+        if i == 0:
+            yield expon
+        else:
+            for x in [expon, expon - abs(a_seq[i - 1])]:
+                while True:
+                    x -= 2 * i
+                    if x < degree_cutoff:
+                        break
+                    for e in generate(x, i - 1):
+                        yield e
+    #
+    ans = 0
+    #
+    m = len(a_seq)
+    n = max([0] + [abs(i) for i in a_seq])
+    b_seq = [abs(i) if i < 0 else i + n for i in a_seq]
+    comaj = sum([i + 1 for i in range(m - 1) if b_seq[i] < b_seq[i + 1]])
+    #
+    p = len([i for i in a_seq if i > 0])
+    start = 2 * comaj + p + sum([abs(i) for i in a_seq])
+    for e in generate(start, m):
+        ans += X(0)**e
+    return ans
 
 
 def type_c_comaj_formula_summand(a_seq, degree_cutoff):
@@ -85,9 +121,18 @@ def comaj_formula(w, degree_cutoff):
 
 
 def type_c_comaj_formula(w, degree_cutoff):
+    assert type(w) == SignedPermutation
     ans = 0
     for a_seq in w.get_reduced_words():
         ans += type_c_comaj_formula_summand(a_seq, degree_cutoff)
+    return ans
+
+
+def type_d_comaj_formula(w, degree_cutoff):
+    assert type(w) == EvenSignedPermutation
+    ans = 0
+    for a_seq in w.get_signed_reduced_words():
+        ans += type_d_comaj_formula_summand(a_seq, degree_cutoff)
     return ans
 
 
@@ -124,4 +169,13 @@ def test_type_c_principal_specialization(n=3, degree_cutoff=-10):
         r = type_c_comaj_formula(w, degree_cutoff)
         s = type_c_principal_specialization(w, degree_cutoff)
         print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r, '=?=', s)
+        assert r == s
+
+
+def test_type_d_principal_specialization(n=3, degree_cutoff=-10):
+    total = factorial(n) * 2**(n - 1)
+    for i, w in enumerate(EvenSignedPermutation.all(n)):
+        r = type_d_comaj_formula(w, degree_cutoff)
+        s = type_d_principal_specialization(w, degree_cutoff)
+        print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r == s)#r, '=?=', s, r == s)
         assert r == s

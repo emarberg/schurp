@@ -7,6 +7,10 @@ from partitions import StrictPartition
 from permutations import Permutation
 
 
+DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS = {(): {()}}
+DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS = {(): [()]}
+
+
 SIGNED_REDUCED_WORDS = {(): {()}}
 EVEN_SIGNED_REDUCED_WORDS = {(): [()]}
 EVEN_SIGNED_REDUCED_COUNTS = {(): 1}
@@ -136,15 +140,15 @@ class SignedPermutation:
         return SIGNED_REDUCED_WORDS[oneline]
 
     def get_signed_reduced_words(self):
-        for w in self.get_reduced_words():
-            e = [i for i, a in enumerate(w) if a != 0]
-            for v in range(2**len(e)):
-                a = list(w)
-                for i in e:
-                    if v % 2:
-                        a[i] *= -1
-                    v = v // 2
-                yield tuple(a)
+        w = self.reduce()
+        oneline = w.oneline
+        if oneline not in DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS:
+            words = set()
+            for i in w.right_descent_set:
+                s = SignedPermutation.s_i(i, w.rank)
+                words |= {e + (j,) for e in (w * s).get_signed_reduced_words() for j in {i, -i}}
+            DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS[oneline] = words
+        return DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS[oneline]
 
     def get_fpf_involution_words(self):
         w = self
@@ -907,6 +911,18 @@ class EvenSignedPermutation:
                 words += [e + (i,) for e in (w * s).get_reduced_words()]
             EVEN_SIGNED_REDUCED_WORDS[oneline] = sorted(words, key=lambda x: self.flatten(x))
         return EVEN_SIGNED_REDUCED_WORDS[oneline]
+
+    def get_signed_reduced_words(self):
+        w = self.reduce()
+        oneline = w.oneline
+        if oneline not in DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS:
+            words = set()
+            for i in w.right_descent_set:
+                s = EvenSignedPermutation.s_i(i, w.rank)
+                letters = {i, -i} if i > 1 else {1} if i == 1 else {-1}
+                words |= {e + (j,) for e in (w * s).get_signed_reduced_words() for j in letters}
+            DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS[oneline] = words
+        return DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS[oneline]
 
     def get_involution_words(self):
         w = self.reduce()
