@@ -7,8 +7,9 @@ from partitions import StrictPartition
 from permutations import Permutation
 
 
-DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS = {(): {()}}
-DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS = {(): [()]}
+C_SIGNED_REDUCED_WORDS = {(): {()}}
+B_SIGNED_REDUCED_WORDS = {(): {()}}
+D_SIGNED_REDUCED_WORDS = {(): [()]}
 
 
 SIGNED_REDUCED_WORDS = {(): {()}}
@@ -140,15 +141,31 @@ class SignedPermutation:
         return SIGNED_REDUCED_WORDS[oneline]
 
     def get_signed_reduced_words(self):
+        return self.get_type_b_reduced_words()
+
+    def get_type_b_reduced_words(self):
         w = self.reduce()
         oneline = w.oneline
-        if oneline not in DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS:
+        if oneline not in B_SIGNED_REDUCED_WORDS:
             words = set()
             for i in w.right_descent_set:
                 s = SignedPermutation.s_i(i, w.rank)
-                words |= {e + (j,) for e in (w * s).get_signed_reduced_words() for j in {i, -i}}
-            DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS[oneline] = words
-        return DOUBLE_ALPHABET_SIGNED_REDUCED_WORDS[oneline]
+                letters = {i, -i}
+                words |= {e + (j,) for e in (w * s).get_type_b_reduced_words() for j in letters}
+            B_SIGNED_REDUCED_WORDS[oneline] = words
+        return B_SIGNED_REDUCED_WORDS[oneline]
+
+    def get_type_c_reduced_words(self):
+        w = self.reduce()
+        oneline = w.oneline
+        if oneline not in C_SIGNED_REDUCED_WORDS:
+            words = set()
+            for i in w.right_descent_set:
+                s = SignedPermutation.s_i(i, w.rank)
+                letters = {i + 1, -i - 1}
+                words |= {e + (j,) for e in (w * s).get_type_c_reduced_words() for j in letters}
+            C_SIGNED_REDUCED_WORDS[oneline] = words
+        return C_SIGNED_REDUCED_WORDS[oneline]
 
     def get_fpf_involution_words(self):
         w = self
@@ -915,14 +932,14 @@ class EvenSignedPermutation:
     def get_signed_reduced_words(self):
         w = self.reduce()
         oneline = w.oneline
-        if oneline not in DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS:
+        if oneline not in D_SIGNED_REDUCED_WORDS:
             words = set()
             for i in w.right_descent_set:
                 s = EvenSignedPermutation.s_i(i, w.rank)
                 letters = {i, -i} if i > 1 else {1} if i == 1 else {-1}
                 words |= {e + (j,) for e in (w * s).get_signed_reduced_words() for j in letters}
-            DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS[oneline] = words
-        return DOUBLE_ALPHABET_EVEN_SIGNED_REDUCED_WORDS[oneline]
+            D_SIGNED_REDUCED_WORDS[oneline] = words
+        return D_SIGNED_REDUCED_WORDS[oneline]
 
     def get_involution_words(self):
         w = self.reduce()
