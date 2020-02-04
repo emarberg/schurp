@@ -1,7 +1,6 @@
 from words import (
     involution_insert,
     fpf_insert,
-    alt_fpf_insert,
     HopfPermutation,
     reduce_oneline,
     reduce_fpf,
@@ -9,17 +8,23 @@ from words import (
     get_involution_words,
     get_fpf_involution_words
 )
+from permutations import Permutation
+from keys import monomial_from_composition
+import tests.test_keys as testkeys
 import subprocess
 
 
-class ShiftedCrystalGenerator:
+BASE_DIRECTORY = '/Users/emarberg/Desktop/examples/crystals/'
 
-    DIRECTORY = '/Users/emarberg/Dropbox/shifted_crystals/examples/inv/'
+
+class OrthogonalCrystalGenerator:
+
+    DIRECTORY = BASE_DIRECTORY + 'orthogonal/'
 
     @classmethod
     def test_insertion_tableaux(cls, n, k):
         for i, w in enumerate(HopfPermutation.involutions(n)):
-            cg = ShiftedCrystalGenerator(w.oneline, k)
+            cg = OrthogonalCrystalGenerator(w.oneline, k)
             shapes = [
                 {cg.insertion_tableau(i) for i in comp}
                 for comp in cg.components
@@ -41,8 +46,11 @@ class ShiftedCrystalGenerator:
 
     @property
     def _filename(self):
-        w = ''.join([str(i) for i in self.oneline])
-        return 'size%s_%s_%s' % (str(len(self._factorizations)), w, str(self.num_factors))
+        mu = ''.join([str(i) for i in sorted(self.alpha) if i])
+        w = ''.join([str(i) for i in self.word])
+        rank = str(self.num_factors)
+        size = str(len(self._factorizations))
+        return 'rank%s_alpha%s_size%s_%s' % (rank, mu, size, w)
 
     @property
     def dot_filename(self):
@@ -53,10 +61,46 @@ class ShiftedCrystalGenerator:
         return self.DIRECTORY + 'png/' + '%s.png' % self._filename
 
     def node_label(self, i):
-        pre = str(self.insertion_tableau(i))
+        # turning increasing factorizations into decreasing by conjugating by long element
+        pre = (str(self.alpha) + '\n\n' + str(self.tableau) + '\n\n') if i == 0 else ''
+
         top = str(self.recording_tableau(i))
-        bottom = '/'.join([''.join([str(j) for j in w.elements]) for w in self[i]])
-        return pre + '\n\n' + top + '\n\n' + bottom
+        bottom = '/'.join([''.join([str(self.rank - j) for j in w.elements]) for w in self[i]])
+        return pre + top + '\n\n' + bottom
+
+    @classmethod
+    def is_factorization_compatible(cls, f):
+        return all(len(a) == 0 or i < min(a) for i, a in enumerate(f))
+
+    def is_highlighted(self, x):
+        f = tuple(tuple(self.rank - a for a in part) for part in self[x])
+        return self.is_factorization_compatible(f)
+
+    def highlighted_nodes(self):
+        s = []
+        for x in range(len(self)):
+            if self.is_highlighted(x):
+                s += ['    "%s" [fillcolor=white];' % self.node_label(x)]
+        return s
+
+    @property
+    def alpha(self):
+        if self._alpha is None:
+            qkey = 0
+            for x in range(len(self)):
+                if self.is_highlighted(x):
+                    qkey += monomial_from_composition(self.weights[x])
+            for i in range(10):
+                try:
+                    self._alpha = testkeys.decompose_q(qkey)
+                    return self._alpha
+                except:
+                    qkey *= 2
+            print(qkey // 1024)
+            print(self)
+            raise Exception
+        else:
+            return self._alpha
 
     def write_dotfile(self):
         s = []
@@ -64,7 +108,10 @@ class ShiftedCrystalGenerator:
         s += ['    overlap=false;']
         s += ['    splines=line;']
         s += ['    node [shape=box; fontname="courier"; style=filled];']
-        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges]
+        #
+        s += self.highlighted_nodes()
+        #
+        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges if self.is_highlighted(x) or self.is_highlighted(y)]
         s += ['}']
         s = '\n'.join(s)
 
@@ -77,37 +124,55 @@ class ShiftedCrystalGenerator:
 
     @classmethod
     def all(cls, n, k):
-        for w in HopfPermutation.involutions(n):
-            if w.oneline != reduce_oneline(w.oneline):
-                continue
-            cg = ShiftedCrystalGenerator(w.oneline, k)
-            if cg.edges:
-                cg.generate()
+        for w in Permutation.involutions(n):
+            #if w.involution_length() > 2:
+            #    continue
+            for cg in OrthogonalCrystalGenerator.from_permutation(n, w, k):
+                print(cg.word)
+                if not cg.edges:
+                    continue
+                try:
+                    #if not all(cg.alpha[i] >= cg.alpha[i + 1] for i in range(len(cg.alpha) - 1)):
+                    #    continue
+                    if len(cg.alpha) > k:
+                        continue
+                    cg.generate()
+                except:
+                    pass
+            print()
 
-    def __init__(self, oneline, k):
-        self.oneline = oneline
-        self.words = self._get_words()
-        self.num_factors = k
-        self._factorizations = None
+    @classmethod
+    def from_permutation(cls, n, pi, num_factors):
+        fac = [
+            tuple([Word(*i) for i in tup])
+            for w in pi.get_involution_words()
+            for tup in cls.get_increasing_factorizations(w, num_factors)
+        ]
+        dictionary = {}
+        for f in fac:
+            t = involution_insert(*f)[0]
+            dictionary[t] = dictionary.get(t, []) + [f]
+        for t in dictionary:
+            fac = sorted(dictionary[t], key=lambda f: tuple(len(a) for a in f), reverse=True)
+            yield OrthogonalCrystalGenerator(tuple(pi(i) for i in range(1, n + 1)), fac, num_factors)
+
+    def __init__(self, oneline, factorizations, num_factors):
+        self.rank = len(oneline)
+        self.num_factors = num_factors
+        self._factorizations = factorizations
         self._weights = None
         self._ranks = None
         self._edges = None
 
-    def _get_words(self):
-        return get_involution_words(self.oneline)
+        self.word = tuple(self.rank - a for a in self.insertion_tableau(0).row_reading_word())
+        self.tableau = testkeys.o_eg_insert(self.word)[0]
+        self._alpha = None
 
     def __repr__(self):
-        return 'Crystal generator for w = %s with ell = %s' % (self.oneline, self.num_factors)
+        return 'Crystal generator for P^O(w) = %s with ell = %s' % (self.insertion_tableau(0), self.num_factors)
 
     @property
     def factorizations(self):
-        if self._factorizations is None:
-            fac = [
-                tuple([Word(*i) for i in tup])
-                for w in self.words
-                for tup in self.get_increasing_factorizations(w, self.num_factors)
-            ]
-            self._factorizations = sorted(fac, key=lambda f: tuple(len(a) for a in f), reverse=True)
         return self._factorizations
 
     @property
@@ -251,9 +316,9 @@ class ShiftedCrystalGenerator:
                     break
 
 
-class FPFCrystalGenerator(ShiftedCrystalGenerator):
+class SymplecticCrystalGenerator(OrthogonalCrystalGenerator):
 
-    DIRECTORY = '/Users/emarberg/Dropbox/shifted_crystals/examples/fpf/'
+    DIRECTORY = BASE_DIRECTORY + 'symplectic/'
 
     @classmethod
     def test_insertion_tableaux(cls, n, k):
@@ -308,7 +373,7 @@ class FPFCrystalGenerator(ShiftedCrystalGenerator):
 
     def f_i(self, element_index, operator_index):
         if operator_index > 0:
-            return super(FPFCrystalGenerator, self).f_i(element_index, operator_index)
+            return super(SymplecticCrystalGenerator, self).f_i(element_index, operator_index)
         if self.num_factors < 2:
             return None
         a = self[element_index][0].elements
@@ -335,14 +400,3 @@ class FPFCrystalGenerator(ShiftedCrystalGenerator):
         js = [j for j in range(len(self)) if self[j] == ans]
         assert len(js) == 1
         return js[0]
-
-
-class AltCrystalGenerator(FPFCrystalGenerator):
-
-    DIRECTORY = '/Users/emarberg/Dropbox/shifted_crystals/examples/alt/'
-
-    def insertion_tableau(self, i):
-        return alt_fpf_insert(*self[i])[0]
-
-    def recording_tableau(self, i):
-        return alt_fpf_insert(*self[i])[1]

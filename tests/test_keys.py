@@ -47,6 +47,17 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def schurp(mu, n):
+    ans = 0
+    for t in Tableau.get_semistandard_shifted(Partition(*mu), n):
+        ans += monomial_from_composition(t.weight())
+    return ans
+
+
+def schurq(mu, n):
+    return schurp(mu, n) * 2**len(mu)
+
+
 def test_brion_construction(n=4, m=10):
     def brion_key(z, mu):
         ans = 0
@@ -392,15 +403,16 @@ def test_p_insertion_definition(n=4, positive=True, multiple=True):
             for dream in a.get_pipe_dreams():
                 word = dream.word()
                 p, q = sp_eg_insert(word)
-                p_insertion_cache[(w, p)] = p_insertion_cache.get((w, p), 0) + dream.monomial()
+                p_insertion_cache[p] = p_insertion_cache.get(p, 0) + dream.monomial()
     keys = {}
-    for w, p in sorted(p_insertion_cache, key=lambda t: t[1].partition()):
-        f = p_insertion_cache[(w, p)]
+    for p in sorted(p_insertion_cache, key=lambda t: t.partition()):
+        f = p_insertion_cache[p]
         d = try_to_decompose_p(f, p_halves_cache, p_alphas_cache, positive=positive, multiple=multiple)
         assert len(d) >= 1
         assert all(len(decomp) == 1 for decomp in d)
         assert all(set(decomp.values()) == {1} for decomp in d)
         alpha = list(list(d)[0].keys())[0]
+        p_insertion_cache[p] = alpha
         if alpha not in keys:
             keys[alpha] = []
         keys[alpha] += [p]
@@ -417,14 +429,15 @@ def test_q_insertion_definition(n=5, positive=True, multiple=True):
                 word = dream.word()
                 p, q = o_eg_insert(word)
                 e = len(p.partition())
-                q_insertion_cache[(w, p)] = q_insertion_cache.get((w, p), 0) + dream.monomial() * 2**e
+                q_insertion_cache[p] = q_insertion_cache.get(p, 0) + dream.monomial() * 2**e
     keys = {}
-    for w, p in sorted(q_insertion_cache, key=lambda t: t[1].partition()):
-        f = q_insertion_cache[(w, p)]
+    for p in sorted(q_insertion_cache, key=lambda t: t.partition()):
+        f = q_insertion_cache[p]
         d = try_to_decompose_q(f, q_halves_cache, q_alphas_cache, positive=positive, multiple=multiple)
         assert len(d) >= 1
         assert all(len(decomp) == 1 for decomp in d)
         alpha = list(list(d)[0].keys())[0]
+        q_insertion_cache[p] = alpha
         a, b = symmetric_halves(alpha)
         print(w)
         print(p)
@@ -1416,7 +1429,11 @@ def test_decompose_q():
     ]
 
 
-def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False):
+def decompose_q(f):
+    return try_to_decompose_q(f, positive=True, multiple=True, single=True)
+
+
+def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False, single=False):
     if halves is None:
         halves = q_halves_cache
     if alphas is None:
@@ -1451,6 +1468,12 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
         for alpha, coeff in ans.items():
             g += coeff * q_key(alpha)
         assert f == g
+    if single:
+        assert len(answers) == 1
+        ans = answers[0]
+        assert len(ans) == 1
+        assert set(ans.values()) == {1}
+        return list(ans.keys())[0]
     return answers
 
 

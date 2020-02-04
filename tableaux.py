@@ -551,12 +551,14 @@ class Tableau:
         return ans
 
     @classmethod
-    def get_semistandard_shifted(cls, shape):
+    def get_semistandard_shifted(cls, shape, n=None):
         if isinstance(shape, Partition):
             shape = shape.shape
 
         if len(shape) == 0:
             return {Tableau()}
+
+        n = len(shape) if n is None else n
 
         borders = {
             (a, b)
@@ -567,17 +569,14 @@ class Tableau:
 
         ans = set()
         for border_h, border_v in borders:
-            for t in cls.get_semistandard_shifted(shape - border_h - border_v):
-                if t.mapping:
-                    n, mapping = t.maximum().weight() + 1, t.mapping
-                else:
-                    n, mapping = 1, {}
-
-                for i, j in border_h:
-                    mapping[(i, j)] = MarkedNumber(n)
-                for i, j in border_v:
-                    mapping[(i, j)] = MarkedNumber(-n)
-                ans.add(Tableau(mapping))
+            for k in range(n):
+                for t in cls.get_semistandard_shifted(shape - border_h - border_v, k):
+                    mapping = t.mapping if t.mapping else {}
+                    for i, j in border_h:
+                        mapping[(i, j)] = MarkedNumber(k + 1)
+                    for i, j in border_v:
+                        mapping[(i, j)] = MarkedNumber(-k - 1)
+                    ans.add(Tableau(mapping))
         return ans
 
     def __le__(self, other):
