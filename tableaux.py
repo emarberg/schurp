@@ -552,7 +552,9 @@ class Tableau:
 
     @classmethod
     def get_semistandard_shifted(cls, shape, n=None):
-        if isinstance(shape, Partition):
+        if type(shape) == Partition:
+            shape = StrictPartition(shape)
+        if type(shape) == StrictPartition:
             shape = shape.shape
 
         if len(shape) == 0:

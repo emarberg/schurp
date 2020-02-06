@@ -29,7 +29,7 @@ from keys import (
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
 from permutations import Permutation
-from partitions import Partition
+from partitions import Partition, StrictPartition
 from collections import defaultdict
 from words import Word
 from tableaux import Tableau
@@ -56,6 +56,32 @@ def schurp(mu, n):
 
 def schurq(mu, n):
     return schurp(mu, n) * 2**len(mu)
+
+
+def test_schurp(n=8, l=4):
+    for m in range(n + 1):
+        for mu in StrictPartition.all(m):
+            start = mu(1) + 1
+            for k in range(start, start + l):
+                p = schurp(mu, k)
+                try:
+                    alpha = decompose_p(p)
+                    print(mu, k, '->', alpha)
+                except:
+                    print(mu, k, '->', try_to_decompose_p(p, positive=True, multiple=True))
+
+
+def test_schurq(n=8, l=8):
+    for m in range(n + 1):
+        for mu in StrictPartition.all(m):
+            start = mu(1)
+            for k in range(start, start + l):
+                f = schurq(mu, k)
+                try:
+                    alpha = decompose_q(f)
+                    print(mu, k, '->', alpha)
+                except:
+                    print(mu, k, '->', 'FAILED')
 
 
 def test_brion_construction(n=4, m=10):
@@ -1429,6 +1455,10 @@ def test_decompose_q():
     ]
 
 
+def decompose_p(f):
+    return try_to_decompose_p(f, positive=True, multiple=True, single=True)
+
+
 def decompose_q(f):
     return try_to_decompose_q(f, positive=True, multiple=True, single=True)
 
@@ -1511,7 +1541,7 @@ def p_update(targets, exponents, halves, alphas):
                 halves[e] = halves.get(e, []) + [(alphas[a], a)]
 
 
-def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False):
+def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False, single=False):
     if halves is None:
         halves = p_halves_cache
     if alphas is None:
@@ -1543,6 +1573,12 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
         for alpha, coeff in ans.items():
             g += coeff * p_key(alpha)
         assert f == g
+    if single:
+        assert len(answers) == 1
+        ans = answers[0]
+        assert len(ans) == 1
+        assert set(ans.values()) == {1}
+        return list(ans.keys())[0]
     return answers
 
 

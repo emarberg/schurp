@@ -416,8 +416,8 @@ def _generic_key(weak_comp, cache, name, atomic, monomial_fn):
         else:
             f = _generic_key(new_comp, cache, name, atomic, monomial_fn)
             cache[weak_comp] = f.isobaric_divided_difference(i) - (f if atomic else 0)
-        if len(cache) % 100 == 0:
-            print(' . . .', name, 'cache:', len(cache))
+        # if len(cache) % 100 == 0:
+        #    print(' . . .', name, 'cache:', len(cache))
     return cache[weak_comp]
 
 

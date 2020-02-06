@@ -173,6 +173,15 @@ class MPolynomial:
 
 
     """
+    def variables(self):
+        return {i for key in self.coeffs.keys() for i in key}
+
+    def max_variable(self):
+        v = self.variables()
+        if v:
+            return max(v)
+        return 0
+
     def truncate(self, nvar):
         return MPolynomial({m: v for m, v in self.coeffs.items() if not any(i > nvar for i in m)})
 
@@ -336,8 +345,8 @@ class MPolynomial:
                 ans += sgn * tmp * x**j * y**(d - 1 - j)
             DIVIDED_DIFFERENCE_CACHE[(i, index)] = ans
             ell = len(DIVIDED_DIFFERENCE_CACHE)
-            if ell % 100 == 0:
-                print(' . . . Divided Differences cache:', ell)
+            # if ell % 100 == 0:
+            #    print(' . . . Divided Differences cache:', ell)
         return DIVIDED_DIFFERENCE_CACHE[(i, index)]
 
     def divided_difference(self, i):

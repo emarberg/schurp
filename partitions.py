@@ -295,6 +295,9 @@ class StrictPartition(Partition):
             (i + 1, i + j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    def __call__(self, i):
+        return self.parts[i - 1] if 0 <= i - 1 < len(self.parts) else 0
+
     def _pieri_value(self, delta):
         return 2**(sum(x != 0 for x in delta) - 1)
 
