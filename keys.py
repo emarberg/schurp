@@ -21,23 +21,15 @@ SHIFTED_REDUCED_TABLEAU_CACHE = {}
 
 def _get_key_maps(tab, shape, get_class, get_factors):
     left_keys, right_keys = {}, {}
-    kinds = set()
     for w in get_class(tab):
         f = get_factors(w)
         mu = tuple(sorted(map(len, f), reverse=True))
         if mu == shape:
-            kinds.add(tuple(map(len, f)))
             j, k = len(f[0]), len(f[-1])
             assert j not in left_keys or left_keys[j] == f[0]
             assert k not in right_keys or right_keys[k] == f[-1]
             left_keys[j] = f[0]
             right_keys[k] = f[-1]
-
-    a = 1
-    for p in range(len(shape)):
-        a *= p + 1
-    assert len(kinds) == a or shape == ()
-
     return left_keys, right_keys
 
 

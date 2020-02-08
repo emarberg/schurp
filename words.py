@@ -18,6 +18,9 @@ class Word:
         self._fpf_involutions = None
         assert all(i in self.subset for i in args)
 
+    def reverse(self):
+        return Word(subset=self.subset, *tuple(reversed(self.elements)))
+
     def tuple(self):
         return self.elements
 

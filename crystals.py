@@ -111,7 +111,7 @@ class OrthogonalCrystalGenerator:
         #
         s += self.highlighted_nodes()
         #
-        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges if self.is_highlighted(x) or self.is_highlighted(y)]
+        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges]# if self.is_highlighted(x) or self.is_highlighted(y)]
         s += ['}']
         s = '\n'.join(s)
 

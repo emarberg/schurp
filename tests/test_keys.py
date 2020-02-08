@@ -47,6 +47,33 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def _attempt_p_into_q(alpha, attempts=10):
+    p = p_key(alpha)
+    coeff = 1
+    for i in range(attempts):
+        try:
+            return decompose_q(p), coeff
+        except:
+            p *= 2
+            coeff *= 2
+
+
+def test_p_key_into_q_key(m=6, l=6):
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                attempt = _attempt_p_into_q(alpha)
+                print(alpha, '->', attempt)
+
+
+def test_q_key_into_p_key(m=6, l=6):
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                attempt = try_to_decompose_p(q_key(alpha))
+                print(alpha, '->', attempt)
+
+
 def schurp(mu, n):
     ans = 0
     for t in Tableau.get_semistandard_shifted(Partition(*mu), n):
@@ -1456,14 +1483,23 @@ def test_decompose_q():
 
 
 def decompose_p(f):
-    return try_to_decompose_p(f, positive=True, multiple=True, single=True)
-
+    answers = try_to_decompose_p(f, positive=True)
+    assert len(answers) == 1
+    ans = answers[0]
+    assert len(ans) == 1
+    assert set(ans.values()) == {1}
+    return list(ans.keys())[0]
 
 def decompose_q(f):
-    return try_to_decompose_q(f, positive=True, multiple=True, single=True)
+    answers = try_to_decompose_q(f, positive=True, multiple=True)
+    assert len(answers) == 1
+    ans = answers[0]
+    assert len(ans) == 1
+    assert set(ans.values()) == {1}
+    return list(ans.keys())[0]
 
 
-def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False, single=False):
+def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False):
     if halves is None:
         halves = q_halves_cache
     if alphas is None:
@@ -1498,12 +1534,6 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
         for alpha, coeff in ans.items():
             g += coeff * q_key(alpha)
         assert f == g
-    if single:
-        assert len(answers) == 1
-        ans = answers[0]
-        assert len(ans) == 1
-        assert set(ans.values()) == {1}
-        return list(ans.keys())[0]
     return answers
 
 
@@ -1541,7 +1571,7 @@ def p_update(targets, exponents, halves, alphas):
                 halves[e] = halves.get(e, []) + [(alphas[a], a)]
 
 
-def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False, single=False):
+def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False):
     if halves is None:
         halves = p_halves_cache
     if alphas is None:
@@ -1573,12 +1603,6 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
         for alpha, coeff in ans.items():
             g += coeff * p_key(alpha)
         assert f == g
-    if single:
-        assert len(answers) == 1
-        ans = answers[0]
-        assert len(ans) == 1
-        assert set(ans.values()) == {1}
-        return list(ans.keys())[0]
     return answers
 
 
