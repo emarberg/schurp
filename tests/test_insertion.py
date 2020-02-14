@@ -4,11 +4,32 @@ from words import (
     get_involution_words,
     get_fpf_involution_words,
     Tableau,
+    involution_insert
 )
 from crystals import (
-    ShiftedCrystalGenerator,
-    FPFCrystalGenerator
+    OrthogonalCrystalGenerator,
+    SymplecticCrystalGenerator
 )
+from permutations import Permutation
+
+
+def test_primed_insertin():
+    for n in range(5):
+        for k in range(5):
+            seen = {}
+            for pi in Permutation.involutions(n):
+                fac = [
+                    tuple([Word(*i) for i in tup])
+                    for w in pi.get_primed_involution_words()
+                    for tup in OrthogonalCrystalGenerator.get_increasing_primed_factorizations(w, k)
+                ]
+                for f in fac:
+                    p, q = involution_insert(*f)
+                    print(f, '->', p, q)
+                    print(seen.get((p, q), None))
+                    assert (p, q) not in seen
+                    seen[(p, q)] = f
+
 
 n = 4
 
@@ -21,26 +42,26 @@ def test_fpf_insertion():
 
 def test_involution_p_tableaux():
     k = 4
-    for w in HopfPermutation.involutions(n):
-        cg = ShiftedCrystalGenerator(w.oneline, k)
-        shapes = [
-            {cg.insertion_tableau(i) for i in comp}
-            for comp in cg.components
-        ]
-        assert all(len(sh) == 1 for sh in shapes)
-        assert all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
+    for w in Permutation.involutions(n):
+        for cg in OrthogonalCrystalGenerator.from_permutation(n, w, k):
+            shapes = [
+                {cg.insertion_tableau(i) for i in comp}
+                for comp in cg.components
+            ]
+            assert all(len(sh) == 1 for sh in shapes)
+            assert all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
 
 
-def test_fpf_p_tableaux():
-    k = 4
-    for w in HopfPermutation.fpf_involutions(n):
-        cg = FPFCrystalGenerator(w.oneline, k)
-        shapes = [
-            {cg.insertion_tableau(i) for i in comp}
-            for comp in cg.components
-        ]
-        assert all(len(sh) == 1 for sh in shapes)
-        assert all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
+# def test_fpf_p_tableaux():
+#     k = 4
+#     for w in HopfPermutation.fpf_involutions(n):
+#         cg = SymplecticCrystalGenerator(w.oneline, k)
+#         shapes = [
+#             {cg.insertion_tableau(i) for i in comp}
+#             for comp in cg.components
+#         ]
+#         assert all(len(sh) == 1 for sh in shapes)
+#         assert all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
 
 
 def test_involution_insertion():

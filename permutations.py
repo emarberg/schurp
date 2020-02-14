@@ -3,6 +3,7 @@ from tableaux import Tableau
 from partitions import Partition
 
 REDUCED_WORDS = {(): {()}}
+PRIMED_INVOLUTION_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
 ATOMS_CACHE = {}
 FPF_ATOMS_CACHE = {}
@@ -248,11 +249,37 @@ class Permutation:
                 yield Permutation(*w).inverse()
             add = {new for w in add for new in next(w)} - seen
 
+    def get_fpf_involution_word(self):
+        assert self.is_fpf_involution()
+        for a in self.get_fpf_atoms():
+            return a.get_reduced_word()
+
+    def get_involution_word(self):
+        assert self.inverse() == self
+        for a in self.get_atoms():
+            return a.get_reduced_word()
+
     def get_involution_words(self):
         assert self.inverse() == self
         for a in self.get_atoms():
             for word in a.get_reduced_words():
                 yield word
+
+    def get_primed_involution_words(self):
+        assert self.inverse() == self
+        oneline = tuple(self.oneline)
+        if oneline not in PRIMED_INVOLUTION_WORDS:
+            words = set()
+            for i in self.right_descent_set:
+                s = Permutation.s_i(i)
+                if s * self == self * s:
+                    sub = (self * s).get_primed_involution_words()
+                    words |= {e + (i,) for e in sub} | {e + (-i,) for e in sub}
+                else:
+                    sub = (s * self * s).get_primed_involution_words()
+                    words |= {e + (i,) for e in sub}
+            PRIMED_INVOLUTION_WORDS[oneline] = words
+        return PRIMED_INVOLUTION_WORDS[oneline]
 
     @classmethod
     def all(cls, n):

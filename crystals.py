@@ -111,7 +111,7 @@ class OrthogonalCrystalGenerator:
         #
         s += self.highlighted_nodes()
         #
-        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges]# if self.is_highlighted(x) or self.is_highlighted(y)]
+        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges if self.is_highlighted(x) or self.is_highlighted(y)]
         s += ['}']
         s = '\n'.join(s)
 
@@ -132,8 +132,8 @@ class OrthogonalCrystalGenerator:
                 if not cg.edges:
                     continue
                 try:
-                    #if not all(cg.alpha[i] >= cg.alpha[i + 1] for i in range(len(cg.alpha) - 1)):
-                    #    continue
+                    if not all(cg.alpha[i] >= cg.alpha[i + 1] for i in range(len(cg.alpha) - 1)):
+                        continue
                     if len(cg.alpha) > k:
                         continue
                     cg.generate()
@@ -295,6 +295,13 @@ class OrthogonalCrystalGenerator:
         for i in range(n):
             ans += (n - i) * wt[i]
         return -ans
+
+    @classmethod
+    def get_increasing_primed_factorizations(cls, w, k):
+        sw = tuple((-2 * i - 1) if i < 0 else 2 * i for i in w)
+        for t in cls.get_increasing_factorizations(sw, k):
+            st = tuple(tuple((i + 1) // -2 if i % 2 != 0 else i // 2 for i in a) for a in t)
+            yield st
 
     @classmethod
     def get_increasing_factorizations(cls, w, k):

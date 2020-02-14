@@ -586,7 +586,6 @@ class Word:
 
 
 def get_insertion_mapping(words):
-    assert all(w.is_increasing() for w in words)
     elements = []
     mapping = {}
     for i, w in enumerate(words):
@@ -607,7 +606,12 @@ def shifted_hecke_insert(*words):
 def involution_insert(*words):
     w, mapping = get_insertion_mapping(words)
     p, q = w.involution_insert(verbose=False)
-    return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+    q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+    for i in range(1, 1 + p.max_row):
+        if p.entry(i, i).is_primed():
+            p = p.set(i, i, -p.entry(i, i))
+            q = q.set(i, i, -q.entry(i, i))
+    return p, q
 
 
 def fpf_insert(*words):

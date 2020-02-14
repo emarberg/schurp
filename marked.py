@@ -7,6 +7,9 @@ class MarkedNumber:
     def weight(self):
         return abs(self.number)
 
+    def is_primed(self):
+        return self.is_marked()
+
     def is_marked(self):
         return self.number < 0
 

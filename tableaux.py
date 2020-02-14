@@ -860,15 +860,40 @@ class Tableau:
 
         def involution_bump(a, cdir, tup):
             for i, b in enumerate(tup):
-                if a > b:
+                if abs(a) > abs(b):
                     continue
+
                 if a == b:
+                    b = MarkedNumber(abs(tup[i + 1]))
+                    new = tup
+                    cdir = cdir or (i == 0)
+
+                elif a.is_primed() and a == -b:
+                    b = -tup[i + 1]
+                    new = tup
+                elif b.is_primed() and a == -b and ((i > 0 and not cdir) or (i + 2 != len(tup) and cdir)):
+                    b = tup[i + 1]
+                    new = tup[:i] + (-tup[i], -tup[i + 1]) + tup[i + 2:]
+                elif b.is_primed() and a == -b:
                     b = tup[i + 1]
                     new = tup
                     cdir = cdir or (i == 0)
-                elif not cdir and i == 0:
+
+                elif not cdir and i == 0 and not b.is_primed() and not a.is_primed():
                     new = (a,) + tup[1:]
                     cdir = True
+                elif not cdir and i == 0 and not b.is_primed() and a.is_primed():
+                    b = -b
+                    new = (-a,) + tup[1:]
+                    cdir = True
+                elif not cdir and i == 0 and b.is_primed() and not a.is_primed():
+                    new = (-a,) + tup[1:]
+                    cdir = True
+                    b = -b
+                elif not cdir and i == 0 and b.is_primed() and a.is_primed():
+                    new = (a,) + tup[1:]
+                    cdir = True
+                    b = b
                 else:
                     new = tup[:i] + (a,) + tup[i + 1:]
                 return (b, cdir, new)
