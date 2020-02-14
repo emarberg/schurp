@@ -31,16 +31,20 @@ def test_standard_shifted():
 
 def test_semistandard_shifted():
     p = StrictPartition(2, 1)
-    assert Tableau.get_semistandard_shifted(p) == {
+    assert Tableau.get_semistandard_shifted(p, n=3) == {
         Tableau.from_string("1,1;2").shift(),
+        Tableau.from_string("1,1;3").shift(),
         Tableau.from_string("1,2;3").shift(),
+        Tableau.from_string("1,3';3").shift(),
         Tableau.from_string("1,2';2").shift(),
         Tableau.from_string("1,2';3").shift(),
+        Tableau.from_string("2,2;3").shift(),
+        Tableau.from_string("2,3';3").shift(),
     }
 
 
 def test_toggle():
-    p = StrictPartition(4, 2, 1)
+    p = StrictPartition(4, 1)
     for i, t in enumerate(Tableau.get_semistandard_shifted(p)):
         assert t.toggle().toggle() == t
 
@@ -179,7 +183,7 @@ def test_inverse_inv():
         (1, 5, 3, 4, 2, 3, 2, 1, 2),
         (3, 5, 2, 4, 3, 2, 1, 2, 3),
     ]:
-        p, q = Word(*w).involution_insert()
+        p, q = Word(*w).involution_insert(verbose=True)
         assert Tableau.inverse_inv(p, q) == w
 
 
