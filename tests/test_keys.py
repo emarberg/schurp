@@ -74,6 +74,20 @@ def test_q_key_into_p_key(m=6, l=6):
                 print(alpha, '->', attempt)
 
 
+def altschurp(mu, n):
+    from polynomials import X
+    p = 1
+    for i in range(len(mu)):
+        p *= X(i)**mu[i]
+    for i in range(len(mu)):
+        for j in range(i + 1, n):
+            p *= 1 + X(j) * X(i)**-1
+    for i in range(n):
+        for j in range(n):
+            p = p.isobaric_divided_difference(j)
+    return p
+
+
 def schurp(mu, n):
     ans = 0
     for t in Tableau.get_semistandard_shifted(Partition(*mu), n):
@@ -85,7 +99,7 @@ def schurq(mu, n):
     return schurp(mu, n) * 2**len(mu)
 
 
-def test_schurp(n=8, l=4):
+def test_schurp(n=4, l=4):
     for m in range(n + 1):
         for mu in StrictPartition.all(m):
             start = mu(1) + 1
@@ -98,7 +112,7 @@ def test_schurp(n=8, l=4):
                     print(mu, k, '->', try_to_decompose_p(p, positive=True, multiple=True))
 
 
-def test_schurq(n=8, l=8):
+def test_schurq(n=4, l=8):
     for m in range(n + 1):
         for mu in StrictPartition.all(m):
             start = mu(1)

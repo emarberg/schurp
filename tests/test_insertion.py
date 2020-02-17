@@ -13,7 +13,19 @@ from crystals import (
 from permutations import Permutation
 
 
-def test_primed_insertin():
+def test_specific_primed_insertion():
+    f = (Word(1, 4, 5), Word(3, -4), Word(2,))
+    g = (Word(1, 4, 5), Word(3,), Word(2, -4))
+
+    p = Tableau.from_string("1,2,4,5;3,5'").shift()
+    q = Tableau.from_string("1,1,1,3';2,2").shift()
+    r = Tableau.from_string("1,1,1,3';2,3").shift()
+
+    assert (p, q) == involution_insert(*f)
+    assert (p, r) == involution_insert(*g)
+
+
+def test_primed_insertion():
     for n in range(5):
         for k in range(5):
             seen = {}

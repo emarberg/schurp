@@ -65,12 +65,12 @@ class OrthogonalCrystalGenerator:
         pre = (str(self.alpha) + '\n\n' + str(self.tableau) + '\n\n') if i == 0 else ''
 
         top = str(self.recording_tableau(i))
-        bottom = '/'.join([''.join([str(self.rank - j) for j in w.elements]) for w in self[i]])
+        bottom = '/'.join([''.join([str(self.rank - abs(j)) + ("'" if j < 0 else "") for j in w.elements]) for w in self[i]])
         return pre + top + '\n\n' + bottom
 
     @classmethod
     def is_factorization_compatible(cls, f):
-        return all(len(a) == 0 or i < min(a) for i, a in enumerate(f))
+        return all(len(a) == 0 or i < min([abs(j) for j in a]) for i, a in enumerate(f))
 
     def is_highlighted(self, x):
         f = tuple(tuple(self.rank - a for a in part) for part in self[x])
@@ -106,12 +106,12 @@ class OrthogonalCrystalGenerator:
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
-        s += ['    splines=line;']
+        s += ['    splines=polyline;']
         s += ['    node [shape=box; fontname="courier"; style=filled];']
         #
         s += self.highlighted_nodes()
         #
-        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges if self.is_highlighted(x) or self.is_highlighted(y)]
+        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges]# if self.is_highlighted(x) or self.is_highlighted(y)]
         s += ['}']
         s = '\n'.join(s)
 
@@ -128,15 +128,17 @@ class OrthogonalCrystalGenerator:
             #if w.involution_length() > 2:
             #    continue
             for cg in OrthogonalCrystalGenerator.from_permutation(n, w, k):
+                print()
                 print(cg.word)
                 if not cg.edges:
                     continue
                 try:
-                    if not all(cg.alpha[i] >= cg.alpha[i + 1] for i in range(len(cg.alpha) - 1)):
-                        continue
+                    #if not all(cg.alpha[i] >= cg.alpha[i + 1] for i in range(len(cg.alpha) - 1)):
+                    #    continue
                     if len(cg.alpha) > k:
                         continue
                     cg.generate()
+                    assert cg.is_connected()
                 except:
                     pass
             print()
@@ -145,8 +147,8 @@ class OrthogonalCrystalGenerator:
     def from_permutation(cls, n, pi, num_factors):
         fac = [
             tuple([Word(*i) for i in tup])
-            for w in pi.get_involution_words()
-            for tup in cls.get_increasing_factorizations(w, num_factors)
+            for w in pi.get_primed_involution_words()
+            for tup in cls.get_increasing_primed_factorizations(w, num_factors)
         ]
         dictionary = {}
         for f in fac:
@@ -164,7 +166,7 @@ class OrthogonalCrystalGenerator:
         self._ranks = None
         self._edges = None
 
-        self.word = tuple(self.rank - a for a in self.insertion_tableau(0).row_reading_word())
+        self.word = tuple((self.rank - abs(a)) * (-1 if a < 0 else 1) for a in self.insertion_tableau(0).row_reading_word())
         self.tableau = testkeys.o_eg_insert(self.word)[0]
         self._alpha = None
 
@@ -232,15 +234,18 @@ class OrthogonalCrystalGenerator:
             components.append(comp)
         return components
 
+    def is_connected(self):
+        return len(self.components) == 1
+
     @property
     def edges(self):
         if self._edges is None:
             self._edges = []
             for x in range(len(self)):
-                for i in range(self.num_factors):
+                for i in range(-1, self.num_factors):
                     y = self.f_i(x, i)
                     if y is not None:
-                        self._edges.append((x, y, i))
+                        self._edges.append((x, y, str(i) if i >= 0 else 's'))
         return self._edges
 
     def f_i(self, element_index, operator_index):
@@ -249,36 +254,57 @@ class OrthogonalCrystalGenerator:
             b = self[element_index][operator_index].elements
             while a and b:
                 for j in range(len(a)):
-                    if a[j] > b[-1]:
+                    if abs(a[j]) > abs(b[-1]):
                         a = a[:j] + a[j + 1:]
                         break
                 b = b[:-1]
             if len(a) == 0:
                 return None
-            x = max(a)
-            a = set(self[element_index][operator_index - 1].elements) - {x}
+
+            x = max([abs(i) for i in a])
+            sgn = -1 if x not in a else 1
+
+            a = set(self[element_index][operator_index - 1].elements) - {sgn * x}
             b = set(self[element_index][operator_index].elements)
-            while x in b:
+            while x in b or -x in b:
+                if -x in b:
+                    a = (a - {x + 1}) | {-x - 1}
+                    b = (b - {-x}) | {x}
                 x += 1
-            b |= {x}
+            b |= {sgn * x}
+
             ans = self[element_index]
-            words = (Word(*sorted(a)), Word(*sorted(b)))
+            words = (Word(*sorted(a, key=abs)), Word(*sorted(b, key=abs)))
             ans = ans[:operator_index - 1] + words + ans[operator_index + 1:]
-        if operator_index == 0:
+        elif operator_index == 0:
             if self.num_factors < 2:
                 return None
             a = self[element_index][0].elements
             b = self[element_index][1].elements
             if len(a) == 0:
                 return None
-            if len(b) > 0 and min(a) > min(b):
+            if len(b) > 0 and abs(a[0]) > abs(b[0]):
                 return None
-            x = min(a)
-            a = set(a) - {x}
-            b = set(b) | {x}
+            x = a[0]
+            a = sorted(set(a) - {x}, key=abs)
+            if a and (x < 0 < a[0] or a[0] < 0 < x):
+                a[0] *= -1
+                x *= -1
+            b = sorted(set(b) | {x}, key=abs)
             ans = self[element_index]
-            words = (Word(*sorted(a)), Word(*sorted(b)))
+            words = (Word(*a), Word(*b))
             ans = words + ans[2:]
+        elif operator_index == -1:
+            if not any(self[element_index]):
+                return None
+            i = 0
+            while not self[element_index][i]:
+                i += 1
+            a = list(self[element_index][i].elements)
+            a[0] *= -1
+            ans = self[element_index]
+            ans = ans[:i] + (Word(*a),) + ans[i + 1:]
+        # print(self[element_index], '--[', operator_index, ']-->', ans)
         js = [j for j in range(len(self)) if self[j] == ans]
         assert len(js) == 1
         return js[0]

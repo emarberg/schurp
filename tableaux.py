@@ -871,7 +871,7 @@ class Tableau:
                 elif a.is_primed() and a == -b:
                     b = -tup[i + 1]
                     new = tup
-                elif b.is_primed() and a == -b and ((i > 0 and not cdir) or (i + 2 != len(tup) and cdir)):
+                elif b.is_primed() and a == -b and ((i > 0 and not cdir) or (i + 2 != j and cdir)):
                     b = tup[i + 1]
                     new = tup[:i] + (-tup[i], -tup[i + 1]) + tup[i + 2:]
                 elif b.is_primed() and a == -b:
