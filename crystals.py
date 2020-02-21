@@ -21,19 +21,6 @@ class OrthogonalCrystalGenerator:
 
     DIRECTORY = BASE_DIRECTORY + 'orthogonal/'
 
-    @classmethod
-    def test_insertion_tableaux(cls, n, k):
-        for i, w in enumerate(HopfPermutation.involutions(n)):
-            cg = OrthogonalCrystalGenerator(w.oneline, k)
-            shapes = [
-                {cg.insertion_tableau(i) for i in comp}
-                for comp in cg.components
-            ]
-            b1 = all(len(sh) == 1 for sh in shapes)
-            b2 = all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
-            print(i, w, b1, b2, '(n = %s, k = %s)' % (n, k))
-            assert b1 and b2
-
     def print_zero_weight_space(self):
         for f in self.zero_weight_space:
             p, q = involution_insert(*f)
@@ -83,6 +70,28 @@ class OrthogonalCrystalGenerator:
                 s += ['    "%s" [fillcolor=white];' % self.node_label(x)]
         return s
 
+    def write_dotfile(self):
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        #
+        s += self.highlighted_nodes()
+        #
+        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges if self.is_highlighted(x) or self.is_highlighted(y)]
+        s += ['}']
+        s = '\n'.join(s)
+        with open(self.dot_filename, 'w') as f:
+            f.write(s)
+
+    def generate(self):
+        self.write_dotfile()
+        subprocess.run(["dot", "-Tpng", self.dot_filename, "-o", self.png_filename])
+
+    def is_alpha_increasing(self):
+        return all(self.alpha[i] >= self.alpha[i + 1] for i in range(len(self.alpha) - 1))
+
     @property
     def alpha(self):
         if self._alpha is None:
@@ -102,53 +111,34 @@ class OrthogonalCrystalGenerator:
         else:
             return self._alpha
 
-    def write_dotfile(self):
-        s = []
-        s += ['digraph G {']
-        s += ['    overlap=false;']
-        s += ['    splines=polyline;']
-        s += ['    node [shape=box; fontname="courier"; style=filled];']
-        #
-        s += self.highlighted_nodes()
-        #
-        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges]# if self.is_highlighted(x) or self.is_highlighted(y)]
-        s += ['}']
-        s = '\n'.join(s)
-
-        with open(self.dot_filename, 'w') as f:
-            f.write(s)
-
-    def generate(self):
-        self.write_dotfile()
-        subprocess.run(["dot", "-Tpng", self.dot_filename, "-o", self.png_filename])
-
     @classmethod
-    def all(cls, n, k):
+    def all(cls, n, k, dominant=False):
         for w in Permutation.involutions(n):
-            #if w.involution_length() > 2:
-            #    continue
-            for cg in OrthogonalCrystalGenerator.from_permutation(n, w, k):
+            for cg in cls.from_permutation(n, w, k):
                 print()
-                print(cg.word)
+                print('orthogonal crystal generator for word', cg.word)
+                print('edges:', len(cg.edges))
                 if not cg.edges:
                     continue
                 try:
-                    #if not all(cg.alpha[i] >= cg.alpha[i + 1] for i in range(len(cg.alpha) - 1)):
-                    #    continue
+                    if dominant and not cg.is_alpha_increasing():
+                        continue
                     if len(cg.alpha) > k:
                         continue
+                    print('generating . . .')
                     cg.generate()
                     assert cg.is_connected()
                 except:
                     pass
             print()
+            yield cg
 
     @classmethod
     def from_permutation(cls, n, pi, num_factors):
         fac = [
             tuple([Word(*i) for i in tup])
-            for w in pi.get_primed_involution_words()
-            for tup in cls.get_increasing_primed_factorizations(w, num_factors)
+            for w in pi.get_involution_words()
+            for tup in cls.get_increasing_factorizations(w, num_factors)
         ]
         dictionary = {}
         for f in fac:
@@ -156,7 +146,7 @@ class OrthogonalCrystalGenerator:
             dictionary[t] = dictionary.get(t, []) + [f]
         for t in dictionary:
             fac = sorted(dictionary[t], key=lambda f: tuple(len(a) for a in f), reverse=True)
-            yield OrthogonalCrystalGenerator(tuple(pi(i) for i in range(1, n + 1)), fac, num_factors)
+            yield cls(tuple(pi(i) for i in range(1, n + 1)), fac, num_factors)
 
     def __init__(self, oneline, factorizations, num_factors):
         self.rank = len(oneline)
@@ -164,11 +154,15 @@ class OrthogonalCrystalGenerator:
         self._factorizations = factorizations
         self._weights = None
         self._ranks = None
-        self._edges = None
 
-        self.word = tuple((self.rank - abs(a)) * (-1 if a < 0 else 1) for a in self.insertion_tableau(0).row_reading_word())
+        def adjust(a):
+            return (self.rank - abs(a)) * (-1 if a < 0 else 1)
+
+        self.word = tuple(adjust(a) for a in self.insertion_tableau(0).row_reading_word())
         self.tableau = testkeys.o_eg_insert(self.word)[0]
         self._alpha = None
+        self.f = {}
+        self.compute_edges()
 
     def __repr__(self):
         return 'Crystal generator for P^O(w) = %s with ell = %s' % (self.insertion_tableau(0), self.num_factors)
@@ -239,17 +233,76 @@ class OrthogonalCrystalGenerator:
 
     @property
     def edges(self):
-        if self._edges is None:
-            self._edges = []
-            for x in range(len(self)):
-                for i in range(-1, self.num_factors):
-                    y = self.f_i(x, i)
-                    if y is not None:
-                        self._edges.append((x, y, str(i) if i >= 0 else 's'))
         return self._edges
 
+    def compute_edges(self):
+        def label(i):
+            return (str(-i) + "'") if i < 0 else str(i)
+
+        self.e = {}
+        self._edges = []
+        for x in range(len(self)):
+            for i in range(1, self.num_factors):
+                y = self.f_i(x, i)
+                self.e[(y, i)] = x
+                if y is not None:
+                    self._edges.append((x, y, label(i)))
+
+        for x in range(len(self)):
+            for i in range(1, self.num_factors):
+                y = self.f_i(x, -i)
+                self.e[(y, -i)] = x
+                if y is not None:
+                    self._edges.append((x, y, label(-i)))
+
+    def sigma(self, element_index, operator_index):
+        if element_index is None:
+            return None
+        k = self.phi(element_index, operator_index) - self.epsilon(element_index, operator_index)
+        if k > 0:
+            for i in range(k):
+                element_index = self.f_i(element_index, operator_index)
+        elif k < 0:
+            for i in range(-k):
+                element_index = self.e_i(element_index, operator_index)
+        return element_index
+
+    def phi(self, element_index, operator_index):
+        k = 0
+        while True:
+            element_index = self.f_i(element_index, operator_index)
+            if element_index is None:
+                break
+            k += 1
+        return k
+
+    def epsilon(self, element_index, operator_index):
+        k = 0
+        while True:
+            element_index = self.e_i(element_index, operator_index)
+            if element_index is None:
+                break
+            k += 1
+        return k
+
+    def e_i(self, element_index, operator_index):
+        return self.e.get((element_index, operator_index), None)
+
     def f_i(self, element_index, operator_index):
-        if operator_index > 0:
+        if (element_index, operator_index) not in self.f:
+            self.f[(element_index, operator_index)] = self.compute_f_i(element_index, operator_index)
+        return self.f[(element_index, operator_index)]
+
+    def compute_f_i(self, element_index, operator_index):
+        if operator_index < -1:
+            i = abs(operator_index) - 1
+            element_index = self.sigma(element_index, i)
+            element_index = self.sigma(element_index, i + 1)
+            element_index = self.f_i(element_index, -i)
+            element_index = self.sigma(element_index, i + 1)
+            element_index = self.sigma(element_index, i)
+            return element_index
+        elif operator_index > 0:
             a = self[element_index][operator_index - 1].elements
             b = self[element_index][operator_index].elements
             while a and b:
@@ -276,7 +329,7 @@ class OrthogonalCrystalGenerator:
             ans = self[element_index]
             words = (Word(*sorted(a, key=abs)), Word(*sorted(b, key=abs)))
             ans = ans[:operator_index - 1] + words + ans[operator_index + 1:]
-        elif operator_index == 0:
+        elif operator_index == -1:
             if self.num_factors < 2:
                 return None
             a = self[element_index][0].elements
@@ -294,7 +347,7 @@ class OrthogonalCrystalGenerator:
             ans = self[element_index]
             words = (Word(*a), Word(*b))
             ans = words + ans[2:]
-        elif operator_index == -1:
+        elif operator_index == 0:
             if not any(self[element_index]):
                 return None
             i = 0
@@ -353,30 +406,75 @@ class SymplecticCrystalGenerator(OrthogonalCrystalGenerator):
 
     DIRECTORY = BASE_DIRECTORY + 'symplectic/'
 
+    @property
+    def alpha(self):
+        if self._alpha is None:
+            pkey = 0
+            for x in range(len(self)):
+                if self.is_highlighted(x):
+                    pkey += monomial_from_composition(self.weights[x])
+            self._alpha = testkeys.decompose_p(pkey)
+        return self._alpha
+
     @classmethod
-    def test_insertion_tableaux(cls, n, k):
-        for i, w in enumerate(HopfPermutation.fpf_involutions(n)):
-            cg = cls(w.oneline, k)
-            shapes = [
-                {cg.insertion_tableau(i) for i in comp}
-                for comp in cg.components
-            ]
-            b1 = all(len(sh) == 1 for sh in shapes)
-            b2 = all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
-            print(i, w, b1, b2, '(n = %s, k = %s)' % (n, k))
-            assert b1 and b2
+    def all(cls, n, k, dominant=False):
+        for w in Permutation.fpf_involutions(n):
+            for cg in cls.from_permutation(n, w, k):
+                print()
+                print('symplectic crystal generator for word', cg.word)
+                print('edges:', len(cg.edges))
+                if not cg.edges:
+                    continue
+                try:
+                    if dominant and not cg.is_alpha_increasing():
+                        continue
+                    if len(cg.alpha) > k:
+                        continue
+                    print('generating . . .')
+                    cg.generate()
+                    assert cg.is_connected()
+                except:
+                    pass
+            print()
+            yield cg
+
+    @classmethod
+    def from_permutation(cls, n, pi, num_factors):
+        fac = [
+            tuple([Word(*i) for i in tup])
+            for w in pi.get_fpf_involution_words()
+            for tup in cls.get_increasing_factorizations(w, num_factors)
+        ]
+        dictionary = {}
+        for f in fac:
+            t = fpf_insert(*f)[0]
+            dictionary[t] = dictionary.get(t, []) + [f]
+        for t in dictionary:
+            fac = sorted(dictionary[t], key=lambda f: tuple(len(a) for a in f), reverse=True)
+            yield cls(tuple(pi(i) for i in range(1, n + 1)), fac, num_factors)
+
+    def __init__(self, oneline, factorizations, num_factors):
+        self.rank = len(oneline)
+        self.num_factors = num_factors
+        self._factorizations = factorizations
+        self._weights = None
+        self._ranks = None
+
+        def adjust(a):
+            return (self.rank - abs(a)) * (-1 if a < 0 else 1)
+
+        self.word = tuple(adjust(a) for a in self.insertion_tableau(0).row_reading_word())
+        self.tableau = testkeys.sp_eg_insert(self.word)[0]
+
+        self._alpha = None
+        self.f = {}
+        self.compute_edges()
 
     def insertion_tableau(self, i):
         return fpf_insert(*self[i])[0]
 
     def recording_tableau(self, i):
         return fpf_insert(*self[i])[1]
-
-    def node_label(self, i):
-        pre = str(self.insertion_tableau(i))
-        top = str(self.recording_tableau(i))
-        bottom = '/'.join([''.join([str(j) for j in w.elements]) for w in self[i]])
-        return pre + '\n\n' + top + '\n\n' + bottom
 
     def print_zero_weight_space(self):
         for f in self.zero_weight_space:
@@ -394,19 +492,10 @@ class SymplecticCrystalGenerator(OrthogonalCrystalGenerator):
     def __repr__(self):
         return 'FPF crystal generator for w = %s with ell = %s' % (self.oneline, self.num_factors)
 
-    @classmethod
-    def all(cls, n, k):
-        assert n % 2 == 0
-        for w in HopfPermutation.fpf_involutions(n):
-            if w.oneline != reduce_fpf(w.oneline):
-                continue
-            cg = cls(w.oneline, k)
-            if cg.edges:
-                cg.generate()
-
-    def f_i(self, element_index, operator_index):
-        if operator_index > 0:
-            return super(SymplecticCrystalGenerator, self).f_i(element_index, operator_index)
+    def compute_f_i(self, element_index, operator_index):
+        if operator_index > 0 or operator_index < -1:
+            return super(SymplecticCrystalGenerator, self).compute_f_i(element_index, operator_index)
+        assert operator_index == -1
         if self.num_factors < 2:
             return None
         a = self[element_index][0].elements
