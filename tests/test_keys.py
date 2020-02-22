@@ -24,7 +24,7 @@ from keys import (
     shifted_key_maps,
     is_symmetric_composition,
     symmetric_partitions,
-    skew_symmetric_partitions
+    skew_symmetric_partitions,
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -58,7 +58,7 @@ def _attempt_p_into_q(alpha, attempts=10):
             coeff *= 2
 
 
-def test_p_key_into_q_key(m=6, l=6):
+def test_p_key_into_q_key(m=4, l=4):
     for n in range(m + 1):
         for k in range(l + 1):
             for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
@@ -66,7 +66,7 @@ def test_p_key_into_q_key(m=6, l=6):
                 print(alpha, '->', attempt)
 
 
-def test_q_key_into_p_key(m=6, l=6):
+def test_q_key_into_p_key(m=4, l=4):
     for n in range(m + 1):
         for k in range(l + 1):
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
@@ -99,7 +99,7 @@ def schurq(mu, n):
     return schurp(mu, n) * 2**len(mu)
 
 
-def test_schurp(n=4, l=4):
+def test_schurp(n=3, l=3):
     for m in range(n + 1):
         for mu in StrictPartition.all(m):
             start = mu(1) + 1
@@ -112,7 +112,7 @@ def test_schurp(n=4, l=4):
                     print(mu, k, '->', try_to_decompose_p(p, positive=True, multiple=True))
 
 
-def test_schurq(n=4, l=8):
+def test_schurq(n=3, l=3):
     for m in range(n + 1):
         for mu in StrictPartition.all(m):
             start = mu(1)
@@ -125,7 +125,7 @@ def test_schurq(n=4, l=8):
                     print(mu, k, '->', 'FAILED')
 
 
-def test_brion_construction(n=4, m=10):
+def test_brion_construction(n=4, m=4):
     def brion_key(z, mu):
         ans = 0
         mu += (z.rank - len(mu)) * (0,)
@@ -185,7 +185,7 @@ def test_linear_dependence():
     assert q_key((3, 3, 4, 0, 0, 1)) + q_key((3, 4, 3, 0, 0, 0, 1)) == q_key((3, 4, 3, 0, 0, 1)) + q_key((3, 3, 4, 0, 0, 0, 1))
 
 
-def test_symmetric_composition_from_row_column_counts(m=5):
+def test_symmetric_composition_from_row_column_counts():
     assert symmetric_composition_from_row_column_counts((), ()) == ()
     assert symmetric_composition_from_row_column_counts((5, 0, 0, 2, 0), (1, 1, 1, 2, 2)) == (5, 1, 1, 3, 2)
     assert symmetric_composition_from_row_column_counts((2,), (1, 1)) == (2, 1)
@@ -199,10 +199,14 @@ def test_symmetric_halves(m=6, l=6):
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
                 a, b = symmetric_halves(alpha)
                 beta = symmetric_composition_from_row_column_counts(a, b)
-                print(alpha)
-                print(beta)
-                print(a, b)
-                print()
+                if alpha != beta:
+                    print(alpha)
+                    print(beta)
+                    print()
+                    print(a)
+                    print(b)
+                    print()
+                    print()
                 assert alpha == beta
 
 
@@ -1476,9 +1480,9 @@ def q_update(targets, exponents, halves, alphas):
         for d in exponents:
             try:
                 a = symmetric_composition_from_row_column_counts(d, e)
+                assert symmetric_halves(a) == (d, e)
             except:
                 continue
-            assert symmetric_halves(a) == (d, e)
             if a not in alphas:
                 alphas[a] = q_key(a)
                 halves[e] = halves.get(e, []) + [(alphas[a], a)]

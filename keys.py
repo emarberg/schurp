@@ -103,42 +103,102 @@ def shifted_key_maps(p):
 
 
 def symmetric_composition_from_row_column_counts(row_counts, col_counts):
-    def helper(rc, cc):
-        if len(rc) == 0 or max(rc) == 0:
-            yield set()
-            return
-        m = max(rc)
-        i = [i for i, a in enumerate(rc) if a == m][-1]
-        columns = [j for j, c in enumerate(cc) if c > 0 and j >= i]
-        for subset in itertools.combinations(columns, m):
-            new_rc = rc[:i] + (0,) + rc[i + 1:]
-            new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
-            for ans in helper(new_rc, new_cc):
-                # print(new_rc, new_cc, '\n', Tableau({k: 1 for k in ans}))
-                for j in subset:
-                    ans |= {(i + 1, j + 1), (j + 1, i + 1)}
-                yield ans
-    #
+    shape = _symmetric_composition_from_row_column_counts(row_counts, col_counts)
+    ans = []
+    for i, j in shape:
+        while not (i < len(ans)):
+            ans.append(0)
+        ans[i] += 1
+    return tuple(ans)
+
+
+def _symmetric_composition_from_row_column_counts(row_counts, col_counts):
     n = max(len(row_counts), len(col_counts))
     row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
     col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
     assert sum(row_counts) == sum(col_counts)
-    #
-    answers = []
-    for bns in helper(row_counts, col_counts):
-        ans = n * [0]
-        for i, j in bns:
-            ans[i - 1] += 1
-        ans = tuple(ans)
-        while ans and ans[-1] == 0:
-            ans = ans[:-1]
-        if Partition(*sorted(ans, reverse=True)).is_symmetric():
-            answers.append(ans)
-    if len(answers) > 1:
-        raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
-    if len(answers) == 0:
-        raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
-    return answers[0]
+
+    if sum(row_counts) == 0:
+        return set()
+
+    c = tuple(row_counts[i] + col_counts[i] - 1 for i in range(n))
+    m = [i for i in range(n) if c[i] == max(c)][0]
+    assert c[m] > 0
+
+    a = list(row_counts)
+    a[m] = 0
+    for i in range(m):
+        if a[i] > 0:
+            a[i] -= 1
+    a = tuple(a)
+
+    b = list(col_counts)
+    b[m] = 0
+    for i in range(m + 1, n):
+        if b[i] > 0:
+            b[i] -= 1
+    b = tuple(b)
+
+    mu = _symmetric_composition_from_row_column_counts(a, b)
+
+    new_rows = n * [0]
+    new_cols = n * [0]
+    for i, j in mu:
+        if i <= j:
+            new_rows[i] += 1
+            new_cols[j] += 1
+    for i in range(m):
+        if new_rows[i] < row_counts[i]:
+            assert row_counts[i] == new_rows[i] + 1
+            mu.add((i, m))
+            mu.add((m, i))
+
+    mu.add((m, m))
+    for j in range(m + 1, n):
+        if new_cols[j] < col_counts[j]:
+            assert col_counts[j] == new_cols[j] + 1
+            mu.add((m, j))
+            mu.add((j, m))
+    return mu
+
+
+# def symmetric_composition_from_row_column_counts(row_counts, col_counts):
+#     def helper(rc, cc):
+#         if len(rc) == 0 or max(rc) == 0:
+#             yield set()
+#             return
+#         m = max(rc)
+#         i = [i for i, a in enumerate(rc) if a == m][-1]
+#         columns = [j for j, c in enumerate(cc) if c > 0 and j >= i]
+#         for subset in itertools.combinations(columns, m):
+#             new_rc = rc[:i] + (0,) + rc[i + 1:]
+#             new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
+#             for ans in helper(new_rc, new_cc):
+#                 # print(new_rc, new_cc, '\n', Tableau({k: 1 for k in ans}))
+#                 for j in subset:
+#                     ans |= {(i + 1, j + 1), (j + 1, i + 1)}
+#                 yield ans
+#     #
+#     n = max(len(row_counts), len(col_counts))
+#     row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
+#     col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
+#     assert sum(row_counts) == sum(col_counts)
+#     #
+#     answers = []
+#     for bns in helper(row_counts, col_counts):
+#         ans = n * [0]
+#         for i, j in bns:
+#             ans[i - 1] += 1
+#         ans = tuple(ans)
+#         while ans and ans[-1] == 0:
+#             ans = ans[:-1]
+#         if Partition(*sorted(ans, reverse=True)).is_symmetric():
+#             answers.append(ans)
+#     if len(answers) > 1:
+#         raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
+#     if len(answers) == 0:
+#         raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
+#     return answers[0]
 
 
 def symmetric_double(alpha):
