@@ -122,21 +122,22 @@ def _symmetric_composition_from_row_column_counts(row_counts, col_counts):
         return set()
 
     c = tuple(row_counts[i] + col_counts[i] - 1 for i in range(n))
-    m = [i for i in range(n) if c[i] == max(c)][0]
-    assert c[m] > 0
+    m = [i for i in range(n) if c[i] == max(c)]
 
     a = list(row_counts)
-    a[m] = 0
-    for i in range(m):
+    for i in m:
+        a[i] = 0
+    for i in range(n):
         if a[i] > 0:
-            a[i] -= 1
+            a[i] -= len([j for j in m if i < j])
     a = tuple(a)
 
     b = list(col_counts)
-    b[m] = 0
-    for i in range(m + 1, n):
+    for i in m:
+        b[i] = 0
+    for i in range(n):
         if b[i] > 0:
-            b[i] -= 1
+            b[i] -= len([j for j in m if j < i])
     b = tuple(b)
 
     mu = _symmetric_composition_from_row_column_counts(a, b)
@@ -147,18 +148,11 @@ def _symmetric_composition_from_row_column_counts(row_counts, col_counts):
         if i <= j:
             new_rows[i] += 1
             new_cols[j] += 1
-    for i in range(m):
-        if new_rows[i] < row_counts[i]:
-            assert row_counts[i] == new_rows[i] + 1
-            mu.add((i, m))
-            mu.add((m, i))
-
-    mu.add((m, m))
-    for j in range(m + 1, n):
-        if new_cols[j] < col_counts[j]:
-            assert col_counts[j] == new_cols[j] + 1
-            mu.add((m, j))
-            mu.add((j, m))
+    for i in range(n):
+        if new_rows[i] < row_counts[i] or new_cols[i] < col_counts[i]:
+            for j in m:
+                mu.add((i, j))
+                mu.add((j, i))
     return mu
 
 
