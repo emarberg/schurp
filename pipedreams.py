@@ -260,6 +260,14 @@ class Pipedream:
     def strict_lower_part(self):
         return Pipedream({(i, j) for (i, j) in self.crossings if i > j})
 
+    def weight(self):
+        ans = []
+        for (i, j) in self.crossings:
+            while i - 1 >= len(ans):
+                ans += [0]
+            ans[i - 1] += 1
+        return tuple(ans)
+
     def monomial(self):
         ans = one_var()
         for (i, j) in self.crossings:

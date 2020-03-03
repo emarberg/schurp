@@ -227,7 +227,7 @@ def symmetric_half(alpha):
     return ans
 
 
-def symmetric_halves(alpha):
+def symmetric_halves(alpha, pad=False):
     def s(i):
         def f(x):
             return (x + 1) if x == i else (x - 1) if x == i + 1 else x
@@ -248,7 +248,14 @@ def symmetric_halves(alpha):
         rows = rows[:-1]
     while cols and cols[-1] == 0:
         cols = cols[:-1]
-    return tuple(rows), tuple(cols)
+    a, b = tuple(rows), tuple(cols)
+
+    if pad:
+        n = len(alpha)
+        a += (n - len(a)) * (0,)
+        b += (n - len(b)) * (0,)
+    return a, b
+
 
 
 def skew_symmetric_double(alpha):
@@ -617,14 +624,21 @@ def weak_compatible_sequences(seq, i_min=1):
                 yield (a,) + p, X(i) * q
 
 
-def compatible_sequences(seq, i_min=1):
+def compatible_sequences(seq, i_min=1, flag=None):
+    def phi(a):
+        if flag is None:
+            return a
+        if type(flag) in [list, tuple, dict]:
+            return flag[a]
+        return flag(a)
+
     if len(seq) == 0:
         yield (), X(0)**0
     else:
         a, seq = seq[0], seq[1:]
-        for i in range(i_min, a + 1):
+        for i in range(i_min, phi(a) + 1):
             j_min = (i + 1) if (seq and a < seq[0]) else i
-            for p, q in compatible_sequences(seq, j_min):
+            for p, q in compatible_sequences(seq, j_min, flag):
                 yield (a,) + p, X(i) * q
 
 

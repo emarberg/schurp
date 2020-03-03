@@ -25,6 +25,7 @@ from keys import (
     is_symmetric_composition,
     symmetric_partitions,
     skew_symmetric_partitions,
+    symmetric_half
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -45,6 +46,354 @@ p_halves_cache = {}
 
 q_insertion_cache = {}
 p_insertion_cache = {}
+
+
+def flags(length, upperbound, lowerbound=0):
+    if length == 0:
+        yield ()
+        return
+    for i in range(lowerbound, upperbound):
+        for f in flags(length - 1, upperbound, max(i, lowerbound + 1)):
+            yield (i,) + f
+
+
+def q_key_tableau(w, alpha):
+    positions = [(i + 1, j) for i, v in enumerate(alpha) for j in range(1, v + 1)]
+    sigma = Permutation.from_word(*sorting_permutation(alpha))
+    positions = [(i, sigma(j)) for i, j in positions]
+    positions = [(i, j) for i, j in positions if i <= j]
+    positions = sorted(positions, key=lambda x: (x[1], -x[0]))
+    mapping = {}
+    for i, b in enumerate(positions):
+        mapping[b] = w[i]
+    return Tableau(mapping)
+
+
+def q_key_tableau(w, alpha):
+    _, cc = symmetric_halves(alpha)
+    positions = [(j, i + 1) for i, v in enumerate(cc) for j in range(v, 0, -1)]
+    mapping = {}
+    for i, b in enumerate(positions):
+        mapping[b] = w[i]
+    return Tableau(mapping)
+
+
+def test_flagged_p_key(n):
+    for i in Permutation.fpf_involutions(n):
+        ck = defaultdict(list)
+        for w in i.get_fpf_involution_words():
+            p, _ = sp_eg_insert(w)
+            ck[p].append(w)
+        for p, ckclass in ck.items():
+            if len(ckclass[0]) == 0:
+                continue
+            print(p)
+            maxf = 10
+            for f in flags(1 + max(ckclass[0]), n):
+                maxf -= 1
+                if maxf < 0:
+                    break
+                ans = 0
+                exp = defaultdict(list)
+                for w in ckclass:
+                    for _, x in compatible_sequences(w, flag=f):
+                        exp[get_exponents(x)[0]].append(w)
+                        ans += x
+                alpha = decompose_p(ans)
+                rc, cc = skew_symmetric_halves(alpha)
+                print('flag:', f, '->', alpha, ':', rc, cc, 'w =', w)
+            print()
+
+
+def test_flagged_q_key(n):
+    for i in Permutation.involutions(n):
+        ck = defaultdict(list)
+        va = {}
+        for w in i.get_involution_words():
+            p, _ = o_eg_insert(w)
+            ck[p].append(w)
+            va[p] = p.durfee()
+        for p, ckclass in ck.items():
+            if len(ckclass[0]) == 0:
+                continue
+            if len(p.partition()) < 2:
+                continue
+            for f in flags(1 + max(ckclass[0]), n):
+                ans = 0
+                exp = defaultdict(list)
+                for w in ckclass:
+                    for _, x in compatible_sequences(w, flag=f):
+                        exp[get_exponents(x)[0]].append(w)
+                        ans += x
+                ans *= 2**va[p]
+                alpha = decompose_q(ans)
+
+                rc, cc = symmetric_halves(alpha)
+                assert len(exp[cc]) == 1
+                w = exp[cc][0]
+
+                scc = sorted(cc)
+                while scc and scc[0] == 0:
+                    scc = scc[1:]
+                if scc == sorted(symmetric_halves(sorted(alpha, reverse=True))[1]):
+                    break
+
+                print('flag:', f, '->', alpha, ':', rc, cc)
+                print()
+                print('cc:', cc, '->', w)
+                p, q = o_eg_insert(w)
+                r = q_key_tableau(w, alpha)
+                print(r)
+                print(p)
+                print(q)
+                input('')
+                break
+
+
+def morse_schilling_f(decreasing_factorization, bounded=True):
+    for i in range(len(decreasing_factorization)):
+        if i == len(decreasing_factorization) - 1:
+            decreasing_factorization += ((),)
+
+        a = decreasing_factorization[i]
+        b = decreasing_factorization[i + 1]
+        unpaired = []
+
+        while a:
+            paired = False
+            for j in range(len(b) - 1, -1, -1):
+                if b[j] > a[0]:
+                    b = b[:j] + b[j + 1:]
+                    paired = True
+                    break
+            if not paired:
+                unpaired += [a[0]]
+            a = a[1:]
+
+        if len(unpaired) == 0:
+            continue
+
+        x = unpaired[-1]
+        y = x
+        while y in decreasing_factorization[i + 1]:
+            y -= 1
+        df = list(decreasing_factorization)
+        df[i] = tuple(e for e in df[i] if e != x)
+        df[i + 1] = tuple(sorted(df[i + 1] + (y,), reverse=True))
+
+        while df and df[-1] == ():
+            df = df[:-1]
+
+        if not bounded or all(df[i][-1] > i for i in range(len(df)) if df[i]):
+            yield i, tuple(df)
+
+
+def is_morse_schilling_highest_weight(decreasing_factorization):
+    for i in range(len(decreasing_factorization) - 1):
+        a = decreasing_factorization[i]
+        b = decreasing_factorization[i + 1]
+        while a and b:
+            for j in range(len(b) - 1, -1, -1):
+                if b[j] > a[0]:
+                    b = b[:j] + b[j + 1:]
+                    break
+            a = a[1:]
+        if len(b) != 0:
+            return False
+    return True
+
+
+def get_morse_schilling_highest_weights(it):
+    for word in it:
+        df = maximal_decreasing_factors(word)
+        if is_morse_schilling_highest_weight(df):
+            yield df
+
+
+def get_morse_schilling_demazure_weights(it):
+    def weight(u):
+        ans = tuple(map(len, u))
+        while ans and ans[-1] == 0:
+            ans = ans[:-1]
+        return ans
+
+    def sorted_weight(u):
+        ans = tuple(sorted(weight(u), reverse=True))
+        while ans and ans[-1] == 0:
+            ans = ans[:-1]
+        return ans
+
+    for u, graph in get_morse_schilling_demazure(it):
+        mu = weight(u)
+        levels = []
+        add = {u}
+        while add:
+            levels += [[]]
+            next_add = set()
+            for v in add:
+                if sorted_weight(v) == mu:
+                    levels[-1] += [v]
+                for i in graph[v]:
+                    w = graph[v][i]
+                    next_add.add(w)
+            add = next_add
+        while levels and levels[-1] == []:
+            levels = levels[:-1]
+        assert len(levels[-1]) == 1
+        yield levels[-1][0]
+
+
+def get_morse_schilling_demazure(it):
+    highest = sorted(get_morse_schilling_highest_weights(it))
+    for u in highest:
+        graph = {}
+        add = {u}
+        while add:
+            next_add = set()
+            for w in add:
+                graph[w] = {}
+                for i, df in morse_schilling_f(w):
+                    graph[w][i] = df
+                    next_add.add(df)
+            add = next_add
+        yield u, graph
+
+
+def remove_hook(mu):
+    h = (mu[0],) + (mu[0] - 1) * (1,)
+    mu = list(mu)[1:]
+    mu = [a - 1 for a in mu]
+    while mu and mu[-1] == 0:
+        mu = mu[:-1]
+    mu = tuple(mu)
+    return mu, h
+
+
+def test_q_dominant():
+    weights = {}
+
+    def get_weight(mu):
+        if mu not in weights:
+            rc, cc = symmetric_halves(mu)
+            z = Permutation.from_involution_code(cc)
+            it = z.get_involution_words()
+            weights[mu] = sorted(get_morse_schilling_demazure_weights(it))
+        return weights[mu]
+
+    n = 0
+    while True:
+        n += 1
+        print('n =', n)
+        print()
+        for mu in symmetric_partitions(n):
+            level = 0
+
+            print('key =', decompose_into_keys(q_key(mu)))
+            print()
+            print('level', level, ': mu =', mu)
+            print()
+            for w in get_weight(mu):
+                print('  ', w)
+            print()
+
+            mu, h = remove_hook(mu)
+            level += 1
+
+            print('level', level, ': mu =', mu, 'hook =', h)
+            print()
+            for w in get_weight(mu):
+                print('  ', w)
+            print()
+
+            for w in get_weight(h):
+                print('  ', w)
+            print()
+
+            input('')
+
+
+def test_p_multiplicity_free():
+    print()
+    n = 0
+    while True:
+        n += 1
+        print(n)
+        for mu in skew_symmetric_partitions(n):
+            a, b = skew_symmetric_halves(mu)
+            f = p_key(mu)
+            dec = decompose_into_keys(f)
+            if set(dec.values()) != {1}:
+                print(mu, '->', a, b, ':', {x for x in dec if dec[x] != 1})
+                print()
+                return dec
+
+
+def test_q_multiplicity_free():
+    print()
+    n = 0
+    while True:
+        n += 1
+        print(n)
+        for mu in symmetric_partitions(n):
+            a, b = symmetric_halves(mu)
+            f = q_key(mu)
+            dec = decompose_into_keys(f)
+            if len(set(dec.values())) > 1:
+                print(mu, '->', a, b, ':', {x for x in dec if dec[x] != min(dec.values())})
+                print()
+                return dec
+
+
+def test_leading_with_atoms(m=6):
+    for n in range(m + 1):
+        for mu in symmetric_partitions(n):
+            b, c = symmetric_halves(mu)
+            z = Permutation.from_involution_code(c)
+            s = []
+            for a in z.get_atoms():
+                u = a.get_bottom_pipe_dream().weight()
+                v = a.get_top_pipe_dream().weight()
+                s += [(u, v, sorted(decompose_into_keys(Schubert.get(a))))]
+            print()
+            print('lambda =', mu, '->', c, b)
+            for u, v, line in s:
+                print(u, ':', line, ':', v)
+            print()
+            input('?')
+
+
+def test_leading(m=12, l=12, p=None):
+    def toggle(a, i):
+        if a[i - 1] <= a[i]:
+            return a
+        b = list(a)
+        b[i - 1], b[i] = a[i], a[i - 1]
+        return tuple(b)
+
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                word = tuple(reversed(sorting_permutation(alpha)))
+                mu = tuple(reversed(sorted(alpha)))
+                lam = {(i + 1, j + 1) for i in range(len(mu)) for j in range(mu[i])}
+                alphas = sorted(decompose_into_keys(q_key(mu)))
+                if p is not None and len(alphas) < p:
+                    continue
+                alphas = [a + (len(alpha) - len(a)) * (0,) for a in alphas]
+                print('alpha =', alpha, '<-', mu, ':', word)
+                print()
+                print(Tableau({a: '0' for a in lam}))
+                print(' '.join(map(str, alphas)))
+                for i in word:
+                    alphas = sorted(toggle(a, i) for a in alphas)
+                    s = Permutation.s_i(i)
+                    lam = {(s(a), s(b)) for (a, b) in lam}
+                    print()
+                    print(Tableau({a: '0' for a in lam}))
+                    print(' '.join(map(str, alphas)))
+                print()
+                print()
+                input('')
 
 
 def _attempt_p_into_q(alpha, attempts=10):
@@ -1038,8 +1387,23 @@ def test_p_key_start_decomposition(m=5):
             assert set(dec.values()) == {1}
 
 
+def modify_row_counts(alpha, rc, up=True):
+    rc += (len(alpha) - len(rc)) * (0,)
+    mc = list(rc)
+    repeat = True
+    while repeat:
+        repeat = False
+        for i in range(len(rc) - 1):
+            for j in range(i + 1, len(rc)):
+                if alpha[i] == alpha[j] and ((up and mc[i] > mc[j]) or (not up and mc[i] < mc[j])):
+                    mc[i], mc[j] = mc[j], mc[i]
+                    repeat = True
+    while mc and mc[-1] == 0:
+        mc = mc[:-1]
+    return tuple(mc)
+
+
 def test_q_key_start_decomposition(m=5):
-    # FAILS
     for n in range(m + 1):
         for alpha in symmetric_partitions(n):
             kappa = q_key(alpha)
@@ -1047,12 +1411,20 @@ def test_q_key_start_decomposition(m=5):
             ex = min({0} | set(dec.values()))
             assert ex >= 0
             assert kappa != 0
-            if set(dec.values()) != {2**q_power(alpha)}:
-                a, b = symmetric_halves(alpha)
-                print('alpha =', alpha, '->', a, b)
-                print('decomposition =', dec)
-                print('decomposition =', dec.values())
-            assert set(dec.values()) == {2**q_power(alpha)}
+
+            rc, cc = symmetric_halves(alpha)
+            mc = modify_row_counts(alpha, rc)
+            tc = modify_row_counts(alpha, rc, False)
+
+            print('alpha =', alpha, '->', cc, rc, 'modified =', mc, rc == tc)
+            #print('decomposition =', sorted(dec))
+            print()
+            assert cc == min(dec)
+            assert mc == max(dec)
+            assert dec[cc] == 2**q_power(alpha)
+            assert dec[mc] == 2**q_power(alpha)
+            assert rc == tc
+            # assert set(dec.values()) == {2**q_power(alpha)}
 
 
 def test_p_key_decomposition(m=5):
@@ -1067,14 +1439,37 @@ def test_p_key_decomposition(m=5):
 
 
 def test_q_key_decomposition(m=5):
+    # FAILS
     for n in range(m + 1):
         for k in range(m + 1):
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                if any(alpha[i] == alpha[j] for i in range(len(alpha)) for j in range(i + 1, len(alpha))):
+                    continue
                 kappa = q_key(alpha)
+
+                rc, cc = symmetric_halves(alpha)
+                mc = modify_row_counts(alpha, rc)
+
                 dec = decompose_into_keys(kappa)
                 ex = min({0} | set(dec.values()))
+
+                is_dom = lambda x :all(x[i] >= x[i+1] for i in range(len(x) - 1)) # noqa
+                lam = sorted(filter(is_dom, get_exponents(kappa)))[-1]
+                assert lam == symmetric_half(tuple(reversed(sorted(alpha))))
+
                 assert ex >= 0
                 assert kappa != 0
+                assert cc == min(dec)
+                if mc not in dec:
+                    print('alpha =', alpha, '->', cc, rc, 'modified =', mc)
+                    print()
+                    print(sorting_permutation(alpha))
+                    print()
+                    print(sorted(dec))
+                    print()
+                    input('?')
+                assert dec[cc] == 2**q_power(alpha)
+
 
 
 # def _naive_next(w, base):

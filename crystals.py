@@ -9,7 +9,7 @@ from words import (
     get_fpf_involution_words
 )
 from permutations import Permutation
-from keys import monomial_from_composition
+from keys import monomial_from_composition, symmetric_halves
 import tests.test_keys as testkeys
 import subprocess
 
@@ -49,7 +49,10 @@ class OrthogonalCrystalGenerator:
 
     def node_label(self, i):
         # turning increasing factorizations into decreasing by conjugating by long element
-        pre = (str(self.alpha) + '\n\n' + str(self.tableau) + '\n\n') if i == 0 else ''
+        pre = ''
+        if i == 0:
+            a, b = symmetric_halves(self.alpha, pad=True)
+            pre += 'a: ' + str(self.alpha) + '\nr: ' + str(a) + '\nc: ' + str(b) + '\n\n' + str(self.tableau) + '\n\n'
 
         top = str(self.recording_tableau(i))
         bottom = '/'.join([''.join([str(self.rank - abs(j)) + ("'" if j < 0 else "") for j in w.elements]) for w in self[i]])
@@ -79,7 +82,7 @@ class OrthogonalCrystalGenerator:
         #
         s += self.highlighted_nodes()
         #
-        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges if self.is_highlighted(x) or self.is_highlighted(y)]
+        s += ['    "%s" -> "%s" [label="%s"];' % (self.node_label(x), self.node_label(y), i) for (x, y, i) in self.edges]# if self.is_highlighted(x) or self.is_highlighted(y)]
         s += ['}']
         s = '\n'.join(s)
         with open(self.dot_filename, 'w') as f:

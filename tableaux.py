@@ -27,6 +27,12 @@ class Tableau:
     def __iter__(self):
         return self.mapping.__iter__()
 
+    def durfee(self):
+        i = 0
+        while (i + 1, i + 1) in self.mapping:
+            i += 1
+        return i
+
     @classmethod
     def from_composition(cls, alpha):
         ans = Tableau()
