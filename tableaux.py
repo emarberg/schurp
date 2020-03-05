@@ -76,6 +76,8 @@ class Tableau:
     def from_string(cls, string):
         def mark(i):
             i = i.strip()
+            if i == "":
+                return None
             if i.endswith("'"):
                 return MarkedNumber(-int(i[:-1]))
             else:
@@ -84,6 +86,7 @@ class Tableau:
         dictionary = {
             (i + 1, j + 1): rows[i][j]
             for i in range(len(rows)) for j in range(len(rows[i]))
+            if rows[i][j]
         }
         return Tableau(dictionary)
 

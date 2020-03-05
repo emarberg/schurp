@@ -484,10 +484,10 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
-    def involution_insert(self, verbose=False):
+    def involution_insert(self, verbose=False, phi=None):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
-            i = i_zerobased + 1
+            i = (i_zerobased + 1) if phi is None else phi[i_zerobased]
             j, column_dir, p = p.involution_insert(MarkedNumber(a), verbose=verbose)
             v = MarkedNumber(-i if column_dir else i)
             for k, l in p.shape():

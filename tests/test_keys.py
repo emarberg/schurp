@@ -9,6 +9,7 @@ from keys import (
     p_key, p_atom,
     q_key, q_atom,
     get_exponents,
+    decompose_key,
     decompose_into_compositions,
     decompose_into_keys, decompose_into_atoms, dict_from_tuple,
     symmetric_composition_from_row_column_counts, symmetric_halves,
@@ -69,30 +70,70 @@ def q_key_tableau(w, alpha):
     return Tableau(mapping)
 
 
-def q_key_tableau(w, alpha):
-    _, cc = symmetric_halves(alpha)
-    positions = [(j, i + 1) for i, v in enumerate(cc) for j in range(v, 0, -1)]
-    mapping = {}
-    for i, b in enumerate(positions):
-        mapping[b] = w[i]
-    return Tableau(mapping)
+# def q_key_tableau(w, alpha):
+#     _, cc = symmetric_halves(alpha)
+#     positions = [(j, i + 1) for i, v in enumerate(cc) for j in range(v, 0, -1)]
+#     mapping = {}
+#     for i, b in enumerate(positions):
+#         mapping[b] = w[i]
+#     return Tableau(mapping)
+
+
+def test_flagged_key(n):
+    comps = set()
+    seen = set()
+
+    def add_comps(alpha):
+        p = sum(alpha)
+        q = len(alpha)
+        if (p, q) not in seen:
+            for beta in weak_compositions(p, q, reduced=True):
+                mu = sorted(beta, reverse=True)
+                if all(x == 0 or x <= n - i - 1 for i, x in enumerate(mu)):
+                    comps.add(beta)
+            seen.add((p, q))
+
+    alphas = set()
+    for i in Permutation.all(n):
+        ck = defaultdict(list)
+        for w in i.get_reduced_words():
+            p, _ = eg_insert(w)
+            ck[p].append(w)
+        for p, ckclass in ck.items():
+            print(p)
+            m = max(ckclass[0]) if ckclass[0] else 0
+            for f in flags(1 + m, 3 + n):
+                ans = 0
+                exp = defaultdict(list)
+                for w in ckclass:
+                    for _, x in compatible_sequences(w, flag=f):
+                        exp[get_exponents(x)[0]].append(w)
+                        ans += x
+
+                alpha = decompose_key(ans)
+                alphas.add(alpha)
+                add_comps(alpha)
+
+                print('flag:', f, '->', alpha, 'w =', w)
+            print()
+            print('missing:', comps - alphas)
+            print()
 
 
 def test_flagged_p_key(n):
+    skew = set()
+    seen = set()
+    alphas = set()
+    values = set()
     for i in Permutation.fpf_involutions(n):
         ck = defaultdict(list)
         for w in i.get_fpf_involution_words():
             p, _ = sp_eg_insert(w)
             ck[p].append(w)
         for p, ckclass in ck.items():
-            if len(ckclass[0]) == 0:
-                continue
             print(p)
-            maxf = 10
-            for f in flags(1 + max(ckclass[0]), n):
-                maxf -= 1
-                if maxf < 0:
-                    break
+            m = max(ckclass[0]) if ckclass[0] else 0
+            for f in flags(1 + m, 2 + n):
                 ans = 0
                 exp = defaultdict(list)
                 for w in ckclass:
@@ -100,12 +141,27 @@ def test_flagged_p_key(n):
                         exp[get_exponents(x)[0]].append(w)
                         ans += x
                 alpha = decompose_p(ans)
+                alphas.add(alpha)
+                values.add(ans)
+
+                p = sum(alpha)
+                q = len(alpha)
+                if (p, q) not in seen:
+                    skew |= set(skew_symmetric_weak_compositions(p, q, reduced=True))
+                    skew = {a for a in skew if p_key(a) not in values}
+                    seen.add((p, q))
+
                 rc, cc = skew_symmetric_halves(alpha)
                 print('flag:', f, '->', alpha, ':', rc, cc, 'w =', w)
+            print()
+            print('missing:', skew - alphas)
             print()
 
 
 def test_flagged_q_key(n):
+    sym = set()
+    seen = set()
+    alphas = set()
     for i in Permutation.involutions(n):
         ck = defaultdict(list)
         va = {}
@@ -114,11 +170,9 @@ def test_flagged_q_key(n):
             ck[p].append(w)
             va[p] = p.durfee()
         for p, ckclass in ck.items():
-            if len(ckclass[0]) == 0:
-                continue
-            if len(p.partition()) < 2:
-                continue
-            for f in flags(1 + max(ckclass[0]), n):
+            m = max(ckclass[0]) if ckclass[0] else 0
+            print(p)
+            for f in flags(1 + m, 2 + n):
                 ans = 0
                 exp = defaultdict(list)
                 for w in ckclass:
@@ -127,27 +181,85 @@ def test_flagged_q_key(n):
                         ans += x
                 ans *= 2**va[p]
                 alpha = decompose_q(ans)
+                alphas.add(alpha)
+
+                u = sum(alpha)
+                v = len(alpha)
+                if (u, v) not in seen:
+                    sym |= set(symmetric_weak_compositions(u, v, reduced=True))
+                    seen.add((u, v))
 
                 rc, cc = symmetric_halves(alpha)
-                assert len(exp[cc]) == 1
-                w = exp[cc][0]
+                print('flag:', f, '->', alpha, ':', rc, cc, 'w =', w)
+            print()
+            print('missing:', sym - alphas)
+            print()
 
-                scc = sorted(cc)
-                while scc and scc[0] == 0:
-                    scc = scc[1:]
-                if scc == sorted(symmetric_halves(sorted(alpha, reverse=True))[1]):
-                    break
 
-                print('flag:', f, '->', alpha, ':', rc, cc)
-                print()
-                print('cc:', cc, '->', w)
-                p, q = o_eg_insert(w)
-                r = q_key_tableau(w, alpha)
-                print(r)
-                print(p)
-                print(q)
-                input('')
-                break
+def _flagged_q_key_insertion(n, p, va, ckclass):
+    # if len(p.partition()) < 2:
+    #    continue
+    m = max(ckclass[0]) if ckclass[0] else 0
+    for f in flags(1 + m, n):
+        ans = 0
+        exp = defaultdict(list)
+        for w in ckclass:
+            for _, x in compatible_sequences(w, flag=f):
+                exp[get_exponents(x)[0]].append(w)
+                ans += x
+        ans *= 2**va
+        alpha = decompose_q(ans)
+
+        rc, cc = symmetric_halves(alpha)
+        assert len(exp[cc]) == 1
+        w = exp[cc][0]
+
+        # scc = sorted(cc)
+        # while scc and scc[0] == 0:
+        #     scc = scc[1:]
+        # if scc == sorted(symmetric_halves(sorted(alpha, reverse=True))[1]):
+        #     return
+
+        p, q = o_eg_insert(w)
+        r = q_key_tableau(w, alpha)
+
+        # if r != p:
+        print('flag:', f, '->', alpha, ':', rc, cc)
+        print()
+        print('cc:', cc, '->', w)
+        print(r)
+        print(p)
+        print(q)
+
+        # print()
+        # for e in exp:
+        #     i = tuple(j + 1 for j, v in enumerate(e) for _ in range(v))
+        #     for v in exp[e]:
+        #         m = (1 + max(v)) if v else 0
+        #         v = tuple(m - j for j in v)
+        #         _, q = o_eg_insert(v, i)
+        #         print(q)
+        # print()
+        break
+
+
+def test_flagged_q_key_insertion(n):
+    if type(n) == Tableau:
+        word = n.row_reading_word()
+        p, ckclass = n, o_knuth_class(word)
+        n = (max(word) if word else 0) + 1
+        _flagged_q_key_insertion(n, p, p.durfee(), ckclass)
+        return
+
+    for i in Permutation.involutions(n):
+        ck = defaultdict(list)
+        va = {}
+        for w in i.get_involution_words():
+            p, _ = o_eg_insert(w)
+            ck[p].append(w)
+            va[p] = p.durfee()
+        for p, ckclass in ck.items():
+            _flagged_q_key_insertion(p, va[p], ckclass)
 
 
 def morse_schilling_f(decreasing_factorization, bounded=True):
@@ -787,8 +899,8 @@ def eg_insert(sequence):
     return Word(*sequence).eg_insert()
 
 
-def o_eg_insert(sequence):
-    return Word(*sequence).involution_insert()
+def o_eg_insert(sequence, phi=None):
+    return Word(*sequence).involution_insert(phi=phi)
 
 
 def sp_eg_insert(sequence):

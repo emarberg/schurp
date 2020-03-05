@@ -547,6 +547,13 @@ def decompose_into_keys(kappa):
     return {k: v for k, v in ans.items() if v}
 
 
+def decompose_key(kappa):
+    dec = decompose_into_keys(kappa)
+    assert len(dec) == 1
+    assert set(dec.values()) == {1}
+    return list(dec)[0]
+
+
 def decompose_into_atoms(kappa):
     ans = {}
     while kappa != 0:
