@@ -873,6 +873,7 @@ class Tableau:
                     continue
 
                 if a == b:
+                    assert not a.is_primed()
                     b = MarkedNumber(abs(tup[i + 1]))
                     new = tup
                     cdir = cdir or (i == 0)
