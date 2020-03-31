@@ -867,7 +867,7 @@ class Tableau:
         if p is None:
             return (j, column_dir, self)
 
-        def involution_bump(a, cdir, tup):
+        def involution_bump(j, a, cdir, tup):
             for i, b in enumerate(tup):
                 if abs(a) > abs(b):
                     continue
@@ -879,12 +879,15 @@ class Tableau:
 
                 elif a.is_primed() and a == -b:
                     b = -tup[i + 1]
+                    assert b.is_primed()
                     new = tup
                 elif b.is_primed() and a == -b and ((i > 0 and not cdir) or (i + 2 != j and cdir)):
                     b = tup[i + 1]
+                    assert not b.is_primed()
                     new = tup[:i] + (-tup[i], -tup[i + 1]) + tup[i + 2:]
                 elif b.is_primed() and a == -b:
                     b = tup[i + 1]
+                    assert not b.is_primed()
                     new = tup
                     cdir = cdir or (i == 0)
 
@@ -902,7 +905,6 @@ class Tableau:
                 elif not cdir and i == 0 and b.is_primed() and a.is_primed():
                     new = (a,) + tup[1:]
                     cdir = True
-                    b = b
                 else:
                     new = tup[:i] + (a,) + tup[i + 1:]
                 return (b, cdir, new)
@@ -926,10 +928,10 @@ class Tableau:
                 ))
 
         if column_dir:
-            p, column_dir, col = involution_bump(p, column_dir, col)
+            p, column_dir, col = involution_bump(j, p, column_dir, col)
             tab = self.replace_column(j, col)
         else:
-            p, column_dir, row = involution_bump(p, column_dir, row)
+            p, column_dir, row = involution_bump(j, p, column_dir, row)
             tab = self.replace_row(j, row, shifted=True)
 
         if verbose:

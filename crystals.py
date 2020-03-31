@@ -124,8 +124,8 @@ class OrthogonalCrystalGenerator:
                 if not cg.edges:
                     continue
                 try:
-                    if dominant and not cg.is_alpha_increasing():
-                        continue
+                    #if dominant and not cg.is_alpha_increasing():
+                    #    continue
                     if len(cg.alpha) > k:
                         continue
                     print('generating . . .')

@@ -36,11 +36,13 @@ def test_primed_insertion():
                     for tup in OrthogonalCrystalGenerator.get_increasing_primed_factorizations(w, k)
                 ]
                 for f in fac:
+                    print('f =', f)
                     p, q = involution_insert(*f)
-                    print(f, '->', p, q)
+                    print('\n', p, q)
                     print(seen.get((p, q), None))
                     assert (p, q) not in seen
                     seen[(p, q)] = f
+                    print()
 
 
 n = 4
