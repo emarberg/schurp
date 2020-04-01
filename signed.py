@@ -76,10 +76,14 @@ class SignedPermutation:
         for args in itertools.permutations(range(1, n + 1)):
             yield SignedPermutation(*args)
 
+    def is_abs_fpf_involution(self):
+        n = self.rank
+        return all(abs(self(i)) != i for i in range(1, n + 1))
+
     @classmethod
     def fpf_involutions(cls, n):
         for w in cls.involutions(n):
-            if all(abs(w(i)) != i for i in range(1, n + 1)):
+            if w.is_abs_fpf_involution():
                 yield w
 
     @classmethod
@@ -698,6 +702,9 @@ class SignedPermutation:
     def cyc(self):
         return sorted(self.pair() + self.neg() + self.fix())
 
+    def _min_fpf_inv_atom_oneline(self):
+        return tuple(i for p in self.cyc() for i in p)
+
     def _min_inv_atom_oneline(self):
         tup = tuple(i for p in self.cyc() for i in reversed(p))
         minimum = []
@@ -707,9 +714,35 @@ class SignedPermutation:
             minimum += [i]
         return tuple(minimum)
 
+    def get_min_fpf_atom(self):
+        assert self.is_abs_fpf_involution()
+        return SignedPermutation(*self._min_fpf_inv_atom_oneline())
+
     def get_min_atom(self):
         assert self == self.inverse()
         return SignedPermutation(*self._min_inv_atom_oneline())
+
+    @classmethod
+    def get_minimal_fpf_involution(cls, n):
+        assert n % 2 == 0
+        oneline = [i for j in range(2, n + 1, 2) for i in [j, j - 1]]
+        return SignedPermutation(*oneline)
+
+    def get_fpf_atoms(self):
+        assert self.is_abs_fpf_involution()
+        def next(oneline):
+            for i in range(len(oneline) - 3):
+                a, d, b, c = oneline[i:i + 4]
+                if a < b < c < d:
+                    newline = oneline[:i] + (b, c, a, d) + oneline[i + 4:]
+                    yield newline
+
+        minimum = self._min_fpf_inv_atom_oneline()
+        add = {minimum}
+        while add:
+            for w in add:
+                yield SignedPermutation(*w).inverse()
+            add = {new for w in add for new in next(w)}
 
     def get_atoms(self):
         assert self == self.inverse()
