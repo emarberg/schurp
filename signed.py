@@ -77,6 +77,12 @@ class SignedPermutation:
             yield SignedPermutation(*args)
 
     @classmethod
+    def fpf_involutions(cls, n):
+        for w in cls.involutions(n):
+            if all(abs(w(i)) != i for i in range(1, n + 1)):
+                yield w
+
+    @classmethod
     def involutions(cls, n):
         for w in Permutation.involutions(n):
             oneline = w.oneline
@@ -126,6 +132,18 @@ class SignedPermutation:
             i = min(self.left_descent_set)
             s = SignedPermutation.s_i(i, self.rank)
             return (i,) + (s * self).get_reduced_word()
+        else:
+            return ()
+
+    def get_involution_word(self):
+        assert self.is_involution()
+        if self.left_descent_set:
+            i = min(self.left_descent_set)
+            s = SignedPermutation.s_i(i, self.rank)
+            w = s * self
+            if w != self * s:
+                w = w * s
+            return (i,) + w.get_involution_word()
         else:
             return ()
 
@@ -265,7 +283,7 @@ class SignedPermutation:
             i = next(iter(other.left_descent_set))
             s = SignedPermutation.s_i(i, self.rank)
             if i in self.right_descent_set:
-                return self * (s * other)
+                return self % (s * other)
             else:
                 return (self * s) % (s * other)
         else:
@@ -616,6 +634,9 @@ class SignedPermutation:
                     print('  ', w.reduce(), w.get_min_atom().reduce())
         return ans
 
+    def is_involution(self):
+        return self == self.inverse()
+
     def is_inv_grassmannian(self):
         return self == self.inverse() and self.get_min_atom().is_grassmannian()
 
@@ -703,7 +724,7 @@ class SignedPermutation:
             word = SignedPermutation(*oneline).get_reduced_word()
             n = len(oneline)
             w = self.identity(n)
-            for i in word:
+            for i in reversed(word):
                 s = SignedPermutation.s_i(i, n)
                 if i in w.right_descent_set:
                     return None
