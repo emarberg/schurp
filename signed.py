@@ -80,10 +80,20 @@ class SignedPermutation:
         n = self.rank
         return all(abs(self(i)) != i for i in range(1, n + 1))
 
+    def is_fpf_involution(self):
+        n = self.rank
+        return all(self(i) != i for i in range(1, n + 1))
+
+    @classmethod
+    def abs_fpf_involutions(cls, n):
+        for w in cls.involutions(n):
+            if w.is_abs_fpf_involution():
+                yield w
+
     @classmethod
     def fpf_involutions(cls, n):
         for w in cls.involutions(n):
-            if w.is_abs_fpf_involution():
+            if w.is_fpf_involution():
                 yield w
 
     @classmethod
@@ -192,21 +202,27 @@ class SignedPermutation:
     def get_fpf_involution_words(self):
         w = self
         n = w.rank
-        assert w.inverse() == w
+        assert w.is_fpf_involution()
 
         if any(w(i) == i for i in range(1, n + 1)):
             return
-        z = w.ell_zero()
+        z = 1 if n % 2 != 0 else 0
 
         if all(w(i) == -i for i in range(1, z + 1)) and all(w(i) == i + 1 for i in range(z + 1, n, 2)):
             yield ()
         else:
             for i in w.right_descent_set:
+                if i == 0 and w(1) == -1:
+                    continue
+                if i > 0 and w(i) == i + 1:
+                    continue
                 s = SignedPermutation.s_i(i, w.rank)
                 if s * w != w * s:
                     v = s * w * s
-                    for word in v.get_fpf_involution_words():
-                        yield word + (i,)
+                else:
+                    v = w * s
+                for word in v.get_fpf_involution_words():
+                    yield word + (i,)
 
     def get_involution_words(self):
         w = self.reduce()

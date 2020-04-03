@@ -16,8 +16,8 @@ def test_get_atoms(n=4):
             assert a.inverse() % a == w
 
 
-def test_get_fpf_atoms(n=6):
-    for y in SignedPermutation.fpf_involutions(n):
+def test_get_abs_fpf_atoms(n=6):
+    for y in SignedPermutation.abs_fpf_involutions(n):
         s = set()
         for w in y.get_atoms():
             winv = w.inverse()
