@@ -26,6 +26,82 @@ atoms_d_cache = {}
 
 class SignedPermutation:
 
+    def shape(self):
+        ndes, fix, neg = self._ndes()
+
+        desb = [(b, a) for a, b in ndes if not (0 < a < -b)]
+        negb = [(-i, -i) for i in neg] + [(-a, -a) for a, b in ndes if 0 < a < -b] + [(b, b) for a, b in ndes if 0 < a < -b]
+        fixb = [(i, i) for i in fix]
+
+        n = self.rank
+        y = SignedPermutation.identity(n)
+        for (i, i) in negb:
+            y *= SignedPermutation.t_ij(-i, i, n)
+        for a, b in desb:
+            y *= SignedPermutation.t_ij(a, b, n)
+        assert self.inverse() % self == y
+
+        sh = set()
+        for a, b in ndes:
+            if 0 < a < -b:
+                sh.add((b, -a))
+                sh.add((a, -b))
+        for e in neg:
+            sh.add((-e, e))
+        return sh
+
+    def ndes(self):
+        ndes, fix, neg = self._ndes()
+        return ndes
+
+    def nfix(self):
+        ndes, fix, neg = self._ndes()
+        return fix
+
+    def nneg(self):
+        ndes, fix, neg = self._ndes()
+        return neg
+
+    def _ndes(self):
+        oneline = tuple(self.inverse().oneline)
+        ndes = []
+        while True:
+            i = [i for i in range(len(oneline) - 1) if oneline[i] > oneline[i + 1]]
+            if len(i) == 0:
+                break
+            i = i[0]
+            ndes.append(oneline[i:i + 2])
+            oneline = oneline[:i] + oneline[i + 2:]
+        fix = [i for i in oneline if i > 0]
+        neg = [i for i in oneline if i < 0]
+        return ndes, fix, neg
+
+    def brion_length_b(self):
+        ans = 0
+        n = self.rank
+        y = SignedPermutation.identity(n)
+        for i in self.get_reduced_word():
+            assert i not in y.right_descent_set
+            t = SignedPermutation.s_i(i, n)
+            if i > 0 and y(i) == i and y(i + 1) == i + 1:
+                ans += 1
+            elif i == 0 and y(1) == 1:
+                ans += 1
+            y = y * t if t * y == y * t else t * y * t
+        return ans
+
+    def brion_length_c(self):
+        ans = 0
+        n = self.rank
+        y = SignedPermutation.identity(n)
+        for i in self.get_reduced_word():
+            assert i not in y.right_descent_set
+            t = SignedPermutation.s_i(i, n)
+            if i > 0 and y(i) == i and y(i + 1) == i + 1:
+                ans += 1
+            y = y * t if t * y == y * t else t * y * t
+        return ans
+
     def tex(self):
         s = '$'
         for i in self.oneline:
@@ -678,6 +754,23 @@ class SignedPermutation:
         return max(s for s in range(r + 1, n + 1) if self(s) < self(r))
 
     @classmethod
+    def t_ij(cls, i, j, n):
+        return cls.reflection(i, j, n)
+
+    @classmethod
+    def reflection(cls, i, j, n):
+        caller = list(range(1, n + 1))
+        if i > 0:
+            caller[i - 1] = j
+        else:
+            caller[-i - 1] = -j
+        if j > 0:
+            caller[j - 1] = i
+        else:
+            caller[-j - 1] = -i
+        return cls(*caller)
+
+    @classmethod
     def reflection_s(cls, i, j, n):
         caller = list(range(1, n + 1))
         caller[i - 1] = -j
@@ -732,11 +825,11 @@ class SignedPermutation:
 
     def get_min_fpf_atom(self):
         assert self.is_abs_fpf_involution()
-        return SignedPermutation(*self._min_fpf_inv_atom_oneline())
+        return SignedPermutation(*self._min_fpf_inv_atom_oneline()).inverse()
 
     def get_min_atom(self):
         assert self == self.inverse()
-        return SignedPermutation(*self._min_inv_atom_oneline())
+        return SignedPermutation(*self._min_inv_atom_oneline()).inverse()
 
     @classmethod
     def get_minimal_fpf_involution(cls, n):
