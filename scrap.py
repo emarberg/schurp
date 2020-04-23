@@ -15,6 +15,14 @@ from partitions import *
 #     for mu, nu in StrictPartition.skew_pairs(n):
 #         icache[(mu, nu)] = SchurQ(mu).skew(nu)
 
+from signed import *
+
+def count_modified_type_c_inv_words(n):
+    z = SignedPermutation.longest_element(n)
+    a = 0
+    for w in z.get_atoms():
+        a += 2**w.ell_zero() * len(w.get_reduced_words())
+    return a
 
 
 from permutations import *
