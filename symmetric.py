@@ -588,7 +588,7 @@ class SchurQ(SchurP):
         mu = Partition(*args)
         if len(mu) == 0:
             return Vector({SchurQ(): 1})
-        if mu.parts not in s_lambda_cache:
+        if tuple(mu.parts) not in s_lambda_cache:
             n = len(mu)
             matrix = [[Vector() for i in range(n)] for j in range(n)]
             for i in range(1, n + 1):
@@ -597,8 +597,8 @@ class SchurQ(SchurP):
                     if q >= 0:
                         matrix[i - 1][j - 1] = Vector({SchurQ(q): 1})
             det = Determinant(matrix)
-            s_lambda_cache[mu.parts] = det.evaluate()
-        return s_lambda_cache[mu.parts]
+            s_lambda_cache[tuple(mu.parts)] = det.evaluate()
+        return s_lambda_cache[tuple(mu.parts)]
 
     @classmethod
     def to_p_basis(cls, vector):
