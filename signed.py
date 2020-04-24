@@ -122,6 +122,15 @@ class SignedPermutation:
         self._ldes = None
         self._len = None
 
+    @classmethod
+    def from_word(cls, n, *args):
+        if len(args) == 1 and type(args[0]) == tuple:
+            args = args[0]
+        w = SignedPermutation.identity(n)
+        for i in args:
+            w *= Permutation.s_i(i, n)
+        return w
+
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
         return str(self)
