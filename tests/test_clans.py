@@ -59,8 +59,8 @@ def test_atoms():
     v = Clan([1, True, False, 1])
     assert set(w.get_clan_words()) == {(2, 3)}
     assert set(v.get_clan_words()) == {(2,)}
-    assert w.get_clan_atoms() == {Permutation(1, 3, 4, 2)}
-    assert v.get_clan_atoms() == {Permutation(1, 3, 2)}
+    assert w.get_atoms() == {Permutation(1, 3, 4, 2)}
+    assert v.get_atoms() == {Permutation(1, 3, 2)}
 
 
 def test_all():
@@ -75,5 +75,10 @@ def test_all_b():
     assert len(list(Clan.all_b(2, 1))) == 25
 
 
-def test_atoms_b():
-    pass
+def test_atoms_b(n=4):
+    for p in range(1, n):
+        for q in [p - 1, p]:
+            for clan in Clan.all_b(p, q):
+                print(clan)
+                z = -clan.richardson_springer_map()
+                assert set(clan.get_atoms()).issubset(set(z.get_atoms()))

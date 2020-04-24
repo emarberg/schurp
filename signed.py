@@ -128,8 +128,11 @@ class SignedPermutation:
             args = args[0]
         w = SignedPermutation.identity(n)
         for i in args:
-            w *= Permutation.s_i(i, n)
+            w *= SignedPermutation.s_i(i, n)
         return w
+
+    def __neg__(self):
+        return self * SignedPermutation.longest_element(self.rank)
 
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'

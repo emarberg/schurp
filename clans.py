@@ -117,15 +117,26 @@ class Clan:
             CLAN_WORDS_CACHE[self] = ans if len(ans) > 0 else [()]
         return CLAN_WORDS_CACHE[self]
 
-    def get_clan_atoms(self):
-        def factory(w):
+    def get_atoms(self):
+        def s(i):
             if self.family == self.TYPE_A:
-                return Permutation.from_word(*w)
+                return Permutation.s_i(i)
             elif self.family == self.TYPE_B:
-                return SignedPermutation.from_word(self.rank(), *w)
+                return SignedPermutation.s_i(i, self.rank())
+
+        if self.family == self.TYPE_A:
+            identity = Permutation()
+        elif self.family == self.TYPE_B:
+            identity = SignedPermutation.identity(self.rank())
 
         if self not in CLAN_ATOMS_CACHE:
-            CLAN_ATOMS_CACHE[self] = {factory(w) for w in self.get_clan_words()}
+            ans = set()
+            for i in self.generators():
+                other = i * self
+                if other != self:
+                    for w in other.get_atoms():
+                        ans.add(w * s(i))
+            CLAN_ATOMS_CACHE[self] = ans if len(ans) > 0 else {identity}
         return CLAN_ATOMS_CACHE[self]
 
     def cycles(self):
@@ -135,7 +146,7 @@ class Clan:
                 cycles.append((i + 1, a))
         return cycles
 
-    def richardson_springer(self):
+    def richardson_springer_map(self):
         if self.family == self.TYPE_A:
             w = Permutation()
             for (i, j) in self.cycles:
