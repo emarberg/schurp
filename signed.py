@@ -31,8 +31,6 @@ class SignedPermutation:
 
         desb = [(b, a) for a, b in ndes if not (0 < a < -b)]
         negb = [(-i, -i) for i in neg] + [(-a, -a) for a, b in ndes if 0 < a < -b] + [(b, b) for a, b in ndes if 0 < a < -b]
-        fixb = [(i, i) for i in fix]
-
         n = self.rank
         y = SignedPermutation.identity(n)
         for (i, i) in negb:
@@ -851,7 +849,8 @@ class SignedPermutation:
 
     def get_fpf_atoms(self):
         assert self.is_abs_fpf_involution()
-        def next(oneline):
+
+        def upnext(oneline):
             for i in range(len(oneline) - 3):
                 a, d, b, c = oneline[i:i + 4]
                 if a < b < c < d:
@@ -863,7 +862,13 @@ class SignedPermutation:
         while add:
             for w in add:
                 yield SignedPermutation(*w).inverse()
-            add = {new for w in add for new in next(w)}
+            add = {new for w in add for new in upnext(w)}
+
+    def get_atoms_by_shape(self):
+        shapes = defaultdict(set)
+        for w in self.get_atoms():
+            shapes[tuple(sorted(w.shape()))].add(w)
+        return shapes
 
     def get_atoms(self):
         assert self == self.inverse()
