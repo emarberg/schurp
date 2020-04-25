@@ -160,23 +160,28 @@ def test_atoms_c1_refined(n=4):
 
 
 def _test_refinement(clan):
-    print(clan)
-    print()
+    lines = []
+    lines += [str(clan)]
+    lines += ['']
+
     z = -clan.richardson_springer_map()
     clan_atoms = set(clan.get_atoms())
     z_atoms_by_shape = z.get_atoms_by_shape()
     excluded = []
     for sh, subset in z_atoms_by_shape.items():
         if subset.issubset(clan_atoms):
-            print('  ', set(sh))
+            lines += ['   ' + str(set(sh))]
         else:
             assert len(subset & clan_atoms) == 0
             excluded.append(sh)
-    print()
+    lines += ['']
     if excluded:
-        print('excluded:')
-        print()
+        lines += ['EXCLUDED:']
+        lines += ['']
         for sh in excluded:
-            print('  ', set(sh))
-        print()
-    print()
+            lines += ['   ' + str(set(sh))]
+        lines += ['']
+    lines += ['']
+
+    if clan.is_matchless():
+        print('\n'.join(lines))

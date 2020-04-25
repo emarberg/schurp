@@ -51,6 +51,9 @@ class Clan:
     def __hash__(self):
         return hash((self.family, self.oneline))
 
+    def is_matchless(self):
+        return not any(type(i) == int for i in self.oneline)
+
     @classmethod
     def _all_a(cls, p, q):
         for w in Permutation.involutions(p + q):
