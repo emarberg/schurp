@@ -57,16 +57,26 @@ class Clan:
     def is_aligned(self, matching):
         for (i, j) in matching:
             if self.family == self.TYPE_A:
-                pass
+                pair = (self(i), self(j))
             elif self.family == self.TYPE_B:
                 i, j = self.rank() + 1 + i, self.rank() + 1 + j
+                if not (i <= self.rank() and j <= self.rank()):
+                    continue
+                pair = (self(i), (self(j)))
             elif self.family == self.TYPE_C1:
                 i = self.rank() + i + (0 if i > 0 else 1)
                 j = self.rank() + j + (0 if j > 0 else 1)
+                pair = (self(i), self(j))
             else:
                 raise Exception
-            assert type(self(i)) == bool and type(self(j)) == bool
-            if (self(i), self(j)) in [(True, True), (False, False)]:
+            assert type(pair[0]) == bool and type(pair[1]) == bool
+            if pair in [(True, True), (False, False)]:
+                return False
+
+        if self.family == self.TYPE_B:
+            signs = [self(self.rank() + 1 + i) for (i, j) in sorted(matching) if -i == j]
+            signs += [self(self.rank() + 1)]
+            if any(signs[i] == signs[i + 1] for i in range(len(signs) - 1)):
                 return False
         return True
 

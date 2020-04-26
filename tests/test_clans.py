@@ -193,8 +193,18 @@ def _test_refinement(clan, excluded_guess=None):
         lines += ['']
     lines += ['']
 
-    # if clan.is_matchless():
+    extra = (set(excluded_guess) - set(excluded)) if excluded_guess is not None else set()
+    if extra:
+        lines += ['GUESSED NOT EXCLUDED:']
+        lines += ['']
+        for sh in extra:
+            lines += ['   ' + str(set(sh))]
+        lines += ['']
+    lines += ['']
+
+    if not clan.is_matchless():
+        return
     print('\n'.join(lines))
 
     if excluded_guess is not None:
-        assert set(excluded) == set(excluded_guess)
+        assert set(excluded_guess) == set(excluded)
