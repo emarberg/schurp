@@ -26,6 +26,27 @@ atoms_d_cache = {}
 
 class SignedPermutation:
 
+    @classmethod
+    def ncsp_matchings(cls, base, trivial_allowed=True):
+        base = set(base)
+        assert all(-i in base and i != 0 for i in base)
+
+        if len(base) == 0:
+            yield ()
+            return
+
+        x = min(base)
+        neg = {y for y in base if x < y < 0}
+        for y in neg:
+            left = {z for z in base if x < z < y or x < -z < y}
+            right = {z for z in base if y < z < -y}
+            for a in cls.ncsp_matchings(left, False):
+                for b in cls.ncsp_matchings(right, trivial_allowed):
+                    yield tuple(sorted(set(a) | set(b) | {(x, y), (-y, -x)}))
+        if trivial_allowed:
+            for a in cls.ncsp_matchings(base - {x, -x}, True):
+                yield tuple(sorted(set(a) | {(x, -x)}))
+
     def shape(self):
         ndes, fix, neg = self._ndes()
 
@@ -45,7 +66,7 @@ class SignedPermutation:
                 sh.add((b, -a))
                 sh.add((a, -b))
         for e in neg:
-            sh.add((-e, e))
+            sh.add((e, -e))
         return sh
 
     def ndes(self):
@@ -164,11 +185,11 @@ class SignedPermutation:
 
     def is_abs_fpf_involution(self):
         n = self.rank
-        return all(abs(self(i)) != i for i in range(1, n + 1))
+        return self.is_involution() and all(abs(self(i)) != i for i in range(1, n + 1))
 
     def is_fpf_involution(self):
         n = self.rank
-        return all(self(i) != i for i in range(1, n + 1))
+        return self.is_involution() and all(self(i) != i for i in range(1, n + 1))
 
     @classmethod
     def abs_fpf_involutions(cls, n):
@@ -290,11 +311,7 @@ class SignedPermutation:
         n = w.rank
         assert w.is_fpf_involution()
 
-        if any(w(i) == i for i in range(1, n + 1)):
-            return
-        z = 1 if n % 2 != 0 else 0
-
-        if all(w(i) == -i for i in range(1, z + 1)) and all(w(i) == i + 1 for i in range(z + 1, n, 2)):
+        if len(w) == (n + 1) // 2:
             yield ()
         else:
             for i in w.right_descent_set:
@@ -813,6 +830,14 @@ class SignedPermutation:
     def neg(self):
         n = self.rank
         return [(-a, -a) for a in range(1, n + 1) if self(a) == -a]
+
+    def fixed_points(self):
+        n = self.rank
+        return [a for a in range(-n, n + 1) if 0 != a == self(a)]
+
+    def negated_points(self):
+        n = self.rank
+        return [a for a in range(-n, n + 1) if 0 != a == -self(a)]
 
     def fix(self):
         n = self.rank

@@ -143,7 +143,12 @@ def test_atoms_b_refined(n=4):
     q = n // 2
     p = n - q
     for clan in Clan.all_b(p, q):
-        _test_refinement(clan)
+        base = (-clan.richardson_springer_map()).negated_points()
+        excluded_guess = {
+            m for m in SignedPermutation.ncsp_matchings(base)
+            if not clan.is_aligned(m)
+        }
+        _test_refinement(clan, excluded_guess)
 
 
 def test_atoms_c1(n=3):
@@ -156,10 +161,15 @@ def test_atoms_c1(n=3):
 
 def test_atoms_c1_refined(n=4):
     for clan in Clan.all_c1(n):
-        _test_refinement(clan)
+        base = (-clan.richardson_springer_map()).negated_points()
+        excluded_guess = {
+            m for m in SignedPermutation.ncsp_matchings(base)
+            if not clan.is_aligned(m)
+        }
+        _test_refinement(clan, excluded_guess)
 
 
-def _test_refinement(clan):
+def _test_refinement(clan, excluded_guess=None):
     lines = []
     lines += [str(clan)]
     lines += ['']
@@ -183,5 +193,8 @@ def _test_refinement(clan):
         lines += ['']
     lines += ['']
 
-    if clan.is_matchless():
-        print('\n'.join(lines))
+    # if clan.is_matchless():
+    print('\n'.join(lines))
+
+    if excluded_guess is not None:
+        assert set(excluded) == set(excluded_guess)

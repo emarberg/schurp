@@ -2,8 +2,25 @@ from signed import SignedPermutation
 from polynomials import X
 
 
+def test_ncsp_matchings():
+    m = ((-5, -1), (-4, -3), (-2, 2), (1, 5), (3, 4))
+    base = [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]
+    ncsp = list(SignedPermutation.ncsp_matchings(base))
+    assert m not in ncsp
+
+    base = {-8, -6, -4, -2, 2, 4, 6, 8}
+    assert set(SignedPermutation.ncsp_matchings(base)) == {
+        ((-8, 8), (-6, 6), (-4, 4), (-2, 2)),
+        ((-8, -6), (-4, 4), (-2, 2), (6, 8)),
+        ((-8, -2), (-6, -4), (2, 8), (4, 6)),
+        ((-8, 8), (-6, 6), (-4, -2), (2, 4)),
+        ((-8, 8), (-6, -4,), (-2, 2), (4, 6)),
+        ((-8, -6), (-4, -2), (2, 4), (6, 8))
+    }
+
+
 def test_fpf_involution_words(n=4):
-    for w in SignedPermutation.involutions(n):
+    for w in SignedPermutation.fpf_involutions(n):
         words = set(w.get_fpf_involution_words())
         if words:
             print(w, '->', len(words))
@@ -27,7 +44,7 @@ def test_get_abs_fpf_atoms(n=6):
         assert s == set(y.get_fpf_atoms())
 
 
-def test_brion_length(n=6):
+def test_brion_length(n=4):
     for y in SignedPermutation.involutions(n):
         ell = len(y.neg()) + len(y.pair())
         assert ell + len(y) == 2 * y.involution_length()

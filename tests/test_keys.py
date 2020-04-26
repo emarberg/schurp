@@ -79,7 +79,7 @@ def q_key_tableau(w, alpha):
 #     return Tableau(mapping)
 
 
-def test_flagged_key(n):
+def test_flagged_key(n=3):
     comps = set()
     seen = set()
 
@@ -120,7 +120,7 @@ def test_flagged_key(n):
             print()
 
 
-def test_flagged_p_key(n):
+def test_flagged_p_key(n=3):
     skew = set()
     seen = set()
     alphas = set()
@@ -158,7 +158,7 @@ def test_flagged_p_key(n):
             print()
 
 
-def test_flagged_q_key(n):
+def test_flagged_q_key(n=3):
     sym = set()
     seen = set()
     alphas = set()
@@ -243,7 +243,7 @@ def _flagged_q_key_insertion(n, p, va, ckclass):
         break
 
 
-def test_flagged_q_key_insertion(n):
+def test_flagged_q_key_insertion(n=3):
     if type(n) == Tableau:
         word = n.row_reading_word()
         p, ckclass = n, o_knuth_class(word)
@@ -259,7 +259,7 @@ def test_flagged_q_key_insertion(n):
             ck[p].append(w)
             va[p] = p.durfee()
         for p, ckclass in ck.items():
-            _flagged_q_key_insertion(p, va[p], ckclass)
+            _flagged_q_key_insertion(n, p, va[p], ckclass)
 
 
 def morse_schilling_f(decreasing_factorization, bounded=True):
@@ -381,7 +381,7 @@ def remove_hook(mu):
     return mu, h
 
 
-def test_q_dominant():
+def test_q_dominant(n0=5):
     weights = {}
 
     def get_weight(mu):
@@ -395,6 +395,8 @@ def test_q_dominant():
     n = 0
     while True:
         n += 1
+        if n > n0:
+            break
         print('n =', n)
         print()
         for mu in symmetric_partitions(n):
@@ -421,14 +423,16 @@ def test_q_dominant():
                 print('  ', w)
             print()
 
-            input('')
+            # input('')
 
 
-def test_p_multiplicity_free():
+def test_p_multiplicity_free(n0=5):
     print()
     n = 0
     while True:
         n += 1
+        if n > n0: 
+            break
         print(n)
         for mu in skew_symmetric_partitions(n):
             a, b = skew_symmetric_halves(mu)
@@ -440,11 +444,13 @@ def test_p_multiplicity_free():
                 return dec
 
 
-def test_q_multiplicity_free():
+def test_q_multiplicity_free(n0=5):
     print()
     n = 0
     while True:
         n += 1
+        if n > n0:
+            break
         print(n)
         for mu in symmetric_partitions(n):
             a, b = symmetric_halves(mu)
@@ -471,10 +477,10 @@ def test_leading_with_atoms(m=6):
             for u, v, line in s:
                 print(u, ':', line, ':', v)
             print()
-            input('?')
+            # input('?')
 
 
-def test_leading(m=12, l=12, p=None):
+def test_leading(m=6, l=6, p=None):
     def toggle(a, i):
         if a[i - 1] <= a[i]:
             return a
@@ -505,7 +511,7 @@ def test_leading(m=12, l=12, p=None):
                     print(' '.join(map(str, alphas)))
                 print()
                 print()
-                input('')
+                # input('')
 
 
 def _attempt_p_into_q(alpha, attempts=10):
@@ -625,7 +631,7 @@ def test_brion_construction(n=4, m=4):
                 print()
 
 
-def test_atom_operators_on_keys(k=3):
+def test_atom_operators_on_keys(k=2):
     for n in range(3 * k + 1):
         for alpha in weak_compositions(n, k, reduced=False):
             print('. . .', alpha)
@@ -701,7 +707,7 @@ def words(n, k=None):
         yield w.tuple()
 
 
-def test_key_compatible_sequences(m=5, l=5):
+def test_key_compatible_sequences(m=4, l=4):
     def test_key(p):
         ans = 0
         for seq in knuth_class(p):
@@ -1015,8 +1021,8 @@ def print_keys(n=4):
             print('increasing keys:', a, b)
             print('decreasing keys:', c, d)
             print(c.weight() == alpha)
-            if c.weight() != alpha:
-                input('\n?')
+            # if c.weight() != alpha:
+            #    input('\n?')
             print()
             results[p] = (c, d)
         print()
@@ -1035,8 +1041,8 @@ def print_nil_keys(n=4):
             print('increasing keys:', a, b)
             print('decreasing keys:', c, d)
             print(c.weight() == alpha)
-            if c.weight() != alpha:
-                input('\n?')
+            # if c.weight() != alpha:
+            #    input('\n?')
             print()
             results[p] = (c, d)
         print()
@@ -1579,7 +1585,7 @@ def test_q_key_decomposition(m=5):
                     print()
                     print(sorted(dec))
                     print()
-                    input('?')
+                    # input('?')
                 assert dec[cc] == 2**q_power(alpha)
 
 
@@ -1815,7 +1821,7 @@ def test_p_partition_key_expansion(m=5):
                 print('dec =', dec)
                 print('nai =', naive)
                 print()
-                input('')
+                # input('')
             # assert naive.issubset(dec)
     print()
     print('success:', success)
@@ -1898,7 +1904,7 @@ def test_q_partition_key_expansion(m=5):
                 print('dec =', dec)
                 print('nai =', naive)
                 print()
-                input('')
+                # input('')
             # assert naive.issubset(dec)
     print()
     print('success:', success)

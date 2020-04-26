@@ -54,6 +54,22 @@ class Clan:
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
 
+    def is_aligned(self, matching):
+        for (i, j) in matching:
+            if self.family == self.TYPE_A:
+                pass
+            elif self.family == self.TYPE_B:
+                i, j = self.rank() + 1 + i, self.rank() + 1 + j
+            elif self.family == self.TYPE_C1:
+                i = self.rank() + i + (0 if i > 0 else 1)
+                j = self.rank() + j + (0 if j > 0 else 1)
+            else:
+                raise Exception
+            assert type(self(i)) == bool and type(self(j)) == bool
+            if (self(i), self(j)) in [(True, True), (False, False)]:
+                return False
+        return True
+
     @classmethod
     def _all_a(cls, p, q):
         for w in Permutation.involutions(p + q):
