@@ -258,13 +258,13 @@ class SignedPermutation:
 
     def get_involution_word(self):
         assert self.is_involution()
-        if self.left_descent_set:
-            i = min(self.left_descent_set)
+        if self.right_descent_set:
+            i = min(self.right_descent_set)
             s = SignedPermutation.s_i(i, self.rank)
             w = s * self
             if w != self * s:
                 w = w * s
-            return (i,) + w.get_involution_word()
+            return w.get_involution_word() + (i,)
         else:
             return ()
 
@@ -328,11 +328,22 @@ class SignedPermutation:
                     yield word + (i,)
 
     def get_involution_words(self):
-        w = self.reduce()
-        assert w.inverse() == w
-        for a in w.get_atoms():
-            for word in a.get_reduced_words():
-                yield word
+        assert self.is_involution()
+        if len(self.left_descent_set) == 0:
+            yield ()
+            return
+        for i in self.left_descent_set:
+            s = SignedPermutation.s_i(i, self.rank)
+            w = s * self
+            if w != self * s:
+                w = w * s
+            for e in w.get_involution_words():
+                yield e + (i,)
+        # w = self.reduce()
+        # assert w.inverse() == w
+        # for a in w.get_atoms():
+        #     for word in a.get_reduced_words():
+        #         yield word
 
     def __call__(self, i):
         if i == 0:

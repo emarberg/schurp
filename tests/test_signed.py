@@ -19,6 +19,13 @@ def test_ncsp_matchings():
     }
 
 
+def test_get_involution_word():
+    s = SignedPermutation.s_i(0, 3)
+    t = SignedPermutation.s_i(1, 3)
+    assert (t * s * t).get_involution_word() == (0, 1)
+    assert (s * t * s).get_involution_word() == (1, 0)
+
+
 def test_fpf_involution_words(n=4):
     for w in SignedPermutation.fpf_involutions(n):
         words = set(w.get_fpf_involution_words())
@@ -29,10 +36,12 @@ def test_fpf_involution_words(n=4):
 def test_get_atoms(n=4):
     i = list(SignedPermutation.involutions(n))
     for w in i:
+        words = set()
         for a in w.get_atoms():
             assert len(a) == w.involution_length()
             assert a.inverse() % a == w
-
+            words |= set(a.get_reduced_words())
+        assert words == set(w.get_involution_words())
 
 def test_get_abs_fpf_atoms(n=6):
     for y in SignedPermutation.abs_fpf_involutions(n):
