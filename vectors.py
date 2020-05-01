@@ -1,5 +1,8 @@
+import math
+
 
 class Vector:
+
     def __init__(self, dictionary={}, printer=None):
         self.dictionary = {key: value for key, value in dictionary.items() if value}
         self.printer = printer
@@ -122,3 +125,19 @@ class Vector:
             return '-' + base[3:]
         else:
             return '0'
+
+    @classmethod
+    def linearly_independent_subset(cls, vectors):
+        progress = []
+        ans = []
+        for i, v in enumerate(vectors):
+            for m, u in progress:
+                u_coeff, v_coeff = u[m], v[m]
+                if v_coeff != 0:
+                    d = math.gcd(u_coeff, v_coeff)
+                    v = d * v  - ((d * v_coeff) // u_coeff) * u
+            if not v.is_zero():
+                m = next(iter(v.dictionary))
+                progress.append((m, v))
+                ans.append(i)
+        return ans

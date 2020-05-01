@@ -32,3 +32,15 @@ def test_eq():
     assert v == v - w
     assert 2 * v + 3 * u == u + v + u + v + u
     assert -1 * v + 2 * u == u - v + u
+
+
+def test_linearly_independent():
+    a = Vector({1: 1})
+    b = Vector({2: 1})
+    c = Vector({3: 1})
+
+    assert Vector.linearly_independent_subset([a, b, c]) == [0, 1, 2]
+    assert Vector.linearly_independent_subset([a, -a, c]) == [0, 2]
+    assert Vector.linearly_independent_subset([a, a + b, b]) == [0, 1]
+
+
