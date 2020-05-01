@@ -34,9 +34,11 @@ from permutations import Permutation
 from partitions import Partition, StrictPartition
 from collections import defaultdict
 from words import Word
+from vectors import Vector
 from tableaux import Tableau
 import pyperclip
 import pytest
+import time
 
 
 q_alphas_cache = {}
@@ -262,6 +264,79 @@ def test_flagged_q_key_insertion(n=3):
             _flagged_q_key_insertion(n, p, va[p], ckclass)
 
 
+def test_flagged_p_key_independence(n=4):
+    subset = []
+    progress = []
+    alphas = defaultdict(list)
+    seen = 0
+    inv = list(Permutation.fpf_involutions(n))
+    for e, i in enumerate(inv):
+        ck = defaultdict(list)
+        for w in i.get_fpf_involution_words():
+            p, _ = sp_eg_insert(w)
+            ck[p].append(w)
+        for p, ckclass in ck.items():
+            m = max(ckclass[0]) if ckclass[0] else 0
+            for f in [None]: #flags(1 + m, 2 + n):
+                ans = 0
+                for w in ckclass:
+                    for _, x in compatible_sequences(w, flag=f):
+                        ans += x
+                alpha = decompose_p(ans)
+                if alpha not in alphas:
+                    subset.append(ans)
+                    t0 = time.time()
+                    p0 = len(progress)
+                    progress = Vector.reduce_linearly_independent_subset(subset, progress)
+                    p1 = len(progress)
+                    assert all(m is not None for m, v in progress[p0:p1])
+                    t1 = time.time()
+                    print('vectors:', len(subset), 'of', seen, 'seen, left:', len(inv) - e, '| independence check took %s milliseconds' % int(1000 * (t1 - t0)))
+                seen += 1
+                alphas[alpha].append((p, f))
+                rc, cc = skew_symmetric_halves(alpha)
+    assert Vector.is_linearly_independent_subset(subset)
+    return subset, alphas
+
+
+def test_flagged_q_key_independence(n=3):
+    subset = []
+    progress = []
+    alphas = defaultdict(list)
+    seen = 0
+    inv = list(Permutation.involutions(n))
+    for e, i in enumerate(inv):
+        ck = defaultdict(list)
+        va = {}
+        for w in i.get_involution_words():
+            p, _ = o_eg_insert(w)
+            ck[p].append(w)
+            va[p] = p.durfee()
+        for p, ckclass in ck.items():
+            m = max(ckclass[0]) if ckclass[0] else 0
+            for f in [None]: #flags(1 + m, 2 + n):
+                ans = 0
+                for w in ckclass:
+                    for _, x in compatible_sequences(w, flag=f):
+                        ans += x
+                ans *= 2**va[p]
+                alpha = decompose_q(ans)
+                if alpha not in alphas:
+                    subset.append(ans)
+                    t0 = time.time()
+                    p0 = len(progress)
+                    progress = Vector.reduce_linearly_independent_subset(subset, progress)
+                    p1 = len(progress)
+                    assert all(m is not None for m, v in progress[p0:p1])
+                    t1 = time.time()
+                    print('vectors:', len(subset), 'of', seen, 'seen, left:', len(inv) - e, '| independence check took %s milliseconds' % int(1000 * (t1 - t0)))
+                seen += 1
+                alphas[alpha].append((p, f))
+                rc, cc = symmetric_halves(alpha)
+    assert Vector.is_linearly_independent_subset(subset)
+    return subset, alphas
+
+
 def morse_schilling_f(decreasing_factorization, bounded=True):
     for i in range(len(decreasing_factorization)):
         if i == len(decreasing_factorization) - 1:
@@ -431,7 +506,7 @@ def test_p_multiplicity_free(n0=5):
     n = 0
     while True:
         n += 1
-        if n > n0: 
+        if n > n0:
             break
         print(n)
         for mu in skew_symmetric_partitions(n):

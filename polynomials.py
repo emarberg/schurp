@@ -173,6 +173,10 @@ class MPolynomial:
 
 
     """
+    def any(self):
+        assert len(self.coeffs) > 0
+        return next(iter(self.coeffs))
+
     def variables(self):
         return {i for key in self.coeffs.keys() for i in key}
 

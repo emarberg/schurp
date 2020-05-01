@@ -39,8 +39,8 @@ def test_linearly_independent():
     b = Vector({2: 1})
     c = Vector({3: 1})
 
-    assert Vector.linearly_independent_subset([a, b, c]) == [0, 1, 2]
-    assert Vector.linearly_independent_subset([a, -a, c]) == [0, 2]
-    assert Vector.linearly_independent_subset([a, a + b, b]) == [0, 1]
+    assert Vector.get_linearly_independent_subset([a, b, c]) == [0, 1, 2]
+    assert Vector.get_linearly_independent_subset([a, -a, c]) == [0, 2]
+    assert Vector.get_linearly_independent_subset([a, a + b, b]) == [0, 1]
 
 

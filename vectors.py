@@ -126,18 +126,34 @@ class Vector:
         else:
             return '0'
 
+    def any(self):
+        assert len(self.dictionary) > 0
+        return next(iter(self.dictionary))
+
     @classmethod
-    def linearly_independent_subset(cls, vectors):
-        progress = []
-        ans = []
-        for i, v in enumerate(vectors):
+    def is_linearly_independent_subset(cls, vectors):
+        return len(cls.get_linearly_independent_subset(vectors)) == len(vectors)
+
+    @classmethod
+    def reduce_linearly_independent_subset(cls, vectors, progress=None):
+        progress = [] if progress is None else progress
+        for v in vectors[len(progress):]:
             for m, u in progress:
-                u_coeff, v_coeff = u[m], v[m]
-                if v_coeff != 0:
-                    d = math.gcd(u_coeff, v_coeff)
-                    v = d * v  - ((d * v_coeff) // u_coeff) * u
-            if not v.is_zero():
-                m = next(iter(v.dictionary))
-                progress.append((m, v))
+                if m is not None:
+                    u_coeff, v_coeff = u[m], v[m]
+                    if v_coeff != 0:
+                        d = math.gcd(u_coeff, v_coeff)
+                        v = d * v  - ((d * v_coeff) // u_coeff) * u
+            m = v.any() if not v.is_zero() else None
+            progress.append((m, v))
+        return progress
+
+    @classmethod
+    def get_linearly_independent_subset(cls, vectors):
+        ans = []
+        progress = cls.reduce_linearly_independent_subset(vectors)
+        for i in range(len(progress)):
+            m, u = progress[i]
+            if m is not None:
                 ans.append(i)
         return ans
