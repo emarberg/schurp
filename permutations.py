@@ -851,7 +851,7 @@ class Permutation:
 
     @classmethod
     def from_word(cls, *args):
-        if len(args) == 1 and type(args[0]) == tuple:
+        if len(args) == 1 and type(args[0]) in [list, tuple]:
             args = args[0]
         w = Permutation()
         for i in args:
