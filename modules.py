@@ -15,7 +15,7 @@ class QPModule:
 
     def reduced_word(self, n):
         for i in self.strict_descents(n):
-            return (i,) + self.reduced_word(self.act(i, n))
+            return self.reduced_word(self.act(n, i)) + (i,)
         return ()
 
     def __iter__(self):
@@ -27,22 +27,26 @@ class QPModule:
 
     @classmethod
     def _is_weak_ascent(cls, frame):
-        return all(b == 0b1111111 for b in frame)
+        return all(b == 0xFF for b in frame)
 
     @classmethod
-    def _is_weak_decent(cls, frame):
-        return all(b == 0b0000000 for b in frame[:-1]) and frame[-1] == 0b11111110
+    def _is_weak_descent(cls, frame):
+        return all(b == 0xFF for b in frame[:-1]) and frame[-1] == 0xFE
 
     @classmethod
     def _int(cls, step):
         return int.from_bytes(step, byteorder='big', signed=False)
 
-    def act(self, i, n):
-        start = n * self.rank * self.stepsize
-        step = self.frame[start  + i * self.stepsize:start + (i + 1) * self.stepsize]
-        if self._is_weak_decent(step) or self._is_weak_ascent(step):
-            return n
-        return self._int(step)
+    def act(self, n, *args):
+        for i in args:
+            assert i in range(self.rank)
+            start = n * self.rank * self.stepsize
+            step = self.frame[start  + i * self.stepsize:start + (i + 1) * self.stepsize]
+            if self._is_weak_descent(step) or self._is_weak_ascent(step):
+                pass
+            else:
+                n = self._int(step)
+        return n
 
     def _steps(self, n):
         start = n * self.rank * self.stepsize
@@ -52,13 +56,13 @@ class QPModule:
 
     def strict_ascents(self, n):
         for i, step in enumerate(self._steps(n)):
-            if not self._is_weak_ascent(step) and not self._is_weak_decent(step):
+            if not self._is_weak_ascent(step) and not self._is_weak_descent(step):
                 if self._int(step) > n:
                     yield i
 
     def strict_descents(self, n):
         for i, step in enumerate(self._steps(n)):
-            if not self._is_weak_ascent(step) and not self._is_weak_decent(step):
+            if not self._is_weak_ascent(step) and not self._is_weak_descent(step):
                 if self._int(step) < n:
                     yield i
 
@@ -94,7 +98,6 @@ class QPModule:
         t1 = time.time()
         if verbose:
             print('* initialized, time elapsed: %s milliseconds' % int(1000 * (t1 - t0)))
-            print()
 
         level = {w: [] for w in minima}
         progress, position, start = 0, 0, 0
@@ -109,7 +112,7 @@ class QPModule:
                     if i in descents:
                         frame[start:start + stepsize] = descents[i].to_bytes(stepsize, byteorder='big')
                     else:
-                        y = act(i, w)
+                        y = act(w, i)
                         if y == (w, True):
                             frame[start:start + stepsize] = bytes(stepsize * [0xFF])
                         elif y == (w, False):
@@ -139,8 +142,8 @@ class QPModule:
         module = cls(rank, size)
         stepsize = module.stepsize
 
-        def multiply(i, w):
-            return Permutation.s_i(i + 1) * w
+        def multiply(w, i):
+            return w * Permutation.s_i(i + 1)
 
         def printer(word):
             return str(Permutation.from_word([i + 1 for i in word]))
@@ -150,7 +153,7 @@ class QPModule:
         return module
 
     @classmethod
-    def create_gelfand_a(cls, n, k, plus=True):
+    def create_gelfand_a(cls, n, k=None, plus=True):
         assert 0 <= 2 * k <= n
 
         size = math.factorial(n) // math.factorial(k) // 2**k // math.factorial(n - 2 * k)
@@ -159,7 +162,7 @@ class QPModule:
         stepsize = module.stepsize
         w = Permutation(*[1 + i + (-1)**i for i in range(2 * k)])
 
-        def conjugate(i, w):
+        def conjugate(w, i):
             i += 1
             if w(i) == i and w(i + 1) == i + 1:
                 return (w, plus)
