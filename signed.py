@@ -178,9 +178,9 @@ class SignedPermutation:
         s = ''
         for c in self.cycles():
             if len(c) == 1 and c[0] > 0:
-                s += ' %s ' % c[0]
+                s += '%s' % c[0]
             elif len(c) == 2 and c[0] == -c[1]:
-                s += ' %s ' % (str(abs(c[0])) + '\u0305')
+                s +=  '%s' % (str(abs(c[0])) + '\u0305')
             elif c[0] > 0:
                 s += '(' + (DELIM + SPACE).join([(str(-x) + '\u0305') if x < 0 else str(x) for x in c]) + ')'
         return s.strip()

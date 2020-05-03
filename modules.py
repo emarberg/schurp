@@ -53,6 +53,15 @@ class QPModule:
     def GELFAND_D(cls, k): # noqa
         return 'GELFAND_D(%s)' % k
 
+    def permutation(self, n):
+        return self.printer(self.reduced_word(n))
+
+    def length(self, n):
+        return self.height(n)
+
+    def height(self, n):
+        return len(self.reduced_word(n))
+
     def __eq__(self, other):
         return self.label == other.label
 
@@ -63,11 +72,11 @@ class QPModule:
         return self.size
 
     def __repr__(self):
-        k = 24
+        k = 240
         s = []
         for i in range(min(self.size, k)):
             w = self.reduced_word(i)
-            s += ['[ height ' + str(len(w)) + ' : ' + self.printer(w) + ' ]']
+            s += ['[ height ' + str(len(w)) + ' : ' + self.printer(w).cycle_repr() + ' ]']
         if self.size > k:
             s += ['', '(... and %s more)' % (self.size - k)]
         return '\n' + '\n'.join(s) + '\n'
@@ -211,7 +220,7 @@ class QPModule:
             return w * Permutation.s_i(i + 1)
 
         def printer(word):
-            return str(Permutation.from_word([i + 1 for i in word]))
+            return Permutation.from_word([i + 1 for i in word])
 
         module.frame = cls.create(rank, size, stepsize, [Permutation()], multiply)
         module.printer = printer
@@ -242,7 +251,7 @@ class QPModule:
             for i in word:
                 s = Permutation.s_i(i + 1)
                 v = s * v * s
-            return v.cycle_repr()
+            return v
 
         module.frame = cls.create(rank, size, stepsize, [w], conjugate)
         module.printer = printer
@@ -279,7 +288,7 @@ class QPModule:
             for i in word:
                 s = SignedPermutation.s_i(i, w.rank)
                 v = s * v * s if not (i == 0 and v(1) == 1) else v * s
-            return v.cycle_repr()
+            return v
 
         module.frame = cls.create(rank, size, stepsize, [w], conjugate)
         module.printer = printer
@@ -345,7 +354,7 @@ class QPModule:
                     s = SignedPermutation.ds_i(i, v.rank)
                     v = s * v * s
                 assert v.is_involution()
-            return v.cycle_repr()
+            return v
 
         module.frame = cls.create(rank, size, stepsize, [w], conjugate)
         module.printer = printer

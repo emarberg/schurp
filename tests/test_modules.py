@@ -1,4 +1,5 @@
 from modules import QPModule, q
+from signed import SignedPermutation
 
 
 def test_eq():
@@ -164,3 +165,69 @@ def test_hecke_gelfand_d(nin=5):
                                 assert m.element(e).operate(i) in [m.element(e) * q(1), m.element(e) * -q(-1)]
                             else:
                                 assert m.element(e).operate(i, i) == m.element(e) + m.element(e).operate(i) * (q(1) - q(-1))
+
+
+def test_formula_gelfand_d(nin=5):
+    for n in range(3, nin + 1, 2):
+        for k in range(0, n + 1, 2):
+            m = QPModule.create_gelfand_d(n, k // 2)
+            for e in m:
+                v = m.permutation(e)
+                a = (-1)**v.dkappa()
+                for i in range(n):
+                    f = m.operate(e, i)
+                    w = m.permutation(f)
+                    s = SignedPermutation.ds_i(i if i > 0 else -1, n)
+                    if i > 0 and abs(v(i)) != i and abs(v(i + 1)) != i + 1:
+                        if abs(v(i)) == i + 1 and abs(v(i + 1)) == i:
+                            assert e == f
+                            assert i in m.weak_ascents(e)
+                        elif v(i) < v(i + 1):
+                            assert m.length(e) < m.length(f)
+                        elif v(i) > v(i + 1):
+                            assert m.length(e) > m.length(f)
+                        assert w == s * v * s
+                    if i > 0 and (abs(v(i)) != i or abs(v(i + 1)) != i + 1):
+                        # print(m.height(e), ':', v, '*', i, '->', w, ':', m.height(f))
+                        if i == -a * v(i) or i + 1 == a * v(i + 1):
+                            assert m.length(e) < m.length(f)
+                        if i == a * v(i) or i + 1 == -a * v(i + 1):
+                            assert m.length(e) > m.length(f)
+                        assert w == s * v * s
+                    if i > 0 and abs(v(i)) == i and abs(v(i + 1)) == i + 1:
+                        if i == -a * v(i) and i + 1 == a * v(i + 1):
+                            assert m.length(e) < m.length(f)
+                        elif i == a * v(i) and i + 1 == -a * v(i + 1):
+                            assert m.length(e) > m.length(f)
+                        else:
+                            assert e == f
+                            assert i in m.weak_descents(e)
+                        assert w == s * v * s
+
+                    if i == 0 and abs(v(1)) != 1 and abs(v(2)) != 2:
+                        # print(m.height(e), ':', v, '*', i, '->', w, ':', m.height(f))
+                        if abs(v(1)) == 2 and abs(v(2)) == 1:
+                            assert e == f
+                            assert i in m.weak_ascents(e)
+                        elif (v(1) < 0 and v(2) < 0) or 0 < v(2) < -v(1) or 0 < v(1) < -v(2):
+                            assert m.length(e) > m.length(f)
+                        else:
+                            assert m.length(e) < m.length(f)
+                        assert w == s * v * s
+                    elif i == 0 and (abs(v(1)) != 1 or abs(v(2)) != 2):
+                        # print(m.height(e), ':', v, '*', i, '->', w, ':', m.height(f))
+                        if 1 == a * v(1) or 2 == a * v(2):
+                            assert m.length(e) < m.length(f)
+                        if 1 == -a * v(1) or 2 == -a * v(2):
+                            assert m.length(e) > m.length(f)
+                        assert w == (s * v * s).dstar()
+                    elif i == 0 and abs(v(1)) == 1 and abs(v(2)) == 2:
+                        t = SignedPermutation.ds_i(1, n)
+                        if 1 == a * v(1) and 2 == a * v(2):
+                            assert m.length(e) < m.length(f)
+                        elif 1 == -a * v(1) and 2 == -a * v(2):
+                            assert m.length(e) > m.length(f)
+                        else:
+                            assert e == f
+                            assert i in m.weak_descents(e)
+                        assert w == s * v * t
