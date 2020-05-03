@@ -112,7 +112,7 @@ def test_hecke_gelfand_bc(nin=3):
 
 
 def test_gelfand_d(nin=5):
-    for n in range(2, nin + 1):
+    for n in range(3, nin + 1, 2):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
             for e in m:
@@ -135,3 +135,29 @@ def test_gelfand_d(nin=5):
                             print('  R3', 'i =', i, 'j =', j, '->', m.element(x), '==', m.element(y))
                             assert x == y
                 print()
+
+
+def test_hecke_gelfand_d(nin=5):
+    for n in range(3, nin + 1, 2):
+        for k in range(0, n + 1, 2):
+            m = QPModule.create_gelfand_d(n, k // 2)
+            for e in m:
+                print('n =', n, 'k =', k // 2, ':', 'element =', e, 'of', m.size)
+                for i in range(n):
+                    for j in range(n):
+                        if {i, j} == {0, 2} or (abs(i - j) == 1 and {i, j} != {0, 1}):
+                            x = m.element(e).operate(i, j, i)
+                            y = m.element(e).operate(j, i, j)
+                            # print('  R1:', 'i =', i, 'j =', j, '->', x, '==', y)
+                            assert x == y
+                        elif {i, j} == {0, 1} or abs(i - j) > 1:
+                            x = m.element(e).operate(i, j)
+                            y = m.element(e).operate(j, i)
+                            # print('  R2:', 'i =', i, 'j =', j, '->', x, '==', y)
+                            assert x == y
+                        elif i == j:
+                            f = m.operate(e, i)
+                            if e == f:
+                                assert m.element(e).operate(i) in [m.element(e) * q(1), m.element(e) * -q(-1)]
+                            else:
+                                assert m.element(e).operate(i, i) == m.element(e) + m.element(e).operate(i) * (q(1) - q(-1))

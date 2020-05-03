@@ -63,12 +63,14 @@ class QPModule:
         return self.size
 
     def __repr__(self):
-        k = 10
+        k = 24
+        s = []
+        for i in range(min(self.size, k)):
+            w = self.reduced_word(i)
+            s += ['[ height ' + str(len(w)) + ' : ' + self.printer(w) + ' ]']
         if self.size > k:
-            s = '\n'.join([self.printer(self.reduced_word(i)) for i in range(k)]) + '\n\n(... and %s more)' % (self.size - k)
-        else:
-            s = '\n'.join([self.printer(self.reduced_word(i)) for i in self])
-        return '\n' + s + '\n'
+            s += ['', '(... and %s more)' % (self.size - k)]
+        return '\n' + '\n'.join(s) + '\n'
 
     def reduced_word(self, n):
         for i in self.strict_descents(n):
@@ -166,6 +168,7 @@ class QPModule:
         while level:
             nextlevel = {}
             for w, origins in level.items():
+                assert position < size
                 descents = {}
                 for (i, n, o) in origins:
                     frame[o:o + stepsize] = position.to_bytes(stepsize, byteorder='big')
@@ -186,7 +189,7 @@ class QPModule:
             level = nextlevel
 
             if verbose:
-                print('* level %s done @ position %s' % (progress, position))
+                print('* level %s done @ position %s of %s' % (progress, position, size))
 
             progress += 1
 
@@ -285,13 +288,13 @@ class QPModule:
     @classmethod
     def create_gelfand_d(cls, n, k, plus=True):
         assert n >= 2
+        assert n % 2 != 0
         assert 0 <= 2 * k <= n
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
         assert size % 2 == 0
         size = size // 2
-        print(size)
-        input('')
+
         rank = max(0, n)
         module = cls(cls.GELFAND_D(k), rank, size)
         stepsize = module.stepsize
@@ -303,10 +306,7 @@ class QPModule:
                 if abs(w(1)) != 1 and abs(w(2)) != 2:
                     if w * s == s * w:
                         return (w, plus)
-                    elif w.dkappa() % 2 == 0:
-                        return s * w * s
-                    else:
-                        return t * w * t
+                    return s * w * s
                 if (w(1) == 1 and w(2) == 2) or (w(1) == -1 and w(2) == -2):
                     return s * w * t
                 if (w(1) == 1 and w(2) == -2) or (w(1) == -1 and w(2) == 2):
@@ -321,10 +321,7 @@ class QPModule:
             if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
                 return (w, not plus)
 
-            if all(abs(w(j)) == j for j in range(1, i)):
-                s = SignedPermutation.ds_i((-1)**w.dkappa() * i, w.rank)
-            else:
-                s = SignedPermutation.ds_i(i, w.rank)
+            s = SignedPermutation.ds_i(i, w.rank)
             return s * w * s
 
         w = SignedPermutation(*(
@@ -339,19 +336,17 @@ class QPModule:
                     s = SignedPermutation.ds_i(-1, v.rank)
                     t = SignedPermutation.ds_i(1, v.rank)
                     if abs(v(1)) != 1 and abs(v(2)) != 2:
-                        v = s * v * s if v.dkappa() % 2 == 0 else t * v * t
+                        v = s * v * s
                     elif (v(1) == 1 and v(2) == 2) or (v(1) == -1 and v(2) == -2):
                         v = s * v * t
                     else:
                         v = (s * v * s).dstar()
-                elif all(abs(v(j)) == j for j in range(1, i)):
-                    s = SignedPermutation.ds_i((-1)**v.dkappa() * i, v.rank)
-                    v = s * v * s
                 else:
                     s = SignedPermutation.ds_i(i, v.rank)
                     v = s * v * s
+                assert v.is_involution()
             return v.cycle_repr()
 
         module.frame = cls.create(rank, size, stepsize, [w], conjugate)
-        # module.printer = printer
+        module.printer = printer
         return module

@@ -172,15 +172,18 @@ class SignedPermutation:
         if len(self) == 0:
             return '1'
 
-        EXCLUDE_SINGLE_CYCLES = True
         SPACE = ' '
         DELIM = ''  # ','
 
         s = ''
         for c in self.cycles():
-            if not EXCLUDE_SINGLE_CYCLES or len(c) > 1:
+            if len(c) == 1 and c[0] > 0:
+                s += ' %s ' % c[0]
+            elif len(c) == 2 and c[0] == -c[1]:
+                s += ' %s ' % (str(abs(c[0])) + '\u0305')
+            elif c[0] > 0:
                 s += '(' + (DELIM + SPACE).join([(str(-x) + '\u0305') if x < 0 else str(x) for x in c]) + ')'
-        return s
+        return s.strip()
 
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
@@ -423,7 +426,7 @@ class SignedPermutation:
         return SignedPermutation(*oneline)
 
     def dstar(self):
-        return SignedPermutation(*[-j if abs(j) == j > 2 else j for j in self.oneline])
+        return SignedPermutation(*[-self(i) if abs(self(i)) == i > 2 else self(i) for i in range(1, self.rank + 1)])
 
     def dkappa(self):
         k = len([i for i in range(1, self.rank + 1) if -i != self(i) < 0])
