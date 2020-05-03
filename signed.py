@@ -26,6 +26,7 @@ atoms_d_cache = {}
 
 class SignedPermutation:
 
+
     @classmethod
     def ncsp_matchings(cls, base, trivial_allowed=True):
         base = set(base)
@@ -152,6 +153,34 @@ class SignedPermutation:
 
     def __neg__(self):
         return self * SignedPermutation.longest_element(self.rank)
+
+    def cycles(self):
+        ans = []
+        a = list(range(1, 1 + self.rank))
+        while a:
+            cyc = [a[0]]
+            while self(cyc[-1]) != cyc[0]:
+                cyc.append(self(cyc[-1]))
+            ans.append(tuple(cyc))
+            ncyc = [-i for i in cyc]
+            if set(ncyc) != set(cyc):
+                ans.append(tuple(ncyc))
+            a = sorted(set(a) - set(cyc) - set(ncyc))
+        return ans
+
+    def cycle_repr(self):
+        if len(self) == 0:
+            return '1'
+
+        EXCLUDE_SINGLE_CYCLES = True
+        SPACE = ' '
+        DELIM = ''  # ','
+
+        s = ''
+        for c in self.cycles():
+            if not EXCLUDE_SINGLE_CYCLES or len(c) > 1:
+                s += '(' + (DELIM + SPACE).join([(str(-x) + '\u0305') if x < 0 else str(x) for x in c]) + ')'
+        return s
 
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
@@ -383,6 +412,24 @@ class SignedPermutation:
             oneline = list(range(1, i)) + [i + 1, i] + list(range(i + 2, n + 1))
         return SignedPermutation(*oneline)
 
+    @classmethod
+    def ds_i(cls, i, n):
+        assert 0 < abs(i) < n
+        if i > 0:
+            oneline = list(range(1, i)) + [i + 1, i] + list(range(i + 2, n + 1))
+        else:
+            i = -i
+            oneline = list(range(1, i)) + [-i - 1, -i] + list(range(i + 2, n + 1))
+        return SignedPermutation(*oneline)
+
+    def dstar(self):
+        return SignedPermutation(*[-j if abs(j) == j > 2 else j for j in self.oneline])
+
+    def dkappa(self):
+        k = len([i for i in range(1, self.rank + 1) if -i != self(i) < 0])
+        assert k % 2 == 0
+        return k // 2
+
     @property
     def right_descent_set(self):
         if self._rdes is None:
@@ -444,7 +491,8 @@ class SignedPermutation:
         return self.oneline < other.oneline
 
     def __eq__(self, other):
-        assert type(other) == SignedPermutation
+        if type(other) != SignedPermutation:
+            return False
         return self.oneline == other.oneline
 
     def __pow__(self, n):

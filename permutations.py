@@ -796,7 +796,7 @@ class Permutation:
         return True
 
     def __eq__(self, other):
-        if not isinstance(other, Permutation):
+        if type(other) != Permutation:
             return False
         return len(self * (other**-1)) == 0
 

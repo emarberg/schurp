@@ -4,6 +4,10 @@ from permutations import Permutation
 DIVIDED_DIFFERENCE_CACHE = {}
 
 
+def q(i):
+    return MPolynomial.monomial(0xFFFFFFFFFFFFFF)**i
+
+
 def X(i):
     return MPolynomial.monomial(i)
 
@@ -438,11 +442,13 @@ class MPolynomial:
         #     return "s"
         # if i == 8:
         #     return "r"
+        if i == 0xFFFFFFFFFFFFFF:
+            return 'q'
         if i > 0:
             return "x_" + str(i)
-        elif i == 0:
+        if i == 0:
             return "\u03B2"
-        else:
+        if i < 0:
             return "y_" + str(-i)
 
     @staticmethod

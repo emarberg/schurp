@@ -1,3 +1,4 @@
+from polynomials import MPolynomial
 import math
 
 
@@ -78,6 +79,12 @@ class Vector:
         else:
             return self * Vector.base(other)
 
+    def operate(self, *args):
+        ans = self
+        for a in args:
+            ans = ans * Vector({a: 1})
+        return ans
+
     def __rmul__(self, other):
         if self.is_scalar(other):
             return Vector({key: self[key] * other for key in self.keys()}, self.printer)
@@ -100,7 +107,7 @@ class Vector:
         return Vector(dictionary={k: v // c for k, v in self.items()}, printer=self.printer)
 
     def is_scalar(self, other):
-        return type(other) == int
+        return type(other) in [int, MPolynomial]
 
     def is_zero(self):
         return len(self) == 0
@@ -110,6 +117,8 @@ class Vector:
             return ' + '
         elif coeff == -1:
             return ' - '
+        elif type(coeff) == MPolynomial:
+            return ' + (%s)*' % coeff
         elif coeff > 0:
             return ' + %s*' % coeff
         else:
@@ -143,7 +152,7 @@ class Vector:
                     u_coeff, v_coeff = u[m], v[m]
                     if v_coeff != 0:
                         d = math.gcd(u_coeff, v_coeff)
-                        v = d * v  - ((d * v_coeff) // u_coeff) * u
+                        v = d * v - ((d * v_coeff) // u_coeff) * u
             m = v.any() if not v.is_zero() else None
             progress.append((m, v))
         return progress

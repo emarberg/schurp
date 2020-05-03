@@ -1,9 +1,66 @@
 from permutations import Permutation
+from signed import SignedPermutation
+from polynomials import q
+from vectors import Vector
 import math
 import time
 
 
+class QPModuleElement:
+
+    def __init__(self, qpmodule, n):
+        self.qpmodule = qpmodule
+        self.n = n
+
+    def __eq__(self, other):
+        assert type(self) == type(other)
+        assert self.qpmodule == other.qpmodule
+        return self.n == other.n
+
+    def __hash__(self):
+        return hash((self.n, self.qpmodule))
+
+    def __repr__(self):
+        return self.qpmodule.printer(self.qpmodule.reduced_word(self.n))
+
+    def __mul__(self, i):
+        result = self.qpmodule.operate(self.n, i)
+        if result == self.n:
+            if i in self.qpmodule.weak_ascents(self.n):
+                return Vector({self: q(1)})
+            else:
+                return Vector({self: -q(-1)})
+        new = QPModuleElement(self.qpmodule, result)
+        if result < self.n:
+            return Vector({self: q(1) - q(-1), new: 1})
+        else:
+            return Vector({new: 1})
+
+
 class QPModule:
+
+    HECKE_A = 'HECKE_A'
+
+    @classmethod
+    def GELFAND_A(cls, k): # noqa
+        return 'GELFAND_A(%s)' % k
+
+    @classmethod
+    def GELFAND_BC(cls, k): # noqa
+        return 'GELFAND_BC(%s)' % k
+
+    @classmethod
+    def GELFAND_D(cls, k): # noqa
+        return 'GELFAND_D(%s)' % k
+
+    def __eq__(self, other):
+        return self.label == other.label
+
+    def __hash__(self):
+        return hash(self.label)
+
+    def __len__(self):
+        return self.size
 
     def __repr__(self):
         k = 10
@@ -15,7 +72,7 @@ class QPModule:
 
     def reduced_word(self, n):
         for i in self.strict_descents(n):
-            return self.reduced_word(self.act(n, i)) + (i,)
+            return self.reduced_word(self.operate(n, i)) + (i,)
         return ()
 
     def __iter__(self):
@@ -37,11 +94,15 @@ class QPModule:
     def _int(cls, step):
         return int.from_bytes(step, byteorder='big', signed=False)
 
-    def act(self, n, *args):
+    def element(self, n):
+        assert 0 <= n < self.size
+        return Vector({QPModuleElement(self, n): 1})
+
+    def operate(self, n, *args):
         for i in args:
             assert i in range(self.rank)
             start = n * self.rank * self.stepsize
-            step = self.frame[start  + i * self.stepsize:start + (i + 1) * self.stepsize]
+            step = self.frame[start + i * self.stepsize:start + (i + 1) * self.stepsize]
             if self._is_weak_descent(step) or self._is_weak_ascent(step):
                 pass
             else:
@@ -76,15 +137,16 @@ class QPModule:
             if self._is_weak_descent(step):
                 yield i
 
-    def __init__(self, rank, size, frame=None, printer=None):
+    def __init__(self, family, rank, size, frame=None, printer=None, label=None):
         self.rank = rank
         self.size = size
         self.stepsize = max(1, math.ceil(math.log2((size + 2) / 8.0)))
         self.frame = frame
         self.printer = printer if printer is not None else str
+        self.label = (rank, size, family)
 
     @classmethod
-    def create(cls, rank, size, stepsize, minima, act, verbose=True):
+    def create(cls, rank, size, stepsize, minima, operate, verbose=True):
         assert size * rank * stepsize < 0.8e+10
 
         t0 = time.time()
@@ -112,7 +174,7 @@ class QPModule:
                     if i in descents:
                         frame[start:start + stepsize] = descents[i].to_bytes(stepsize, byteorder='big')
                     else:
-                        y = act(w, i)
+                        y = operate(w, i)
                         if y == (w, True):
                             frame[start:start + stepsize] = bytes(stepsize * [0xFF])
                         elif y == (w, False):
@@ -139,7 +201,7 @@ class QPModule:
     def create_hecke_a(cls, n):
         size = math.factorial(n)
         rank = max(0, n - 1)
-        module = cls(rank, size)
+        module = cls(cls.HECKE_A, rank, size)
         stepsize = module.stepsize
 
         def multiply(w, i):
@@ -153,14 +215,13 @@ class QPModule:
         return module
 
     @classmethod
-    def create_gelfand_a(cls, n, k=None, plus=True):
+    def create_gelfand_a(cls, n, k, plus=True):
         assert 0 <= 2 * k <= n
 
         size = math.factorial(n) // math.factorial(k) // 2**k // math.factorial(n - 2 * k)
         rank = max(0, n - 1)
-        module = cls(rank, size)
+        module = cls(cls.GELFAND_A(k), rank, size)
         stepsize = module.stepsize
-        w = Permutation(*[1 + i + (-1)**i for i in range(2 * k)])
 
         def conjugate(w, i):
             i += 1
@@ -171,9 +232,11 @@ class QPModule:
             s = Permutation.s_i(i)
             return s * w * s
 
+        w = Permutation(*[1 + i + (-1)**i for i in range(2 * k)])
+
         def printer(word):
             v = w
-            for i in reversed(word):
+            for i in word:
                 s = Permutation.s_i(i + 1)
                 v = s * v * s
             return v.cycle_repr()
@@ -183,9 +246,112 @@ class QPModule:
         return module
 
     @classmethod
-    def create_gelfand_bc(cls, n):
-        pass
+    def create_gelfand_bc(cls, n, k, plus=True):
+        assert 0 <= 2 * k <= n
+
+        size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
+        rank = max(0, n)
+        module = cls(cls.GELFAND_BC(k), rank, size)
+        stepsize = module.stepsize
+
+        def conjugate(w, i):
+            s = SignedPermutation.s_i(i, w.rank)
+            if i == 0 and w(1) in [-1, 1]:
+                return w * s
+            if i > 0 and abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
+                return (w, plus)
+            if i > 0 and w(i) == i and w(i + 1) == i + 1:
+                return (w, not plus)
+            if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
+                return (w, not plus)
+            return s * w * s
+
+        w = SignedPermutation(*(
+            [1 + i + (-1)**i for i in range(2 * k)] +
+            [i for i in range(2 * k + 1, n + 1)]
+        ))
+
+        def printer(word):
+            v = w
+            for i in word:
+                s = SignedPermutation.s_i(i, w.rank)
+                v = s * v * s if not (i == 0 and v(1) == 1) else v * s
+            return v.cycle_repr()
+
+        module.frame = cls.create(rank, size, stepsize, [w], conjugate)
+        module.printer = printer
+        return module
 
     @classmethod
-    def create_gelfand_d(cls, n):
-        pass
+    def create_gelfand_d(cls, n, k, plus=True):
+        assert n >= 2
+        assert 0 <= 2 * k <= n
+
+        size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
+        assert size % 2 == 0
+        size = size // 2
+        print(size)
+        input('')
+        rank = max(0, n)
+        module = cls(cls.GELFAND_D(k), rank, size)
+        stepsize = module.stepsize
+
+        def conjugate(w, i):
+            if i == 0:
+                s = SignedPermutation.ds_i(-1, w.rank)
+                t = SignedPermutation.ds_i(1, w.rank)
+                if abs(w(1)) != 1 and abs(w(2)) != 2:
+                    if w * s == s * w:
+                        return (w, plus)
+                    elif w.dkappa() % 2 == 0:
+                        return s * w * s
+                    else:
+                        return t * w * t
+                if (w(1) == 1 and w(2) == 2) or (w(1) == -1 and w(2) == -2):
+                    return s * w * t
+                if (w(1) == 1 and w(2) == -2) or (w(1) == -1 and w(2) == 2):
+                    return (w, not plus)
+                if (abs(w(1)) == 1 and abs(w(2)) != 2) or (abs(w(1)) != 1 and abs(w(2)) == 2):
+                    return (s * w * s).dstar()
+
+            if i > 0 and abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
+                return (w, plus)
+            if i > 0 and w(i) == i and w(i + 1) == i + 1:
+                return (w, not plus)
+            if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
+                return (w, not plus)
+
+            if all(abs(w(j)) == j for j in range(1, i)):
+                s = SignedPermutation.ds_i((-1)**w.dkappa() * i, w.rank)
+            else:
+                s = SignedPermutation.ds_i(i, w.rank)
+            return s * w * s
+
+        w = SignedPermutation(*(
+            [1 + i + (-1)**i for i in range(2 * k)] +
+            [i for i in range(2 * k + 1, n + 1)]
+        ))
+
+        def printer(word):
+            v = w
+            for i in word:
+                if i == 0:
+                    s = SignedPermutation.ds_i(-1, v.rank)
+                    t = SignedPermutation.ds_i(1, v.rank)
+                    if abs(v(1)) != 1 and abs(v(2)) != 2:
+                        v = s * v * s if v.dkappa() % 2 == 0 else t * v * t
+                    elif (v(1) == 1 and v(2) == 2) or (v(1) == -1 and v(2) == -2):
+                        v = s * v * t
+                    else:
+                        v = (s * v * s).dstar()
+                elif all(abs(v(j)) == j for j in range(1, i)):
+                    s = SignedPermutation.ds_i((-1)**v.dkappa() * i, v.rank)
+                    v = s * v * s
+                else:
+                    s = SignedPermutation.ds_i(i, v.rank)
+                    v = s * v * s
+            return v.cycle_repr()
+
+        module.frame = cls.create(rank, size, stepsize, [w], conjugate)
+        # module.printer = printer
+        return module
