@@ -39,6 +39,7 @@ def test_gelfand_a(nin=5):
     for n in range(nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_a(n, k // 2)
+            assert len({m.printer(m.reduced_word(i)) for i in m}) == m.size
             for e in m:
                 for i in range(n - 1):
                     for j in range(n - 1):
@@ -75,6 +76,7 @@ def test_gelfand_bc(nin=4):
     for n in range(nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_bc(n, k // 2)
+            assert len({m.printer(m.reduced_word(i)) for i in m}) == m.size
             for e in m:
                 for i in range(n):
                     for j in range(n):
@@ -115,6 +117,7 @@ def test_gelfand_d(nin=5):
     for n in range(3, nin + 1, 2):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
+            assert len({m.printer(m.reduced_word(i)) for i in m}) == m.size
             for e in m:
                 print('n =', n, 'k =', k // 2, ':', 'element =', m.element(e))
                 for i in range(n):
