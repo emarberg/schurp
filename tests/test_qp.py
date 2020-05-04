@@ -1,4 +1,4 @@
-from modules import QPModule, q
+from qp import QPModule, q
 from signed import SignedPermutation
 
 
