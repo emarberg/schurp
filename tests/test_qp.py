@@ -146,7 +146,7 @@ def test_hecke_gelfand_d(nin=5):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
             for e in m:
-                print('n =', n, 'k =', k // 2, ':', 'element =', e, 'of', m.size)
+                # print('n =', n, 'k =', k // 2, ':', 'element =', m.element(e), 'of', m.size)
                 for i in range(n):
                     for j in range(n):
                         if {i, j} == {0, 2} or (abs(i - j) == 1 and {i, j} != {0, 1}):

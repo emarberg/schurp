@@ -22,7 +22,7 @@ class QPModuleElement:
         return hash((self.n, self.qpmodule))
 
     def __repr__(self):
-        return self.qpmodule.printer(self.qpmodule.reduced_word(self.n))
+        return self.qpmodule.permutation(self.n).cycle_repr()
 
     def __mul__(self, i):
         result = self.qpmodule.operate(self.n, i)
@@ -176,11 +176,8 @@ class QPModule:
         if verbose:
             print('* initialized, time elapsed: %s milliseconds' % int(1000 * (t1 - t0)))
 
-        level = []
-        origins = {}
-        for ht, w in minima:
-            heappush(level, (ht, w))
-            origins[w] = []
+        level = minima
+        origins = {w: [] for _, w in minima}
         position, start = 0, 0
 
         while level:
@@ -341,30 +338,30 @@ class QPModule:
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
-            a, b = ht
             if i == 0:
                 s = SignedPermutation.ds_i(-1, w.rank)
                 t = SignedPermutation.ds_i(1, w.rank)
                 if abs(w(1)) != 1 and abs(w(2)) != 2:
                     if w * s == s * w:
                         return ht, (w, plus)
-                    return s * w * s
+                    return ht + 1, s * w * s
                 if (w(1) == 1 and w(2) == 2) or (w(1) == -1 and w(2) == -2):
-                    return s * w * t
+                    return ht + 1, s * w * t
                 if (w(1) == 1 and w(2) == -2) or (w(1) == -1 and w(2) == 2):
                     return ht, (w, not plus)
                 if (abs(w(1)) == 1 and abs(w(2)) != 2) or (abs(w(1)) != 1 and abs(w(2)) == 2):
-                    return (s * w * s).dstar()
+                    return ht + 1, (s * w * s).dstar()
+                raise Exception
 
-            if i > 0 and abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
+            if abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
                 return ht, (w, plus)
-            if i > 0 and w(i) == i and w(i + 1) == i + 1:
+            if w(i) == i and w(i + 1) == i + 1:
                 return ht, (w, not plus)
-            if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
+            if w(i) == -i and w(i + 1) == -i - 1:
                 return ht, (w, not plus)
 
             s = SignedPermutation.ds_i(i, w.rank)
-            return s * w * s
+            return ht + 1, s * w * s
 
         w = SignedPermutation(*(
             [1 + i + (-1)**i for i in range(2 * k)] +
@@ -372,12 +369,12 @@ class QPModule:
         ))
 
         def printer(word):
-            ht, v = (0, 0), w
+            ht, v = 0, w
             for i in word:
                 ht, v = conjugate(ht, v, i)
             return ht, v
 
-        minima = [((0, 0), w)]
+        minima = [(0, w)]
         module.frame = cls.create(rank, size, stepsize, minima, conjugate)
         module.printer = printer
         return module

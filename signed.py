@@ -433,6 +433,9 @@ class SignedPermutation:
         assert k % 2 == 0
         return k // 2
 
+    def dlength(self):
+        return len(self) - self.ell_zero()
+
     @property
     def right_descent_set(self):
         if self._rdes is None:
