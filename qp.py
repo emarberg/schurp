@@ -38,6 +38,10 @@ class QPModuleElement:
             return Vector({new: 1})
 
 
+class QPWGraph:
+    pass
+
+
 class QPModule:
 
     HECKE_A = 'HECKE_A'
@@ -64,7 +68,7 @@ class QPModule:
         return self.height(n)
 
     def height(self, n):
-        return self.expand(n)[0]
+        return self[n][0]
 
     def __eq__(self, other):
         return self.label == other.label
@@ -94,8 +98,13 @@ class QPModule:
         return iter(range(self.size))
 
     def __getitem__(self, n):
-        start = n * self.rank * self.stepsize
-        return [self._int(self.frame[start + i * self.stepsize:start + (i + 1) * self.stepsize]) for i in range(self.rank)]
+        start = n * (self.height_bytes + self.rank * self.stepsize)
+        ans = [self._int(self.frame[start:start + self.height_bytes])]
+        start += self.height_bytes
+        return ans + [
+            self._int(self.frame[start + i * self.stepsize:start + (i + 1) * self.stepsize])
+            for i in range(self.rank)
+        ]
 
     @classmethod
     def _is_weak_ascent(cls, frame):
@@ -116,7 +125,7 @@ class QPModule:
     def operate(self, n, *args):
         for i in args:
             assert i in range(self.rank)
-            start = n * self.rank * self.stepsize
+            start = n * (self.height_bytes + self.rank * self.stepsize) + self.height_bytes
             step = self.frame[start + i * self.stepsize:start + (i + 1) * self.stepsize]
             if self._is_weak_descent(step) or self._is_weak_ascent(step):
                 pass
@@ -125,7 +134,7 @@ class QPModule:
         return n
 
     def _steps(self, n):
-        start = n * self.rank * self.stepsize
+        start = n * (self.height_bytes + self.rank * self.stepsize) + self.height_bytes
         for _ in range(self.rank):
             yield self.frame[start:start + self.stepsize]
             start += self.stepsize
@@ -152,17 +161,18 @@ class QPModule:
             if self._is_weak_descent(step):
                 yield i
 
-    def __init__(self, family, rank, size, frame=None, printer=None, label=None):
+    def __init__(self, family, rank, size, height_bytes, frame=None, printer=None, label=None):
         self.rank = rank
         self.size = size
         self.stepsize = max(1, math.ceil(math.log2((size + 2) / 8.0)))
+        self.height_bytes = height_bytes
         self.frame = frame
         self.printer = printer if printer is not None else str
         self.label = (rank, size, family)
 
     @classmethod
-    def create(cls, rank, size, stepsize, minima, operate, verbose=True):
-        assert size * rank * stepsize < 0.8e+10
+    def create(cls, rank, size, stepsize, height_bytes, minima, operate, verbose=True):
+        assert size * (rank * stepsize + height_bytes) < 0.8e+10
 
         t0 = time.time()
         if verbose:
@@ -170,7 +180,7 @@ class QPModule:
             print('creating bytearray of size %s bytes' % (size * rank * stepsize))
             print()
 
-        frame = bytearray(size * rank * stepsize)
+        frame = bytearray(size * (rank * stepsize + height_bytes))
 
         t1 = time.time()
         if verbose:
@@ -183,6 +193,8 @@ class QPModule:
         while level:
             wht, w = heappop(level)
             assert position < size
+            frame[start:start + height_bytes] = wht.to_bytes(height_bytes, byteorder='big')
+            start += height_bytes
             descents = {}
             for (i, n, o) in origins[w]:
                 frame[o:o + stepsize] = position.to_bytes(stepsize, byteorder='big')
@@ -215,7 +227,8 @@ class QPModule:
     def create_hecke_a(cls, n):
         size = math.factorial(n)
         rank = max(0, n - 1)
-        module = cls(cls.HECKE_A, rank, size)
+        height_bytes = 1
+        module = cls(cls.HECKE_A, rank, size, height_bytes)
         stepsize = module.stepsize
 
         def multiply(ht, w, i):
@@ -229,7 +242,7 @@ class QPModule:
             return ht, v
 
         minima = [(0, Permutation())]
-        module.frame = cls.create(rank, size, stepsize, minima, multiply)
+        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, multiply)
         module.printer = printer
         return module
 
@@ -239,7 +252,8 @@ class QPModule:
 
         size = math.factorial(n) // math.factorial(k) // 2**k // math.factorial(n - 2 * k)
         rank = max(0, n - 1)
-        module = cls(cls.GELFAND_A(k), rank, size)
+        height_bytes = 1
+        module = cls(cls.GELFAND_A(k), rank, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -249,27 +263,18 @@ class QPModule:
             if w(i) == i + 1 and w(i + 1) == i:
                 return ht, (w, not plus)
             s = Permutation.s_i(i)
-
-            a, b = ht
-            if w(i) != i and w(i + 1) != i + 1:
-                b += (1 if w(i) < w(i + 1) else -1)
-            elif w(i) == i and w(i + 1) != i + 1:
-                a -= 1
-            elif w(i) != i and w(i + 1) == i + 1:
-                a += 1
-
-            return (a, b), s * w * s
+            return ht + 1, s * w * s
 
         w = Permutation(*[1 + i + (-1)**i for i in range(2 * k)])
 
         def printer(word):
-            ht, v = (0, 0), w
+            ht, v = 0, w
             for i in word:
                 ht, v = conjugate(ht, v, i)
             return ht, v
 
-        minima = [((0, 0), w)]
-        module.frame = cls.create(rank, size, stepsize, minima, conjugate)
+        minima = [(0, w)]
+        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, conjugate)
         module.printer = printer
         return module
 
@@ -279,33 +284,21 @@ class QPModule:
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
         rank = max(0, n)
-        module = cls(cls.GELFAND_BC(k), rank, size)
+        height_bytes = 1
+        module = cls(cls.GELFAND_BC(k), rank, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
-            a, b = ht
             s = SignedPermutation.s_i(i, w.rank)
             if i == 0 and w(1) in [-1, 1]:
-                return (a + w(1), b), w * s
+                return ht + 1, w * s
             if i > 0 and abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
                 return ht, (w, plus)
             if i > 0 and w(i) == i and w(i + 1) == i + 1:
                 return ht, (w, not plus)
             if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
                 return ht, (w, not plus)
-
-            if i == 0:
-                b += (1 if w(1) > 0 else -1)
-            elif i > 0 and abs(w(i)) == i and abs(w(i + 1)) == i + 1:
-                a += (1 if w(i) == -i else -1)
-            elif i > 0 and abs(w(i)) == i and abs(w(i + 1)) != i + 1:
-                a += (1 if w(i) == -i else -1)
-            elif i > 0 and abs(w(i)) != i and abs(w(i + 1)) == i + 1:
-                a += (1 if w(i + 1) == i + 1 else -1)
-            elif i > 0 and abs(w(i)) != i and abs(w(i + 1)) != i + 1:
-                b += (1 if w(i) < w(i + 1) else -1)
-
-            return (a, b), s * w * s
+            return ht + 1, s * w * s
 
         w = SignedPermutation(*(
             [1 + i + (-1)**i for i in range(2 * k)] +
@@ -313,13 +306,13 @@ class QPModule:
         ))
 
         def printer(word):
-            ht, v = (0, 0), w
+            ht, v = 0, w
             for i in word:
                 ht, v = conjugate(ht, v, i)
             return ht, v
 
-        minima = [((0, 0), w)]
-        module.frame = cls.create(rank, size, stepsize, minima, conjugate)
+        minima = [(0, w)]
+        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, conjugate)
         module.printer = printer
         return module
 
@@ -334,7 +327,8 @@ class QPModule:
         size = size // 2
 
         rank = max(0, n)
-        module = cls(cls.GELFAND_D(k), rank, size)
+        height_bytes = 1
+        module = cls(cls.GELFAND_D(k), rank, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -375,6 +369,6 @@ class QPModule:
             return ht, v
 
         minima = [(0, w)]
-        module.frame = cls.create(rank, size, stepsize, minima, conjugate)
+        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, conjugate)
         module.printer = printer
         return module
