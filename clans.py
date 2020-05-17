@@ -54,7 +54,12 @@ class Clan:
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
 
-    def is_aligned(self, matching):
+    def clan_type(self):
+        p = len([x for x in self.oneline if x is True])
+        q = len([x for x in self.oneline if x is False])
+        return p - q
+
+    def is_aligned(self, matching, verbose=False):
         for (i, j) in matching:
             if self.family == self.TYPE_A:
                 pair = (self(i), self(j))
@@ -74,9 +79,13 @@ class Clan:
                 return False
 
         if self.family == self.TYPE_B:
-            signs = [self(self.rank() + 1 + i) for (i, j) in sorted(matching) if -i == j]
+            k = abs(self.clan_type()) // 2
+            trivial = [i for (i, j) in sorted(matching) if -i == j]
+            if len(trivial) < k:
+                return False
+            signs = [self(self.rank() + 1 + i) for i in trivial]
             signs += [self(self.rank() + 1)]
-            if any(signs[i] == signs[i + 1] for i in range(len(signs) - 1)):
+            if any(signs[i] == signs[i + 1] for i in range(k, len(signs) - 1)):
                 return False
         return True
 
@@ -101,12 +110,13 @@ class Clan:
             base = [i if i < w(i) else w(i) if w(i) < i else False for i in range(-n, 0)]
             base += [len(fixed) % 2 != n % 2]
             base += [i if i < w(i) else w(i) if w(i) < i else False for i in range(1, n + 1)]
-            for subset in itertools.combinations(fixed, (p - q + len(fixed)) // 2):
-                oneline = base[:]
-                for i in subset:
-                    oneline[n + i] = True
-                    oneline[n - i] = True
-                yield Clan(oneline, cls.TYPE_B)
+            if p - q + len(fixed) >= 0:
+                for subset in itertools.combinations(fixed, (p - q + len(fixed)) // 2):
+                    oneline = base[:]
+                    for i in subset:
+                        oneline[n + i] = True
+                        oneline[n - i] = True
+                    yield Clan(oneline, cls.TYPE_B)
 
     @classmethod
     def all_a(cls, p, q=None):

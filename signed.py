@@ -403,8 +403,14 @@ class SignedPermutation:
         return SignedPermutation(*list(range(1, n + 1)))
 
     @classmethod
-    def longest_element(cls, n):
-        return SignedPermutation(*[-i for i in range(1, n + 1)])
+    def longest_element(cls, n, k=None):
+        k = n if k is None else k
+        return SignedPermutation(*[(-i if i <= k else i) for i in range(1, n + 1)])
+
+    @classmethod
+    def grassmannian_element(cls, n, k=None):
+        k = n if k is None else k
+        return SignedPermutation(*[(-(k + 1 - i) if i <= k else i) for i in range(1, n + 1)])
 
     @classmethod
     def s_i(cls, i, n):
@@ -960,7 +966,19 @@ class SignedPermutation:
             shapes[tuple(sorted(w.shape()))].add(w)
         return shapes
 
-    def get_atoms(self):
+    @classmethod
+    def relative_atoms(cls, y, z):
+        if y == z:
+            yield SignedPermutation.identity(y.rank)
+        elif y.involution_length() < z.involution_length():
+            for i in range(y.rank):
+                s = SignedPermutation.s_i(i, y.rank)
+                v = s % y % s
+                if v != y:
+                    for a in cls.relative_atoms(v, z):
+                        yield s * a
+
+    def get_atoms(self, z=None):
         assert self == self.inverse()
         w = self.reduce()
         if w not in atoms_b_cache:
