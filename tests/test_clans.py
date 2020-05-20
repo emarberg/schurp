@@ -136,6 +136,15 @@ def test_all_b():
                 assert cl.clan_type() == 2 * p - 2 * q - 1
 
 
+def test_all_c2():
+    assert len(list(Clan.all_c2(2, 1))) == 9
+
+    for p in range(4):
+        for q in range(4):
+            for cl in Clan.all_c2(p, q):
+                assert cl.clan_type() == 2 * p - 2 * q
+
+
 def test_all_c1():
     assert len(list(Clan.all_c1(2))) == 11
 
@@ -144,13 +153,38 @@ def test_all_c1():
             assert cl.clan_type() == 0
 
 
-def test_atoms_b(n=3):
+def test_atoms_b(n=4):
     for p in range(1, n):
-        for q in [p - 1, p]:
-            for clan in Clan.all_b(p, q):
-                print(clan)
-                z = -clan.richardson_springer_map()
-                assert set(clan.get_atoms()).issubset(set(z.get_atoms()))
+        q = n - p
+        offset = abs(2 * p - 2 * q - 1) // 2
+        for clan in Clan.all_b(p, q):
+            z = -clan.richardson_springer_map()
+            atoms = set(clan.get_atoms())
+            print(clan)
+            for a in atoms:
+                print('  ', a.inverse(), a.inverse().get_reduced_word())
+            print(z, offset)
+            btoms = set(z.get_atoms(offset))
+            for a in btoms:
+                print('  ', a.inverse(), a.inverse().get_reduced_word())
+            assert atoms.issubset(btoms)
+
+
+def test_atoms_c2(n=4):
+    for p in range(1, n):
+        q = n - p
+        offset = abs(p - q)
+        for clan in Clan.all_c2(p, q):
+            z = -clan.richardson_springer_map()
+            atoms = clan.get_atoms()
+            print(clan)
+            for a in atoms:
+                print('  ', a.inverse(), a.inverse().get_reduced_word())
+            print(z, offset)
+            btoms = set(z.get_fpf_atoms(offset))
+            for a in btoms:
+                print('  ', a.inverse(), a.inverse().get_reduced_word())
+            assert atoms.issubset(btoms)
 
 
 def relatom_shape_test(aword, y):
@@ -223,6 +257,29 @@ def test_atoms_b_refined(n=3):
             _test_refinement(clan, atoms_by_shape, excluded_guess)
 
 
+def test_atoms_c2_refined(n=4):
+    for p in range(n + 1):
+        q = n - p
+        k = abs(p - q)
+        for clan in Clan.all_c2(p, q):
+            base = (-clan.richardson_springer_map()).negated_points()
+            excluded_guess = {
+                m for m in SignedPermutation.ncsp_matchings(base)
+                if not clan.is_aligned(m)
+            }
+            print('\nexcluded_guess:', excluded_guess)
+
+            z = -clan.richardson_springer_map()
+            atoms_by_shape = {}
+            for w in z.get_fpf_atoms(offset=k):
+                sh = w.fpf_shape(offset=k)
+                sh = tuple(sorted(sh))
+                atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
+            print('atoms_by_shape:', atoms_by_shape)
+
+            _test_refinement(clan, atoms_by_shape, excluded_guess)
+
+
 def test_atoms_c1(n=3):
     for m in range(n + 1):
         for clan in Clan.all_c1(m):
@@ -275,7 +332,7 @@ def _test_refinement(clan, atoms_by_shape, excluded_guess=None):
 
     extra = (set(excluded_guess) - set(excluded)) if excluded_guess is not None else set()
     if extra:
-        lines += ['EXPECTED BUT NOT EXCLUDED:']
+        lines += ['NOT EXCLUDED BUT PREDICTED TO BE EXCLUDED:']
         lines += ['']
         for sh in extra:
             lines += ['   ' + str(set(sh))]

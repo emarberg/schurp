@@ -48,6 +48,16 @@ class SignedPermutation:
             for a in cls.ncsp_matchings(base - {x, -x}, True):
                 yield tuple(sorted(set(a) | {(x, -x)}))
 
+    def fpf_shape(self, offset=None):
+        n = self.rank
+        if offset is None:
+            offset = 0 if n % 2 == 0 else 1
+        assert 0 <= offset <= n and (n - offset) % 2 == 0
+        oneline = [-k for k in range(offset, 0, -1)]
+        for i in range(offset + 1, n, 2):
+            oneline += [i + 1, i]
+        return (SignedPermutation(*oneline) * self).shape()
+
     def shape(self):
         ndes, fix, neg = self._ndes()
 
@@ -917,7 +927,7 @@ class SignedPermutation:
     def cyc(self):
         return sorted(self.pair() + self.neg() + self.fix())
 
-    def _min_fpf_inv_atom_oneline(self):
+    def _min_abs_fpf_inv_atom_oneline(self):
         return tuple(i for p in self.cyc() for i in p)
 
     def _min_inv_atom_oneline(self):
@@ -929,9 +939,9 @@ class SignedPermutation:
             minimum += [i]
         return tuple(minimum)
 
-    def get_min_fpf_atom(self):
+    def get_min_abs_fpf_atom(self):
         assert self.is_abs_fpf_involution()
-        return SignedPermutation(*self._min_fpf_inv_atom_oneline()).inverse()
+        return SignedPermutation(*self._min_abs_fpf_inv_atom_oneline()).inverse()
 
     def get_min_atom(self):
         assert self == self.inverse()
@@ -943,7 +953,21 @@ class SignedPermutation:
         oneline = [i for j in range(2, n + 1, 2) for i in [j, j - 1]]
         return SignedPermutation(*oneline)
 
-    def get_fpf_atoms(self):
+    def get_fpf_atoms(self, offset=None):
+        assert self.is_fpf_involution()
+        n = self.rank
+        if offset is None:
+            offset = 0 if n % 2 == 0 else 1
+        assert 0 <= offset <= n and (n - offset) % 2 == 0
+        for w in self.get_atoms():
+            oneline = w.inverse().oneline
+            if all(a < 0 for a in oneline[:offset]) and all(oneline[i] > oneline[i + 1] for i in range(offset, len(oneline) - 1, 2)):
+                newline = tuple(reversed([-a for a in oneline[:offset]]))
+                for i in range(offset, len(oneline) - 1, 2):
+                    newline += (oneline[i + 1], oneline[i])
+                yield SignedPermutation(*newline).inverse()
+
+    def get_abs_fpf_atoms(self):
         assert self.is_abs_fpf_involution()
 
         def upnext(oneline):
@@ -953,7 +977,7 @@ class SignedPermutation:
                     newline = oneline[:i] + (b, c, a, d) + oneline[i + 4:]
                     yield newline
 
-        minimum = self._min_fpf_inv_atom_oneline()
+        minimum = self._min_abs_fpf_inv_atom_oneline()
         add = {minimum}
         while add:
             for w in add:
@@ -978,13 +1002,29 @@ class SignedPermutation:
                     for a in cls.relative_atoms(v, z):
                         yield s * a
 
-    def get_atoms(self, z=None):
+    def get_atoms(self, offset=None):
         assert self == self.inverse()
+
+        n = self.rank
+        if offset is None:
+            offset = 0
+        assert 0 <= offset <= n
+
         w = self.reduce()
         if w not in atoms_b_cache:
             atoms_b_cache[w] = list(w._get_atoms())
-        ans = atoms_b_cache[w]
-        return [x.inflate(self.rank) for x in ans]
+
+        ans = [x.inflate(self.rank) for x in atoms_b_cache[w]]
+        if offset == 0:
+            return ans
+
+        bns = []
+        for w in ans:
+            oneline = w.inverse().oneline
+            if all(a < 0 for a in oneline[:offset]):
+                newline = tuple(reversed([-a for a in oneline[:offset]])) + oneline[offset:]
+                bns.append(SignedPermutation(*newline).inverse())
+        return bns
 
     def _get_atoms(self):
         def involution(oneline):

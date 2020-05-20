@@ -40,6 +40,10 @@ class Clan:
     def create_c1(cls, oneline):
         return Clan(oneline, cls.TYPE_C1)
 
+    @classmethod
+    def create_c2(cls, oneline):
+        return Clan(oneline, cls.TYPE_C2)
+
     def __repr__(self):
         l = [str(min(i, self(i))) if type(i) == int else '+' if i else '-' for i in self.oneline]
         return ' '.join(l)
@@ -61,14 +65,14 @@ class Clan:
 
     def is_aligned(self, matching, verbose=False):
         for (i, j) in matching:
+            if self.family in [self.TYPE_B, self.TYPE_C2] and i + j == 0:
+                continue
             if self.family == self.TYPE_A:
                 pair = (self(i), self(j))
             elif self.family == self.TYPE_B:
                 i, j = self.rank() + 1 + i, self.rank() + 1 + j
-                if not (i <= self.rank() and j <= self.rank()):
-                    continue
                 pair = (self(i), (self(j)))
-            elif self.family == self.TYPE_C1:
+            elif self.family in [self.TYPE_C1, self.TYPE_C2]:
                 i = self.rank() + i + (0 if i > 0 else 1)
                 j = self.rank() + j + (0 if j > 0 else 1)
                 pair = (self(i), self(j))
@@ -78,9 +82,12 @@ class Clan:
             if pair in [(True, True), (False, False)]:
                 return False
 
+        trivial = [a for (a, b) in sorted(matching) if -a == b]
+
+        if self.family == self.TYPE_C2:
+            return len(trivial) == abs(self.clan_type()) // 2
         if self.family == self.TYPE_B:
             k = abs(self.clan_type()) // 2
-            trivial = [i for (i, j) in sorted(matching) if -i == j]
             if len(trivial) < k:
                 return False
             signs = [self(self.rank() + 1 + i) for i in trivial]
@@ -100,23 +107,38 @@ class Clan:
                 oneline = base[:]
                 for i in subset:
                     oneline[i] = True
-                yield Clan(oneline, cls.TYPE_A)
+                cl = Clan(oneline, cls.TYPE_A)
+                assert cl.clan_type() == p - q
+                yield cl
 
     @classmethod
     def _all_b(cls, p, q):
         n = p + q
         for w in SignedPermutation.involutions(n):
             fixed = [i for i in range(1, n + 1) if w(i) == i]
+            f = len(fixed)
+
             base = [i if i < w(i) else w(i) if w(i) < i else False for i in range(-n, 0)]
-            base += [len(fixed) % 2 != n % 2]
+            base += [(2 * p - 2 * q + 2 * f - 1) % 4 == 1]
             base += [i if i < w(i) else w(i) if w(i) < i else False for i in range(1, n + 1)]
-            if p - q + len(fixed) >= 0:
-                for subset in itertools.combinations(fixed, (p - q + len(fixed)) // 2):
+
+            e = 1 if base[n] else -1
+            f = len(fixed)
+            # 2 * k + e - 2 * (f - k) == 4 * k - 2 * f + e == 2 * p - 2 * q - 1
+            # 4 * k + e == 2 * p - 2 * q + 2 * f - 1
+            k = (2 * p - 2 * q + 2 * f - 1 - e)
+            assert k % 4 == 0
+            k = k // 4
+
+            if 0 <= k <= f:
+                for subset in itertools.combinations(fixed, k):
                     oneline = base[:]
                     for i in subset:
                         oneline[n + i] = True
                         oneline[n - i] = True
-                    yield Clan(oneline, cls.TYPE_B)
+                    cl = Clan(oneline, cls.TYPE_B)
+                    assert cl.clan_type() == 2 * p - 2 * q - 1
+                    yield cl
 
     @classmethod
     def all_a(cls, p, q=None):
@@ -149,13 +171,47 @@ class Clan:
                 for subset in itertools.combinations(fixed, p):
                     oneline = base[:]
                     for i in subset:
+                        # the tuple is 0-indexed
                         oneline[n + i - 1] = True
                         oneline[n - i] = False
                     yield Clan(oneline, cls.TYPE_C1)
 
     @classmethod
+    def _all_c2(cls, p, q):
+        n = p + q
+        for w in SignedPermutation.involutions(n):
+            if any(w(i) == -i for i in range(1, n + 1)):
+                continue
+            fixed = [i for i in range(1, n + 1) if w(i) == i]
+            base = [i if i < w(i) else w(i) if w(i) < i else False for i in range(-n, 0)]
+            base += [i if i < w(i) else w(i) if w(i) < i else False for i in range(1, n + 1)]
+
+            f = len(fixed)
+            # 2 * k - 2 * (f - k) == 4 * k - 2 * f == 2 * p - 2 * q
+            # 4 * k == 2 * p - 2 * q + 2 * f
+            k = (2 * p - 2 * q + 2 * f)
+            assert k % 4 == 0
+            k = k // 4
+
+            if 0 <= k <= f:
+                for subset in itertools.combinations(fixed, k):
+                    oneline = base[:]
+                    for i in subset:
+                        oneline[n + i - 1] = True
+                        oneline[n - i] = True
+                    cl = Clan(oneline, cls.TYPE_C2)
+                    assert cl.clan_type() == 2 * p - 2 * q
+                    yield cl
+
+    @classmethod
     def all_c2(cls, p, q=None):
-        pass
+        if q is None:
+            n = p
+            for p in range(1, n):
+                for clan in cls.all_b(p, n - p):
+                    yield clan
+        for c in cls._all_c2(p, q):
+            yield c
 
     def rank(self):
         if self.family == self.TYPE_A:
@@ -163,6 +219,8 @@ class Clan:
         if self.family == self.TYPE_B:
             return (len(self.oneline) - 1) // 2
         if self.family == self.TYPE_C1:
+            return len(self.oneline) // 2
+        if self.family == self.TYPE_C2:
             return len(self.oneline) // 2
 
     def generators(self):
@@ -184,12 +242,12 @@ class Clan:
         def s(i):
             if self.family == self.TYPE_A:
                 return Permutation.s_i(i)
-            elif self.family in [self.TYPE_B, self.TYPE_C1]:
+            elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
                 return SignedPermutation.s_i(i, self.rank())
 
         if self.family == self.TYPE_A:
             identity = Permutation()
-        elif self.family in [self.TYPE_B, self.TYPE_C1]:
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             identity = SignedPermutation.identity(self.rank())
 
         if self not in CLAN_ATOMS_CACHE:
@@ -210,16 +268,14 @@ class Clan:
         return cycles
 
     def richardson_springer_map(self):
-        if self.family == self.TYPE_A:
+        def phi_a(cycles):
             w = Permutation()
-            for (i, j) in self.cycles():
+            for (i, j) in cycles:
                 w *= Permutation.t_ij(i, j)
             return w
 
-        if self.family == self.TYPE_B:
-            n = self.rank()
+        def phi_bcd(cycles, n):
             w = SignedPermutation.identity(n)
-            cycles = [(i - n - 1, j - n - 1) for (i, j) in self.cycles()]
             for (i, j) in cycles:
                 if abs(i) <= j:
                     if i < 0:
@@ -229,20 +285,20 @@ class Clan:
                     w *= s
             return w
 
-        if self.family == self.TYPE_C1:
+        if self.family == self.TYPE_A:
+            return phi_a(self.cycles())
+
+        if self.family == self.TYPE_B:
             n = self.rank()
-            w = SignedPermutation.identity(n)
+            cycles = [(i - n - 1, j - n - 1) for (i, j) in self.cycles()]
+            return phi_bcd(cycles, n)
+
+        if self.family in [self.TYPE_C1, self.TYPE_C2]:
+            n = self.rank()
             cycles = [(
                 i - n - 1 if i <= n else i - n,
                 j - n - 1 if j <= n else j - n) for (i, j) in self.cycles()]
-            for (i, j) in cycles:
-                if abs(i) <= j:
-                    if i < 0:
-                        s = SignedPermutation.reflection_s(-i, j, n)
-                    else:
-                        s = SignedPermutation.reflection_t(i, j, n)
-                    w *= s
-            return w
+            return phi_bcd(cycles, n)
 
     def __call__(self, i):
         return self.oneline[i - 1]
@@ -250,7 +306,7 @@ class Clan:
     def _conjugate(self, i, j=None):
         if j is None:
             j = i + 1
-        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1]:
+        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             newline = list(self.oneline)
             a, b = self(i), self(j)
             if type(a) == int:
@@ -261,7 +317,7 @@ class Clan:
             return Clan(newline, self.family)
 
     def _translate(self, i):
-        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1]:
+        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             assert type(self(i)) != int and type(self(i + 1)) != int
             newline = list(self.oneline)
             newline[i - 1], newline[i] = i + 1, i
@@ -333,6 +389,28 @@ class Clan:
             return self._translate(n + i)._translate(n - i)
         return self
 
+    def _multiply_c2(self, i):
+        assert 0 <= i < self.rank()
+        n = self.rank()
+        if i == 0:
+            a, b = self(n), self(n + 1)
+            if type(a) == int and type(b) == int and a < b:
+                return self._conjugate(n, n + 1)
+            return self
+
+        a, b = self(n + i), self(n + 1 + i)
+        if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
+            return self
+        if type(a) == int and type(b) == int and a < b:
+            return self._conjugate(n + i)._conjugate(n - i)
+        if type(a) == int and type(b) != int and a < n + i:
+            return self._conjugate(n + i)._conjugate(n - i)
+        if type(a) != int and type(b) == int and n + 1 + i < b:
+            return self._conjugate(n + i)._conjugate(n - i)
+        if type(a) != int and type(b) != int and a != b:
+            return self._translate(n + i)._translate(n - i)
+        return self
+
     def __rmul__(self, i):
         assert type(i) == int
         if self.family == self.TYPE_A:
@@ -341,4 +419,6 @@ class Clan:
             return self._multiply_b(i)
         if self.family == self.TYPE_C1:
             return self._multiply_c1(i)
+        if self.family == self.TYPE_C2:
+            return self._multiply_c2(i)
 
