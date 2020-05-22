@@ -6,11 +6,16 @@ REDUCED_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
 ATOMS_CACHE = {}
+TWISTED_ATOMS_CACHE = {}
+TWISTED_INVOLUTION_WORDS_CACHE = {}
 FPF_ATOMS_CACHE = {}
 SYMPLECTIC_HECKE_ATOMS_CACHE = {}
 
 
 class Permutation:
+
+    def star(self, n):
+        return Permutation(*[n + 1 - self(i) for i in range(n, 0, -1)])
 
     @property
     def rank(self):
@@ -173,6 +178,66 @@ class Permutation:
                 newdream[0] = (word[0],) + newdream[0]
                 yield tuple(newdream)
 
+    def get_twisted_involution_words(self, n):
+        if self not in TWISTED_INVOLUTION_WORDS_CACHE:
+            TWISTED_INVOLUTION_WORDS_CACHE[(self, n)] = list(self._get_twisted_involution_words(n))
+        return TWISTED_INVOLUTION_WORDS_CACHE[(self, n)]
+
+    def _get_twisted_involution_words(self, n):
+        if self.is_identity():
+            return [()]
+        ans = []
+        for i in self.right_descent_set:
+            s = Permutation.s_i(i)
+            t = Permutation.s_i(n - i)
+            w = t * self * s
+            if self == w:
+                w = self * s
+            ans += [e + (i,) for e in w.get_twisted_involution_words(n)]
+        return ans
+
+    def get_twisted_atoms(self, n):
+        if self not in TWISTED_ATOMS_CACHE:
+            TWISTED_ATOMS_CACHE[(self, n)] = list(self._get_twisted_atoms(n))
+        return TWISTED_ATOMS_CACHE[(self, n)]
+
+    def _get_twisted_atoms(self, n):
+        if self.is_identity():
+            return [Permutation()]
+        ans = set()
+        for i in self.right_descent_set:
+            s = Permutation.s_i(i)
+            t = Permutation.s_i(n - i)
+            w = t * self * s
+            if self == w:
+                w = self * s
+            ans |= {e * s for e in w.get_twisted_atoms(n)}
+        return list(ans)
+
+    def fixed(self, n):
+        return {i for i in range(1, n + 1) if self(i) == i}
+
+    def twisted_shape(self, n):
+        y = self.star(n).inverse() % self
+        assert y.twisted_involution_length(n) == self.length()
+
+        w0 = Permutation.longest_element(n)
+        y = w0 * y
+        aword = reversed(self.get_reduced_word())
+
+        yfixed = {i for i in range(1, n + 1) if y(i) == i}
+        v = Permutation()
+        sh = set()
+        for a in aword:
+            if a > 0 and y(a) == a and y(a + 1) == a + 1:
+                e, f = tuple(sorted([v(a), v(a + 1)]))
+                sh |= {(e, f)}
+            s = Permutation.s_i(a)
+            v *= s
+            y = s % y % s
+        f = {i for p in sh for i in p}
+        return sh | {(i, i) for i in yfixed - f}
+
     def get_atoms(self):
         if self not in ATOMS_CACHE:
             ATOMS_CACHE[self] = list(self._get_atoms())
@@ -285,6 +350,14 @@ class Permutation:
     def all(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
             yield Permutation(args)
+
+    @classmethod
+    def twisted_involutions(cls, n):
+        w0 = Permutation.longest_element(n)
+        for args in itertools.permutations(range(1, n + 1)):
+            w = Permutation(args)
+            if all(w(w(i)) == i for i in range(1, n + 1)):
+                yield w0 * w
 
     @classmethod
     def involutions(cls, n):
@@ -745,6 +818,18 @@ class Permutation:
             x = x * self
         return x
 
+    def __mod__(self, other):
+        assert type(other) == Permutation
+        if other.left_descent_set:
+            i = next(iter(other.left_descent_set))
+            s = Permutation.s_i(i)
+            if i in self.right_descent_set:
+                return self % (s * other)
+            else:
+                return (self * s) % (s * other)
+        else:
+            return self
+
     # other is a permutation
     def __mul__(self, other):
         assert type(other) == Permutation
@@ -836,6 +921,11 @@ class Permutation:
 
     def __hash__(self):
         return hash(tuple(self.oneline))
+
+    def twisted_involution_length(self, n):
+        w0 = Permutation.longest_element(n)
+        y = w0 * self
+        return w0.involution_length() - y.involution_length()
 
     def involution_length(self):
         return (self.length() + len(list(filter(lambda i: len(i) > 1, self.cycles)))) // 2

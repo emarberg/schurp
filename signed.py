@@ -26,7 +26,6 @@ atoms_d_cache = {}
 
 class SignedPermutation:
 
-
     @classmethod
     def ncsp_matchings(cls, base, trivial_allowed=True):
         base = set(base)
@@ -381,11 +380,13 @@ class SignedPermutation:
                 w = w * s
             for e in w.get_involution_words():
                 yield e + (i,)
-        # w = self.reduce()
-        # assert w.inverse() == w
-        # for a in w.get_atoms():
-        #     for word in a.get_reduced_words():
-        #         yield word
+
+    # def get_fpf_involution_words(self):
+    #     w = self.reduce()
+    #     assert w.is_fpf_involution()
+    #     for a in w.get_fpf_atoms():
+    #         for word in a.get_reduced_words():
+    #             yield word
 
     def __call__(self, i):
         if i == 0:
@@ -416,6 +417,13 @@ class SignedPermutation:
     def longest_element(cls, n, k=None):
         k = n if k is None else k
         return SignedPermutation(*[(-i if i <= k else i) for i in range(1, n + 1)])
+
+    @classmethod
+    def longest_fpf(cls, n):
+        oneline = [-j for i in range(1, n, 2) for j in [i + 1, i]]
+        if n % 2 != 0:
+            oneline += [-n]
+        return SignedPermutation(*oneline)
 
     @classmethod
     def grassmannian_element(cls, n, k=None):
@@ -528,6 +536,27 @@ class SignedPermutation:
             p = n // 2
             q = n - p
             return self.__pow__(p) * self.__pow__(q)
+
+    def fpf_stanley_schur_s_decomposition(self):
+        assert self.is_fpf_involution()
+        ans = Vector()
+        for x in self.get_fpf_atoms():
+            ans += x.stanley_schur_q_decomposition()
+        return SchurQ.decompose_s_lambda(ans)
+
+    def fpf_stanley_schur_p_decomposition(self):
+        assert self.is_fpf_involution()
+        ans = Vector()
+        for x in self.get_fpf_atoms():
+            ans += x.stanley_schur_p_decomposition()
+        return ans
+
+    def fpf_stanley_schur_q_decomposition(self):
+        assert self.is_fpf_involution()
+        ans = Vector()
+        for x in self.get_fpf_atoms():
+            ans += x.stanley_schur_q_decomposition()
+        return ans
 
     def inv_stanley_schur_s_decomposition(self):
         assert self == self.inverse()
