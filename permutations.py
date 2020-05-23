@@ -221,22 +221,14 @@ class Permutation:
         y = self.star(n).inverse() % self
         assert y.twisted_involution_length(n) == self.length()
 
-        w0 = Permutation.longest_element(n)
-        y = w0 * y
-        aword = reversed(self.get_reduced_word())
+        w = self.inverse()
+        line = [w(i) for i in range(1, n + 1)]
+        pairs = []
+        while line:
+            pairs += [(line[0], line[-1])]
+            line = line[1:-1]
 
-        yfixed = {i for i in range(1, n + 1) if y(i) == i}
-        v = Permutation()
-        sh = set()
-        for a in aword:
-            if a > 0 and y(a) == a and y(a + 1) == a + 1:
-                e, f = tuple(sorted([v(a), v(a + 1)]))
-                sh |= {(e, f)}
-            s = Permutation.s_i(a)
-            v *= s
-            y = s % y % s
-        f = {i for p in sh for i in p}
-        return sh | {(i, i) for i in yfixed - f}
+        return {(a, b) for b, a in pairs if a <= b}
 
     def get_atoms(self):
         if self not in ATOMS_CACHE:
@@ -353,11 +345,21 @@ class Permutation:
 
     @classmethod
     def twisted_involutions(cls, n):
-        w0 = Permutation.longest_element(n)
-        for args in itertools.permutations(range(1, n + 1)):
-            w = Permutation(args)
-            if all(w(w(i)) == i for i in range(1, n + 1)):
-                yield w0 * w
+        level = {Permutation()}
+        while level:
+            new = set()
+            for w in level:
+                yield w
+                for i in range(1, n):
+                    if w(i) < w(i + 1):
+                        s = Permutation.s_i(i)
+                        t = Permutation.s_i(n - i)
+                        v = t * w * s
+                        if w == v:
+                            new.add(w * s)
+                        else:
+                            new.add(v)
+            level = new
 
     @classmethod
     def involutions(cls, n):
