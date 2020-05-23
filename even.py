@@ -222,6 +222,33 @@ class EvenSignedPermutation:
             EVEN_SIGNED_INVOLUTION_WORDS[key] = sorted(words, key=lambda x: self.flatten(x))
         return EVEN_SIGNED_INVOLUTION_WORDS[key]
 
+    def shape(self):
+        raise NotImplementedError
+
+        n = self.rank
+        y = self.star().inverse() % self
+        assert y.involution_length() == self.length()
+
+        w0 = EvenSignedPermutation.longest_element(n)
+        y = w0 * y
+        aword = reversed(self.get_reduced_word())
+
+        yfixed = {i for i in range(-n, n + 1) if i != 0 and y(i) == i}
+        v = EvenSignedPermutation()
+        sh = set()
+        for a in aword:
+            if a > 0 and y(a) == a and y(a + 1) == a + 1:
+                e, f = tuple(sorted([v(a), v(a + 1)]))
+                sh |= {(e, f), (-f, -e)}
+            elif a == 0 and y(1) == 1 and y(2) == 2:
+                e, f = tuple(sorted([v(1), v(-2)]))
+                sh |= {(e, f), (-f, -e)}
+            s = EvenSignedPermutation.s_i(a, n)
+            v *= s
+            y = s % y % s
+        f = {i for p in sh for i in p}
+        return sh | {(i, i) for i in yfixed - f}
+
     def get_twisted_involution_words(self):
         return self.get_twisted_involution_words(True)
 
