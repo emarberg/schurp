@@ -26,6 +26,7 @@ class EvenSignedPermutation:
         self._ldes = None
         self._len = None
         self._involution_length = None
+        self._twisted_involution_length = None
 
     def __repr__(self):
         # return 'EvenSignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
@@ -136,8 +137,14 @@ class EvenSignedPermutation:
         oneline[0] *= -1
         return EvenSignedPermutation(*oneline)
 
+    def is_involution(self, twist=False):
+        if twist:
+            return self.star() == self.inverse()
+        else:
+            return self == self.inverse()
+
     def is_twisted_involution(self):
-        return self.star() == self.inverse()
+        return self.is_involution(True)
 
     @classmethod
     def flatten(cls, word):
@@ -155,7 +162,7 @@ class EvenSignedPermutation:
                 prev = word
 
     def count_flattened_involution_words(self):
-        p = self.inv_stanley_schur_p_decomposition
+        pass
 
     def get_flattened_involution_words(self):
         prev = None
@@ -202,17 +209,21 @@ class EvenSignedPermutation:
             D_SIGNED_REDUCED_WORDS[oneline] = words
         return D_SIGNED_REDUCED_WORDS[oneline]
 
-    def get_involution_words(self):
+    def get_involution_words(self, twist=False):
         w = self.reduce()
         assert w.inverse() == w
         oneline = w.oneline
-        if oneline not in EVEN_SIGNED_INVOLUTION_WORDS:
+        key = (oneline, twist)
+        if key not in EVEN_SIGNED_INVOLUTION_WORDS:
             words = []
-            for a in w.get_atoms():
+            for a in w.get_atoms(twist):
                 for word in a.get_reduced_words():
                     words.append(word)
-            EVEN_SIGNED_INVOLUTION_WORDS[oneline] = sorted(words, key=lambda x: self.flatten(x))
-        return EVEN_SIGNED_INVOLUTION_WORDS[oneline]
+            EVEN_SIGNED_INVOLUTION_WORDS[key] = sorted(words, key=lambda x: self.flatten(x))
+        return EVEN_SIGNED_INVOLUTION_WORDS[key]
+
+    def get_twisted_involution_words(self):
+        return self.get_twisted_involution_words(True)
 
     def get_fpf_involution_words(self):
         pass
@@ -235,10 +246,15 @@ class EvenSignedPermutation:
             newline = newline[:-1]
         return EvenSignedPermutation(*newline)
 
-    def involution_length(self):
-        if self._involution_length is None:
-            self._involution_length = len(self.get_involution_word())
-        return self._involution_length
+    def involution_length(self, twist=False):
+        if twist:
+            if self._twisted_involution_length is None:
+                self._twisted_involution_length = len(self.get_twisted_involution_word())
+            return self._twisted_involution_length
+        else:
+            if self._involution_length is None:
+                self._involution_length = len(self.get_involution_word())
+            return self._involution_length
 
     def __neg__(self):
         return self * EvenSignedPermutation.longest_element(self.rank)
@@ -290,6 +306,19 @@ class EvenSignedPermutation:
                     if -self(i) > self(j):
                         self._len += 1
         return self._len
+
+    def __mod__(self, other):
+        assert type(other) == EvenSignedPermutation
+        assert self.rank == other.rank
+        if other.left_descent_set:
+            i = next(iter(other.left_descent_set))
+            s = EvenSignedPermutation.s_i(i, self.rank)
+            if i in self.right_descent_set:
+                return self % (s * other)
+            else:
+                return (self * s) % (s * other)
+        else:
+            return self
 
     def __mul__(self, other):
         assert type(other) == EvenSignedPermutation
@@ -419,26 +448,61 @@ class EvenSignedPermutation:
         newline = self.oneline + tuple(range(self.rank + 1, rank + 1))
         return EvenSignedPermutation(*newline)
 
-    def get_atoms(self):
-        assert self == self.inverse()
+    def get_atoms_by_shape(self):
+        shapes = defaultdict(set)
+        for w in self.get_atoms():
+            shapes[tuple(sorted(w.shape()))].add(w)
+        return shapes
+
+    def shape(self):
+        raise NotImplementedError
+
+    @classmethod
+    def relative_twisted_atoms(cls, y, z):
+        for w in cls.relative_atoms(y, z, True):
+            yield w
+
+    @classmethod
+    def relative_atoms(cls, y, z, twist=False):
+        assert y.is_involution(twist)
+        assert z.is_involution(twist)
+
+        if y == z:
+            yield EvenSignedPermutation.identity(y.rank)
+        elif y.involution_length(twist) < z.involution_length(twist):
+            for i in range(y.rank):
+                s = EvenSignedPermutation.s_i(i, y.rank)
+                t = s.star() if twist else s
+                v = t % y % s
+                if v != y:
+                    for a in cls.relative_atoms(v, z):
+                        yield s * a
+
+    def get_twisted_atoms(self):
+        return self.get_atoms(True)
+
+    def get_atoms(self, twist=False):
+        assert self.is_involution(twist)
         w = self.reduce()
-        if w not in ATOMS_D_CACHE:
-            ATOMS_D_CACHE[w] = list(w._get_atoms())
-        ans = ATOMS_D_CACHE[w]
+        key = (w, twist)
+        if key not in ATOMS_D_CACHE:
+            ATOMS_D_CACHE[key] = list(w._get_atoms(twist))
+        ans = ATOMS_D_CACHE[key]
         return [x.inflate(self.rank) for x in ans]
 
-    def _get_atoms(self):
+    def _get_atoms(self, twist=False):
         if len(self) == 0:
             yield self
             return
 
         for i in range(self.rank):
             s = EvenSignedPermutation.s_i(i, self.rank)
+            t = s.star() if twist else s
             w = self * s
             if len(w) < len(self):
-                if w == s * self:
-                    for a in w.get_atoms():
+                if w == t * self:
+                    for a in w.get_atoms(twist):
                         yield a * s
                 else:
-                    for a in (s * w).get_atoms():
+                    for a in (t * w).get_atoms(twist):
                         yield a * s

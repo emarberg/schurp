@@ -2,7 +2,8 @@ from vectors import Vector
 from tableaux import Tableau
 from marked import MarkedNumber
 from collections import defaultdict
-from signed import SignedPermutation, EvenSignedPermutation
+from signed import SignedPermutation
+from even import EvenSignedPermutation
 import itertools
 import numpy
 from PIL import Image, ImageDraw, ImageColor

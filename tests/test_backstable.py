@@ -1,5 +1,6 @@
 from permutations import Permutation
-from signed import SignedPermutation, EvenSignedPermutation
+from signed import SignedPermutation
+from even import EvenSignedPermutation
 from polynomials import X
 
 
