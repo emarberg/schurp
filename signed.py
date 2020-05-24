@@ -11,6 +11,8 @@ C_SIGNED_REDUCED_WORDS = {(): {()}}
 B_SIGNED_REDUCED_WORDS = {(): {()}}
 SIGNED_REDUCED_WORDS = {(): {()}}
 
+SIGNED_INVOLUTION_WORDS = {}
+SIGNED_FPF_INVOLUTION_WORDS = {}
 
 schurp_stansym_cache = {}
 schurq_stansym_cache = {}
@@ -19,7 +21,658 @@ atoms_b_cache = {}
 atoms_d_cache = {}
 
 
-class SignedPermutation:
+class SignedMixin:
+
+    @classmethod
+    def identity(cls, n):
+        return cls(*list(range(1, n + 1)))
+
+    def __mod__(self, other):
+        assert type(other) == type(self)
+        assert self.rank == other.rank
+        if other.left_descent_set:
+            i = next(iter(other.left_descent_set))
+            s = self.s_i(i, self.rank)
+            if i in self.right_descent_set:
+                return self % (s * other)
+            else:
+                return (self * s) % (s * other)
+        else:
+            return self
+
+    def __mul__(self, other):
+        assert type(other) == type(self)
+        assert self.rank == other.rank
+        newline = [self(other(i)) for i in range(1, self.rank + 1)]
+        return self.__class__(*newline)
+
+    def inverse(self):
+        newline = self.rank * [0]
+        for i in range(1, self.rank + 1):
+            j = self(i)
+            if j > 0:
+                newline[j - 1] = i
+            else:
+                newline[-j - 1] = -i
+        return self.__class__(*newline)
+
+    def __lt__(self, other):
+        assert type(other) == type(self)
+        return self.oneline < other.oneline
+
+    def __eq__(self, other):
+        if type(other) != type(self):
+            return False
+        return self.oneline == other.oneline
+
+    def __pow__(self, n):
+        if n < 0:
+            return self.inverse().__pow__(-n)
+        elif n == 0:
+            return self.identity(self.rank)
+        elif n == 1:
+            return self.__class__(*self.oneline)
+        else:
+            p = n // 2
+            q = n - p
+            return self.__pow__(p) * self.__pow__(q)
+
+    @classmethod
+    def t_ij(cls, i, j, n):
+        return cls.reflection(i, j, n)
+
+    @classmethod
+    def reflection(cls, i, j, n):
+        caller = list(range(1, n + 1))
+        if i > 0:
+            caller[i - 1] = j
+        else:
+            caller[-i - 1] = -j
+        if j > 0:
+            caller[j - 1] = i
+        else:
+            caller[-j - 1] = -i
+        return cls(*caller)
+
+    @classmethod
+    def reflection_s(cls, i, j, n):
+        caller = list(range(1, n + 1))
+        caller[i - 1] = -j
+        caller[j - 1] = -i
+        return cls(*caller)
+
+    @classmethod
+    def reflection_t(cls, i, j, n):
+        assert i != j
+        caller = list(range(1, n + 1))
+        caller[i - 1] = j
+        caller[j - 1] = i
+        return cls(*caller)
+
+    def inflate(self, rank):
+        newline = self.oneline + tuple(range(self.rank + 1, rank + 1))
+        return self.__class__(*newline)
+
+    def fixed_points(self):
+        n = self.rank
+        return [a for a in range(-n, n + 1) if 0 != a == self(a)]
+
+    def negated_points(self):
+        n = self.rank
+        return [a for a in range(-n, n + 1) if 0 != a == -self(a)]
+
+    def __call__(self, i):
+        if i == 0:
+            return 0
+        assert 1 <= abs(i) <= self.rank
+        if i > 0:
+            return self.oneline[i - 1]
+        else:
+            return -self.oneline[abs(i) - 1]
+
+    def __hash__(self):
+        return hash(self.oneline)
+
+    def reduce(self):
+        newline = self.oneline
+        while newline and newline[-1] == len(newline):
+            newline = newline[:-1]
+        return self.__class__(*newline)
+
+    def tex(self):
+        s = '$'
+        for i in self.oneline:
+            if i > 0:
+                s += str(i) + '\\hs '
+            else:
+                s += '\\bar' + str(-i) + '\\hs '
+        s = s[:-len('\\hs ')]
+        s += '$'
+        return s
+
+    @classmethod
+    def from_word(cls, n, *args):
+        if len(args) == 1 and type(args[0]) == tuple:
+            args = args[0]
+        w = cls.identity(n)
+        for i in args:
+            w *= cls.s_i(i, n)
+        return w
+
+    @classmethod
+    def double_involution_word(cls, word):
+        if len(word) == 0:
+            return tuple()
+        n = 1 + max([i for i in word])
+        w = cls.identity(n)
+        ans = []
+        for i in word:
+            assert i not in w.right_descent_set
+            s = cls.s_i(i, n)
+            w *= s
+            if i not in w.left_descent_set:
+                ans = [i] + ans + [i]
+                w = s * w
+            else:
+                ans = ans + [i]
+        return tuple(ans)
+
+    def __neg__(self):
+        return self.longest_element(self.rank) * self
+
+    def cycles(self):
+        ans = []
+        a = list(range(1, 1 + self.rank))
+        while a:
+            cyc = [a[0]]
+            while self(cyc[-1]) != cyc[0]:
+                cyc.append(self(cyc[-1]))
+            ans.append(tuple(cyc))
+            ncyc = [-i for i in cyc]
+            if set(ncyc) != set(cyc):
+                ans.append(tuple(ncyc))
+            a = sorted(set(a) - set(cyc) - set(ncyc))
+        return ans
+
+    def cycle_repr(self):
+        if len(self) == 0:
+            return '1'
+
+        SPACE = ' '
+        DELIM = ''  # ','
+
+        s = ''
+        for c in self.cycles():
+            if len(c) == 1 and c[0] > 0:
+                s += '%s' % c[0]
+            elif len(c) == 2 and c[0] == -c[1]:
+                s += '%s' % (str(abs(c[0])) + '\u0305')
+            elif c[0] > 0:
+                s += '(' + (DELIM + SPACE).join([(str(-x) + '\u0305') if x < 0 else str(x) for x in c]) + ')'
+        return s.strip()
+
+    def __str__(self):
+        s = []
+        for i in self.oneline:
+            s += [str(abs(i))]
+            if i < 0:
+                s += ['\u0305']
+        if s:
+            return ''.join(s)
+        else:
+            return '1'
+
+    @classmethod
+    def permutations(cls, n):
+        for args in itertools.permutations(range(1, n + 1)):
+            yield cls(*args)
+
+    def get_reduced_word(self):
+        if self.left_descent_set:
+            i = min(self.left_descent_set)
+            s = self.s_i(i, self.rank)
+            return (i,) + (s * self).get_reduced_word()
+        else:
+            return ()
+
+    def _get_reduced_words(self, cache):
+        w = self.reduce()
+        oneline = w.oneline
+        if oneline not in cache:
+            words = set()
+            for i in w.right_descent_set:
+                s = self.s_i(i, w.rank)
+                words |= {e + (i,) for e in (w * s)._get_reduced_words(cache)}
+            cache[oneline] = words
+        return cache[oneline]
+
+
+class SignedPermutation(SignedMixin):
+
+    def __init__(self, *oneline):
+        self.oneline = tuple(oneline)
+        self.rank = len(oneline)
+        assert set(range(1, self.rank + 1)) == set(abs(i) for i in self.oneline)
+        # cached fields
+        self._rdes = None
+        self._ldes = None
+        self._len = None
+
+    def __repr__(self):
+        # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
+        return str(self)
+
+    @classmethod
+    def all(cls, n):
+        for args in itertools.permutations(range(1, n + 1)):
+            for v in range(2**n):
+                oneline = []
+                for i in range(n):
+                    oneline.append(args[i] * (-1) ** (v % 2))
+                    v = v // 2
+                yield cls(*oneline)
+
+    @classmethod
+    def involutions(cls, n):
+        for w in Permutation.involutions(n):
+            oneline = w.oneline
+            oneline += tuple(range(len(oneline) + 1, n + 1))
+            cycles = [{i, oneline[i] - 1} for i in range(n) if i <= oneline[i] - 1]
+            k = len(cycles)
+            for v in range(2**k):
+                newline = list(oneline)
+                for i in range(k):
+                    if v % 2 != 0:
+                        for j in cycles[i]:
+                            newline[j] *= -1
+                    v = v // 2
+                yield cls(*newline)
+
+    @classmethod
+    def abs_fpf_involutions(cls, n):
+        for w in cls.involutions(n):
+            if w.is_abs_fpf_involution():
+                yield w
+
+    @classmethod
+    def fpf_involutions(cls, n):
+        for w in cls.involutions(n):
+            if w.is_fpf_involution():
+                yield w
+
+    def is_involution(self):
+        return self == self.inverse()
+
+    def is_abs_fpf_involution(self):
+        n = self.rank
+        return self.is_involution() and all(abs(self(i)) != i for i in range(1, n + 1))
+
+    def is_fpf_involution(self):
+        n = self.rank
+        return self.is_involution() and all(self(i) != i for i in range(1, n + 1))
+
+    def get_reduced_words(self):
+        return self._get_reduced_words(SIGNED_REDUCED_WORDS)
+
+    def get_signed_reduced_words(self):
+        return self.get_type_b_reduced_words()
+
+    def get_type_b_reduced_words(self):
+        w = self.reduce()
+        oneline = w.oneline
+        if oneline not in B_SIGNED_REDUCED_WORDS:
+            words = set()
+            for i in w.right_descent_set:
+                s = SignedPermutation.s_i(i, w.rank)
+                letters = {i, -i}
+                words |= {e + (j,) for e in (w * s).get_type_b_reduced_words() for j in letters}
+            B_SIGNED_REDUCED_WORDS[oneline] = words
+        return B_SIGNED_REDUCED_WORDS[oneline]
+
+    def get_type_c_reduced_words(self):
+        w = self.reduce()
+        oneline = w.oneline
+        if oneline not in C_SIGNED_REDUCED_WORDS:
+            words = set()
+            for i in w.right_descent_set:
+                s = SignedPermutation.s_i(i, w.rank)
+                letters = {i + 1, -i - 1}
+                words |= {e + (j,) for e in (w * s).get_type_c_reduced_words() for j in letters}
+            C_SIGNED_REDUCED_WORDS[oneline] = words
+        return C_SIGNED_REDUCED_WORDS[oneline]
+
+    def get_fpf_involution_words(self):
+        assert self.is_fpf_involution()
+        w = self.reduce()
+        n = w.rank
+
+        oneline = w.oneline
+        if oneline not in SIGNED_FPF_INVOLUTION_WORDS:
+            words = set()
+            if len(w) == (n + 1) // 2:
+                words.add(())
+            else:
+                for i in w.right_descent_set:
+                    if i == 0 and w(1) == -1:
+                        continue
+                    if i > 0 and w(i) == i + 1:
+                        continue
+                    s = self.s_i(i, w.rank)
+                    if s * w != w * s:
+                        v = s * w * s
+                    else:
+                        v = w * s
+                    for word in v.get_fpf_involution_words():
+                        words.add(word + (i,))
+            SIGNED_FPF_INVOLUTION_WORDS[oneline] = words
+        return SIGNED_FPF_INVOLUTION_WORDS[oneline]
+
+    def get_involution_words(self):
+        assert self.is_involution()
+        w = self.reduce()
+        oneline = w.oneline
+        if oneline not in SIGNED_INVOLUTION_WORDS:
+            words = set()
+            if len(self.left_descent_set) == 0:
+                words.add(())
+            else:
+                for i in self.left_descent_set:
+                    s = self.s_i(i, self.rank)
+                    w = s * self
+                    if w != self * s:
+                        w = w * s
+                    for e in w.get_involution_words():
+                        words.add(e + (i,))
+            SIGNED_INVOLUTION_WORDS[oneline] = words
+        return SIGNED_INVOLUTION_WORDS[oneline]
+
+    @classmethod
+    def involution_hecke_words(cls, n, length_bound=-1):
+        for level in cls.involution_hecke_levels(n, length_bound):
+            for pi, w in level:
+                yield w
+
+    @classmethod
+    def involution_hecke_levels(cls, n, length_bound=-1):
+        start = (cls.identity(n), ())
+        level = {start}
+        while level:
+            next_level = set()
+            yield level
+            for pi, w in level:
+                for i in range(n):
+                    s = cls.s_i(i, n)
+                    sigma = s % pi % s
+                    next_level.add((sigma, w + (i,)))
+            level = next_level
+            if length_bound == 0:
+                break
+            length_bound -= 1
+
+    def get_involution_hecke_words(self, length_bound):
+        for level in self.involution_hecke_levels(self.rank, length_bound):
+            for pi, w in level:
+                if self == pi:
+                    yield w
+
+    def get_involution_word(self):
+        assert self.is_involution()
+        if self.right_descent_set:
+            i = min(self.right_descent_set)
+            s = self.s_i(i, self.rank)
+            w = self * s
+            if w != s * self:
+                w = s * w
+            return w.get_involution_word() + (i,)
+        else:
+            return ()
+
+    def involution_length(self):
+        return (len(self.neg()) + len(self.pair()) + len(self)) // 2
+
+    @classmethod
+    def longest_element(cls, n, k=None):
+        k = n if k is None else k
+        return SignedPermutation(*[(-i if i <= k else i) for i in range(1, n + 1)])
+
+    @classmethod
+    def longest_fpf(cls, n):
+        oneline = [-j for i in range(1, n, 2) for j in [i + 1, i]]
+        if n % 2 != 0:
+            oneline += [-n]
+        return SignedPermutation(*oneline)
+
+    @classmethod
+    def grassmannian_element(cls, n, k=None):
+        k = n if k is None else k
+        return SignedPermutation(*[(-(k + 1 - i) if i <= k else i) for i in range(1, n + 1)])
+
+    @classmethod
+    def s_i(cls, i, n):
+        assert 0 <= i < n
+        if i == 0:
+            oneline = [-1] + list(range(2, n + 1))
+        else:
+            oneline = list(range(1, i)) + [i + 1, i] + list(range(i + 2, n + 1))
+        return SignedPermutation(*oneline)
+
+    @property
+    def right_descent_set(self):
+        if self._rdes is None:
+            self._rdes = set()
+            if self.rank >= 1 and self(1) < 0:
+                self._rdes.add(0)
+            for i in range(1, self.rank):
+                if self(i) > self(i + 1):
+                    self._rdes.add(i)
+        return self._rdes
+
+    @property
+    def left_descent_set(self):
+        if self._ldes is None:
+            self._ldes = self.inverse().right_descent_set
+        return self._ldes
+
+    def __len__(self):
+        if self._len is None:
+            biline = [-i for i in reversed(self.oneline)] + list(self.oneline)
+            n = self.rank * 2
+            inv = len([(i, j) for i in range(n) for j in range(i + 1, n) if biline[i] > biline[j]])
+            inv_zero = len([i for i in self.oneline if i < 0])
+            assert inv % 2 == inv_zero % 2
+            self._len = (inv + inv_zero) // 2
+        return self._len
+
+    def is_even_signed(self):
+        return len([i for i in self.oneline if i < 0]) % 2 == 0
+
+    def fpf_stanley_schur_s_decomposition(self):
+        assert self.is_fpf_involution()
+        ans = Vector()
+        for x in self.get_fpf_atoms():
+            ans += x.stanley_schur_q_decomposition()
+        return SchurQ.decompose_s_lambda(ans)
+
+    def fpf_stanley_schur_p_decomposition(self):
+        assert self.is_fpf_involution()
+        ans = Vector()
+        for x in self.get_fpf_atoms():
+            ans += x.stanley_schur_p_decomposition()
+        return ans
+
+    def fpf_stanley_schur_q_decomposition(self):
+        assert self.is_fpf_involution()
+        ans = Vector()
+        for x in self.get_fpf_atoms():
+            ans += x.stanley_schur_q_decomposition()
+        return ans
+
+    def inv_stanley_schur_s_decomposition(self):
+        assert self == self.inverse()
+        ans = Vector()
+        for x in self.get_atoms():
+            ans += x.stanley_schur_q_decomposition()
+        return SchurQ.decompose_s_lambda(ans)
+
+    def inv_stanley_schur_p_decomposition(self):
+        assert self == self.inverse()
+        ans = Vector()
+        for x in self.get_atoms():
+            ans += x.stanley_schur_p_decomposition()
+        return ans
+
+    def inv_stanley_schur_q_decomposition(self):
+        assert self == self.inverse()
+        ans = Vector()
+        for x in self.get_atoms():
+            ans += x.stanley_schur_q_decomposition()
+        return ans
+
+    def stanley_schur_p_decomposition(self):
+        ans = Vector()
+        for sh, i in self.stanley_schur_decomposition('B').items():
+            ans += Vector({SchurP(StrictPartition(*sh)): i})
+        return ans
+
+    def stanley_schur_q_decomposition(self):
+        ans = Vector()
+        for sh, i in self.stanley_schur_decomposition('C').items():
+            ans += Vector({SchurQ(StrictPartition(*sh)): i})
+        return ans
+
+    def stanley_schur_s_decomposition(self):
+        ans = self.stanley_schur_q_decomposition()
+        return SchurQ.decompose_s_lambda(ans)
+
+    def stanley_schur_d_decomposition(self):
+        ans = Vector()
+        for sh, i in self.stanley_schur_decomposition('D').items():
+            ans += Vector({SchurP(StrictPartition(*sh)): i})
+        return ans
+
+    def _get_cache(self, bcd_type):
+        assert bcd_type in ['B', 'C', 'D']
+        if bcd_type == 'D':
+            assert self.is_even_signed()
+        caches = {
+            'B': schurp_stansym_cache,
+            'C': schurq_stansym_cache,
+            'D': schurd_stansym_cache
+        }
+        return caches[bcd_type]
+
+    def stanley_schur_decomposition(self, bcd_type):
+        cache = self._get_cache(bcd_type)
+        w = self.reduce()
+        n = w.rank
+
+        if w in cache:
+            return cache[w]
+
+        sh = w.increasing_shape()
+        if sh is not None:
+            return {sh: 1}
+
+        r = w.last_descent()
+        s = w.last_inversion(r)
+        v = w * self.reflection_t(r, s, n)
+
+        v_len = len(v)
+        assert v_len + 1 == len(w)
+
+        indices = []
+        if bcd_type == 'C':
+            indices += [v * self.reflection_s(r, r, n)]
+        elif bcd_type == 'B':
+            indices += 2 * [v * self.reflection_s(r, r, n)]
+        elif bcd_type == 'D':
+            pass
+        indices += [v * self.reflection_t(i, r, n) for i in range(1, r)]
+
+        newline = v.oneline + (n + 1,)
+        v = SignedPermutation(*newline)
+        indices += [v * self.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
+        indices = [x.reduce() for x in indices if v_len + 1 == len(x)]
+
+        ans = defaultdict(int)
+        for x in indices:
+            for sh, i in x.stanley_schur_decomposition(bcd_type).items():
+                ans[sh] += i
+        ans = dict(ans)
+
+        cache[self] = ans
+        return ans
+
+    @classmethod
+    def standardize(cls, oneline):
+        distinct = sorted([abs(j) for j in oneline])
+        assert len(set(distinct)) == len(oneline)
+        mapping = {v: i + 1 for i, v in enumerate(distinct)}
+        newline = tuple(mapping[v] if v > 0 else -mapping[-v] for v in oneline)
+        return cls(*newline)
+
+    @classmethod
+    def get_grassmannian(cls, n):
+        for w in cls.all(n):
+            if w.is_grassmannian():
+                yield w
+
+    @classmethod
+    def get_inv_grassmannian(cls, n):
+        ans = defaultdict(list)
+        for w in cls.involutions(n):
+            s = w.inv_stanley_schur_s_decomposition()
+            keys = list(s.keys())
+            if len(keys) == 1 and s[keys[0]] == 1:
+                ans[keys[0].mu.compact()] += [w]
+        for k, v in sorted(ans.items(), key=lambda x: (len(x[0]), str(x[0]))):
+            if v:
+                print('\n' + k)
+                for w in v:
+                    print('  ', w.reduce(), w.get_min_atom().reduce())
+        return ans
+
+    def is_inv_grassmannian(self):
+        return self == self.inverse() and self.get_min_atom().is_grassmannian()
+
+    def is_grassmannian(self):
+        return self.increasing_shape() is not None
+
+    def increasing_shape(self):
+        if all(self(i) < self(i + 1) for i in range(1, self.rank)):
+            return tuple(abs(i) for i in self.oneline if i < 0)
+
+    def last_descent(self):
+        n = self.rank
+        descents = [i for i in range(1, n) if self(i) > self(i + 1)]
+        if descents:
+            return max(descents)
+
+    def last_inversion(self, r):
+        n = self.rank
+        return max(s for s in range(r + 1, n + 1) if self(s) < self(r))
+
+    def ell_zero(self):
+        return len([i for i in range(1, self.rank + 1) if self(i) < 0])
+
+    def pair(self):
+        n = self.rank
+        return [
+            (a, self(a))
+            for a in range(-n, n + 1)
+            if 0 < abs(a) < self(a)
+        ]
+
+    def neg(self):
+        n = self.rank
+        return [(-a, -a) for a in range(1, n + 1) if self(a) == -a]
+
+    def fix(self):
+        n = self.rank
+        return [(a, a) for a in range(1, n + 1) if self(a) == a]
+
+    def cyc(self):
+        return sorted(self.pair() + self.neg() + self.fix())
 
     @classmethod
     def ncsp_matchings(cls, base, trivial_allowed=True):
@@ -100,6 +753,27 @@ class SignedPermutation:
         neg = [i for i in oneline if i < 0]
         return ndes, fix, neg
 
+    @classmethod
+    def ds_i(cls, i, n):
+        assert 0 < abs(i) < n
+        if i > 0:
+            oneline = list(range(1, i)) + [i + 1, i] + list(range(i + 2, n + 1))
+        else:
+            i = -i
+            oneline = list(range(1, i)) + [-i - 1, -i] + list(range(i + 2, n + 1))
+        return SignedPermutation(*oneline)
+
+    def dstar(self):
+        return SignedPermutation(*[-self(i) if abs(self(i)) == i > 2 else self(i) for i in range(1, self.rank + 1)])
+
+    def dkappa(self):
+        k = len([i for i in range(1, self.rank + 1) if -i != self(i) < 0])
+        assert k % 2 == 0
+        return k // 2
+
+    def dlength(self):
+        return len(self) - self.ell_zero()
+
     def brion_length_b(self):
         ans = 0
         n = self.rank
@@ -126,831 +800,6 @@ class SignedPermutation:
             y = y * t if t * y == y * t else t * y * t
         return ans
 
-    def tex(self):
-        s = '$'
-        for i in self.oneline:
-            if i > 0:
-                s += str(i) + '\\hs '
-            else:
-                s += '\\bar' + str(-i) + '\\hs '
-        s = s[:-len('\\hs ')]
-        s += '$'
-        return s
-
-    def __init__(self, *oneline):
-        self.oneline = tuple(oneline)
-        self.rank = len(oneline)
-        assert set(range(1, self.rank + 1)) == set(abs(i) for i in self.oneline)
-        # cached fields
-        self._rdes = None
-        self._ldes = None
-        self._len = None
-
-    @classmethod
-    def from_word(cls, n, *args):
-        if len(args) == 1 and type(args[0]) == tuple:
-            args = args[0]
-        w = SignedPermutation.identity(n)
-        for i in args:
-            w *= SignedPermutation.s_i(i, n)
-        return w
-
-    def __neg__(self):
-        return self * SignedPermutation.longest_element(self.rank)
-
-    def cycles(self):
-        ans = []
-        a = list(range(1, 1 + self.rank))
-        while a:
-            cyc = [a[0]]
-            while self(cyc[-1]) != cyc[0]:
-                cyc.append(self(cyc[-1]))
-            ans.append(tuple(cyc))
-            ncyc = [-i for i in cyc]
-            if set(ncyc) != set(cyc):
-                ans.append(tuple(ncyc))
-            a = sorted(set(a) - set(cyc) - set(ncyc))
-        return ans
-
-    def cycle_repr(self):
-        if len(self) == 0:
-            return '1'
-
-        SPACE = ' '
-        DELIM = ''  # ','
-
-        s = ''
-        for c in self.cycles():
-            if len(c) == 1 and c[0] > 0:
-                s += '%s' % c[0]
-            elif len(c) == 2 and c[0] == -c[1]:
-                s += '%s' % (str(abs(c[0])) + '\u0305')
-            elif c[0] > 0:
-                s += '(' + (DELIM + SPACE).join([(str(-x) + '\u0305') if x < 0 else str(x) for x in c]) + ')'
-        return s.strip()
-
-    def __repr__(self):
-        # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
-        return str(self)
-
-    def __str__(self):
-        s = []
-        for i in self.oneline:
-            s += [str(abs(i))]
-            if i < 0:
-                s += ['\u0305']
-        if s:
-            return ''.join(s)
-        else:
-            return '1'
-
-    @classmethod
-    def all(cls, n):
-        for args in itertools.permutations(range(1, n + 1)):
-            for v in range(2**n):
-                oneline = []
-                for i in range(n):
-                    oneline.append(args[i] * (-1) ** (v % 2))
-                    v = v // 2
-                yield SignedPermutation(*oneline)
-
-    @classmethod
-    def permutations(cls, n):
-        for args in itertools.permutations(range(1, n + 1)):
-            yield SignedPermutation(*args)
-
-    def is_abs_fpf_involution(self):
-        n = self.rank
-        return self.is_involution() and all(abs(self(i)) != i for i in range(1, n + 1))
-
-    def is_fpf_involution(self):
-        n = self.rank
-        return self.is_involution() and all(self(i) != i for i in range(1, n + 1))
-
-    @classmethod
-    def abs_fpf_involutions(cls, n):
-        for w in cls.involutions(n):
-            if w.is_abs_fpf_involution():
-                yield w
-
-    @classmethod
-    def fpf_involutions(cls, n):
-        for w in cls.involutions(n):
-            if w.is_fpf_involution():
-                yield w
-
-    @classmethod
-    def involutions(cls, n):
-        for w in Permutation.involutions(n):
-            oneline = w.oneline
-            oneline += tuple(range(len(oneline) + 1, n + 1))
-            cycles = [{i, oneline[i] - 1} for i in range(n) if i <= oneline[i] - 1]
-            k = len(cycles)
-            for v in range(2**k):
-                newline = list(oneline)
-                for i in range(k):
-                    if v % 2 != 0:
-                        for j in cycles[i]:
-                            newline[j] *= -1
-                    v = v // 2
-                yield SignedPermutation(*newline)
-
-    @classmethod
-    def involution_hecke_words(cls, n, length_bound=-1):
-        for level in cls.involution_hecke_levels(n, length_bound):
-            for pi, w in level:
-                yield w
-
-    @classmethod
-    def involution_hecke_levels(cls, n, length_bound=-1):
-        start = (cls.identity(n), ())
-        level = {start}
-        while level:
-            next_level = set()
-            yield level
-            for pi, w in level:
-                for i in range(n):
-                    s = SignedPermutation.s_i(i, n)
-                    sigma = s % pi % s
-                    next_level.add((sigma, w + (i,)))
-            level = next_level
-            if length_bound == 0:
-                break
-            length_bound -= 1
-
-    def get_involution_hecke_words(self, length_bound):
-        for level in self.involution_hecke_levels(self.rank, length_bound):
-            for pi, w in level:
-                if self == pi:
-                    yield w
-
-    def get_reduced_word(self):
-        if self.left_descent_set:
-            i = min(self.left_descent_set)
-            s = SignedPermutation.s_i(i, self.rank)
-            return (i,) + (s * self).get_reduced_word()
-        else:
-            return ()
-
-    def get_involution_word(self):
-        assert self.is_involution()
-        if self.right_descent_set:
-            i = min(self.right_descent_set)
-            s = SignedPermutation.s_i(i, self.rank)
-            w = s * self
-            if w != self * s:
-                w = w * s
-            return w.get_involution_word() + (i,)
-        else:
-            return ()
-
-    def get_reduced_words(self):
-        w = self.reduce()
-        oneline = w.oneline
-        if oneline not in SIGNED_REDUCED_WORDS:
-            words = set()
-            for i in w.right_descent_set:
-                s = SignedPermutation.s_i(i, w.rank)
-                words |= {e + (i,) for e in (w * s).get_reduced_words()}
-            SIGNED_REDUCED_WORDS[oneline] = words
-        return SIGNED_REDUCED_WORDS[oneline]
-
-    def get_signed_reduced_words(self):
-        return self.get_type_b_reduced_words()
-
-    def get_type_b_reduced_words(self):
-        w = self.reduce()
-        oneline = w.oneline
-        if oneline not in B_SIGNED_REDUCED_WORDS:
-            words = set()
-            for i in w.right_descent_set:
-                s = SignedPermutation.s_i(i, w.rank)
-                letters = {i, -i}
-                words |= {e + (j,) for e in (w * s).get_type_b_reduced_words() for j in letters}
-            B_SIGNED_REDUCED_WORDS[oneline] = words
-        return B_SIGNED_REDUCED_WORDS[oneline]
-
-    def get_type_c_reduced_words(self):
-        w = self.reduce()
-        oneline = w.oneline
-        if oneline not in C_SIGNED_REDUCED_WORDS:
-            words = set()
-            for i in w.right_descent_set:
-                s = SignedPermutation.s_i(i, w.rank)
-                letters = {i + 1, -i - 1}
-                words |= {e + (j,) for e in (w * s).get_type_c_reduced_words() for j in letters}
-            C_SIGNED_REDUCED_WORDS[oneline] = words
-        return C_SIGNED_REDUCED_WORDS[oneline]
-
-    def get_fpf_involution_words(self):
-        w = self
-        n = w.rank
-        assert w.is_fpf_involution()
-
-        if len(w) == (n + 1) // 2:
-            yield ()
-        else:
-            for i in w.right_descent_set:
-                if i == 0 and w(1) == -1:
-                    continue
-                if i > 0 and w(i) == i + 1:
-                    continue
-                s = SignedPermutation.s_i(i, w.rank)
-                if s * w != w * s:
-                    v = s * w * s
-                else:
-                    v = w * s
-                for word in v.get_fpf_involution_words():
-                    yield word + (i,)
-
-    def get_involution_words(self):
-        assert self.is_involution()
-        if len(self.left_descent_set) == 0:
-            yield ()
-            return
-        for i in self.left_descent_set:
-            s = SignedPermutation.s_i(i, self.rank)
-            w = s * self
-            if w != self * s:
-                w = w * s
-            for e in w.get_involution_words():
-                yield e + (i,)
-
-    # def get_fpf_involution_words(self):
-    #     w = self.reduce()
-    #     assert w.is_fpf_involution()
-    #     for a in w.get_fpf_atoms():
-    #         for word in a.get_reduced_words():
-    #             yield word
-
-    def __call__(self, i):
-        if i == 0:
-            return 0
-        assert 1 <= abs(i) <= self.rank
-        if i > 0:
-            return self.oneline[i - 1]
-        else:
-            return -self.oneline[abs(i) - 1]
-
-    def __hash__(self):
-        return hash(self.oneline)
-
-    def reduce(self):
-        newline = self.oneline
-        while newline and newline[-1] == len(newline):
-            newline = newline[:-1]
-        return SignedPermutation(*newline)
-
-    def involution_length(self):
-        return (len(self.neg()) + len(self.pair()) + len(self)) // 2
-
-    @classmethod
-    def identity(cls, n):
-        return SignedPermutation(*list(range(1, n + 1)))
-
-    @classmethod
-    def longest_element(cls, n, k=None):
-        k = n if k is None else k
-        return SignedPermutation(*[(-i if i <= k else i) for i in range(1, n + 1)])
-
-    @classmethod
-    def longest_fpf(cls, n):
-        oneline = [-j for i in range(1, n, 2) for j in [i + 1, i]]
-        if n % 2 != 0:
-            oneline += [-n]
-        return SignedPermutation(*oneline)
-
-    @classmethod
-    def grassmannian_element(cls, n, k=None):
-        k = n if k is None else k
-        return SignedPermutation(*[(-(k + 1 - i) if i <= k else i) for i in range(1, n + 1)])
-
-    @classmethod
-    def s_i(cls, i, n):
-        assert 0 <= i < n
-        if i == 0:
-            oneline = [-1] + list(range(2, n + 1))
-        else:
-            oneline = list(range(1, i)) + [i + 1, i] + list(range(i + 2, n + 1))
-        return SignedPermutation(*oneline)
-
-    @classmethod
-    def ds_i(cls, i, n):
-        assert 0 < abs(i) < n
-        if i > 0:
-            oneline = list(range(1, i)) + [i + 1, i] + list(range(i + 2, n + 1))
-        else:
-            i = -i
-            oneline = list(range(1, i)) + [-i - 1, -i] + list(range(i + 2, n + 1))
-        return SignedPermutation(*oneline)
-
-    def dstar(self):
-        return SignedPermutation(*[-self(i) if abs(self(i)) == i > 2 else self(i) for i in range(1, self.rank + 1)])
-
-    def dkappa(self):
-        k = len([i for i in range(1, self.rank + 1) if -i != self(i) < 0])
-        assert k % 2 == 0
-        return k // 2
-
-    def dlength(self):
-        return len(self) - self.ell_zero()
-
-    @property
-    def right_descent_set(self):
-        if self._rdes is None:
-            self._rdes = set()
-            if self.rank >= 1 and self(1) < 0:
-                self._rdes.add(0)
-            for i in range(1, self.rank):
-                if self(i) > self(i + 1):
-                    self._rdes.add(i)
-        return self._rdes
-
-    @property
-    def left_descent_set(self):
-        if self._ldes is None:
-            self._ldes = self.inverse().right_descent_set
-        return self._ldes
-
-    def __len__(self):
-        if self._len is None:
-            biline = [-i for i in reversed(self.oneline)] + list(self.oneline)
-            n = self.rank * 2
-            inv = len([(i, j) for i in range(n) for j in range(i + 1, n) if biline[i] > biline[j]])
-            inv_zero = len([i for i in self.oneline if i < 0])
-            assert inv % 2 == inv_zero % 2
-            self._len = (inv + inv_zero) // 2
-        return self._len
-
-    def __mod__(self, other):
-        assert type(other) == SignedPermutation
-        assert self.rank == other.rank
-        if other.left_descent_set:
-            i = next(iter(other.left_descent_set))
-            s = SignedPermutation.s_i(i, self.rank)
-            if i in self.right_descent_set:
-                return self % (s * other)
-            else:
-                return (self * s) % (s * other)
-        else:
-            return self
-
-    def __mul__(self, other):
-        assert type(other) == SignedPermutation
-        assert self.rank == other.rank
-        newline = [self(other(i)) for i in range(1, self.rank + 1)]
-        return SignedPermutation(*newline)
-
-    def inverse(self):
-        newline = self.rank * [0]
-        for i in range(1, self.rank + 1):
-            j = self(i)
-            if j > 0:
-                newline[j - 1] = i
-            else:
-                newline[-j - 1] = -i
-        return SignedPermutation(*newline)
-
-    def __lt__(self, other):
-        assert type(other) == SignedPermutation
-        return self.oneline < other.oneline
-
-    def __eq__(self, other):
-        if type(other) != SignedPermutation:
-            return False
-        return self.oneline == other.oneline
-
-    def __pow__(self, n):
-        if n < 0:
-            return self.inverse().__pow__(-n)
-        elif n == 0:
-            return SignedPermutation.identity(self.rank)
-        elif n == 1:
-            return SignedPermutation(*self.oneline)
-        else:
-            p = n // 2
-            q = n - p
-            return self.__pow__(p) * self.__pow__(q)
-
-    def fpf_stanley_schur_s_decomposition(self):
-        assert self.is_fpf_involution()
-        ans = Vector()
-        for x in self.get_fpf_atoms():
-            ans += x.stanley_schur_q_decomposition()
-        return SchurQ.decompose_s_lambda(ans)
-
-    def fpf_stanley_schur_p_decomposition(self):
-        assert self.is_fpf_involution()
-        ans = Vector()
-        for x in self.get_fpf_atoms():
-            ans += x.stanley_schur_p_decomposition()
-        return ans
-
-    def fpf_stanley_schur_q_decomposition(self):
-        assert self.is_fpf_involution()
-        ans = Vector()
-        for x in self.get_fpf_atoms():
-            ans += x.stanley_schur_q_decomposition()
-        return ans
-
-    def inv_stanley_schur_s_decomposition(self):
-        assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_q_decomposition()
-        return SchurQ.decompose_s_lambda(ans)
-
-    def inv_stanley_schur_p_decomposition(self):
-        assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_p_decomposition()
-        return ans
-
-    def inv_stanley_schur_q_decomposition(self):
-        assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_q_decomposition()
-        return ans
-
-    def is_even_signed(self):
-        return len([i for i in self.oneline if i < 0]) % 2 == 0
-
-    def inv_stanley_schur_d_decomposition(self):
-        assert self.is_even_signed()
-        ans = Vector()
-        for x in self.get_atoms_d():
-            ans += x.stanley_schur_d_decomposition()
-        return ans
-
-    def stanley_schur_p_decomposition(self):
-        ans = Vector()
-        for sh, i in self.stanley_schur_decomposition('B').items():
-            ans += Vector({SchurP(StrictPartition(*sh)): i})
-        return ans
-
-    def stanley_schur_q_decomposition(self):
-        ans = Vector()
-        for sh, i in self.stanley_schur_decomposition('C').items():
-            ans += Vector({SchurQ(StrictPartition(*sh)): i})
-        return ans
-
-    def stanley_schur_s_decomposition(self):
-        ans = self.stanley_schur_q_decomposition()
-        return SchurQ.decompose_s_lambda(ans)
-
-    def stanley_schur_d_decomposition(self):
-        ans = Vector()
-        for sh, i in self.stanley_schur_decomposition('D').items():
-            ans += Vector({SchurP(StrictPartition(*sh)): i})
-        return ans
-
-    def _get_cache(self, bcd_type):
-        assert bcd_type in ['B', 'C', 'D']
-        if bcd_type == 'D':
-            assert self.is_even_signed()
-        caches = {
-            'B': schurp_stansym_cache,
-            'C': schurq_stansym_cache,
-            'D': schurd_stansym_cache
-        }
-        return caches[bcd_type]
-
-    def stanley_schur_decomposition(self, bcd_type):
-        cache = self._get_cache(bcd_type)
-        w = self.reduce()
-        n = w.rank
-
-        if w in cache:
-            return cache[w]
-
-        sh = w.increasing_shape()
-        if sh is not None:
-            return {sh: 1}
-
-        r = w.last_descent()
-        s = w.last_inversion(r)
-        v = w * self.reflection_t(r, s, n)
-
-        v_len = len(v)
-        assert v_len + 1 == len(w)
-
-        indices = []
-        if bcd_type == 'C':
-            indices += [v * self.reflection_s(r, r, n)]
-        elif bcd_type == 'B':
-            indices += 2 * [v * self.reflection_s(r, r, n)]
-        elif bcd_type == 'D':
-            pass
-        indices += [v * self.reflection_t(i, r, n) for i in range(1, r)]
-
-        newline = v.oneline + (n + 1,)
-        v = SignedPermutation(*newline)
-        indices += [v * self.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
-        indices = [x.reduce() for x in indices if v_len + 1 == len(x)]
-
-        ans = defaultdict(int)
-        for x in indices:
-            for sh, i in x.stanley_schur_decomposition(bcd_type).items():
-                ans[sh] += i
-        ans = dict(ans)
-
-        cache[self] = ans
-        return ans
-
-    @classmethod
-    def queue_stanley_decomposition(cls, n, verbose=True):
-        def get_shape(oneline):
-            while oneline[-1] == len(oneline):
-                oneline = oneline[:-1]
-            oneline = oneline[1:]
-            ans = []
-            while oneline:
-                for i in range(len(oneline)):
-                    a = oneline[i]
-                    if i == 0 and a < 0:
-                        ans += [(a, -a)]
-                        oneline = oneline[1:]
-                        break
-                    if i + 1 >= len(oneline):
-                        continue
-                    b = oneline[i + 1]
-                    if 0 < a < -b:
-                        ans += [(a, -b)]
-                        oneline = oneline[:i] + oneline[i + 2:]
-                        break
-            return ans
-
-        def get_rs(x):
-            r = 0
-            s = n
-            while r < s - 1 and (x(r + 1) == n or x(r + 1) == x(r) - 1):
-                r += 1
-            try:
-                z = SignedPermutation(*x.oneline[r:]).reduce()
-                a = SignedPermutation.longest_element(n - r - 1).get_atoms()
-                assert z in a
-            except:
-                r += 1
-                shape = get_shape(tuple(x(i) for i in range(r, n + 1)))
-                s = x.inverse()(
-                    max([a for a, b in shape if 0 < a < x(r) < b])
-                )
-            return r, s
-
-        ans = []
-        atoms = SignedPermutation.longest_element(n).get_atoms()
-        preatoms = SignedPermutation.longest_element(n - 1).get_atoms()
-        queue = [SignedPermutation(*((n + 1,) + x.oneline + (n,))) for x in preatoms]
-        while queue:
-            print('queue: %s' % len(queue))
-            x = queue.pop(0).reduce()
-            if x in atoms:
-                print('\n*', x, 'is atom\n')
-                ans += [x]
-                continue
-
-            n = x.rank
-            r, s = get_rs(x)
-            v = x * cls.reflection_t(r, s, n)
-            v_len = len(v)
-            assert v_len + 1 == len(x)
-
-            newline = v.oneline + (n + 1,)
-            new_v = SignedPermutation(*newline)
-            lhs = [new_v * cls.reflection_t(r, i, n + 1) for i in range(r + 1, n + 2) if i != s]
-            lhs = sorted([u.reduce() for u in lhs if v_len + 1 == len(u)])
-
-            if lhs != sorted([u.reduce() for u in queue if u.reduce() in lhs]):
-                queue += [x]
-                continue
-
-            yield (x.reduce(), v.reduce())
-            for u in lhs:
-                yield (u, v.reduce())
-
-            queue = [u for u in queue if u.reduce() not in lhs]
-            rhs = [v * cls.reflection_s(r, r, n)]
-            rhs += [v * cls.reflection_t(i, r, n) for i in range(1, r)]
-            rhs += [new_v * cls.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
-            rhs = [u.reduce() for u in rhs if v_len + 1 == len(u)]
-            queue += rhs
-
-            for u in rhs:
-                yield(v.reduce(), u)
-
-        assert sorted(ans) == sorted(atoms)
-
-    @classmethod
-    def standardize(cls, oneline):
-        distinct = sorted([abs(j) for j in oneline])
-        assert len(set(distinct)) == len(oneline)
-        mapping = {v: i + 1 for i, v in enumerate(distinct)}
-        newline = tuple(mapping[v] if v > 0 else -mapping[-v] for v in oneline)
-        return SignedPermutation(*newline)
-
-    def conjectural_stanley_schur_decomposition(self, starting_rank=None, verbose=True, step=0):
-        w = self.reduce()
-        n = w.rank
-
-        if starting_rank is None:
-            starting_rank = n
-
-        space = ((4 + starting_rank) * step) * ' '
-        if w in SignedPermutation.longest_element(starting_rank - 1).get_atoms():
-            print(space, '*', w, 'is atom')
-            print()
-            verbose = False
-            yield (w, 1)
-            return
-
-        sh = w.increasing_shape()
-        if sh is not None:
-            return
-
-        def get_shape(oneline):
-            while oneline[-1] == len(oneline):
-                oneline = oneline[:-1]
-            oneline = oneline[1:]
-            ans = []
-            while oneline:
-                for i in range(len(oneline)):
-                    a = oneline[i]
-                    if i == 0 and a < 0:
-                        ans += [(a, -a)]
-                        oneline = oneline[1:]
-                        break
-                    if i + 1 >= len(oneline):
-                        continue
-                    b = oneline[i + 1]
-                    if 0 < a < -b:
-                        ans += [(a, -b)]
-                        oneline = oneline[:i] + oneline[i + 2:]
-                        break
-            return ans
-
-        if verbose:
-            r = 0
-            s = n
-            while r < s - 1 and (w(r + 1) == n or w(r + 1) == w(r) - 1):
-                r += 1
-            try:
-                z = SignedPermutation(*w.oneline[r:]).reduce()
-                a = SignedPermutation.longest_element(n - r - 1).get_atoms()
-                assert z in a
-            except:
-                try:
-                    r += 1
-                    shape = get_shape(tuple(w(i) for i in range(r, n + 1)))
-                    s = w.inverse()(
-                        max([a for a, b in shape if 0 < a < w(r) < b])
-                    )
-                    print('(r,s) = (%s,%s)' % (r, s))
-                except:
-                    print(space, 'no inversions:', w, '\n')
-                    w, r, s = eval(input('w, r, s = '))
-                    print('(r,s) = (%s,%s)' % (r, s))
-        else:
-            r = w.last_descent()
-            s = w.last_inversion(r)
-
-        v = w * self.reflection_t(r, s, n)
-
-        v_len = len(v)
-        assert v_len + 1 == len(w)
-
-        indices = [v * self.reflection_s(r, r, n)]
-        indices += [v * self.reflection_t(i, r, n) for i in range(1, r)]
-        newline = v.oneline + (n + 1,)
-        v = SignedPermutation(*newline)
-        indices += [v * self.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
-        indices = [x.reduce() for x in indices if v_len + 1 == len(x)]
-
-        subindices = [v * self.reflection_t(r, i, n + 1) for i in range(r + 1, n + 2) if i != s]
-        subindices = [x.reduce() for x in subindices if v_len + 1 == len(x)]
-
-        if verbose:
-            print(space, self, '->', v.reduce(), '->', indices, ('- ' + str(subindices)) if subindices else '')
-            print()
-
-        for x in indices:
-            for a, coeff in x.conjectural_stanley_schur_decomposition(starting_rank, verbose, step + 1):
-                yield (a, coeff)
-
-        for x in subindices:
-            yield (x, -1)
-
-    @classmethod
-    def get_grassmannian(cls, n):
-        for w in cls.all(n):
-            if w.is_grassmannian():
-                yield w
-
-    @classmethod
-    def get_inv_grassmannian(cls, n):
-        ans = defaultdict(list)
-        for w in cls.involutions(n):
-            s = w.inv_stanley_schur_s_decomposition()
-            keys = list(s.keys())
-            if len(keys) == 1 and s[keys[0]] == 1:
-                ans[keys[0].mu.compact()] += [w]
-        for k, v in sorted(ans.items(), key=lambda x : (len(x[0]), str(x[0]))):
-            if v:
-                print('\n' + k)
-                for w in v:
-                    print('  ', w.reduce(), w.get_min_atom().reduce())
-        return ans
-
-    def is_involution(self):
-        return self == self.inverse()
-
-    def is_inv_grassmannian(self):
-        return self == self.inverse() and self.get_min_atom().is_grassmannian()
-
-    def is_grassmannian(self):
-        return self.increasing_shape() is not None
-
-    def increasing_shape(self):
-        if all(self(i) < self(i + 1) for i in range(1, self.rank)):
-            return tuple(abs(i) for i in self.oneline if i < 0)
-
-    def last_descent(self):
-        n = self.rank
-        descents = [i for i in range(1, n) if self(i) > self(i + 1)]
-        if descents:
-            return max(descents)
-
-    def last_inversion(self, r):
-        n = self.rank
-        return max(s for s in range(r + 1, n + 1) if self(s) < self(r))
-
-    @classmethod
-    def t_ij(cls, i, j, n):
-        return cls.reflection(i, j, n)
-
-    @classmethod
-    def reflection(cls, i, j, n):
-        caller = list(range(1, n + 1))
-        if i > 0:
-            caller[i - 1] = j
-        else:
-            caller[-i - 1] = -j
-        if j > 0:
-            caller[j - 1] = i
-        else:
-            caller[-j - 1] = -i
-        return cls(*caller)
-
-    @classmethod
-    def reflection_s(cls, i, j, n):
-        caller = list(range(1, n + 1))
-        caller[i - 1] = -j
-        caller[j - 1] = -i
-        return cls(*caller)
-
-    @classmethod
-    def reflection_t(cls, i, j, n):
-        assert i != j
-        caller = list(range(1, n + 1))
-        caller[i - 1] = j
-        caller[j - 1] = i
-        return cls(*caller)
-
-    def inflate(self, rank):
-        newline = self.oneline + tuple(range(self.rank + 1, rank + 1))
-        return SignedPermutation(*newline)
-
-    def ell_zero(self):
-        return len([i for i in range(1, self.rank + 1) if self(i) < 0])
-
-    def pair(self):
-        n = self.rank
-        return [
-            (a, self(a))
-            for a in range(-n, n + 1)
-            if 0 < abs(a) < self(a)
-        ]
-
-    def neg(self):
-        n = self.rank
-        return [(-a, -a) for a in range(1, n + 1) if self(a) == -a]
-
-    def fixed_points(self):
-        n = self.rank
-        return [a for a in range(-n, n + 1) if 0 != a == self(a)]
-
-    def negated_points(self):
-        n = self.rank
-        return [a for a in range(-n, n + 1) if 0 != a == -self(a)]
-
-    def fix(self):
-        n = self.rank
-        return [(a, a) for a in range(1, n + 1) if self(a) == a]
-
-    def cyc(self):
-        return sorted(self.pair() + self.neg() + self.fix())
-
     def _min_abs_fpf_inv_atom_oneline(self):
         return tuple(i for p in self.cyc() for i in p)
 
@@ -973,8 +822,10 @@ class SignedPermutation:
 
     @classmethod
     def get_minimal_fpf_involution(cls, n):
-        assert n % 2 == 0
-        oneline = [i for j in range(2, n + 1, 2) for i in [j, j - 1]]
+        if n % 2 == 0:
+            oneline = [i for j in range(2, n + 1, 2) for i in [j, j - 1]]
+        else:
+            oneline = [-1] + [i for j in range(3, n + 1, 2) for i in [j, j - 1]]
         return SignedPermutation(*oneline)
 
     def get_fpf_atoms(self, offset=None):
@@ -1008,23 +859,23 @@ class SignedPermutation:
                 yield SignedPermutation(*w).inverse()
             add = {new for w in add for new in upnext(w)}
 
+    @classmethod
+    def relative_atoms(cls, y, z):
+        if y == z:
+            yield cls.identity(y.rank)
+        elif y.involution_length() < z.involution_length():
+            for i in range(y.rank):
+                s = cls.s_i(i, y.rank)
+                v = s % y % s
+                if v != y:
+                    for a in cls.relative_atoms(v, z):
+                        yield s * a
+
     def get_atoms_by_shape(self):
         shapes = defaultdict(set)
         for w in self.get_atoms():
             shapes[tuple(sorted(w.shape()))].add(w)
         return shapes
-
-    @classmethod
-    def relative_atoms(cls, y, z):
-        if y == z:
-            yield SignedPermutation.identity(y.rank)
-        elif y.involution_length() < z.involution_length():
-            for i in range(y.rank):
-                s = SignedPermutation.s_i(i, y.rank)
-                v = s % y % s
-                if v != y:
-                    for a in cls.relative_atoms(v, z):
-                        yield s * a
 
     def get_atoms(self, offset=None):
         assert self == self.inverse()
@@ -1127,24 +978,6 @@ class SignedPermutation:
                     for a in (s * w).get_atoms_d():
                         yield a * s
 
-    @classmethod
-    def double_involution_word(cls, word):
-        if len(word) == 0:
-            return tuple()
-        n = 1 + max([i for i in word])
-        w = SignedPermutation.identity(n)
-        ans = []
-        for i in word:
-            assert i not in w.right_descent_set
-            s = SignedPermutation.s_i(i, n)
-            w *= s
-            if i not in w.left_descent_set:
-                ans = [i] + ans + [i]
-                w = s * w
-            else:
-                ans = ans + [i]
-        return tuple(ans)
-
 
 class SignedAtomsGraph:
 
@@ -1238,12 +1071,95 @@ class SignedAtomsGraph:
         self.sub_atoms = SignedPermutation.longest_element(n - 1).get_atoms()
         self._edges = None
 
+    @classmethod
+    def queue_stanley_decomposition(cls, n, verbose=True):
+        def get_shape(oneline):
+            while oneline[-1] == len(oneline):
+                oneline = oneline[:-1]
+            oneline = oneline[1:]
+            ans = []
+            while oneline:
+                for i in range(len(oneline)):
+                    a = oneline[i]
+                    if i == 0 and a < 0:
+                        ans += [(a, -a)]
+                        oneline = oneline[1:]
+                        break
+                    if i + 1 >= len(oneline):
+                        continue
+                    b = oneline[i + 1]
+                    if 0 < a < -b:
+                        ans += [(a, -b)]
+                        oneline = oneline[:i] + oneline[i + 2:]
+                        break
+            return ans
+
+        def get_rs(x):
+            r = 0
+            s = n
+            while r < s - 1 and (x(r + 1) == n or x(r + 1) == x(r) - 1):
+                r += 1
+            try:
+                z = SignedPermutation(*x.oneline[r:]).reduce()
+                a = SignedPermutation.longest_element(n - r - 1).get_atoms()
+                assert z in a
+            except:
+                r += 1
+                shape = get_shape(tuple(x(i) for i in range(r, n + 1)))
+                s = x.inverse()(
+                    max([a for a, b in shape if 0 < a < x(r) < b])
+                )
+            return r, s
+
+        ans = []
+        atoms = SignedPermutation.longest_element(n).get_atoms()
+        preatoms = SignedPermutation.longest_element(n - 1).get_atoms()
+        queue = [SignedPermutation(*((n + 1,) + x.oneline + (n,))) for x in preatoms]
+        while queue:
+            print('queue: %s' % len(queue))
+            x = queue.pop(0).reduce()
+            if x in atoms:
+                print('\n*', x, 'is atom\n')
+                ans += [x]
+                continue
+
+            n = x.rank
+            r, s = get_rs(x)
+            v = x * SignedPermutation.reflection_t(r, s, n)
+            v_len = len(v)
+            assert v_len + 1 == len(x)
+
+            newline = v.oneline + (n + 1,)
+            new_v = SignedPermutation(*newline)
+            lhs = [new_v * SignedPermutation.reflection_t(r, i, n + 1) for i in range(r + 1, n + 2) if i != s]
+            lhs = sorted([u.reduce() for u in lhs if v_len + 1 == len(u)])
+
+            if lhs != sorted([u.reduce() for u in queue if u.reduce() in lhs]):
+                queue += [x]
+                continue
+
+            yield (x.reduce(), v.reduce())
+            for u in lhs:
+                yield (u, v.reduce())
+
+            queue = [u for u in queue if u.reduce() not in lhs]
+            rhs = [v * SignedPermutation.reflection_s(r, r, n)]
+            rhs += [v * SignedPermutation.reflection_t(i, r, n) for i in range(1, r)]
+            rhs += [new_v * SignedPermutation.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
+            rhs = [u.reduce() for u in rhs if v_len + 1 == len(u)]
+            queue += rhs
+
+            for u in rhs:
+                yield(v.reduce(), u)
+
+        assert sorted(ans) == sorted(atoms)
+
     @property
     def edges(self):
         if self._edges is None:
             self._edges = [
                 (a, b)
-                for (a, b) in SignedPermutation.queue_stanley_decomposition(self.n)
+                for (a, b) in self.queue_stanley_decomposition(self.n)
                 if a.rank == self.n
             ]
         return self._edges

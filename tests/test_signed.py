@@ -2,6 +2,13 @@ from signed import SignedPermutation
 from polynomials import X
 
 
+def test_get_minimal_fpf_involution():
+    assert SignedPermutation.get_minimal_fpf_involution(1) == SignedPermutation(-1)
+    assert SignedPermutation.get_minimal_fpf_involution(2) == SignedPermutation(2, 1)
+    assert SignedPermutation.get_minimal_fpf_involution(3) == SignedPermutation(-1, 3, 2)
+    assert SignedPermutation.get_minimal_fpf_involution(4) == SignedPermutation(2, 1, 4, 3)
+
+
 def test_ncsp_matchings():
     m = ((-5, -1), (-4, -3), (-2, 2), (1, 5), (3, 4))
     base = [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]
@@ -24,6 +31,8 @@ def test_get_involution_word():
     t = SignedPermutation.s_i(1, 3)
     assert (t * s * t).get_involution_word() == (0, 1)
     assert (s * t * s).get_involution_word() == (1, 0)
+    assert set((t * s * t).get_involution_words()) == {(0, 1)}
+    assert set((s * t * s).get_involution_words()) == {(1, 0)}
 
 
 def test_fpf_involution_words(n=4):

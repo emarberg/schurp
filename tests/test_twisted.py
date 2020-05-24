@@ -39,7 +39,7 @@ def _test_shape(w, n):
     return sh | {(i, i) for i in yfixed - f}
 
 
-def test_twisted_shape(n=6):
+def test_twisted_shape(n=5):
     w0 = Permutation.longest_element(n)
     for w in Permutation.twisted_involutions(n):
         shapes = {}
@@ -60,4 +60,3 @@ def test_twisted_shape(n=6):
                 if _test_shape(a, n) != sh:
                     print(' *', a, ':', sh, '!=', _test_shape(a, n))
                     raise Exception
-    assert False

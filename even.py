@@ -1,7 +1,8 @@
 from permutations import Permutation
+from signed import SignedPermutation, SignedMixin
 from collections import defaultdict
 from vectors import Vector
-from symmetric import SchurP
+from symmetric import SchurP, SchurQ
 from partitions import StrictPartition
 import itertools
 
@@ -9,12 +10,15 @@ import itertools
 D_SIGNED_REDUCED_WORDS = {(): [()]}
 EVEN_SIGNED_REDUCED_WORDS = {(): [()]}
 EVEN_SIGNED_REDUCED_COUNTS = {(): 1}
-EVEN_SIGNED_INVOLUTION_WORDS = {(): [()]}
+
+EVEN_SIGNED_INVOLUTION_WORDS = {}
+EVEN_SIGNED_FPF_INVOLUTION_WORDS = {}
+
 ATOMS_D_CACHE = {}
 SCHURD_STANSYM_CACHE = {}
 
 
-class EvenSignedPermutation:
+class EvenSignedPermutation(SignedMixin):
 
     def __init__(self, *oneline):
         self.oneline = tuple(oneline)
@@ -32,26 +36,6 @@ class EvenSignedPermutation:
         # return 'EvenSignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
         return str(self)
 
-    def __str__(self):
-        s = []
-        for i in self.oneline:
-            s += [str(abs(i))]
-            if i < 0:
-                s += ['\u0305']
-        if s:
-            return ''.join(s)
-        else:
-            return '1'
-
-    @classmethod
-    def from_word(cls, n, *args):
-        if len(args) == 1 and type(args[0]) == tuple:
-            args = args[0]
-        w = EvenSignedPermutation.identity(n)
-        for i in args:
-            w *= EvenSignedPermutation.s_i(i, n)
-        return w
-
     @classmethod
     def all(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
@@ -66,12 +50,11 @@ class EvenSignedPermutation:
                     pass
 
     @classmethod
-    def permutations(cls, n):
-        for args in itertools.permutations(range(1, n + 1)):
-            yield EvenSignedPermutation(*args)
+    def twisted_involutions(cls, n):
+        return cls.involutions(n, True)
 
     @classmethod
-    def involutions(cls, n):
+    def involutions(cls, n, twist=False):
         for w in Permutation.involutions(n):
             oneline = w.oneline
             oneline += tuple(range(len(oneline) + 1, n + 1))
@@ -84,58 +67,18 @@ class EvenSignedPermutation:
                         for j in cycles[i]:
                             newline[j] *= -1
                     v = v // 2
-                try:
+                s = len([i for i in newline if i < 0])
+                if not twist and s % 2 == 0:
                     yield EvenSignedPermutation(*newline)
-                except:
-                    pass
-
-    def is_abs_fpf_involution(self):
-        n = self.rank
-        return self.is_involution() and all(abs(self(i)) != i for i in range(1, n + 1))
-
-    def is_fpf_involution(self):
-        n = self.rank
-        return self.is_involution() and all(self(i) != i for i in range(1, n + 1))
+                elif twist and s % 2 != 0:
+                    newline[0] *= -1
+                    yield EvenSignedPermutation(*newline)
 
     @classmethod
     def fpf_involutions(cls, n):
-        raise NotImplementedError
-
-    def get_reduced_word(self):
-        if self.left_descent_set:
-            i = min(self.left_descent_set)
-            s = EvenSignedPermutation.s_i(i, self.rank)
-            return (i,) + (s * self).get_reduced_word()
-        else:
-            return ()
-
-    def get_involution_word(self):
-        if self.left_descent_set:
-            i = min(self.left_descent_set)
-            s = EvenSignedPermutation.s_i(i, self.rank)
-            if s * self == self * s:
-                return (s * self).get_involution_word() + (i,)
-            else:
-                return (s * self * s).get_involution_word() + (i,)
-        else:
-            return ()
-
-    def get_twisted_involution_word(self):
-        if self.right_descent_set:
-            i = min(self.right_descent_set)
-            s = EvenSignedPermutation.s_i(i, self.rank)
-            t = s.star()
-            if t * self == self * s:
-                return (self * t).get_twisted_involution_word() + (i,)
-            else:
-                return (t * self * s).get_twisted_involution_word() + (i,)
-        else:
-            return ()
-
-    def star(self):
-        oneline = [i if abs(i) != 1 else -i for i in self.oneline]
-        oneline[0] *= -1
-        return EvenSignedPermutation(*oneline)
+        for w in (cls.involutions(n) if n % 2 == 0 else cls.twisted_involutions(n)):
+            if w.is_fpf_involution():
+                yield w
 
     def is_involution(self, twist=False):
         if twist:
@@ -145,6 +88,35 @@ class EvenSignedPermutation:
 
     def is_twisted_involution(self):
         return self.is_involution(True)
+
+    def is_fpf_involution(self):
+        n = self.rank
+        if n % 2 == 0:
+            return self.is_involution() and all(self(i) != i for i in range(1, n + 1))
+        if n % 2 != 0:
+            w = SignedPermutation.s_i(0, n) * SignedPermutation(*self.oneline)
+            return w.is_fpf_involution()
+
+    def get_twisted_involution_word(self):
+        return self.get_involution_word(True)
+
+    def get_involution_word(self, twist=False):
+        if self.right_descent_set:
+            i = min(self.right_descent_set)
+            s = EvenSignedPermutation.s_i(i, self.rank)
+            t = s.star() if twist else s
+            if t * self == self * s:
+                return (self * s).get_involution_word(twist) + (i,)
+            else:
+                return (t * self * s).get_involution_word(twist) + (i,)
+        else:
+            return ()
+
+    def star(self):
+        oneline = [i if abs(i) != 1 else -i for i in self.oneline]
+        if oneline:
+            oneline[0] *= -1
+        return EvenSignedPermutation(*oneline)
 
     @classmethod
     def flatten(cls, word):
@@ -160,9 +132,6 @@ class EvenSignedPermutation:
             elif prev != word:
                 yield word
                 prev = word
-
-    def count_flattened_involution_words(self):
-        pass
 
     def get_flattened_involution_words(self):
         prev = None
@@ -187,15 +156,7 @@ class EvenSignedPermutation:
         return EVEN_SIGNED_REDUCED_COUNTS[oneline]
 
     def get_reduced_words(self):
-        w = self.reduce()
-        oneline = w.oneline
-        if oneline not in EVEN_SIGNED_REDUCED_WORDS:
-            words = []
-            for i in w.right_descent_set:
-                s = EvenSignedPermutation.s_i(i, w.rank)
-                words += [e + (i,) for e in (w * s).get_reduced_words()]
-            EVEN_SIGNED_REDUCED_WORDS[oneline] = sorted(words, key=lambda x: self.flatten(x))
-        return EVEN_SIGNED_REDUCED_WORDS[oneline]
+        return self._get_reduced_words(EVEN_SIGNED_REDUCED_WORDS)
 
     def get_signed_reduced_words(self):
         w = self.reduce()
@@ -210,8 +171,8 @@ class EvenSignedPermutation:
         return D_SIGNED_REDUCED_WORDS[oneline]
 
     def get_involution_words(self, twist=False):
+        assert self.is_involution(twist)
         w = self.reduce()
-        assert w.inverse() == w
         oneline = w.oneline
         key = (oneline, twist)
         if key not in EVEN_SIGNED_INVOLUTION_WORDS:
@@ -221,6 +182,20 @@ class EvenSignedPermutation:
                     words.append(word)
             EVEN_SIGNED_INVOLUTION_WORDS[key] = sorted(words, key=lambda x: self.flatten(x))
         return EVEN_SIGNED_INVOLUTION_WORDS[key]
+
+    def get_twisted_involution_words(self):
+        return self.get_involution_words(True)
+
+    def get_fpf_involution_words(self):
+        assert self.is_fpf_involution()
+        key = self.oneline
+        if key not in EVEN_SIGNED_FPF_INVOLUTION_WORDS:
+            words = []
+            for a in self.get_fpf_atoms():
+                for word in a.get_reduced_words():
+                    words.append(word)
+            EVEN_SIGNED_FPF_INVOLUTION_WORDS[key] = sorted(words, key=lambda x: self.flatten(x))
+        return EVEN_SIGNED_FPF_INVOLUTION_WORDS[key]
 
     def shape(self):
         raise NotImplementedError
@@ -249,29 +224,8 @@ class EvenSignedPermutation:
         f = {i for p in sh for i in p}
         return sh | {(i, i) for i in yfixed - f}
 
-    def get_twisted_involution_words(self):
-        return self.get_twisted_involution_words(True)
-
-    def get_fpf_involution_words(self):
-        pass
-
-    def __call__(self, i):
-        if i == 0:
-            return 0
-        assert 1 <= abs(i) <= self.rank
-        if i > 0:
-            return self.oneline[i - 1]
-        else:
-            return -self.oneline[abs(i) - 1]
-
-    def __hash__(self):
-        return hash(self.oneline)
-
-    def reduce(self):
-        newline = self.oneline
-        while newline and newline[-1] == len(newline):
-            newline = newline[:-1]
-        return EvenSignedPermutation(*newline)
+    def twisted_involution_length(self):
+        return self.involution_length(True)
 
     def involution_length(self, twist=False):
         if twist:
@@ -282,13 +236,6 @@ class EvenSignedPermutation:
             if self._involution_length is None:
                 self._involution_length = len(self.get_involution_word())
             return self._involution_length
-
-    def __neg__(self):
-        return self * EvenSignedPermutation.longest_element(self.rank)
-
-    @classmethod
-    def identity(cls, n):
-        return EvenSignedPermutation(*list(range(1, n + 1)))
 
     @classmethod
     def longest_element(cls, n):
@@ -334,78 +281,18 @@ class EvenSignedPermutation:
                         self._len += 1
         return self._len
 
-    def __mod__(self, other):
-        assert type(other) == EvenSignedPermutation
-        assert self.rank == other.rank
-        if other.left_descent_set:
-            i = next(iter(other.left_descent_set))
-            s = EvenSignedPermutation.s_i(i, self.rank)
-            if i in self.right_descent_set:
-                return self % (s * other)
-            else:
-                return (self * s) % (s * other)
+    @classmethod
+    def get_minimal_fpf_involution(cls, n):
+        if n % 2 == 0:
+            oneline = [i for j in range(2, n + 1, 2) for i in [j, j - 1]]
         else:
-            return self
+            oneline = [1] + [i for j in range(3, n + 1, 2) for i in [j, j - 1]]
+        return cls(*oneline)
 
-    def __mul__(self, other):
-        assert type(other) == EvenSignedPermutation
-        assert self.rank == other.rank
-        newline = [self(other(i)) for i in range(1, self.rank + 1)]
-        return EvenSignedPermutation(*newline)
-
-    def inverse(self):
-        newline = self.rank * [0]
-        for i in range(1, self.rank + 1):
-            j = self(i)
-            if j > 0:
-                newline[j - 1] = i
-            else:
-                newline[-j - 1] = -i
-        return EvenSignedPermutation(*newline)
-
-    def __lt__(self, other):
-        assert type(other) == EvenSignedPermutation
-        return self.oneline < other.oneline
-
-    def __eq__(self, other):
-        assert type(other) == EvenSignedPermutation
-        return self.oneline == other.oneline
-
-    def __pow__(self, n):
-        if n < 0:
-            return self.inverse().__pow__(-n)
-        elif n == 0:
-            return EvenSignedPermutation.identity(self.rank)
-        elif n == 1:
-            return EvenSignedPermutation(*self.oneline)
-        else:
-            p = n // 2
-            q = n - p
-            return self.__pow__(p) * self.__pow__(q)
-
-    def inv_stanley_schur_s_decomposition(self):
-        assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_p_decomposition()
-        return SchurP.decompose_s_lambda(ans)
-
-    def inv_stanley_schur_p_decomposition(self):
-        assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_p_decomposition()
-        return ans
-
-    def stanley_schur_p_decomposition(self):
-        ans = Vector()
-        for sh, i in self.stanley_schur_decomposition().items():
-            ans += Vector({SchurP(StrictPartition(*sh)): i})
-        return ans
-
-    def stanley_schur_s_decomposition(self):
-        ans = self.stanley_schur_p_decomposition()
-        return SchurP.decompose_s_lambda(ans)
+    def get_fpf_atoms(self):
+        y = self.get_minimal_fpf_involution(self.rank)
+        twist = self.rank % 2 != 0
+        return self.relative_atoms(y, self, twist)
 
     def stanley_schur_decomposition(self,):
         cache = SCHURD_STANSYM_CACHE
@@ -455,34 +342,11 @@ class EvenSignedPermutation:
         n = self.rank
         return max(s for s in range(r + 1, n + 1) if self(s) < self(r))
 
-    @classmethod
-    def reflection_s(cls, i, j, n):
-        assert i != j
-        caller = list(range(1, n + 1))
-        caller[i - 1] = -j
-        caller[j - 1] = -i
-        return EvenSignedPermutation(*caller)
-
-    @classmethod
-    def reflection_t(cls, i, j, n):
-        assert i != j
-        caller = list(range(1, n + 1))
-        caller[i - 1] = j
-        caller[j - 1] = i
-        return EvenSignedPermutation(*caller)
-
-    def inflate(self, rank):
-        newline = self.oneline + tuple(range(self.rank + 1, rank + 1))
-        return EvenSignedPermutation(*newline)
-
     def get_atoms_by_shape(self):
         shapes = defaultdict(set)
         for w in self.get_atoms():
             shapes[tuple(sorted(w.shape()))].add(w)
         return shapes
-
-    def shape(self):
-        raise NotImplementedError
 
     @classmethod
     def relative_twisted_atoms(cls, y, z):
@@ -513,7 +377,7 @@ class EvenSignedPermutation:
         w = self.reduce()
         key = (w, twist)
         if key not in ATOMS_D_CACHE:
-            ATOMS_D_CACHE[key] = list(w._get_atoms(twist))
+            ATOMS_D_CACHE[key] = list(set(w._get_atoms(twist)))
         ans = ATOMS_D_CACHE[key]
         return [x.inflate(self.rank) for x in ans]
 
