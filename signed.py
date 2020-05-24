@@ -23,6 +23,9 @@ atoms_d_cache = {}
 
 class SignedMixin:
 
+    def length(self):
+        return len(self)
+
     @classmethod
     def identity(cls, n):
         return cls(*list(range(1, n + 1)))

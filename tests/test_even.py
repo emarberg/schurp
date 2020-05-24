@@ -18,30 +18,50 @@ def test_get_involution_word():
     assert set((s * t * s).get_involution_words()) == {(0, 2), (2, 0)}
 
 
-def test_fpf_involution_words(n=4):
-    for w in EvenSignedPermutation.fpf_involutions(n):
-        words = set(w.get_fpf_involution_words())
-        if words:
-            print(w, '->', len(words))
+def test_fpf_involution_words():
+    for n in [3, 4]:
+        for w in EvenSignedPermutation.fpf_involutions(n):
+            words = set(w.get_fpf_involution_words())
+            if words:
+                print(w, '->', len(words))
 
 
-def test_get_atoms(n=4):
-    i = list(EvenSignedPermutation.involutions(n))
-    for w in i:
-        words = set()
-        for a in w.get_atoms():
-            assert len(a) == w.involution_length()
-            assert a.inverse() % a == w
-            words |= set(a.get_reduced_words())
-        assert words == set(w.get_involution_words())
+def test_get_atoms():
+    for n in [3, 4]:
+        i = list(EvenSignedPermutation.involutions(n))
+        for w in i:
+            words = set()
+            for a in w.get_atoms():
+                assert len(a) == w.involution_length()
+                assert a.inverse() % a == w
+                words |= set(a.get_reduced_words())
+            assert words == set(w.get_involution_words())
 
 
-def test_get_twisted_atoms(n=4):
-    i = list(EvenSignedPermutation.twisted_involutions(n))
-    for w in i:
-        words = set()
+def test_get_twisted_atoms():
+    for n in [3, 4]:
+        i = list(EvenSignedPermutation.twisted_involutions(n))
+        for w in i:
+            words = set()
+            for a in w.get_twisted_atoms():
+                assert len(a) == w.twisted_involution_length()
+                assert a.inverse().star() % a == w
+                words |= set(a.get_reduced_words())
+            assert words == set(w.get_twisted_involution_words())
+
+
+def test_twisted_involutions(n=5):
+    assert n % 2 != 0
+    w0 = EvenSignedPermutation.longest_element(n)
+    assert set(EvenSignedPermutation.twisted_involutions(n)) == {
+        w0 * w for w in EvenSignedPermutation.involutions(n)
+    }
+
+
+def test_twisted(n=4):
+    for w in EvenSignedPermutation.twisted_involutions(n):
         for a in w.get_twisted_atoms():
-            assert len(a) == w.twisted_involution_length()
-            assert a.inverse().star() % a == w
-            words |= set(a.get_reduced_words())
-        assert words == set(w.get_twisted_involution_words())
+            v = a.star().inverse() % a
+            print(w, a, a.get_reduced_word(), v)
+            assert v == w
+            assert a.length() == w.twisted_involution_length()

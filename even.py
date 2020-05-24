@@ -197,6 +197,9 @@ class EvenSignedPermutation(SignedMixin):
             EVEN_SIGNED_FPF_INVOLUTION_WORDS[key] = sorted(words, key=lambda x: self.flatten(x))
         return EVEN_SIGNED_FPF_INVOLUTION_WORDS[key]
 
+    def fpf_shape(self):
+        raise NotImplementedError
+
     def shape(self):
         raise NotImplementedError
 
@@ -366,7 +369,7 @@ class EvenSignedPermutation(SignedMixin):
                 t = s.star() if twist else s
                 v = t % y % s
                 if v != y:
-                    for a in cls.relative_atoms(v, z):
+                    for a in cls.relative_atoms(v, z, twist):
                         yield s * a
 
     def get_twisted_atoms(self):
