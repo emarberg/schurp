@@ -23,6 +23,14 @@ atoms_d_cache = {}
 
 class SignedMixin:
 
+    def pair(self):
+        n = self.rank
+        return sorted([
+            (a, self(a))
+            for a in range(-n, n + 1)
+            if 0 < abs(a) < self(a)
+        ])
+
     def length(self):
         return len(self)
 
@@ -657,14 +665,6 @@ class SignedPermutation(SignedMixin):
 
     def ell_zero(self):
         return len([i for i in range(1, self.rank + 1) if self(i) < 0])
-
-    def pair(self):
-        n = self.rank
-        return [
-            (a, self(a))
-            for a in range(-n, n + 1)
-            if 0 < abs(a) < self(a)
-        ]
 
     def neg(self):
         n = self.rank

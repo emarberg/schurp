@@ -109,3 +109,33 @@ def test_shape(n=4):
             print()
         print()
         print()
+
+
+def test_nneg(n=4):
+    for w in SignedPermutation.involutions(n):
+        for atom in w.get_atoms():
+            o = atom.inverse().oneline
+
+            ndes, fix, neg = atom.ndes(), atom.nfix(), atom.nneg()
+
+            sh = {(a, -a) for a in neg}
+            sh |= {(a, -b) for a, b in ndes if 0 < a < -b}
+            sh |= {(b, -a) for a, b in ndes if 0 < a < -b}
+            sh = tuple(sorted(sh))
+
+            for a, b in ndes:
+                if a < -b:
+                    neg += (a, b)
+            neg = tuple(sorted([abs(i) for i in neg]))
+
+            cfix = tuple(i for i in w.fixed_points() if i > 0)
+            cneg = tuple(i for i in w.negated_points() if i > 0)
+            csh = tuple(sorted(atom.shape()))
+
+            print(w, ':', o, '->', csh, '==', sh)
+            print('  fixed points:', cfix, '==', fix)
+            print('negated points:', cneg, '==', neg)
+            print()
+            assert fix == cfix
+            assert neg == cneg
+            assert csh == sh

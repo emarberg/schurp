@@ -55,24 +55,17 @@ class EvenSignedPermutation(SignedMixin):
 
     @classmethod
     def involutions(cls, n, twist=False):
-        for w in Permutation.involutions(n):
-            oneline = w.oneline
-            oneline += tuple(range(len(oneline) + 1, n + 1))
-            cycles = [{i, oneline[i] - 1} for i in range(n) if i <= oneline[i] - 1]
-            k = len(cycles)
-            for v in range(2**k):
-                newline = list(oneline)
-                for i in range(k):
-                    if v % 2 != 0:
-                        for j in cycles[i]:
-                            newline[j] *= -1
-                    v = v // 2
-                s = len([i for i in newline if i < 0])
-                if not twist and s % 2 == 0:
-                    yield EvenSignedPermutation(*newline)
-                elif twist and s % 2 != 0:
-                    newline[0] *= -1
-                    yield EvenSignedPermutation(*newline)
+        level = {EvenSignedPermutation.identity(n)}
+        while level:
+            nextlevel = set()
+            for w in level:
+                yield w
+                for i in range(n):
+                    if i not in w.right_descent_set:
+                        s = EvenSignedPermutation.s_i(i, n)
+                        t = EvenSignedPermutation.s_i(1 - i, n) if i in [0, 1] and twist else s
+                        nextlevel.add(t % w % s)
+            level = nextlevel
 
     @classmethod
     def fpf_involutions(cls, n):
@@ -200,9 +193,6 @@ class EvenSignedPermutation(SignedMixin):
     def fpf_shape(self):
         raise NotImplementedError
 
-    def twisted_shape(self):
-        raise NotImplementedError
-
     def involution_fixed_points(self, twist=False):
         y = self
         n = y.rank
@@ -213,10 +203,52 @@ class EvenSignedPermutation(SignedMixin):
             yfixed |= {-1, 1}
         return yfixed
 
+    def twisted_shape(self, verbose=False):
+        def vprint(*args):
+            if verbose:
+                print(*args) # noqa
+
+        n = self.rank
+        y = self.inverse().star() % self
+        assert y.twisted_involution_length() == self.length()
+
+        twist = n % 2 == 0
+        w0 = EvenSignedPermutation.longest_element(n)
+        y = w0 * y
+        aword = list(reversed(self.get_reduced_word()))
+        vprint('word:', aword)
+
+        yfixed = y.involution_fixed_points(twist)
+        v = EvenSignedPermutation.identity(n)
+        sh = set()
+        for a in aword:
+            vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh, 'a =', a, 'leads to')
+
+            if a > 0 and {a, a + 1}.issubset(y.involution_fixed_points(twist)):
+                e, f = tuple(sorted([abs(v(a)), abs(v(a + 1))]))
+                sh |= {(e, f), (-f, -e)}
+            elif a == 0 and {1, 2}.issubset(y.involution_fixed_points(twist)):
+                e, f = tuple(sorted([abs(v(1)), abs(v(2))]))
+                sh |= {(e, f), (-f, -e)}
+            s = EvenSignedPermutation.s_i(a, n)
+            t = s.star() if twist else s
+
+            u = v * s
+            assert u.length() == v.length() + 1
+            v = u
+
+            z = t % y % s
+            assert z.involution_length(twist) == y.involution_length(twist) + 1
+            y = z
+        vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh)
+        vprint()
+        f = {i for p in sh for i in p}
+        return sh | {(-i, i) for i in yfixed - f if i > 0}
+
     def shape(self, verbose=False):
         def vprint(*args):
             if verbose:
-                print(*args)
+                print(*args) # noqa
 
         n = self.rank
         y = self.inverse() % self
@@ -253,19 +285,71 @@ class EvenSignedPermutation(SignedMixin):
         vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh)
         vprint()
         f = {i for p in sh for i in p}
-        return sh | {(i, i) for i in yfixed - f}
+        return sh | {(-i, i) for i in yfixed - f if i > 0}
 
-    def ndes(self):
-        ndes, fix, neg = self._ndes()
-        return ndes
+    def twisted_fixed_points(self):
+        n = self.rank
+        ans = []
+        for a in range(-n, n + 1):
+            if a == -1 and self(a) == 1:
+                ans.append(a)
+            elif a == 1 and self(a) == -1:
+                ans.append(a)
+            elif abs(a) > 1 and self(a) == a:
+                ans.append(a)
+        return tuple(ans)
 
-    def nfix(self):
-        ndes, fix, neg = self._ndes()
+    def twisted_negated_points(self):
+        n = self.rank
+        ans = []
+        for a in range(-n, n + 1):
+            if a == -1 and self(a) == -1:
+                ans.append(a)
+            elif a == 1 and self(a) == 1:
+                ans.append(a)
+            elif abs(a) > 1 and self(a) == -a:
+                ans.append(a)
+        return tuple(ans)
+
+    def twisted_nfix(self):
+        ndes, fix = self._twisted_ndes()
         return fix
 
-    def nneg(self):
-        ndes, fix, neg = self._ndes()
-        return neg
+    def twisted_ndes(self):
+        ndes, fix = self._twisted_ndes()
+        return ndes
+
+    def _twisted_ndes(self):
+        y = self.inverse().star() % self
+        assert y.twisted_involution_length() == self.length()
+
+        oneline = tuple(self.inverse().oneline)
+        ndes = []
+
+        if oneline:
+            a = abs(oneline[0])
+            ndes.append((a, -a))
+            oneline = oneline[1:]
+
+        while True:
+            if oneline and oneline[0] < 0:
+                oneline = (-oneline[0],) + oneline[1:]
+            i = [i for i in range(len(oneline) - 1) if oneline[i] > oneline[i + 1]]
+            if len(i) == 0:
+                break
+            i = i[0]
+            a, b = oneline[i:i + 2]
+            ndes.append((abs(a), b))
+            oneline = oneline[:i] + oneline[i + 2:]
+        return tuple(sorted(ndes)), oneline
+
+    def nfix(self):
+        ndes, fix = self._ndes()
+        return fix
+
+    def ndes(self):
+        ndes, fix = self._ndes()
+        return ndes
 
     def _ndes(self):
         y = self.inverse() % self
@@ -274,6 +358,8 @@ class EvenSignedPermutation(SignedMixin):
         oneline = tuple(self.inverse().oneline)
         ndes = []
         while True:
+            if oneline and oneline[0] < 0:
+                oneline = (-oneline[0],) + oneline[1:]
             i = [i for i in range(len(oneline) - 1) if oneline[i] > oneline[i + 1]]
             if len(i) == 0:
                 break
@@ -281,9 +367,7 @@ class EvenSignedPermutation(SignedMixin):
             a, b = oneline[i:i + 2]
             ndes.append((abs(a), b))
             oneline = oneline[:i] + oneline[i + 2:]
-        fix = tuple(i for i in oneline if i > 0)
-        neg = tuple(i for i in oneline if i < 0)
-        return tuple(sorted(ndes)), fix, neg
+        return tuple(sorted(ndes)), oneline
 
     def twisted_involution_length(self):
         return self.involution_length(True)
