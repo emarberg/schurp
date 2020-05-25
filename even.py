@@ -200,32 +200,90 @@ class EvenSignedPermutation(SignedMixin):
     def fpf_shape(self):
         raise NotImplementedError
 
-    def shape(self):
+    def twisted_shape(self):
         raise NotImplementedError
 
+    def involution_fixed_points(self, twist=False):
+        y = self
+        n = y.rank
+        yfixed = {i for i in range(-n, n + 1) if i not in [-1, 0, 1] and y(i) == i}
+        if not twist and y(1) == 1:
+            yfixed |= {-1, 1}
+        if twist and y(1) == -1:
+            yfixed |= {-1, 1}
+        return yfixed
+
+    def shape(self, verbose=False):
+        def vprint(*args):
+            if verbose:
+                print(*args)
+
         n = self.rank
-        y = self.star().inverse() % self
+        y = self.inverse() % self
         assert y.involution_length() == self.length()
 
+        twist = n % 2 != 0
         w0 = EvenSignedPermutation.longest_element(n)
         y = w0 * y
-        aword = reversed(self.get_reduced_word())
+        aword = list(reversed(self.get_reduced_word()))
+        vprint('word:', aword)
 
-        yfixed = {i for i in range(-n, n + 1) if i != 0 and y(i) == i}
-        v = EvenSignedPermutation()
+        yfixed = y.involution_fixed_points(twist)
+        v = EvenSignedPermutation.identity(n)
         sh = set()
         for a in aword:
-            if a > 0 and y(a) == a and y(a + 1) == a + 1:
-                e, f = tuple(sorted([v(a), v(a + 1)]))
+            vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh, 'a =', a, 'leads to')
+
+            if a > 0 and {a, a + 1}.issubset(y.involution_fixed_points(twist)):
+                e, f = tuple(sorted([abs(v(a)), abs(v(a + 1))]))
                 sh |= {(e, f), (-f, -e)}
-            elif a == 0 and y(1) == 1 and y(2) == 2:
-                e, f = tuple(sorted([v(1), v(-2)]))
+            elif a == 0 and {1, 2}.issubset(y.involution_fixed_points(twist)):
+                e, f = tuple(sorted([abs(v(1)), abs(v(2))]))
                 sh |= {(e, f), (-f, -e)}
             s = EvenSignedPermutation.s_i(a, n)
-            v *= s
-            y = s % y % s
+            t = s.star() if twist else s
+
+            u = v * s
+            assert u.length() == v.length() + 1
+            v = u
+
+            z = t % y % s
+            assert z.involution_length(twist) == y.involution_length(twist) + 1
+            y = z
+        vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh)
+        vprint()
         f = {i for p in sh for i in p}
         return sh | {(i, i) for i in yfixed - f}
+
+    def ndes(self):
+        ndes, fix, neg = self._ndes()
+        return ndes
+
+    def nfix(self):
+        ndes, fix, neg = self._ndes()
+        return fix
+
+    def nneg(self):
+        ndes, fix, neg = self._ndes()
+        return neg
+
+    def _ndes(self):
+        y = self.inverse() % self
+        assert y.involution_length() == self.length()
+
+        oneline = tuple(self.inverse().oneline)
+        ndes = []
+        while True:
+            i = [i for i in range(len(oneline) - 1) if oneline[i] > oneline[i + 1]]
+            if len(i) == 0:
+                break
+            i = i[0]
+            a, b = oneline[i:i + 2]
+            ndes.append((abs(a), b))
+            oneline = oneline[:i] + oneline[i + 2:]
+        fix = tuple(i for i in oneline if i > 0)
+        neg = tuple(i for i in oneline if i < 0)
+        return tuple(sorted(ndes)), fix, neg
 
     def twisted_involution_length(self):
         return self.involution_length(True)

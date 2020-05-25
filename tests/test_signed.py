@@ -52,6 +52,7 @@ def test_get_atoms(n=4):
             words |= set(a.get_reduced_words())
         assert words == set(w.get_involution_words())
 
+
 def test_get_abs_fpf_atoms(n=6):
     for y in SignedPermutation.abs_fpf_involutions(n):
         s = set()
@@ -90,3 +91,21 @@ def test_brion_weight_counts(n=4):
             b += x**w.brion_length_b() * len(w.get_reduced_words())
             c += x**w.brion_length_c() * len(w.get_reduced_words())
         print(m, ':', a, '\t\t\t', b, '\t\t\t', c)
+
+
+def test_shape(n=4):
+    cls = SignedPermutation
+    w0 = cls.longest_element(n)
+    for w in cls.involutions(n):
+        shapes = {}
+        for a in w.get_atoms():
+            sh = tuple(sorted(a.shape()))
+            shapes[sh] = shapes.get(sh, []) + [a]
+        print(w, ' :: ', w * w0, ' :: ', (w * w0).fixed_points())
+        print()
+        for sh, atoms in shapes.items():
+            print(' ', set(sh), '->', atoms)
+            print(' ', len(str(set(sh))) * ' ', '  ', [a.inverse() for a in atoms])
+            print()
+        print()
+        print()

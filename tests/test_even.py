@@ -19,7 +19,7 @@ def test_get_involution_word():
 
 
 def test_fpf_involution_words():
-    for n in [3, 4]:
+    for n in [2, 3]:
         for w in EvenSignedPermutation.fpf_involutions(n):
             words = set(w.get_fpf_involution_words())
             if words:
@@ -65,3 +65,59 @@ def test_twisted(n=4):
             print(w, a, a.get_reduced_word(), v)
             assert v == w
             assert a.length() == w.twisted_involution_length()
+
+
+def _nneg(w):
+    des = 0
+    for i in range(len(w) - 1):
+        a, b = w[i:i + 2]
+        if a > b:
+            des += 1
+            v = w[:i] + w[i + 2:]
+            for nn in _nneg(v):
+                yield {(abs(a), b)} | nn
+    if des == 0:
+        yield {w}
+
+
+def test_nneg(n=4):
+    for w in EvenSignedPermutation.involutions(n):
+        for atom in w.get_atoms():
+            o = atom.inverse().oneline
+            nn = {tuple(sorted(x)) for x in _nneg(o)}
+            print(w, ':', o, '->', nn)
+            assert len(nn) == 1
+
+            ndes, fix, neg = atom.ndes(), atom.nfix(), atom.nneg()
+            for a, b in ndes:
+                if a < -b:
+                    neg += (a, -b)
+            neg = tuple(sorted(neg))
+
+            cfix = tuple(i for i in w.fixed_points() if i > 0)
+            cneg = tuple(i for i in w.negated_points() if i > 0)
+
+            print('  fixed points:', cfix, '==', fix)
+            print('negated points:', cneg, '==', neg)
+            print()
+            #assert fix == cfix
+            #assert neg == cneg
+
+
+def test_shape(n=4):
+    cls = EvenSignedPermutation
+    w0 = cls.longest_element(n)
+    for w in cls.involutions(n):
+        shapes = {}
+        for a in w.get_atoms():
+            sh = tuple(sorted(a.shape()))
+            shapes[sh] = shapes.get(sh, []) + [a]
+        print(w, ' :: ', w * w0, ' :: ', (w * w0).involution_fixed_points(n % 2 != 0))
+        print()
+        for sh, atoms in shapes.items():
+            print(' ', set(sh), '->', atoms)
+            print(' ', len(str(set(sh))) * ' ', '  ', [a.inverse() for a in atoms])
+            print()
+            assert not any(i == j for i, j in sh)
+        print()
+        print()

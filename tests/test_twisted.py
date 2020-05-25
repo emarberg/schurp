@@ -34,7 +34,9 @@ def _test_shape(w, n):
             sh |= {(e, f)}
         s = Permutation.s_i(a)
         v *= s
-        y = s % y % s
+        z = s % y % s
+        assert z.involution_length() == y.involution_length() + 1
+        y = z
     f = {i for p in sh for i in p}
     return sh | {(i, i) for i in yfixed - f}
 

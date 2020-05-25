@@ -118,11 +118,11 @@ class SignedMixin:
 
     def fixed_points(self):
         n = self.rank
-        return [a for a in range(-n, n + 1) if 0 != a == self(a)]
+        return tuple(a for a in range(-n, n + 1) if 0 != a == self(a))
 
     def negated_points(self):
         n = self.rank
-        return [a for a in range(-n, n + 1) if 0 != a == -self(a)]
+        return tuple(a for a in range(-n, n + 1) if 0 != a == -self(a))
 
     def __call__(self, i):
         if i == 0:
@@ -743,6 +743,9 @@ class SignedPermutation(SignedMixin):
         return neg
 
     def _ndes(self):
+        y = self.inverse() % self
+        assert y.involution_length() == self.length()
+
         oneline = tuple(self.inverse().oneline)
         ndes = []
         while True:
@@ -750,11 +753,12 @@ class SignedPermutation(SignedMixin):
             if len(i) == 0:
                 break
             i = i[0]
-            ndes.append(oneline[i:i + 2])
+            a, b = oneline[i:i + 2]
+            ndes.append((a, b))
             oneline = oneline[:i] + oneline[i + 2:]
-        fix = [i for i in oneline if i > 0]
-        neg = [i for i in oneline if i < 0]
-        return ndes, fix, neg
+        fix = tuple(i for i in oneline if i > 0)
+        neg = tuple(i for i in oneline if i < 0)
+        return tuple(sorted(ndes)), fix, neg
 
     @classmethod
     def ds_i(cls, i, n):
