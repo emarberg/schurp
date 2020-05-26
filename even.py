@@ -5,6 +5,7 @@ from vectors import Vector
 from symmetric import SchurP, SchurQ
 from partitions import StrictPartition
 import itertools
+import operator
 
 
 D_SIGNED_REDUCED_WORDS = {(): [()]}
@@ -542,3 +543,25 @@ class EvenSignedPermutation(SignedMixin):
                 else:
                     for a in (t * w).get_atoms(twist):
                         yield a * s
+
+    def get_min_atom(self, matching=None):
+        assert self.is_involution()
+        if matching is None:
+            g = sorted(self.negated_points())
+            matching = {(g[i], g[i + 1]) for i in range(0, len(g), 2)}
+        x = {i for m in matching for i in m if i > 0}
+        fix = [(i,) for i in self.fixed_points() if i > 0]
+        neg = [(-i,) for i in self.negated_points() if i not in x and i > 0]
+        pair = [(b, a) for a, b in self.pair()]
+        des = [(a, -b) for a, b in matching if a > 0]
+        oneline = [
+            i
+            for m in sorted(fix + neg + pair + des, key=operator.itemgetter(0))
+            for i in m
+        ]
+        if len([i for i in oneline if i < 0]) % 2 != 0:
+            oneline[0] *= -1
+        w = EvenSignedPermutation(*oneline).inverse()
+        assert w.inverse() % w == self
+        assert self.involution_length() == w.length()
+        return w
