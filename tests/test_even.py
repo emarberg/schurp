@@ -229,6 +229,7 @@ def test_atoms_span(nn=3):
                         x += ['*']
                     x += [u]
                 print('  ', x)
+                assert False
 
 
 def test_shape(nn=3):
@@ -264,6 +265,10 @@ def is_max_twisted_atom(w):
         b, c, a = v[i: i + 3]
         if a < b < c:
             return False
+    if len(v) >= 4:
+        b, c, a = v[1:4]
+        if a < -b < c:
+            return False
     if len(v) >= 2:
         b, a = v[:2]
         if abs(a) < abs(b) and b > 0:
@@ -277,11 +282,45 @@ def is_min_twisted_atom(w):
         c, a, b = v[i: i + 3]
         if a < b < c:
             return False
+    if len(v) >= 4:
+        c, a, b = v[1:4]
+        if a < b < -c:
+            return False
     if len(v) >= 2:
         b, a = v[:2]
         if abs(a) < abs(b) and b < 0:
             return False
     return True
+
+
+def twisted_span(v, strong=False):
+    level = {v.oneline}
+    while level:
+        nextlevel = set()
+        for v in level:
+            yield v
+            for i in range(1, len(v) - 2):
+                b, c, a = v[i: i + 3]
+                if a < b < c:
+                    nextlevel.add(v[:i] + (c, a, b) + v[i + 3:])
+            if len(v) >= 2:
+                b, a = v[:2]
+                if abs(a) < abs(b) and b > 0:
+                    nextlevel.add((-b, -a) + v[2:])
+            if len(v) >= 4:
+                x, b, c, a = v[:4]
+                if a < -b < c < abs(x):
+                    nextlevel.add((x, -c, a, -b) + v[4:])
+            # if strong:
+            #     for i in range(len(v)):
+            #         for j in range(i + 1, len(v)):
+            #             for k in range(j + 1, len(v) - 1):
+            #                 a, b, c, d = v[i], v[j], v[k], v[k + 1]
+            #                 if abs(a) < -b < c < -d:
+            #                     if all(abs(x) < abs(b) for x in v[:i] + v[i + 1:j] + v[j + 1:k]):
+            #                         u = v[:i] + (a,) + v[i + 1:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
+            #                         nextlevel.add(u)
+        level = nextlevel
 
 
 def test_twisted_shape(nn=3):
@@ -301,10 +340,29 @@ def test_twisted_shape(nn=3):
                 print(' ', set(sh), '->', minima, '<', [a.inverse() for a in atoms], '<', maxima)
                 print()
 
-                # v = w.get_min_twisted_atom(sh).inverse()
+                v = w.get_min_twisted_atom(sh).inverse()
+                test = [cls(*u).inverse() for u in twisted_span(v)]
+                assert sorted(test) == sorted(atoms)
 
                 assert len([i for i, j in sh if i == -j]) == 1
-                assert len(minima) == 1 or len(maxima) == 1
-            print()
+                assert len(minima) == 1
+                assert minima == [v]
             print()
 
+
+def test_twisted_atoms_span(nn=3):
+    for n in [nn]:
+        cls = EvenSignedPermutation
+        for w in cls.twisted_involutions(n):
+            v = w.get_min_twisted_atom().inverse()
+            test = sorted([cls(*u) for u in twisted_span(v, True)])
+            sest = sorted([u.inverse() for u in w.get_twisted_atoms()])
+            if test != sest:
+                print(w)
+                print('  ', test)
+                x = []
+                for u in sest:
+                    if is_min_twisted_atom(u.inverse()) and u not in test:
+                        x += ['*']
+                    x += [u]
+                print('  ', x)

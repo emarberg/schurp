@@ -288,6 +288,20 @@ class EvenSignedPermutation(SignedMixin):
         f = {i for p in sh for i in p}
         return sh | {(-i, i) for i in yfixed - f if i > 0}
 
+    def twisted_pair(self):
+        def y(i):
+            a = self(i)
+            if a in [1, -1]:
+                return -a
+            return a
+
+        n = self.rank
+        return sorted([
+            (a, y(a))
+            for a in range(-n, n + 1)
+            if 0 < abs(a) < y(a)
+        ])
+
     def twisted_fixed_points(self):
         n = self.rank
         ans = []
@@ -564,4 +578,34 @@ class EvenSignedPermutation(SignedMixin):
         w = EvenSignedPermutation(*oneline).inverse()
         assert w.inverse() % w == self
         assert self.involution_length() == w.length()
+        return w
+
+    def get_min_twisted_atom(self, matching=None):
+        assert self.is_twisted_involution()
+        if matching is None:
+            g = sorted(self.twisted_negated_points())
+            matching = {(g[i], g[i + 1]) for i in range(1, len(g) - 1, 2)}
+            matching.add((g[0], g[-1]))
+        x = {i for m in matching for i in m if i > 0}
+        oneline = [b for a, b in matching if a == -b]
+        matching = [(a, b) for a, b in matching if a != -b]
+        assert len(oneline) == 1
+        fix = [(i,) for i in self.twisted_fixed_points() if i > 0]
+        neg = [(-i,) for i in self.twisted_negated_points() if i not in x and i > 0]
+        pair = [(b, a) for a, b in self.twisted_pair()]
+        des = [(a, -b) for a, b in matching if a > 0]
+        oneline += [
+            i
+            for m in sorted(fix + neg + pair + des, key=operator.itemgetter(0))
+            for i in m
+        ]
+        if len([i for i in oneline if i < 0]) % 2 != 0:
+            a, b = oneline[:2]
+            if abs(a) < abs(b):
+                oneline[0] *= -1
+            else:
+                oneline[1] *= -1
+        w = EvenSignedPermutation(*oneline).inverse()
+        assert w.inverse().star() % w == self
+        assert self.twisted_involution_length() == w.length()
         return w
