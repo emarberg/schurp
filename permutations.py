@@ -1,6 +1,7 @@
 import itertools
 from tableaux import Tableau
 from partitions import Partition
+import operator
 
 REDUCED_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
@@ -179,6 +180,7 @@ class Permutation:
                 yield tuple(newdream)
 
     def get_twisted_involution_words(self, n):
+        assert self.is_twisted_involution(n)
         if self not in TWISTED_INVOLUTION_WORDS_CACHE:
             TWISTED_INVOLUTION_WORDS_CACHE[(self, n)] = list(self._get_twisted_involution_words(n))
         return TWISTED_INVOLUTION_WORDS_CACHE[(self, n)]
@@ -197,6 +199,7 @@ class Permutation:
         return ans
 
     def get_twisted_atoms(self, n):
+        assert self.is_twisted_involution(n)
         if self not in TWISTED_ATOMS_CACHE:
             TWISTED_ATOMS_CACHE[(self, n)] = list(self._get_twisted_atoms(n))
         return TWISTED_ATOMS_CACHE[(self, n)]
@@ -228,7 +231,7 @@ class Permutation:
             pairs += [(line[0], line[-1])]
             line = line[1:-1]
 
-        return {(a, b) for b, a in pairs if a <= b}
+        return {(a, b) for b, a in pairs if a < b}
 
     def get_atoms(self):
         if self not in ATOMS_CACHE:
@@ -677,6 +680,60 @@ class Permutation:
         expr = self.reduced_expr()
         return self.expr_to_involution(expr).involution_length() == len(expr)
 
+    def twisted_fixed_points(self, n):
+        return [i for i in range(1, n + 1) if n + 1 - self(i) == i]
+
+    def twisted_cycles(self, n):
+        return [(i, n + 1 - self(i)) for i in range(1, n + 1) if n + 1 - self(i) > i]
+
+    def _get_min_twisted_matching(self, n, matching):
+        if matching is None:
+            fix = self.twisted_fixed_points(n)
+            matching = []
+            if len(fix) % 2 != 0:
+                fix = fix[:-1]
+            while len(fix) >= 2:
+                a, b = fix[0], fix[1]
+                matching.append((a, b))
+                fix = fix[2:]
+        return matching
+
+    def _get_max_twisted_matching(self, n, matching):
+        if matching is None:
+            fix = self.twisted_fixed_points(n)
+            matching = []
+            if len(fix) % 2 != 0:
+                fix = fix[:-1]
+            while len(fix) >= 2:
+                a, b = fix[0], fix[1]
+                matching.append((a, b))
+                fix = fix[2:]
+        return matching
+
+    def get_min_twisted_atom(self, n, matching=None):
+        assert self.is_twisted_involution(n)
+        matching = self._get_min_twisted_matching(n, matching)
+        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching for a in m})
+        assert len(base) <= 1
+
+        itemgetter = operator.itemgetter(0)
+        cycles = sorted([(b, a) for (a, b) in matching] + self.twisted_cycles(n), key=itemgetter)
+        for x, y in reversed(cycles):
+            base = [x] + base + [y]
+        return Permutation(*base).inverse()
+
+    def get_max_twisted_atom(self, n, matching=None):
+        assert self.is_twisted_involution(n)
+        matching = self._get_max_twisted_matching(n, matching)
+        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching for a in m})
+        assert len(base) <= 1
+
+        itemgetter = lambda p: -p[1]  # noqa
+        cycles = sorted([(b, a) for (a, b) in matching] + self.twisted_cycles(n), key=itemgetter)
+        for x, y in reversed(cycles):
+            base = [x] + base + [y]
+        return Permutation(*base).inverse()
+
     def get_min_atom(self):
         assert self.is_involution()
         cycles = sorted([list(reversed(sorted(c))) for c in self.cycles], key=lambda x: x[-1])
@@ -696,6 +753,9 @@ class Permutation:
         assert self.is_fpf_involution()
         cycles = sorted([list(sorted(c)) for c in self.cycles], key=lambda x: x[-1])
         return Permutation([i for cycle in cycles for i in cycle])**-1
+
+    def is_twisted_involution(self, n):
+        return n >= len(self.oneline) and self.inverse() == self.star(n)
 
     def is_involution(self):
         return len(self.cycles) == 0 or max(map(len, self.cycles)) <= 2

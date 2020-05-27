@@ -584,8 +584,7 @@ class EvenSignedPermutation(SignedMixin):
         assert self.is_twisted_involution()
         if matching is None:
             g = sorted(self.twisted_negated_points())
-            matching = {(g[i], g[i + 1]) for i in range(1, len(g) - 1, 2)}
-            matching.add((g[0], g[-1]))
+            matching = {(g[i], g[i + 1]) for i in range(0, len(g) - 1, 2)}
         x = {i for m in matching for i in m if i > 0}
         oneline = [b for a, b in matching if a == -b]
         matching = [(a, b) for a, b in matching if a != -b]

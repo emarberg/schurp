@@ -1,4 +1,5 @@
 from even import EvenSignedPermutation
+import subprocess
 
 
 def test_get_minimal_fpf_involution():
@@ -188,29 +189,55 @@ def is_min_atom(w):
 
 
 def span(v, strong=False):
-    level = {v.oneline}
+    v = v.oneline
+    level = {(None, v, None)}
     while level:
         nextlevel = set()
-        for v in level:
-            yield v
+        for u, v, label in level:
+            if u is not None:
+                yield (u, v, label)
             for i in range(len(v) - 2):
                 b, c, a = v[i: i + 3]
                 if a < b < c:
-                    nextlevel.add(v[:i] + (c, a, b) + v[i + 3:])
+                    w = v[:i] + (c, a, b) + v[i + 3:]
+                    nextlevel.add((v, w, False))
             if len(v) >= 3:
                 b, c, a = v[:3]
                 if a < -b < c:
-                    nextlevel.add((-c, a, -b) + v[3:])
+                    w = (-c, a, -b) + v[3:]
+                    nextlevel.add((v, w, False))
             if strong:
-                for i in range(len(v)):
-                    for j in range(i + 1, len(v)):
-                        for k in range(j + 1, len(v) - 1):
-                            a, b, c, d = v[i], v[j], v[k], v[k + 1]
-                            if abs(a) < -b < c < -d:
-                                if all(abs(x) < abs(b) for x in v[:i] + v[i + 1:j] + v[j + 1:k]):
-                                    u = v[:i] + (a,) + v[i + 1:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
-                                    nextlevel.add(u)
+                for j in range(1, len(v)):
+                    for k in range(j + 1, len(v) - 1):
+                        b, c, d = v[j], v[k], v[k + 1]
+                        if 0 < -b < c < -d and all(abs(x) <= abs(b) for x in v[:k]):
+                            w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
+                            nextlevel.add((v, w, True))
         level = nextlevel
+
+
+def print_atoms_span(n=3):
+    cls = EvenSignedPermutation
+    for w in cls.involutions(n):
+        v = w.get_min_atom().inverse()
+        edges = list(span(v, True))
+        if len(edges) == 0:
+            continue
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [fontname="courier"];']
+        s += ['    "%s" -> "%s" [style="%s"];' % (str(cls(*x)), str(cls(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
+        s += ['}']
+        s = '\n'.join(s)
+        name = ''.join([str(v(i)) for i in range(1, n + 1)])
+        file = '/Users/emarberg/Desktop/examples/atoms/'
+        dotfile = file + 'dot/DI/' + name + '.dot'
+        pngfile = file + 'png/DI/' + name + '.png'
+        with open(dotfile, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
 
 def test_atoms_span(nn=3):
@@ -218,7 +245,7 @@ def test_atoms_span(nn=3):
         cls = EvenSignedPermutation
         for w in cls.involutions(n):
             v = w.get_min_atom().inverse()
-            test = sorted([cls(*u) for u in span(v, True)])
+            test = sorted({v} | {cls(*u) for (_, u, _) in span(v, True)})
             sest = sorted([u.inverse() for u in w.get_atoms()])
             if test != sest:
                 print(w)
@@ -250,7 +277,7 @@ def test_shape(nn=3):
                 print()
 
                 v = w.get_min_atom(sh).inverse()
-                test = [cls(*u).inverse() for u in span(v)]
+                test = {v.inverse()} | {cls(*q).inverse() for (_, q, _) in span(v)}
                 assert sorted(test) == sorted(atoms)
 
                 assert not any(i == j for i, j in sh)
@@ -294,32 +321,49 @@ def is_min_twisted_atom(w):
 
 
 def twisted_span(v, strong=False):
-    level = {v.oneline}
+    v = v.oneline
+    level = {(None, v, None)}
     while level:
         nextlevel = set()
-        for v in level:
-            yield v
+        for u, v, label in level:
+            if u is not None:
+                yield (u, v, label)
             for i in range(1, len(v) - 2):
                 b, c, a = v[i: i + 3]
                 if a < b < c:
-                    nextlevel.add(v[:i] + (c, a, b) + v[i + 3:])
+                    w = v[:i] + (c, a, b) + v[i + 3:]
+                    nextlevel.add((v, w, False))
             if len(v) >= 2:
                 b, a = v[:2]
                 if abs(a) < abs(b) and b > 0:
-                    nextlevel.add((-b, -a) + v[2:])
+                    w = (-b, -a) + v[2:]
+                    nextlevel.add((v, w, False))
             if len(v) >= 4:
                 x, b, c, a = v[:4]
                 if a < -b < c < abs(x):
-                    nextlevel.add((x, -c, a, -b) + v[4:])
-            # if strong:
-            #     for i in range(len(v)):
-            #         for j in range(i + 1, len(v)):
-            #             for k in range(j + 1, len(v) - 1):
-            #                 a, b, c, d = v[i], v[j], v[k], v[k + 1]
-            #                 if abs(a) < -b < c < -d:
-            #                     if all(abs(x) < abs(b) for x in v[:i] + v[i + 1:j] + v[j + 1:k]):
-            #                         u = v[:i] + (a,) + v[i + 1:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
-            #                         nextlevel.add(u)
+                    w = (x, -c, a, -b) + v[4:]
+                    nextlevel.add((v, w, False))
+            if strong:
+                # for j in range(len(v)):
+                #     for k in range(j + 1, len(v) - 1):
+                #         a, b, c = v[j], v[k], v[k + 1]
+                #         if 0 < -a < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
+                #             w = v[:j] + (-c,) + v[j + 1:k] + (a, -b) + v[k + 2:]
+                #             nextlevel.add((v, w, False))
+                if len(v) >= 3:
+                    a, b, c = v[:3]
+                    if 0 < -a < b < -c:
+                        w = (-c, a, -b) + v[3:]
+                        nextlevel.add((v, w, True))
+                    if 0 < a < b < -c:
+                        w = (-c, a, -b) + v[3:]
+                        nextlevel.add((v, w, True))
+                if len(v) >= 4:
+                    b, a, c, d = v[:4]
+                    if 0 < a < -b < c < -d:
+                        w = (-d, -a, -b, -c) + v[4:]
+                        nextlevel.add((v, w, True))
+
         level = nextlevel
 
 
@@ -341,7 +385,7 @@ def test_twisted_shape(nn=3):
                 print()
 
                 v = w.get_min_twisted_atom(sh).inverse()
-                test = [cls(*u).inverse() for u in twisted_span(v)]
+                test = {v.inverse()} | {cls(*u).inverse() for (_, u, _) in twisted_span(v)}
                 assert sorted(test) == sorted(atoms)
 
                 assert len([i for i, j in sh if i == -j]) == 1
@@ -350,19 +394,44 @@ def test_twisted_shape(nn=3):
             print()
 
 
+def print_twisted_span(n):
+    cls = EvenSignedPermutation
+    for w in cls.twisted_involutions(n):
+        v = w.get_min_twisted_atom().inverse()
+        edges = list(twisted_span(v, True))
+        if len(edges) == 0:
+            continue
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [fontname="courier"];']
+        s += ['    "%s" -> "%s" [style="%s"];' % (str(cls(*x)), str(cls(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
+        s += ['}']
+        s = '\n'.join(s)
+        name = ''.join([str(v(i)) for i in range(1, n + 1)])
+        file = '/Users/emarberg/Desktop/examples/atoms/'
+        dotfile = file + 'dot/DII/' + name + '.dot'
+        pngfile = file + 'png/DII/' + name + '.png'
+        with open(dotfile, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+
+
 def test_twisted_atoms_span(nn=3):
     for n in [nn]:
         cls = EvenSignedPermutation
         for w in cls.twisted_involutions(n):
             v = w.get_min_twisted_atom().inverse()
-            test = sorted([cls(*u) for u in twisted_span(v, True)])
+            test = sorted({v} | {cls(*u) for (_, u, _) in twisted_span(v, True)})
             sest = sorted([u.inverse() for u in w.get_twisted_atoms()])
             if test != sest:
                 print(w)
-                print('  ', test)
+                print('  ', v, '<', test)
                 x = []
                 for u in sest:
-                    if is_min_twisted_atom(u.inverse()) and u not in test:
+                    if is_min_twisted_atom(u.inverse()):
                         x += ['*']
                     x += [u]
-                print('  ', x)
+                print('  ', v, '<', x)
+                print('  ', [u for u in test if u not in sest])
