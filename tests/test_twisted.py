@@ -158,6 +158,8 @@ def print_atoms_span(n=3):
         s += ['    overlap=false;']
         s += ['    splines=spline;']
         s += ['    node [fontname="courier"];']
+        for x in set(w.get_twisted_atoms(n)):
+            s += ['    "%s";' % str(x.inverse())]
         s += ['    "%s" -> "%s" [style="%s"];' % (str(Permutation(*x)), str(Permutation(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
         s += ['}']
         s = '\n'.join(s)

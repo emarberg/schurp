@@ -228,6 +228,8 @@ def print_atoms_span(n=3):
         s += ['    overlap=false;']
         s += ['    splines=spline;']
         s += ['    node [fontname="courier"];']
+        for x in set(w.get_atoms()):
+            s += ['    "%s";' % str(x.inverse())]
         s += ['    "%s" -> "%s" [style="%s"];' % (str(cls(*x)), str(cls(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
         s += ['}']
         s = '\n'.join(s)
@@ -394,7 +396,7 @@ def test_twisted_shape(nn=3):
             print()
 
 
-def print_twisted_span(n):
+def print_twisted_atoms_span(n):
     cls = EvenSignedPermutation
     for w in cls.twisted_involutions(n):
         v = w.get_min_twisted_atom().inverse()
@@ -406,6 +408,8 @@ def print_twisted_span(n):
         s += ['    overlap=false;']
         s += ['    splines=spline;']
         s += ['    node [fontname="courier"];']
+        for x in set(w.get_twisted_atoms()):
+            s += ['    "%s";' % str(x.inverse())]
         s += ['    "%s" -> "%s" [style="%s"];' % (str(cls(*x)), str(cls(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
         s += ['}']
         s = '\n'.join(s)
