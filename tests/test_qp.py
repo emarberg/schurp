@@ -36,6 +36,30 @@ def test_create():
     m = QPModule.create_gelfand_a(3, 1)
 
 
+def test_slow_gelfand_a(nin=6):
+    for n in range(nin + 1):
+        for k in range(0, n + 1, 2):
+            m = QPModule.create_gelfand_a(n, k // 2)
+            slow = QPModule.slow_create_gelfand_a(n, k // 2)
+            assert m == slow
+
+
+def test_slow_gelfand_bc(nin=6):
+    for n in range(nin + 1):
+        for k in range(0, n + 1, 2):
+            m = QPModule.create_gelfand_bc(n, k // 2)
+            slow = QPModule.slow_create_gelfand_bc(n, k // 2)
+            assert m == slow
+
+
+def test_slow_gelfand_d(nin=6):
+    for n in range(3, nin + 1, 2):
+        for k in range(0, n + 1, 2):
+            m = QPModule.create_gelfand_d(n, k // 2)
+            slow = QPModule.slow_create_gelfand_d(n, k // 2)
+            assert m == slow
+
+
 def test_gelfand_a(nin=5):
     for n in range(nin + 1):
         for k in range(0, n + 1, 2):
@@ -44,7 +68,6 @@ def test_gelfand_a(nin=5):
             for e in m:
                 for i in range(n - 1):
                     for j in range(n - 1):
-                        print(n, k, e, i, j)
                         if abs(i - j) > 1:
                             assert m.operate(e, i, j) == m.operate(e, j, i)
                         elif abs(i - j) == 1:
@@ -170,7 +193,7 @@ def test_hecke_gelfand_d(nin=5):
 def test_formula_gelfand_d(nin=5):
     for n in range(3, nin + 1, 2):
         for k in range(0, n + 1, 2):
-            m = QPModule.create_gelfand_d(n, k // 2)
+            m = QPModule.create_gelfand_d(n, k // 2, plus=False)
             for e in m:
                 v = m.permutation(e)
                 a = (-1)**v.dkappa()
