@@ -4,6 +4,7 @@ from even import EvenSignedPermutation
 from polynomials import q
 from vectors import Vector
 from heapq import heappush, heappop
+import json
 import math
 import time
 
@@ -23,7 +24,7 @@ class QPModuleElement:
         return hash((self.n, self.qpmodule))
 
     def __repr__(self):
-        return self.qpmodule.permutation(self.n).cycle_repr()
+        return str(self.qpmodule.permutation(self.n))
 
     def __mul__(self, i):
         result = self.qpmodule.operate(self.n, i)
@@ -45,13 +46,19 @@ class QPWGraph:
 
 class QPModule:
 
+    DIRECTORY = '/Users/emarberg/Desktop/examples/models/'
+
     HECKE_A = 'HECKE_A'
     GELFAND_A = 'GELFAND_A'
     GELFAND_BC = 'GELFAND_BC'
     GELFAND_D = 'GELFAND_D'
 
     def expand(self, n):
-        return self.printer(self.reduced_word(n))
+        if self.printer:
+            return self.printer(self.reduced_word(n))
+        else:
+            word = self.reduced_word(n)
+            return len(word), word
 
     def permutation(self, n):
         return self.expand(n)[1]
@@ -63,7 +70,9 @@ class QPModule:
         return self[n][0]
 
     def __eq__(self, other):
-        if self.family != other.family or self.layer != other.layer or self.rank != other.rank or self.size != other.size:
+        if self.layer != other.layer:
+            return False
+        if self.family != other.family or self.rank != other.rank or self.size != other.size:
             return False
         if self.stepsize != other.stepsize or self.height_bytes != other.height_bytes:
             return False
@@ -76,16 +85,17 @@ class QPModule:
         return self.size
 
     def __repr__(self):
-        k = 240
-        s = [self.family + str(self.rank) + ' : layer ' + str(self.layer)]
+        k = 24
+        s = [self.family + str(self.rank) + ' : LAYER ' + str(self.layer)]
         s += ['']
-        for i in range(min(self.size, k)):
-            ht, w = self.expand(i)
-            des = str(list(self.weak_descents(i)))
-            asc = str(list(self.weak_ascents(i)))
-            s += ['[ height ' + str(ht) + ' : ' + w.cycle_repr() + ' : weak descents ' + des + ' : weak ascents ' + asc + ' ]']
-        if self.size > k:
-            s += ['', '(... and %s more)' % (self.size - k)]
+        if self.frame:
+            for i in range(min(self.size, k)):
+                ht, w = self.expand(i)
+                des = str(list(self.weak_descents(i)))
+                asc = str(list(self.weak_ascents(i)))
+                s += ['[ height ' + str(ht) + ' : ' + str(w) + ' : weak descents ' + des + ' : weak ascents ' + asc + ' ]']
+            if self.size > k:
+                s += ['', '(... and %s more)' % (self.size - k)]
         return '\n' + '\n'.join(s) + '\n'
 
     def reduced_word(self, n):
@@ -160,15 +170,71 @@ class QPModule:
             if self._is_weak_descent(step):
                 yield i
 
-    def __init__(self, family, layer, rank, size, height_bytes, frame=None, printer=None):
+    def __init__(self, family, rank, layer, size, height_bytes, frame=None, printer=None):
+        self.family = family
         self.rank = rank
+        self.layer = layer
         self.size = size
         self.stepsize = max(1, math.ceil(math.log2((size + 2) / 8.0)))
         self.height_bytes = height_bytes
         self.frame = frame
-        self.printer = printer if printer is not None else str
-        self.family = family
-        self.layer = layer
+        self.printer = printer
+
+    def get_filename(self):
+        return self.filename(self.family, self.rank, self.layer)
+
+    @classmethod
+    def filename(cls, family, rank, layer):
+        file = cls.DIRECTORY + family + str(rank)
+        if layer is not None:
+            file += '_' + str(layer)
+        return file
+
+    def metadata(self):
+        return {
+            'family': self.family,
+            'rank': self.rank,
+            'layer': self.layer,
+            'size': self.size,
+            'stepsize': self.stepsize,
+            'height_bytes': self.height_bytes,
+        }
+
+    def write(self):
+        filename = self.get_filename()
+        bytefile = filename + '.b'
+        with open(bytefile, 'wb') as file:
+            file.write(self.frame)
+            file.close()
+        metafile = filename + '.meta'
+        with open(metafile, 'w') as file:
+            file.write(json.dumps(self.metadata()))
+            file.close()
+
+    @classmethod
+    def read(cls, filename):
+        metafile = filename + '.meta'
+        with open(metafile, 'r') as file:
+            dictionary = json.loads(file.read())
+            file.close()
+
+        family = dictionary['family']
+        rank = int(dictionary['rank'])
+        layer = dictionary['layer']
+        layer = None if layer == 'None' else int(layer)
+        size = int(dictionary['size'])
+        stepsize = int(dictionary['stepsize'])
+        height_bytes = int(dictionary['height_bytes'])
+        module = cls(family, rank, layer, size, height_bytes)
+        print(dictionary)
+        print(module)
+        assert module.stepsize == stepsize
+
+        bytefile = filename + '.b'
+        with open(bytefile, 'rb') as file:
+            module.frame = bytearray(file.read())
+            file.close()
+        return module
 
     @classmethod
     def create(cls, rank, size, stepsize, height_bytes, minima, operate, verbose=True):
@@ -220,10 +286,10 @@ class QPModule:
 
     @classmethod
     def create_hecke_a(cls, n):
-        size = math.factorial(n)
-        rank = max(0, n - 1)
+        assert n >= 0
+        size = math.factorial(n + 1)
         height_bytes = 1
-        module = cls(cls.HECKE_A, 0, rank, size, height_bytes)
+        module = cls(cls.HECKE_A, n, None, size, height_bytes)
         stepsize = module.stepsize
 
         def multiply(ht, w, i):
@@ -237,18 +303,17 @@ class QPModule:
             return ht, v
 
         minima = [(0, Permutation())]
-        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, multiply)
+        module.frame = cls.create(n, size, stepsize, height_bytes, minima, multiply)
         module.printer = printer
         return module
 
     @classmethod
     def create_gelfand_a(cls, n, k, plus=True):
-        assert 0 <= 2 * k <= n
+        assert 0 <= 2 * k <= n + 1
 
-        size = math.factorial(n) // math.factorial(k) // 2**k // math.factorial(n - 2 * k)
-        rank = max(0, n - 1)
+        size = math.factorial(n + 1) // math.factorial(k) // 2**k // math.factorial(n + 1 - 2 * k)
         height_bytes = 1
-        module = cls(cls.GELFAND_A, k, rank, size, height_bytes)
+        module = cls(cls.GELFAND_A, n, k, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -269,7 +334,7 @@ class QPModule:
             return ht, v
 
         minima = [(0, w)]
-        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, conjugate)
+        module.frame = cls.create(n, size, stepsize, height_bytes, minima, conjugate)
         module.printer = printer
         return module
 
@@ -278,9 +343,8 @@ class QPModule:
         assert 0 <= 2 * k <= n
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
-        rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_BC, k, rank, size, height_bytes)
+        module = cls(cls.GELFAND_BC, n, k, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -307,7 +371,7 @@ class QPModule:
             return ht, v
 
         minima = [(0, w)]
-        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, conjugate)
+        module.frame = cls.create(n, size, stepsize, height_bytes, minima, conjugate)
         module.printer = printer
         return module
 
@@ -321,9 +385,8 @@ class QPModule:
         assert size % 2 == 0
         size = size // 2
 
-        rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_D, k, rank, size, height_bytes)
+        module = cls(cls.GELFAND_D, n, k, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -364,27 +427,26 @@ class QPModule:
             return ht, v
 
         minima = [(0, w)]
-        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, conjugate)
+        module.frame = cls.create(n, size, stepsize, height_bytes, minima, conjugate)
         module.printer = printer
         return module
 
     @classmethod
     def slow_create_gelfand_a(cls, n, k, plus=True):
-        assert 0 <= 2 * k <= n
+        assert 0 <= 2 * k <= n + 1
 
-        m = 2 * n - 2 * k
-        a = [Permutation.s_i(i) for i in range(n + 1, m)]
-        s = {i: Permutation.s_i(i + 1) for i in range(n - 1)}
+        m = 2 * n + 2 - 2 * k
+        a = [Permutation.s_i(i) for i in range(n + 2, m)]
+        s = {i: Permutation.s_i(i + 1) for i in range(n + 1)}
         w = Permutation(*(
             [1 + i + (-1)**i for i in range(2 * k)] +
-            [n + 1 + i for i in range(n - 2 * k)] +
-            [2 * k + 1 + i for i in range(n - 2 * k)]
+            [n + 2 + i for i in range(n + 1 - 2 * k)] +
+            [2 * k + 1 + i for i in range(n + 1 - 2 * k)]
         ))
 
-        size = math.factorial(n) // math.factorial(k) // 2**k // math.factorial(n - 2 * k)
-        rank = max(0, n - 1)
+        size = math.factorial(n + 1) // math.factorial(k) // 2**k // math.factorial(n + 1 - 2 * k)
         height_bytes = 1
-        module = cls(cls.GELFAND_A, k, rank, size, height_bytes)
+        module = cls(cls.GELFAND_A, n, k, size, height_bytes)
         return cls.create_gelfand_classical(plus, module, a, s, w)
 
     @classmethod
@@ -401,9 +463,8 @@ class QPModule:
         ))
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
-        rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_BC, k, rank, size, height_bytes)
+        module = cls(cls.GELFAND_BC, n, k, size, height_bytes)
         return cls.create_gelfand_classical(plus, module, a, s, w)
 
     @classmethod
@@ -425,9 +486,8 @@ class QPModule:
         assert size % 2 == 0
         size = size // 2
 
-        rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_D, k, rank, size, height_bytes)
+        module = cls(cls.GELFAND_D, n, k, size, height_bytes)
         return cls.create_gelfand_classical(plus, module, a, s, w)
 
     @classmethod

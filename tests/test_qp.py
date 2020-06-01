@@ -3,11 +3,11 @@ from signed import SignedPermutation
 
 
 def test_eq():
-    m = QPModule.create_gelfand_a(2, 0)
-    n = QPModule.create_gelfand_a(2, 0)
+    m = QPModule.create_gelfand_a(1, 0)
+    n = QPModule.create_gelfand_a(1, 0)
     assert m == n
 
-    n = QPModule.create_gelfand_a(2, 1)
+    n = QPModule.create_gelfand_a(1, 1)
     assert m != n
     assert len(m) == len(n)
 
@@ -16,31 +16,33 @@ def test_create():
     m = QPModule.create_gelfand_a(0, 0)
     m = QPModule.create_gelfand_a(1, 0)
 
-    m = QPModule.create_gelfand_a(2, 0)
+    m = QPModule.create_gelfand_a(1, 0)
     assert set(m.weak_descents(0)) == set()
     assert set(m.weak_ascents(0)) == {0}
 
-    m = QPModule.create_gelfand_a(2, 1, False)
+    m = QPModule.create_gelfand_a(1, 1, False)
     assert set(m.weak_descents(0)) == set()
     assert set(m.weak_ascents(0)) == {0}
 
-    m = QPModule.create_gelfand_a(2, 1)
+    m = QPModule.create_gelfand_a(1, 1)
     assert set(m.weak_descents(0)) == {0}
     assert set(m.weak_ascents(0)) == set()
 
-    m = QPModule.create_gelfand_a(2, 0, False)
+    m = QPModule.create_gelfand_a(1, 0, False)
     assert set(m.weak_descents(0)) == {0}
     assert set(m.weak_ascents(0)) == set()
 
+    m = QPModule.create_gelfand_a(1, 1)
     m = QPModule.create_gelfand_a(2, 1)
-    m = QPModule.create_gelfand_a(3, 1)
 
 
 def test_slow_gelfand_a(nin=6):
     for n in range(nin + 1):
-        for k in range(0, n + 1, 2):
+        for k in range(0, n + 2, 2):
             m = QPModule.create_gelfand_a(n, k // 2)
             slow = QPModule.slow_create_gelfand_a(n, k // 2)
+            print(m)
+            print(slow)
             assert m == slow
 
 
@@ -60,9 +62,27 @@ def test_slow_gelfand_d(nin=6):
             assert m == slow
 
 
+def test_io(n=6):
+    for k in range(0, n + 2, 2):
+        m = QPModule.create_gelfand_a(n, k // 2)
+        m.write()
+        read = QPModule.read(m.get_filename())
+        assert m == read
+    for k in range(0, n + 1, 2):
+        m = QPModule.create_gelfand_bc(n, k // 2)
+        m.write()
+        read = QPModule.read(m.get_filename())
+        assert m == read
+    for k in range(0, n + 1, 2):
+        m = QPModule.create_gelfand_d(n, k // 2)
+        m.write()
+        read = QPModule.read(m.get_filename())
+        assert m == read
+
+
 def test_gelfand_a(nin=5):
     for n in range(nin + 1):
-        for k in range(0, n + 1, 2):
+        for k in range(0, n + 2, 2):
             m = QPModule.create_gelfand_a(n, k // 2)
             assert len({m.printer(m.reduced_word(i)) for i in m}) == m.size
             for e in m:
@@ -78,7 +98,7 @@ def test_gelfand_a(nin=5):
 
 def test_hecke_gelfand_a(nin=4):
     for n in range(nin + 1):
-        for k in range(0, n + 1, 2):
+        for k in range(0, n + 2, 2):
             m = QPModule.create_gelfand_a(n, k // 2)
             for e in m:
                 for i in range(n - 1):
@@ -137,7 +157,7 @@ def test_hecke_gelfand_bc(nin=3):
                                 assert m.element(e).operate(i, i) == m.element(e) + m.element(e).operate(i) * (q(1) - q(-1))
 
 
-def test_gelfand_d(nin=5):
+def test_gelfand_d(nin=4):
     for n in range(3, nin + 1, 2):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
@@ -164,7 +184,7 @@ def test_gelfand_d(nin=5):
                 print()
 
 
-def test_hecke_gelfand_d(nin=5):
+def test_hecke_gelfand_d(nin=4):
     for n in range(3, nin + 1, 2):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
