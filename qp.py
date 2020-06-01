@@ -212,6 +212,21 @@ class QPModule:
             file.close()
 
     @classmethod
+    def read_gelfand_a(cls, n, k):
+        filename = cls.filename(cls.GELFAND_A, n, k)
+        return cls.read(filename)
+
+    @classmethod
+    def read_gelfand_bc(cls, n, k):
+        filename = cls.filename(cls.GELFAND_BC, n, k)
+        return cls.read(filename)
+
+    @classmethod
+    def read_gelfand_d(cls, n, k):
+        filename = cls.filename(cls.GELFAND_D, n, k)
+        return cls.read(filename)
+
+    @classmethod
     def read(cls, filename):
         metafile = filename + '.meta'
         with open(metafile, 'r') as file:
@@ -226,8 +241,6 @@ class QPModule:
         stepsize = int(dictionary['stepsize'])
         height_bytes = int(dictionary['height_bytes'])
         module = cls(family, rank, layer, size, height_bytes)
-        print(dictionary)
-        print(module)
         assert module.stepsize == stepsize
 
         bytefile = filename + '.b'

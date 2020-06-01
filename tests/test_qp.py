@@ -62,7 +62,7 @@ def test_slow_gelfand_d(nin=6):
             assert m == slow
 
 
-def test_io(n=6):
+def test_io(n=5):
     for k in range(0, n + 2, 2):
         m = QPModule.create_gelfand_a(n, k // 2)
         m.write()
