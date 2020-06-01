@@ -46,18 +46,9 @@ class QPWGraph:
 class QPModule:
 
     HECKE_A = 'HECKE_A'
-
-    @classmethod
-    def GELFAND_A(cls, k): # noqa
-        return 'GELFAND_A(%s)' % k
-
-    @classmethod
-    def GELFAND_BC(cls, k): # noqa
-        return 'GELFAND_BC(%s)' % k
-
-    @classmethod
-    def GELFAND_D(cls, k): # noqa
-        return 'GELFAND_D(%s)' % k
+    GELFAND_A = 'GELFAND_A'
+    GELFAND_BC = 'GELFAND_BC'
+    GELFAND_D = 'GELFAND_D'
 
     def expand(self, n):
         return self.printer(self.reduced_word(n))
@@ -72,21 +63,22 @@ class QPModule:
         return self[n][0]
 
     def __eq__(self, other):
-        if self.label != other.label or self.rank != other.rank or self.size != other.size:
+        if self.family != other.family or self.layer != other.layer or self.rank != other.rank or self.size != other.size:
             return False
         if self.stepsize != other.stepsize or self.height_bytes != other.height_bytes:
             return False
         return self.frame == other.frame
 
     def __hash__(self):
-        return hash(self.label)
+        return hash((self.family, self.rank, self.layer))
 
     def __len__(self):
         return self.size
 
     def __repr__(self):
         k = 240
-        s = []
+        s = [self.family + str(self.rank) + ' : layer ' + str(self.layer)]
+        s += ['']
         for i in range(min(self.size, k)):
             ht, w = self.expand(i)
             des = str(list(self.weak_descents(i)))
@@ -168,14 +160,15 @@ class QPModule:
             if self._is_weak_descent(step):
                 yield i
 
-    def __init__(self, family, rank, size, height_bytes, frame=None, printer=None, label=None):
+    def __init__(self, family, layer, rank, size, height_bytes, frame=None, printer=None):
         self.rank = rank
         self.size = size
         self.stepsize = max(1, math.ceil(math.log2((size + 2) / 8.0)))
         self.height_bytes = height_bytes
         self.frame = frame
         self.printer = printer if printer is not None else str
-        self.label = (rank, size, family)
+        self.family = family
+        self.layer = layer
 
     @classmethod
     def create(cls, rank, size, stepsize, height_bytes, minima, operate, verbose=True):
@@ -230,7 +223,7 @@ class QPModule:
         size = math.factorial(n)
         rank = max(0, n - 1)
         height_bytes = 1
-        module = cls(cls.HECKE_A, rank, size, height_bytes)
+        module = cls(cls.HECKE_A, 0, rank, size, height_bytes)
         stepsize = module.stepsize
 
         def multiply(ht, w, i):
@@ -255,7 +248,7 @@ class QPModule:
         size = math.factorial(n) // math.factorial(k) // 2**k // math.factorial(n - 2 * k)
         rank = max(0, n - 1)
         height_bytes = 1
-        module = cls(cls.GELFAND_A(k), rank, size, height_bytes)
+        module = cls(cls.GELFAND_A, k, rank, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -287,7 +280,7 @@ class QPModule:
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
         rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_BC(k), rank, size, height_bytes)
+        module = cls(cls.GELFAND_BC, k, rank, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -330,7 +323,7 @@ class QPModule:
 
         rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_D(k), rank, size, height_bytes)
+        module = cls(cls.GELFAND_D, k, rank, size, height_bytes)
         stepsize = module.stepsize
 
         def conjugate(ht, w, i):
@@ -391,7 +384,7 @@ class QPModule:
         size = math.factorial(n) // math.factorial(k) // 2**k // math.factorial(n - 2 * k)
         rank = max(0, n - 1)
         height_bytes = 1
-        module = cls(cls.GELFAND_A(k), rank, size, height_bytes)
+        module = cls(cls.GELFAND_A, k, rank, size, height_bytes)
         return cls.create_gelfand_classical(plus, module, a, s, w)
 
     @classmethod
@@ -410,7 +403,7 @@ class QPModule:
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
         rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_BC(k), rank, size, height_bytes)
+        module = cls(cls.GELFAND_BC, k, rank, size, height_bytes)
         return cls.create_gelfand_classical(plus, module, a, s, w)
 
     @classmethod
@@ -434,7 +427,7 @@ class QPModule:
 
         rank = max(0, n)
         height_bytes = 1
-        module = cls(cls.GELFAND_D(k), rank, size, height_bytes)
+        module = cls(cls.GELFAND_D, k, rank, size, height_bytes)
         return cls.create_gelfand_classical(plus, module, a, s, w)
 
     @classmethod
