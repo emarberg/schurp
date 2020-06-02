@@ -101,6 +101,8 @@ class QPWGraph:
 
         self.even_intervals, self.even_invleft, self.even_invright = self._compute_intervals(0)
         self.odd_intervals, self.odd_invleft, self.odd_invright = self._compute_intervals(1)
+        self.weak_ascents = [set(self.qpmodule.weak_ascents(i)) for i in self.qpmodule]
+        self.strict_ascents = [set(self.qpmodule.strict_ascents(i)) for i in self.qpmodule]
 
         t6 = time.time()
         if verbose:
@@ -143,8 +145,8 @@ class QPWGraph:
     def height(self, n):
         return self.qpmodule.height(n)
 
-    def _space(self, i, j):
-        return (1 + (j - i - 1) // 2) * self.nbytes
+    def _space(self, hi, hj):
+        return (1 + (hj - hi - 1) // 2) * self.nbytes
 
     @classmethod
     def _int(cls, step, signed=False):
@@ -230,13 +232,12 @@ class QPWGraph:
         f = self.get_cbasis(i, j)
         self.frame[start:start + len(f)] = f
 
-    def _slowcompute(self, verbose=True):
+    def _slowcompute(self, verbose=False):
         t0 = time.time()
         self.frame = bytearray(self.size)
 
-        if verbose:
-            print('Computing canonical basis:')
-            progress = 0
+        print('Computing canonical basis:')
+        progress = 0
 
         for j in self.qpmodule:
             hj = self.height(j)
@@ -255,9 +256,9 @@ class QPWGraph:
                     continue
 
                 if verbose:
-                    newprogress = int(1000 * start / self.size)
+                    newprogress = int(100 * start / self.size)
                     if newprogress > progress:
-                        # print('*', newprogress / 10.0, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+                        print('*', newprogress, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
                         progress = newprogress
 
                 t = set(self.qpmodule.strict_ascents(i)) & des
@@ -281,16 +282,14 @@ class QPWGraph:
                     mu = self.get_cbasis_leading(x, sj)
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
-        if verbose:
-            print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+        print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
 
-    def compute(self, verbose=True):
+    def compute(self, verbose=False):
         t0 = time.time()
         self.frame = bytearray(self.size)
 
-        if verbose:
-            print('Computing canonical basis:')
-            progress = 0
+        print('Computing canonical basis:')
+        progress = 0
 
         start = 0
         nextstart = 0
@@ -311,12 +310,12 @@ class QPWGraph:
                         print('*', newprogress, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
                         progress = newprogress
 
-                if des & set(self.qpmodule.weak_ascents(i)):
+                if des & self.weak_ascents[i]:
                     continue
 
-                t = set(self.qpmodule.strict_ascents(i)) & des
-                if t:
-                    x = self.qpmodule.operate(i, next(iter(t)))
+                intersect = des & self.strict_ascents[i]
+                if intersect:
+                    x = self.qpmodule.operate(i, next(iter(intersect)))
                     self._safe_set(start, x, j)
                     continue
 
@@ -331,8 +330,7 @@ class QPWGraph:
                     mu = self.get_cbasis_leading(x, sj)
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
-        if verbose:
-            print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+        print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
 
     def _get_interval(self, i, sj, s, hj):
         if hj % 2 == 0:
