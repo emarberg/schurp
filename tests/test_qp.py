@@ -1,5 +1,38 @@
-from qp import QPModule, q
+from qp import QPWGraph, QPModule
+import polynomials
 from signed import SignedPermutation
+import random
+
+
+def test_qpwgraph(n=6, k=3):
+    m = QPModule.create_gelfand_a(n, k)
+    w = QPWGraph(m)
+    w.frame = bytearray(w.size)
+
+    random.seed(12345)
+    expected = {}
+    for j in m:
+        for i in range(j - 1, -1, -1):
+            if m.height(i) == m.height(j):
+                continue
+            e = random.randint(0, 2**(8 * w.nbytes - 1) - 1)
+            w.set_cbasis(i, j, e)
+            expected[(i, j)] = e
+
+    for j in m:
+        for i in m:
+            if m.height(i) < m.height(j):
+                assert w.get_cbasis(i, j) == expected[(i, j)]
+
+
+def test_qpwgraph_cbasis(n=3):
+    m = QPModule.create_hecke_a(n)
+    w = QPWGraph(m)
+    w.compute()
+    for i in m:
+        for j in m:
+            f = w.get_cbasis_polynomial(i, j)
+            assert f.is_zero() or f.is_positive()
 
 
 def test_eq():
@@ -97,6 +130,7 @@ def test_gelfand_a(nin=5):
 
 
 def test_hecke_gelfand_a(nin=4):
+    q = polynomials.q
     for n in range(nin + 1):
         for k in range(0, n + 2, 2):
             m = QPModule.create_gelfand_a(n, k // 2)
@@ -136,6 +170,7 @@ def test_gelfand_bc(nin=4):
 
 
 def test_hecke_gelfand_bc(nin=3):
+    q = polynomials.q
     for n in range(nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_bc(n, k // 2)
@@ -185,6 +220,7 @@ def test_gelfand_d(nin=4):
 
 
 def test_hecke_gelfand_d(nin=4):
+    q = polynomials.q
     for n in range(3, nin + 1, 2):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)

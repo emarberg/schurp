@@ -1,12 +1,238 @@
 from permutations import Permutation
 from signed import SignedPermutation
 from even import EvenSignedPermutation
-from polynomials import q
+import polynomials
 from vectors import Vector
 from heapq import heappush, heappop
 import json
 import math
 import time
+
+
+class QPWGraph:
+
+    def __init__(self, qpmodule, nbytes=8, verbose=True):
+        self.qpmodule = qpmodule
+        self.nbytes = 8
+        self.frame = None
+
+        t0 = time.time()
+        if verbose:
+            a = self.qpmodule.get_filename().split('/')[-1]
+            b = len(self.qpmodule)
+            print()
+            print('QPWGraph for %s (%s elements)' % (a, b))
+            print()
+            print('* computing heights', end='') # noqa
+
+        self.heights = []
+        for n in self.qpmodule:
+            nht = self.qpmodule.height(n)
+            if nht >= len(self.heights):
+                self.heights.append(1)
+            else:
+                self.heights[nht] += 1
+
+        t1 = time.time()
+        if verbose:
+            print(' %s milliseconds' % int(1000 * (t1 - t0)))
+            print('* computing size', end='') # noqa
+
+        self.size = 0
+        for i in range(len(self.heights)):
+            for j in range(i + 1, len(self.heights)):
+                self.size += self._space(i, j) * self.heights[i] * self.heights[j]
+        assert self.size < 0.8e+10
+
+        t2 = time.time()
+        if verbose:
+            print(' %s milliseconds' % int(1000 * (t2 - t1)))
+            print('* computing suboffsets', end='') # noqa
+
+        self.hbytes = max(1, math.ceil(math.log2(max(self.heights) / 8.0)))
+        self.suboffsets = bytearray(self.hbytes * len(self.qpmodule))
+
+        offset = 0
+        start = 0
+        for n in self.qpmodule:
+            if offset > 0 and self.qpmodule.height(n) > self.qpmodule.height(n - 1):
+                offset = 0
+            v = self.heights[self.qpmodule.height(n)] - 1 - offset
+            self.suboffsets[start:start + self.hbytes] = v.to_bytes(self.hbytes, byteorder='big')
+            start += self.hbytes
+            offset += 1
+
+        t3 = time.time()
+        if verbose:
+            print(' %s milliseconds' % int(1000 * (t3 - t2)))
+            print('* computing height offsets', end='') # noqa
+
+        self.offsets = {}
+        total_offsets = {}
+        for j in range(len(self.heights)):
+            self.offsets[j] = (j + 1) * [0]
+            for i in range(j - 2, -1, -1):
+                self.offsets[j][i] = self.offsets[j][i + 1] + self.heights[i + 1] * self._space(i + 1, j)
+            total_offsets[j] = self.offsets[j][0] + self.heights[0] * self._space(0, j)
+
+        t4 = time.time()
+        if verbose:
+            print(' %s milliseconds' % int(1000 * (t4 - t3)))
+            print('* computing addresses', end='') # noqa
+
+        self.abytes = max(1, math.ceil(math.log2((self.size) / 8.0)))
+        self.addresses = bytearray(self.abytes * len(self.qpmodule))
+
+        a = 0
+        start = 0
+        for j in self.qpmodule:
+            self.addresses[start:start + self.abytes] = a.to_bytes(self.abytes, byteorder='big')
+            start += self.abytes
+            a += total_offsets[self.qpmodule.height(j)]
+
+        t5 = time.time()
+        if verbose:
+            print(' %s milliseconds' % int(1000 * (t5 - t4)))
+            print('* finished')
+            print()
+
+    def height(self, n):
+        return self.qpmodule.height(n)
+
+    def _space(self, i, j):
+        return (1 + (j - i - 1) // 2) * self.nbytes
+
+    @classmethod
+    def _int(cls, step, signed=False):
+        return int.from_bytes(step, byteorder='big', signed=signed)
+
+    def __repr__(self):
+        a = self.qpmodule.get_filename().split('/')[-1]
+        b = len(self.qpmodule)
+        s = ['QPWGraph for %s (%s elements)' % (a, b)]
+        s += ['*        nbytes = %s' % str(self.nbytes)]
+        s += ['*        abytes = %s' % str(self.abytes)]
+        s += ['*  address size = %s' % str(self.abytes * b)]
+        s += ['*          size = %s' % str(self.size)]
+        return '\n'.join(s)
+
+    def address_cbasis(self, i, j):
+        hi = self.height(i)
+        hj = self.height(j)
+
+        assert hi < hj
+        space = self._space(hi, hj)
+
+        start_i = i * self.hbytes
+        start_j = j * self.abytes
+
+        addr = self._int(self.addresses[start_j:start_j + self.abytes]) + \
+            self.offsets[hj][hi] + \
+            self._int(self.suboffsets[start_i:start_i + self.hbytes]) * space
+        return addr, addr + space, space
+
+    def get_cbasis_leading(self, i, j):
+        if self.height(i) >= self.height(j):
+            return 0
+        _, stop, _ = self.address_cbasis(i, j)
+        return self._int(self.frame[stop - self.nbytes:stop], signed=True)
+
+    def get_cbasis(self, i, j, return_bytes=True):
+        hi = self.height(i)
+        hj = self.height(j)
+        space = self._space(hi, hj)
+
+        if i == j:
+            return (1).to_bytes(self.nbytes, byteorder='big', signed=True) if return_bytes else 1
+        elif hi >= hj:
+            return (0).to_bytes(self.nbytes, byteorder='big', signed=True) if return_bytes else 0
+        start, stop, _ = self.address_cbasis(i, j)
+        return self.frame[start:stop] if return_bytes else self._int(self.frame[start:stop], signed=True)
+
+    def get_cbasis_polynomial(self, i, j):
+        if i == j:
+            return polynomials.q(0)
+        c = self.get_cbasis(i, j)
+        ans = 0 * polynomials.q(0)
+        start = 0
+        for e in range(1 + (j - i - 1) // 2):
+            ans += polynomials.q(e) * self._int(c[start:start + self.nbytes], signed=True)
+            start += self.nbytes
+        return ans
+
+    def set_cbasis(self, i, j, v, set_bytes=True):
+        start, stop, size = self.address_cbasis(i, j)
+        if set_bytes:
+            self.frame[start:stop] = v
+        else:
+            self.frame[start:stop] = v.to_bytes(size, byteorder='big', signed=True)
+
+    def _safe_add(self, start, f, shift=0, mu=1):
+        if mu == 0:
+            return
+        astart = start + shift * self.nbytes
+        fstart = 0
+        while fstart < len(f):
+            a = self._int(self.frame[astart:astart + self.nbytes], signed=True)
+            b = self._int(f[fstart:fstart + self.nbytes], signed=True)
+            v = (a + mu * b).to_bytes(self.nbytes, byteorder='big', signed=True)
+            self.frame[astart:astart + self.nbytes] = v
+            astart += self.nbytes
+            fstart += self.nbytes
+
+    def compute(self, verbose=True):
+        t0 = time.time()
+        self.frame = bytearray(self.size)
+
+        if verbose:
+            print('Compututing canonical basis:')
+            progress = 0
+
+        for j in self.qpmodule:
+            hj = self.height(j)
+            wdes = set(self.qpmodule.weak_descents(j))
+            sdes = set(self.qpmodule.strict_descents(j))
+            des = wdes | sdes
+
+            for i in range(j - 1, -1, -1):
+                hi = self.height(i)
+                if hi == hj:
+                    continue
+
+                if des & set(self.qpmodule.weak_ascents(i)):
+                    continue
+
+                start, _, _ = self.address_cbasis(i, j)
+
+                if verbose:
+                    newprogress = int(100 * start / self.size)
+                    if newprogress > progress:
+                        print('*', newprogress, 'percent done (%s milliseconds elapsed)' % int(1000 * (time.time() - t0)))
+                        progress = newprogress
+
+                t = set(self.qpmodule.strict_ascents(i)) & des
+                if t:
+                    x = self.qpmodule.operate(i, next(iter(t)))
+                    self._safe_add(start, self.get_cbasis(x, j))
+                    continue
+
+                s = next(iter(sdes))
+                si = self.qpmodule.operate(i, s)
+                sj = self.qpmodule.operate(j, s)
+
+                self._safe_add(start, self.get_cbasis(si, sj))
+                self._safe_add(start, self.get_cbasis(i, sj), shift=1)
+                for x in range(i, sj):
+                    if s in self.qpmodule.weak_ascents(x) or s in self.qpmodule.strict_ascents(x):
+                        continue
+                    hx = self.height(x)
+                    if (hj - hx) % 2 != 0:
+                        continue
+                    mu = self.get_cbasis_leading(x, sj)
+                    self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
+
+        if verbose:
+            print('Done computing (%s milliseconds elapsed)' % int(1000 * (time.time() - t0)))
 
 
 class QPModuleElement:
@@ -30,18 +256,14 @@ class QPModuleElement:
         result = self.qpmodule.operate(self.n, i)
         if result == self.n:
             if i in self.qpmodule.weak_ascents(self.n):
-                return Vector({self: q(1)})
+                return Vector({self: polynomials.q(1)})
             else:
-                return Vector({self: -q(-1)})
+                return Vector({self: -polynomials.q(-1)})
         new = QPModuleElement(self.qpmodule, result)
         if result < self.n:
-            return Vector({self: q(1) - q(-1), new: 1})
+            return Vector({self: polynomials.q(1) - polynomials.q(-1), new: 1})
         else:
             return Vector({new: 1})
-
-
-class QPWGraph:
-    pass
 
 
 class QPModule:
@@ -124,8 +346,8 @@ class QPModule:
         return all(b == 0xFF for b in frame[:-1]) and frame[-1] == 0xFE
 
     @classmethod
-    def _int(cls, step):
-        return int.from_bytes(step, byteorder='big', signed=False)
+    def _int(cls, step, signed=False):
+        return int.from_bytes(step, byteorder='big', signed=signed)
 
     def element(self, n):
         assert 0 <= n < self.size
