@@ -16,13 +16,13 @@ def test_qpwgraph(n=6, k=3):
             if m.height(i) == m.height(j):
                 continue
             e = random.randint(0, 2**(8 * w.nbytes - 1) - 1)
-            w.set_cbasis(i, j, e)
+            w.set_cbasis(i, j, e, set_bytes=False)
             expected[(i, j)] = e
 
     for j in m:
         for i in m:
             if m.height(i) < m.height(j):
-                assert w.get_cbasis(i, j) == expected[(i, j)]
+                assert m._int(w.get_cbasis(i, j), signed=True) == expected[(i, j)]
 
 
 def test_qpwgraph_cbasis(n=3):
@@ -33,6 +33,15 @@ def test_qpwgraph_cbasis(n=3):
         for j in m:
             f = w.get_cbasis_polynomial(i, j)
             assert f.is_zero() or f.is_positive()
+
+
+def test_qpwgraph_speed(n=4):
+    m = QPModule.create_hecke_a(n)
+    w1 = QPWGraph(m)
+    w1.fastcompute()
+    w2 = QPWGraph(m)
+    w2.compute()
+    assert w1.frame == w2.frame
 
 
 def test_eq():

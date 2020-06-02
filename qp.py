@@ -13,7 +13,7 @@ class QPWGraph:
 
     def __init__(self, qpmodule, nbytes=8, verbose=True):
         self.qpmodule = qpmodule
-        self.nbytes = 8
+        self.nbytes = nbytes
         self.frame = None
 
         t0 = time.time()
@@ -32,6 +32,10 @@ class QPWGraph:
                 self.heights.append(1)
             else:
                 self.heights[nht] += 1
+
+        self.cumheights = [0]
+        for h in self.heights[:-1]:
+            self.cumheights.append(self.cumheights[-1] + h)
 
         t1 = time.time()
         if verbose:
@@ -137,17 +141,26 @@ class QPWGraph:
         _, stop, _ = self.address_cbasis(i, j)
         return self._int(self.frame[stop - self.nbytes:stop], signed=True)
 
-    def get_cbasis(self, i, j, return_bytes=True):
+    def get_cbasis(self, i, j):
+        if i == j:
+            return (1).to_bytes(self.nbytes, byteorder='big', signed=True)
+
         hi = self.height(i)
         hj = self.height(j)
+
+        if hi >= hj:
+            return (0).to_bytes(self.nbytes, byteorder='big', signed=True)
+
         space = self._space(hi, hj)
 
-        if i == j:
-            return (1).to_bytes(self.nbytes, byteorder='big', signed=True) if return_bytes else 1
-        elif hi >= hj:
-            return (0).to_bytes(self.nbytes, byteorder='big', signed=True) if return_bytes else 0
-        start, stop, _ = self.address_cbasis(i, j)
-        return self.frame[start:stop] if return_bytes else self._int(self.frame[start:stop], signed=True)
+        start_i = i * self.hbytes
+        start_j = j * self.abytes
+
+        start = self._int(self.addresses[start_j:start_j + self.abytes]) + \
+            self.offsets[hj][hi] + \
+            self._int(self.suboffsets[start_i:start_i + self.hbytes]) * space
+
+        return self.frame[start:start + space]
 
     def get_cbasis_polynomial(self, i, j):
         if i == j:
@@ -180,12 +193,16 @@ class QPWGraph:
             astart += self.nbytes
             fstart += self.nbytes
 
+    def _safe_set(self, start, i, j):
+        f = self.get_cbasis(i, j)
+        self.frame[start:start + len(f)] = f
+
     def compute(self, verbose=True):
         t0 = time.time()
         self.frame = bytearray(self.size)
 
         if verbose:
-            print('Compututing canonical basis:')
+            print('Computing canonical basis:')
             progress = 0
 
         for j in self.qpmodule:
@@ -199,15 +216,15 @@ class QPWGraph:
                 if hi == hj:
                     continue
 
+                start, _, _ = self.address_cbasis(i, j)
+
                 if des & set(self.qpmodule.weak_ascents(i)):
                     continue
 
-                start, _, _ = self.address_cbasis(i, j)
-
                 if verbose:
-                    newprogress = int(100 * start / self.size)
+                    newprogress = int(1000 * start / self.size)
                     if newprogress > progress:
-                        print('*', newprogress, 'percent done (%s milliseconds elapsed)' % int(1000 * (time.time() - t0)))
+                        # print('*', newprogress / 10.0, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
                         progress = newprogress
 
                 t = set(self.qpmodule.strict_ascents(i)) & des
@@ -232,7 +249,61 @@ class QPWGraph:
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
         if verbose:
-            print('Done computing (%s milliseconds elapsed)' % int(1000 * (time.time() - t0)))
+            print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+
+    def fastcompute(self, verbose=True):
+        t0 = time.time()
+        self.frame = bytearray(self.size)
+
+        if verbose:
+            print('Computing canonical basis:')
+            progress = 0
+
+        start = 0
+        nextstart = 0
+        for j in self.qpmodule:
+            hj = self.height(j)
+            wdes = set(self.qpmodule.weak_descents(j))
+            sdes = set(self.qpmodule.strict_descents(j))
+            des = wdes | sdes
+
+            for i in range(self.cumheights[hj] - 1, -1, -1):
+                hi = self.height(i)
+                start = nextstart
+                nextstart += self._space(hi, hj)
+
+                if verbose:
+                    newprogress = int(1000 * start / self.size)
+                    if newprogress > progress:
+                        # print('*', newprogress / 10.0, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+                        progress = newprogress
+
+                if des & set(self.qpmodule.weak_ascents(i)):
+                    continue
+
+                t = set(self.qpmodule.strict_ascents(i)) & des
+                if t:
+                    x = self.qpmodule.operate(i, next(iter(t)))
+                    self._safe_set(start, x, j)
+                    continue
+
+                s = next(iter(sdes))
+                si = self.qpmodule.operate(i, s)
+                sj = self.qpmodule.operate(j, s)
+
+                self._safe_set(start, si, sj)
+                self._safe_add(start, self.get_cbasis(i, sj), shift=1)
+                for x in range(i, sj):
+                    if s in self.qpmodule.weak_ascents(x) or s in self.qpmodule.strict_ascents(x):
+                        continue
+                    hx = self.height(x)
+                    if (hj - hx) % 2 != 0:
+                        continue
+                    mu = self.get_cbasis_leading(x, sj)
+                    self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
+
+        if verbose:
+            print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
 
 
 class QPModuleElement:
