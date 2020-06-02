@@ -97,8 +97,48 @@ class QPWGraph:
         t5 = time.time()
         if verbose:
             print(' %s milliseconds' % int(1000 * (t5 - t4)))
+            print('* computing intervals', end='') # noqa
+
+        self.even_intervals, self.even_invleft, self.even_invright = self._compute_intervals(0)
+        self.odd_intervals, self.odd_invleft, self.odd_invright = self._compute_intervals(1)
+
+        t6 = time.time()
+        if verbose:
+            print(' %s milliseconds' % int(1000 * (t6 - t5)))
             print('* finished')
             print()
+
+    def _compute_intervals(self, parity):
+        intervals = [[] for _ in range(self.qpmodule.rank)]
+        for n in self.qpmodule:
+            for i in range(self.qpmodule.rank):
+                if self.qpmodule.is_descent(n, i) and self.height(n) % 2 == parity:
+                    intervals[i].append(n)
+
+        invert_left = self.qpmodule.size * [0]
+        catchup = [[] for _ in range(self.qpmodule.rank)]
+        locations = self.qpmodule.rank * [0]
+        for n in self.qpmodule:
+            for i in range(self.qpmodule.rank):
+                catchup[i].append(n)
+                if self.qpmodule.is_descent(n, i) and self.height(n) % 2 == parity:
+                    for m in catchup[i]:
+                        invert_left[m] = locations[i]
+                    catchup[i] = []
+                    locations[i] += 1
+
+        invert_right = self.qpmodule.size * [0]
+        catchup = [[] for _ in range(self.qpmodule.rank)]
+        locations = [len(i) for i in intervals]
+        for n in range(len(self.qpmodule) - 1, -1, -1):
+            for i in range(self.qpmodule.rank):
+                catchup[i].append(n)
+                if self.qpmodule.is_descent(n, i) and self.height(n) % 2 == parity:
+                    for m in catchup[i]:
+                        invert_right[m] = locations[i]
+                    catchup[i] = []
+                    locations[i] -= 1
+        return intervals, invert_left, invert_right
 
     def height(self, n):
         return self.qpmodule.height(n)
@@ -120,25 +160,26 @@ class QPWGraph:
         s += ['*          size = %s' % str(self.size)]
         return '\n'.join(s)
 
+    def _address_cbasis(self, i, j, hi, hj):
+        start_i = i * self.hbytes
+        start_j = j * self.abytes
+        space = self._space(hi, hj)
+        start = self._int(self.addresses[start_j:start_j + self.abytes]) + \
+            self.offsets[hj][hi] + \
+            self._int(self.suboffsets[start_i:start_i + self.hbytes]) * space
+        return start, space
+
     def address_cbasis(self, i, j):
         hi = self.height(i)
         hj = self.height(j)
-
         assert hi < hj
-        space = self._space(hi, hj)
-
-        start_i = i * self.hbytes
-        start_j = j * self.abytes
-
-        addr = self._int(self.addresses[start_j:start_j + self.abytes]) + \
-            self.offsets[hj][hi] + \
-            self._int(self.suboffsets[start_i:start_i + self.hbytes]) * space
-        return addr, addr + space, space
+        return self._address_cbasis(i, j, hi, hj)
 
     def get_cbasis_leading(self, i, j):
         if self.height(i) >= self.height(j):
             return 0
-        _, stop, _ = self.address_cbasis(i, j)
+        start, space = self.address_cbasis(i, j)
+        stop = start + space
         return self._int(self.frame[stop - self.nbytes:stop], signed=True)
 
     def get_cbasis(self, i, j):
@@ -151,15 +192,7 @@ class QPWGraph:
         if hi >= hj:
             return (0).to_bytes(self.nbytes, byteorder='big', signed=True)
 
-        space = self._space(hi, hj)
-
-        start_i = i * self.hbytes
-        start_j = j * self.abytes
-
-        start = self._int(self.addresses[start_j:start_j + self.abytes]) + \
-            self.offsets[hj][hi] + \
-            self._int(self.suboffsets[start_i:start_i + self.hbytes]) * space
-
+        start, space = self._address_cbasis(i, j, hi, hj)
         return self.frame[start:start + space]
 
     def get_cbasis_polynomial(self, i, j):
@@ -174,11 +207,11 @@ class QPWGraph:
         return ans
 
     def set_cbasis(self, i, j, v, set_bytes=True):
-        start, stop, size = self.address_cbasis(i, j)
+        start, size = self.address_cbasis(i, j)
         if set_bytes:
-            self.frame[start:stop] = v
+            self.frame[start:start + size] = v
         else:
-            self.frame[start:stop] = v.to_bytes(size, byteorder='big', signed=True)
+            self.frame[start:start + size] = v.to_bytes(size, byteorder='big', signed=True)
 
     def _safe_add(self, start, f, shift=0, mu=1):
         if mu == 0:
@@ -197,7 +230,7 @@ class QPWGraph:
         f = self.get_cbasis(i, j)
         self.frame[start:start + len(f)] = f
 
-    def compute(self, verbose=True):
+    def _slowcompute(self, verbose=True):
         t0 = time.time()
         self.frame = bytearray(self.size)
 
@@ -216,7 +249,7 @@ class QPWGraph:
                 if hi == hj:
                     continue
 
-                start, _, _ = self.address_cbasis(i, j)
+                start, _ = self.address_cbasis(i, j)
 
                 if des & set(self.qpmodule.weak_ascents(i)):
                     continue
@@ -251,7 +284,7 @@ class QPWGraph:
         if verbose:
             print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
 
-    def fastcompute(self, verbose=True):
+    def compute(self, verbose=True):
         t0 = time.time()
         self.frame = bytearray(self.size)
 
@@ -273,9 +306,9 @@ class QPWGraph:
                 nextstart += self._space(hi, hj)
 
                 if verbose:
-                    newprogress = int(1000 * start / self.size)
+                    newprogress = int(100 * start / self.size)
                     if newprogress > progress:
-                        # print('*', newprogress / 10.0, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+                        print('*', newprogress, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
                         progress = newprogress
 
                 if des & set(self.qpmodule.weak_ascents(i)):
@@ -293,17 +326,19 @@ class QPWGraph:
 
                 self._safe_set(start, si, sj)
                 self._safe_add(start, self.get_cbasis(i, sj), shift=1)
-                for x in range(i, sj):
-                    if s in self.qpmodule.weak_ascents(x) or s in self.qpmodule.strict_ascents(x):
-                        continue
+                for x in self._get_interval(i, sj, s, hj):
                     hx = self.height(x)
-                    if (hj - hx) % 2 != 0:
-                        continue
                     mu = self.get_cbasis_leading(x, sj)
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
         if verbose:
             print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+
+    def _get_interval(self, i, sj, s, hj):
+        if hj % 2 == 0:
+            return self.even_intervals[s][self.even_invleft[i]:self.even_invright[sj - 1]]
+        else:
+            return self.odd_intervals[s][self.odd_invleft[i]:self.odd_invright[sj - 1]]
 
 
 class QPModuleElement:
@@ -415,6 +450,11 @@ class QPModule:
     @classmethod
     def _is_weak_descent(cls, frame):
         return all(b == 0xFF for b in frame[:-1]) and frame[-1] == 0xFE
+
+    def is_descent(self, n, i):
+        start = i * self.stepsize + n * (self.height_bytes + self.rank * self.stepsize) + self.height_bytes
+        step = self.frame[start:start + self.stepsize]
+        return not self._is_weak_ascent(step) and (self._is_weak_descent(step) or self._int(step) < n)
 
     @classmethod
     def _int(cls, step, signed=False):

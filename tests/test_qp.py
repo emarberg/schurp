@@ -38,9 +38,9 @@ def test_qpwgraph_cbasis(n=3):
 def test_qpwgraph_speed(n=4):
     m = QPModule.create_hecke_a(n)
     w1 = QPWGraph(m)
-    w1.fastcompute()
+    w1.compute()
     w2 = QPWGraph(m)
-    w2.compute()
+    w2._slowcompute()
     assert w1.frame == w2.frame
 
 
