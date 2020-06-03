@@ -104,17 +104,56 @@ class QPWGraph:
         self.even_intervals, self.even_invleft, self.even_invright = self._compute_intervals(0)
         self.odd_intervals, self.odd_invleft, self.odd_invright = self._compute_intervals(1)
 
-        self.strict_ascents = [set(self.qpmodule.strict_ascents(i)) for i in self.qpmodule]
-        if self.sgn:
-            self.weak_ascents = [set(self.qpmodule.weak_descents(i)) for i in self.qpmodule]
+        self.gbytes = max(1, math.ceil(self.qpmodule.rank / 8.0))
+
+        def scents(fn):
+            return self._tobytearray([self._bitmap(set(fn(i))) for i in self.qpmodule], self.gbytes)
+
+        if not self.sgn:
+            self.weak_ascents = scents(self.qpmodule.weak_ascents)
+            self.strict_ascents = scents(self.qpmodule.strict_ascents)
+            self.descents = scents(lambda i: set(self.qpmodule.weak_descents(i)) | set(self.qpmodule.strict_descents(i)))
         else:
-            self.weak_ascents = [set(self.qpmodule.weak_ascents(i)) for i in self.qpmodule]
+            self.weak_ascents = scents(self.qpmodule.weak_desents)
+            self.strict_ascents = scents(self.qpmodule.strict_ascents)
+            self.descents = scents(lambda i: set(self.qpmodule.weak_ascents(i)) | set(self.qpmodule.strict_descents(i)))
 
         t6 = time.time()
         if verbose:
             print(' %s milliseconds' % int(1000 * (t6 - t5)))
             print('* finished')
             print()
+
+    def metadata(self):
+        return {
+            'filename': self.qpmodule.get_filename(),
+            'sgn': self.sgn,
+            'nbytes': self.nbytes,
+            'height': self.heights,
+            'cumheights': self.cumheights,
+            'size': self.size,
+            'hbytes': self.hbytes,
+            'offsets': self.offsets,
+            'abytes': self.abytes,
+            'sybtes': self.sbytes,
+            'gbytes': self.gbytes,
+        }
+
+    def _weak_ascents(self, i):
+        return self._int(self.weak_ascents[i * self.gbytes:(i + 1) * self.gbytes])
+
+    def _strict_ascents(self, i):
+        return self._int(self.strict_ascents[i * self.gbytes:(i + 1) * self.gbytes])
+
+    def _descents(self, i):
+        return self._int(self.descents[i * self.gbytes:(i + 1) * self.gbytes])
+
+    @classmethod
+    def _bitmap(cls, s):
+        ans = 0
+        for i in sorted(s):
+            ans += 2**i
+        return ans
 
     @classmethod
     def _bytes(cls, n):
@@ -342,10 +381,7 @@ class QPWGraph:
         nextstart = 0
         for j in self.qpmodule:
             hj = self.height(j)
-            wdes = set(self.qpmodule.weak_descents(j))
-            sdes = set(self.qpmodule.strict_descents(j))
-            des = wdes | sdes
-
+            s = self.qpmodule.get_strict_descent(j)
             for i in range(self.cumheights[hj] - 1, -1, -1):
                 hi = self.height(i)
                 start = nextstart
@@ -357,16 +393,15 @@ class QPWGraph:
                         print('*', newprogress, 'percent done (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
                         progress = newprogress
 
-                if des & self.weak_ascents[i]:
+                if self._descents(j) & self._weak_ascents(i) != 0:
                     continue
 
-                intersect = des & self.strict_ascents[i]
-                if intersect:
-                    x = self.qpmodule.operate(i, next(iter(intersect)))
+                x = self._firstbit(self._descents(j) & self._strict_ascents(i))
+                if x is not None:
+                    x = self.qpmodule.operate(i, x)
                     self._safe_set(start, x, j)
                     continue
 
-                s = next(iter(sdes))
                 si = self.qpmodule.operate(i, s)
                 sj = self.qpmodule.operate(j, s)
 
@@ -378,6 +413,16 @@ class QPWGraph:
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
         print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+
+    @classmethod
+    def _firstbit(cls, x):
+        if x == 0:
+            return
+        ans = 0
+        while x % 2 == 0:
+            x = x >> 1
+            ans += 1
+        return ans
 
     def _get_interval(self, i, sj, s, hj):
         if hj % 2 == 0:
@@ -543,6 +588,12 @@ class QPModule:
             if not self._is_weak_ascent(step) and not self._is_weak_descent(step):
                 if self._int(step) > n:
                     yield i
+
+    def get_strict_descent(self, n):
+        for i, step in enumerate(self._steps(n)):
+            if not self._is_weak_ascent(step) and not self._is_weak_descent(step):
+                if self._int(step) < n:
+                    return i
 
     def strict_descents(self, n):
         for i, step in enumerate(self._steps(n)):
