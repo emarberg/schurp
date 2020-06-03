@@ -108,17 +108,17 @@ def test_io(n=5):
     for k in range(0, n + 2, 2):
         m = QPModule.create_gelfand_a(n, k // 2)
         m.write()
-        read = QPModule.read(m.get_filename())
+        read = QPModule.read(m.get_directory())
         assert m == read
     for k in range(0, n + 1, 2):
         m = QPModule.create_gelfand_bc(n, k // 2)
         m.write()
-        read = QPModule.read(m.get_filename())
+        read = QPModule.read(m.get_directory())
         assert m == read
     for k in range(0, n + 1, 2):
         m = QPModule.create_gelfand_d(n, k // 2)
         m.write()
-        read = QPModule.read(m.get_filename())
+        read = QPModule.read(m.get_directory())
         assert m == read
 
 
