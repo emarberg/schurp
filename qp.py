@@ -7,22 +7,32 @@ from heapq import heappush, heappop
 import json
 import math
 import time
+from pathlib import Path
 
 
 class QPWGraph:
 
-    def __init__(self, qpmodule, sgn=False, nbytes=8, verbose=True):
+    def __init__(self, qpmodule, sgn=False, nbytes=8, setup=True):
         self.qpmodule = qpmodule
         self.sgn = sgn
         self.nbytes = nbytes
         self.frame = None
+        self.is_computed = False
 
+        if setup:
+            self.setup()
+        else:
+            self.is_setup = False
+
+    def setup(self, verbose=True):
         t0 = time.time()
         if verbose:
-            a = self.qpmodule.get_filename().split('/')[-1]
+            a1 = str(self.qpmodule.family)
+            a2 = str(self.qpmodule.rank)
+            a3 = str(self.qpmodule.layer)
             b = len(self.qpmodule)
             print()
-            print('QPWGraph for %s (%s elements)' % (a, b))
+            print('QPWGraph for %s, %s, %s (%s elements)' % (a1, a2, a3, b))
             print()
             print('* computing heights', end='') # noqa
 
@@ -124,9 +134,58 @@ class QPWGraph:
             print('* finished')
             print()
 
+        self.is_setup = True
+
+    def get_filename(self):
+        return self.qpmodule.get_directory() + '.'.join([
+            'wgraph',
+            'signed' if self.sgn else 'unsigned',
+        ])
+
+    @classmethod
+    def _write_bytes(cls, filename, array):
+        with open(filename, 'wb') as file:
+            file.write(array)
+            file.close()
+
+    def write(self):
+        self.qpmodule.write()
+        filename = self.get_filename()
+
+        metafile = filename + '.meta'
+        with open(metafile, 'w') as file:
+            file.write(json.dumps(self.metadata()))
+            file.close()
+
+        if not self.is_setup:
+            return
+
+        aux = self.qpmodule.get_directory() + 'aux/'
+        Path(aux).mkdir(parents=True, exist_ok=True)
+
+        self._write_bytes(aux + 'suboffsets.b', self.suboffsets)
+        self._write_bytes(aux + 'addresses.b', self.addresses)
+        self._write_bytes(aux + 'weak_ascents.b', self.weak_ascents)
+        self._write_bytes(aux + 'strict_ascents.b', self.strict_ascents)
+        self._write_bytes(aux + 'descents.b', self.descents)
+
+        for i in range(self.qpmodule.rank):
+            self._write_bytes(aux + 'even_intervals.%s.b' % i, self.even_intervals[i])
+            self._write_bytes(aux + 'even_invleft.%s.b' % i, self.even_invleft[i])
+            self._write_bytes(aux + 'even_invright.%s.b' % i, self.even_invright[i])
+            self._write_bytes(aux + 'odd_intervals.%s.b' % i, self.odd_intervals[i])
+            self._write_bytes(aux + 'odd_invleft.%s.b' % i, self.odd_invleft[i])
+            self._write_bytes(aux + 'odd_invright.%s.b' % i, self.odd_invright[i])
+
+        if not self.is_computed:
+            return
+
+        self._write_bytes(filename + '.cbasis.b', self.frame)
+
     def metadata(self):
+        assert self.is_setup
         return {
-            'filename': self.qpmodule.get_filename(),
+            'directory': self.qpmodule.get_directory(),
             'sgn': self.sgn,
             'nbytes': self.nbytes,
             'height': self.heights,
@@ -137,6 +196,8 @@ class QPWGraph:
             'abytes': self.abytes,
             'sybtes': self.sbytes,
             'gbytes': self.gbytes,
+            'is_setup': self.is_setup,
+            'is_computed': self.is_computed,
         }
 
     def _weak_ascents(self, i):
@@ -171,7 +232,7 @@ class QPWGraph:
         intervals = [[] for _ in range(self.qpmodule.rank)]
         for n in self.qpmodule:
             for i in range(self.qpmodule.rank):
-                if is_descent(n, i) and self.height(n) % 2 == parity:
+                if is_descent(n, i) and self._height(n) % 2 == parity:
                     intervals[i].append(n)
 
         invert_left = [self.qpmodule.size * [0] for _ in range(self.qpmodule.rank)]
@@ -180,7 +241,7 @@ class QPWGraph:
         for n in self.qpmodule:
             for i in range(self.qpmodule.rank):
                 catchup[i].append(n)
-                if is_descent(n, i) and self.height(n) % 2 == parity:
+                if is_descent(n, i) and self._height(n) % 2 == parity:
                     for m in catchup[i]:
                         invert_left[i][m] = locations[i]
                     catchup[i] = []
@@ -192,7 +253,7 @@ class QPWGraph:
         for n in range(len(self.qpmodule) - 1, -1, -1):
             for i in range(self.qpmodule.rank):
                 catchup[i].append(n)
-                if is_descent(n, i) and self.height(n) % 2 == parity:
+                if is_descent(n, i) and self._height(n) % 2 == parity:
                     for m in catchup[i]:
                         invert_right[i][m] = locations[i]
                     catchup[i] = []
@@ -228,7 +289,7 @@ class QPWGraph:
         start = n * self.sbytes
         return self._int(self.odd_invright[s][start:start + self.sbytes])
 
-    def height(self, n):
+    def _height(self, n):
         return self.qpmodule.height(n)
 
     def _space(self, hi, hj):
@@ -242,10 +303,6 @@ class QPWGraph:
         a = self.qpmodule.get_filename().split('/')[-1]
         b = len(self.qpmodule)
         s = ['QPWGraph for %s (%s elements)' % (a, b)]
-        s += ['*        nbytes = %s' % str(self.nbytes)]
-        s += ['*        abytes = %s' % str(self.abytes)]
-        s += ['*  address size = %s' % str(self.abytes * b)]
-        s += ['*          size = %s' % str(self.size)]
         return '\n'.join(s)
 
     def _address_cbasis(self, i, j, hi, hj):
@@ -258,13 +315,13 @@ class QPWGraph:
         return start, space
 
     def address_cbasis(self, i, j):
-        hi = self.height(i)
-        hj = self.height(j)
+        hi = self._height(i)
+        hj = self._height(j)
         assert hi < hj
         return self._address_cbasis(i, j, hi, hj)
 
     def get_cbasis_leading(self, i, j):
-        if self.height(i) >= self.height(j):
+        if self._height(i) >= self._height(j):
             return 0
         start, space = self.address_cbasis(i, j)
         stop = start + space
@@ -274,8 +331,8 @@ class QPWGraph:
         if i == j:
             return (1).to_bytes(self.nbytes, byteorder='big', signed=True)
 
-        hi = self.height(i)
-        hj = self.height(j)
+        hi = self._height(i)
+        hj = self._height(j)
 
         if hi >= hj:
             return (0).to_bytes(self.nbytes, byteorder='big', signed=True)
@@ -318,7 +375,30 @@ class QPWGraph:
         f = self.get_cbasis(i, j)
         self.frame[start:start + len(f)] = f
 
+    @classmethod
+    def _firstbit(cls, x):
+        if x == 0:
+            return
+        ans = 0
+        while x % 2 == 0:
+            x = x >> 1
+            ans += 1
+        return ans
+
+    def _get_interval(self, i, sj, s, hj):
+        if hj % 2 == 0:
+            a, b = self._even_invleft(i, s), self._even_invright(sj - 1, s)
+            interval = self.even_intervals[s]
+        else:
+            a, b = self._odd_invleft(i, s), self._odd_invright(sj - 1, s)
+            interval = self.odd_intervals[s]
+        for x in range(a, b):
+            yield self._int(interval[x * self.sbytes:(x + 1) * self.sbytes])
+
     def _slowcompute(self, verbose=False):
+        assert self.is_setup
+        assert not self.is_computed
+
         t0 = time.time()
         self.frame = bytearray(self.size)
 
@@ -326,13 +406,13 @@ class QPWGraph:
         progress = 0
 
         for j in self.qpmodule:
-            hj = self.height(j)
+            hj = self._height(j)
             wdes = set(self.qpmodule.weak_descents(j))
             sdes = set(self.qpmodule.strict_descents(j))
             des = wdes | sdes
 
             for i in range(j - 1, -1, -1):
-                hi = self.height(i)
+                hi = self._height(i)
                 if hi == hj:
                     continue
 
@@ -362,15 +442,19 @@ class QPWGraph:
                 for x in range(i, sj):
                     if s in self.qpmodule.weak_ascents(x) or s in self.qpmodule.strict_ascents(x):
                         continue
-                    hx = self.height(x)
+                    hx = self._height(x)
                     if (hj - hx) % 2 != 0:
                         continue
                     mu = self.get_cbasis_leading(x, sj)
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
         print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+        self.is_computed = True
 
     def compute(self, verbose=False):
+        assert self.is_setup
+        assert not self.is_computed
+
         t0 = time.time()
         self.frame = bytearray(self.size)
 
@@ -380,10 +464,10 @@ class QPWGraph:
         start = 0
         nextstart = 0
         for j in self.qpmodule:
-            hj = self.height(j)
+            hj = self._height(j)
             s = self.qpmodule.get_strict_descent(j)
             for i in range(self.cumheights[hj] - 1, -1, -1):
-                hi = self.height(i)
+                hi = self._height(i)
                 start = nextstart
                 nextstart += self._space(hi, hj)
 
@@ -408,32 +492,12 @@ class QPWGraph:
                 self._safe_set(start, si, sj)
                 self._safe_add(start, self.get_cbasis(i, sj), shift=1)
                 for x in self._get_interval(i, sj, s, hj):
-                    hx = self.height(x)
+                    hx = self._height(x)
                     mu = self.get_cbasis_leading(x, sj)
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
         print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
-
-    @classmethod
-    def _firstbit(cls, x):
-        if x == 0:
-            return
-        ans = 0
-        while x % 2 == 0:
-            x = x >> 1
-            ans += 1
-        return ans
-
-    def _get_interval(self, i, sj, s, hj):
-        if hj % 2 == 0:
-            a, b = self._even_invleft(i, s), self._even_invright(sj - 1, s)
-            interval = self.even_intervals[s]
-        else:
-            a, b = self._odd_invleft(i, s), self._odd_invright(sj - 1, s)
-            interval = self.odd_intervals[s]
-        while a < b:
-            yield self._int(interval[a * self.sbytes:(a + 1) * self.sbytes])
-            a += 1
+        self.is_computed = True
 
 
 class QPModuleElement:
@@ -475,6 +539,16 @@ class QPModule:
     GELFAND_A = 'GELFAND_A'
     GELFAND_BC = 'GELFAND_BC'
     GELFAND_D = 'GELFAND_D'
+
+    def __init__(self, family, rank, layer, size, height_bytes, frame=None, printer=None):
+        self.family = family
+        self.rank = rank
+        self.layer = layer
+        self.size = size
+        self.stepsize = max(1, math.ceil(math.log2((size + 2) / 8.0)))
+        self.height_bytes = height_bytes
+        self.frame = frame
+        self.printer = printer
 
     def expand(self, n):
         if self.printer:
@@ -611,25 +685,15 @@ class QPModule:
             if self._is_weak_descent(step):
                 yield i
 
-    def __init__(self, family, rank, layer, size, height_bytes, frame=None, printer=None):
-        self.family = family
-        self.rank = rank
-        self.layer = layer
-        self.size = size
-        self.stepsize = max(1, math.ceil(math.log2((size + 2) / 8.0)))
-        self.height_bytes = height_bytes
-        self.frame = frame
-        self.printer = printer
-
-    def get_filename(self):
-        return self.filename(self.family, self.rank, self.layer)
+    def get_directory(self):
+        return self.directory(self.family, self.rank, self.layer)
 
     @classmethod
-    def filename(cls, family, rank, layer):
+    def directory(cls, family, rank, layer):
         file = cls.DIRECTORY + family + str(rank)
         if layer is not None:
-            file += '_' + str(layer)
-        return file
+            file += '_BLOCK' + str(layer)
+        return file + '/'
 
     def metadata(self):
         return {
@@ -642,34 +706,32 @@ class QPModule:
         }
 
     def write(self):
-        filename = self.get_filename()
-        bytefile = filename + '.b'
+        directory = self.get_directory()
+        Path(directory).mkdir(parents=True, exist_ok=True)
+        bytefile = directory + 'module.b'
         with open(bytefile, 'wb') as file:
             file.write(self.frame)
             file.close()
-        metafile = filename + '.meta'
+        metafile = directory + 'module.meta'
         with open(metafile, 'w') as file:
             file.write(json.dumps(self.metadata()))
             file.close()
 
     @classmethod
     def read_gelfand_a(cls, n, k):
-        filename = cls.filename(cls.GELFAND_A, n, k)
-        return cls.read(filename)
+        return cls.read(cls.directory(cls.GELFAND_A, n, k))
 
     @classmethod
     def read_gelfand_bc(cls, n, k):
-        filename = cls.filename(cls.GELFAND_BC, n, k)
-        return cls.read(filename)
+        return cls.read(cls.directory(cls.GELFAND_BC, n, k))
 
     @classmethod
     def read_gelfand_d(cls, n, k):
-        filename = cls.filename(cls.GELFAND_D, n, k)
-        return cls.read(filename)
+        return cls.read(cls.directory(cls.GELFAND_D, n, k))
 
     @classmethod
-    def read(cls, filename):
-        metafile = filename + '.meta'
+    def read(cls, directory):
+        metafile = directory + 'module.meta'
         with open(metafile, 'r') as file:
             dictionary = json.loads(file.read())
             file.close()
@@ -684,7 +746,7 @@ class QPModule:
         module = cls(family, rank, layer, size, height_bytes)
         assert module.stepsize == stepsize
 
-        bytefile = filename + '.b'
+        bytefile = directory + 'module.b'
         with open(bytefile, 'rb') as file:
             module.frame = bytearray(file.read())
             file.close()
