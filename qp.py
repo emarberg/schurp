@@ -124,7 +124,7 @@ class QPWGraph:
             self.strict_ascents = scents(self.qpmodule.strict_ascents)
             self.descents = scents(lambda i: set(self.qpmodule.weak_descents(i)) | set(self.qpmodule.strict_descents(i)))
         else:
-            self.weak_ascents = scents(self.qpmodule.weak_desents)
+            self.weak_ascents = scents(self.qpmodule.weak_descents)
             self.strict_ascents = scents(self.qpmodule.strict_ascents)
             self.descents = scents(lambda i: set(self.qpmodule.weak_ascents(i)) | set(self.qpmodule.strict_descents(i)))
 
@@ -136,6 +136,33 @@ class QPWGraph:
 
         self.is_setup = True
 
+    def __eq__(self, other):
+        assert type(other) == type(self)
+        return self.sgn == other.sgn and \
+            self.nbytes == other.nbytes and \
+            self.heights == other.heights and \
+            self.cumheights == other.cumheights and \
+            self.size == other.size and \
+            self.hbytes == other.hbytes and \
+            self.offsets == other.offsets and \
+            self.abytes == other.abytes and \
+            self.sbytes == other.sbytes and \
+            self.gbytes == other.gbytes and \
+            self.is_setup == other.is_setup and \
+            self.suboffsets == other.suboffsets and \
+            self.addresses == other.addresses and \
+            self.weak_ascents == other.weak_ascents and \
+            self.strict_ascents == other.strict_ascents and \
+            self.descents == other.descents and \
+            self.even_intervals == other.even_intervals and \
+            self.even_invleft == other.even_invleft and \
+            self.even_invright == other.even_invright and \
+            self.odd_intervals == other.odd_intervals and \
+            self.odd_invleft == other.odd_invleft and \
+            self.odd_invright == other.odd_invright and \
+            self.is_computed == other.is_computed and \
+            self.frame == other.frame
+
     def get_filename(self):
         return self.qpmodule.get_directory() + '.'.join([
             'wgraph',
@@ -143,10 +170,66 @@ class QPWGraph:
         ])
 
     @classmethod
+    def read(cls, directory, sgn=False, nbytes=8):
+        qpmodule = QPModule.read(directory)
+        wgraph = QPWGraph(qpmodule, sgn, nbytes, setup=False)
+        wgraph._read()
+        return wgraph
+
+    def _read(self):
+        metafile = self.get_filename() + '.meta'
+        with open(metafile, 'r') as file:
+            dictionary = json.loads(file.read())
+
+        assert self.sgn == dictionary['sgn']
+        assert self.nbytes == dictionary['nbytes']
+        self.heights = dictionary['heights']
+        self.cumheights = dictionary['cumheights']
+        self.size = dictionary['size']
+        self.hbytes = dictionary['hbytes']
+        self.offsets = {int(k): v for (k, v) in dictionary['offsets'].items()}
+        self.abytes = dictionary['abytes']
+        self.sbytes = dictionary['sbytes']
+        self.gbytes = dictionary['gbytes']
+        self.is_setup = dictionary['is_setup']
+        self.is_computed = dictionary['is_computed']
+
+        if self.is_setup:
+            aux = self.qpmodule.get_directory() + 'aux/'
+            self.suboffsets = self._read_bytes(aux + 'suboffsets.b')
+            self.addresses = self._read_bytes(aux + 'addresses.b')
+            self.weak_ascents = self._read_bytes(aux + 'weak_ascents.b')
+            self.strict_ascents = self._read_bytes(aux + 'strict_ascents.b')
+            self.descents = self._read_bytes(aux + 'descents.b')
+
+            self.even_intervals = []
+            self.even_invleft = []
+            self.even_invright = []
+            self.odd_intervals = []
+            self.odd_invleft = []
+            self.odd_invright = []
+            for i in range(self.qpmodule.rank):
+                self.even_intervals.append(self._read_bytes(aux + 'even_intervals.%s.b' % i))
+                self.even_invleft.append(self._read_bytes(aux + 'even_invleft.%s.b' % i))
+                self.even_invright.append(self._read_bytes(aux + 'even_invright.%s.b' % i))
+                self.odd_intervals.append(self._read_bytes(aux + 'odd_intervals.%s.b' % i))
+                self.odd_invleft.append(self._read_bytes(aux + 'odd_invleft.%s.b' % i))
+                self.odd_invright.append(self._read_bytes(aux + 'odd_invright.%s.b' % i))
+
+        if self.is_computed:
+            bytefile = self.get_filename() + '.cbasis.b'
+            with open(bytefile, 'rb') as file:
+                self.frame = bytearray(file.read())
+
+    @classmethod
+    def _read_bytes(cls, filename):
+        with open(filename, 'rb') as file:
+            return bytearray(file.read())
+
+    @classmethod
     def _write_bytes(cls, filename, array):
         with open(filename, 'wb') as file:
             file.write(array)
-            file.close()
 
     def write(self):
         self.qpmodule.write()
@@ -155,7 +238,6 @@ class QPWGraph:
         metafile = filename + '.meta'
         with open(metafile, 'w') as file:
             file.write(json.dumps(self.metadata()))
-            file.close()
 
         if not self.is_setup:
             return
@@ -185,16 +267,15 @@ class QPWGraph:
     def metadata(self):
         assert self.is_setup
         return {
-            'directory': self.qpmodule.get_directory(),
             'sgn': self.sgn,
             'nbytes': self.nbytes,
-            'height': self.heights,
+            'heights': self.heights,
             'cumheights': self.cumheights,
             'size': self.size,
             'hbytes': self.hbytes,
             'offsets': self.offsets,
             'abytes': self.abytes,
-            'sybtes': self.sbytes,
+            'sbytes': self.sbytes,
             'gbytes': self.gbytes,
             'is_setup': self.is_setup,
             'is_computed': self.is_computed,
@@ -218,7 +299,7 @@ class QPWGraph:
 
     @classmethod
     def _bytes(cls, n):
-        return max(1, math.ceil(math.log2(n / 8.0)))
+        return max(1, math.ceil(math.log2(max(1, n / 8.0))))
 
     def _compute_intervals(self, parity):
         def is_descent(n, i):
@@ -300,7 +381,7 @@ class QPWGraph:
         return int.from_bytes(step, byteorder='big', signed=signed)
 
     def __repr__(self):
-        a = self.qpmodule.get_filename().split('/')[-1]
+        a = self.qpmodule.get_directory().split('/')[-1]
         b = len(self.qpmodule)
         s = ['QPWGraph for %s (%s elements)' % (a, b)]
         return '\n'.join(s)
@@ -711,11 +792,9 @@ class QPModule:
         bytefile = directory + 'module.b'
         with open(bytefile, 'wb') as file:
             file.write(self.frame)
-            file.close()
         metafile = directory + 'module.meta'
         with open(metafile, 'w') as file:
             file.write(json.dumps(self.metadata()))
-            file.close()
 
     @classmethod
     def read_gelfand_a(cls, n, k):
@@ -734,7 +813,6 @@ class QPModule:
         metafile = directory + 'module.meta'
         with open(metafile, 'r') as file:
             dictionary = json.loads(file.read())
-            file.close()
 
         family = dictionary['family']
         rank = int(dictionary['rank'])
@@ -749,7 +827,6 @@ class QPModule:
         bytefile = directory + 'module.b'
         with open(bytefile, 'rb') as file:
             module.frame = bytearray(file.read())
-            file.close()
         return module
 
     @classmethod

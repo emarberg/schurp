@@ -105,21 +105,32 @@ def test_slow_gelfand_d(nin=6):
 
 
 def test_io(n=5):
+    def test_wgraph(m):
+        for sgn in [True, False]:
+            w = QPWGraph(m, sgn=sgn)
+            w.compute()
+            w.write()
+            read = QPWGraph.read(m.get_directory(), sgn=sgn)
+            assert w == read
+
     for k in range(0, n + 2, 2):
         m = QPModule.create_gelfand_a(n, k // 2)
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
+        test_wgraph(m)
     for k in range(0, n + 1, 2):
         m = QPModule.create_gelfand_bc(n, k // 2)
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
+        test_wgraph(m)
     for k in range(0, n + 1, 2):
         m = QPModule.create_gelfand_d(n, k // 2)
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
+        test_wgraph(m)
 
 
 def test_gelfand_a(nin=5):
