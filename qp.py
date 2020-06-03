@@ -11,8 +11,9 @@ import time
 
 class QPWGraph:
 
-    def __init__(self, qpmodule, nbytes=8, verbose=True):
+    def __init__(self, qpmodule, sgn=False, nbytes=8, verbose=True):
         self.qpmodule = qpmodule
+        self.sgn = sgn
         self.nbytes = nbytes
         self.frame = None
 
@@ -53,7 +54,7 @@ class QPWGraph:
             print(' %s milliseconds' % int(1000 * (t2 - t1)))
             print('* computing suboffsets', end='') # noqa
 
-        self.hbytes = max(1, math.ceil(math.log2(max(self.heights) / 8.0)))
+        self.hbytes = self._bytes(max(self.heights))
         self.suboffsets = bytearray(self.hbytes * len(self.qpmodule))
 
         offset = 0
@@ -84,7 +85,7 @@ class QPWGraph:
             print(' %s milliseconds' % int(1000 * (t4 - t3)))
             print('* computing addresses', end='') # noqa
 
-        self.abytes = max(1, math.ceil(math.log2((self.size) / 8.0)))
+        self.abytes = self._bytes(self.size)
         self.addresses = bytearray(self.abytes * len(self.qpmodule))
 
         a = 0
@@ -99,10 +100,15 @@ class QPWGraph:
             print(' %s milliseconds' % int(1000 * (t5 - t4)))
             print('* computing intervals', end='') # noqa
 
+        self.sbytes = self._bytes(self.qpmodule.size)
         self.even_intervals, self.even_invleft, self.even_invright = self._compute_intervals(0)
         self.odd_intervals, self.odd_invleft, self.odd_invright = self._compute_intervals(1)
-        self.weak_ascents = [set(self.qpmodule.weak_ascents(i)) for i in self.qpmodule]
+
         self.strict_ascents = [set(self.qpmodule.strict_ascents(i)) for i in self.qpmodule]
+        if self.sgn:
+            self.weak_ascents = [set(self.qpmodule.weak_descents(i)) for i in self.qpmodule]
+        else:
+            self.weak_ascents = [set(self.qpmodule.weak_ascents(i)) for i in self.qpmodule]
 
         t6 = time.time()
         if verbose:
@@ -110,37 +116,78 @@ class QPWGraph:
             print('* finished')
             print()
 
+    @classmethod
+    def _bytes(cls, n):
+        return max(1, math.ceil(math.log2(n / 8.0)))
+
     def _compute_intervals(self, parity):
+        def is_descent(n, i):
+            if self.qpmodule.is_strict_descent(n, i):
+                return True
+            if not self.sgn:
+                return self.qpmodule.is_weak_descent(n, i)
+            else:
+                return self.qpmodule.is_weak_ascent(n, i)
+
         intervals = [[] for _ in range(self.qpmodule.rank)]
         for n in self.qpmodule:
             for i in range(self.qpmodule.rank):
-                if self.qpmodule.is_descent(n, i) and self.height(n) % 2 == parity:
+                if is_descent(n, i) and self.height(n) % 2 == parity:
                     intervals[i].append(n)
 
-        invert_left = self.qpmodule.size * [0]
+        invert_left = [self.qpmodule.size * [0] for _ in range(self.qpmodule.rank)]
         catchup = [[] for _ in range(self.qpmodule.rank)]
         locations = self.qpmodule.rank * [0]
         for n in self.qpmodule:
             for i in range(self.qpmodule.rank):
                 catchup[i].append(n)
-                if self.qpmodule.is_descent(n, i) and self.height(n) % 2 == parity:
+                if is_descent(n, i) and self.height(n) % 2 == parity:
                     for m in catchup[i]:
-                        invert_left[m] = locations[i]
+                        invert_left[i][m] = locations[i]
                     catchup[i] = []
                     locations[i] += 1
 
-        invert_right = self.qpmodule.size * [0]
+        invert_right = [self.qpmodule.size * [0] for _ in range(self.qpmodule.rank)]
         catchup = [[] for _ in range(self.qpmodule.rank)]
         locations = [len(i) for i in intervals]
         for n in range(len(self.qpmodule) - 1, -1, -1):
             for i in range(self.qpmodule.rank):
                 catchup[i].append(n)
-                if self.qpmodule.is_descent(n, i) and self.height(n) % 2 == parity:
+                if is_descent(n, i) and self.height(n) % 2 == parity:
                     for m in catchup[i]:
-                        invert_right[m] = locations[i]
+                        invert_right[i][m] = locations[i]
                     catchup[i] = []
                     locations[i] -= 1
+
+        intervals = [self._tobytearray(i, self.sbytes) for i in intervals]
+        invert_left = [self._tobytearray(i, self.sbytes) for i in invert_left]
+        invert_right = [self._tobytearray(i, self.sbytes) for i in invert_right]
         return intervals, invert_left, invert_right
+
+    @classmethod
+    def _tobytearray(cls, iterable, nbytes, signed=False):
+        array = bytearray(len(iterable) * nbytes)
+        start = 0
+        for a in iterable:
+            array[start:start + nbytes] = a.to_bytes(nbytes, byteorder='big', signed=signed)
+            start += nbytes
+        return array
+
+    def _even_invleft(self, n, s):
+        start = n * self.sbytes
+        return self._int(self.even_invleft[s][start:start + self.sbytes])
+
+    def _even_invright(self, n, s):
+        start = n * self.sbytes
+        return self._int(self.even_invright[s][start:start + self.sbytes])
+
+    def _odd_invleft(self, n, s):
+        start = n * self.sbytes
+        return self._int(self.odd_invleft[s][start:start + self.sbytes])
+
+    def _odd_invright(self, n, s):
+        start = n * self.sbytes
+        return self._int(self.odd_invright[s][start:start + self.sbytes])
 
     def height(self, n):
         return self.qpmodule.height(n)
@@ -334,9 +381,14 @@ class QPWGraph:
 
     def _get_interval(self, i, sj, s, hj):
         if hj % 2 == 0:
-            return self.even_intervals[s][self.even_invleft[i]:self.even_invright[sj - 1]]
+            a, b = self._even_invleft(i, s), self._even_invright(sj - 1, s)
+            interval = self.even_intervals[s]
         else:
-            return self.odd_intervals[s][self.odd_invleft[i]:self.odd_invright[sj - 1]]
+            a, b = self._odd_invleft(i, s), self._odd_invright(sj - 1, s)
+            interval = self.odd_intervals[s]
+        while a < b:
+            yield self._int(interval[a * self.sbytes:(a + 1) * self.sbytes])
+            a += 1
 
 
 class QPModuleElement:
@@ -449,10 +501,17 @@ class QPModule:
     def _is_weak_descent(cls, frame):
         return all(b == 0xFF for b in frame[:-1]) and frame[-1] == 0xFE
 
-    def is_descent(self, n, i):
-        start = i * self.stepsize + n * (self.height_bytes + self.rank * self.stepsize) + self.height_bytes
-        step = self.frame[start:start + self.stepsize]
-        return not self._is_weak_ascent(step) and (self._is_weak_descent(step) or self._int(step) < n)
+    def is_strict_descent(self, n, i):
+        return i in set(self.strict_descents(n))
+
+    def is_strict_ascent(self, n, i):
+        return i in set(self.strict_ascents(n))
+
+    def is_weak_descent(self, n, i):
+        return i in set(self.weak_descents(n))
+
+    def is_weak_ascent(self, n, i):
+        return i in set(self.weak_ascents(n))
 
     @classmethod
     def _int(cls, step, signed=False):
