@@ -108,7 +108,8 @@ def test_io(n=5):
     def test_wgraph(m):
         for sgn in [True, False]:
             w = QPWGraph(m, sgn=sgn)
-            w.compute()
+            w.write()
+            w.compute(verbose=True)
             w.write()
             read = QPWGraph.read(m.get_directory(), sgn=sgn)
             assert w == read
