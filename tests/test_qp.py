@@ -89,7 +89,7 @@ def test_slow_gelfand_a(nin=6):
 
 
 def test_slow_gelfand_bc(nin=6):
-    for n in range(nin + 1):
+    for n in range(2, nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_bc(n, k // 2)
             slow = QPModule.slow_create_gelfand_bc(n, k // 2)
@@ -97,41 +97,95 @@ def test_slow_gelfand_bc(nin=6):
 
 
 def test_slow_gelfand_d(nin=6):
-    for n in range(3, nin + 1, 2):
+    for n in range(3, nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
             slow = QPModule.slow_create_gelfand_d(n, k // 2)
             assert m == slow
 
 
-def test_io(n=5):
-    def test_wgraph(m):
-        for sgn in [True, False]:
-            w = QPWGraph(m, sgn=sgn)
-            w.write()
-            w.compute(verbose=True)
-            w.write()
-            read = QPWGraph.read(m.get_directory(), sgn=sgn)
-            assert w == read
+def _test_wgraph(m, check=False):
+    w = QPWGraph(m, sgn=True)
+    w.write()
+    w.compute(verbose=True)
+    w.write()
+    read = QPWGraph.read(m.get_directory(), sgn=True)
+    assert w == read
 
+    v = QPWGraph(m, sgn=False)
+    v.write()
+    v.compute(verbose=True)
+    v.write()
+    read = QPWGraph.read(m.get_directory(), sgn=False)
+    assert v == read
+
+    if check:
+        assert v.frame == w.frame
+
+
+
+def test_io_two_sided_hecke(n=3):
+    m = QPModule.create_two_sided_hecke_a(n)
+    m.write()
+    read = QPModule.read(m.get_directory())
+    assert m == read
+    _test_wgraph(m, True)
+
+    m = QPModule.create_two_sided_hecke_bc(n)
+    m.write()
+    read = QPModule.read(m.get_directory())
+    assert m == read
+    _test_wgraph(m, True)
+
+    m = QPModule.create_two_sided_hecke_d(n)
+    m.write()
+    read = QPModule.read(m.get_directory())
+    assert m == read
+    _test_wgraph(m, True)
+
+
+def test_io_hecke(n=3):
+    m = QPModule.create_hecke_a(n)
+    m.write()
+    read = QPModule.read(m.get_directory())
+    assert m == read
+    _test_wgraph(m, True)
+
+    m = QPModule.create_hecke_bc(n)
+    m.write()
+    read = QPModule.read(m.get_directory())
+    assert m == read
+    _test_wgraph(m, True)
+
+    m = QPModule.create_hecke_d(n)
+    m.write()
+    read = QPModule.read(m.get_directory())
+    assert m == read
+    _test_wgraph(m, True)
+
+
+def test_io_a(n=3):
     for k in range(0, n + 2, 2):
         m = QPModule.create_gelfand_a(n, k // 2)
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
-        test_wgraph(m)
+        _test_wgraph(m)
+
+
+def test_io_bcd(n=3):
     for k in range(0, n + 1, 2):
         m = QPModule.create_gelfand_bc(n, k // 2)
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
-        test_wgraph(m)
+        _test_wgraph(m)
     for k in range(0, n + 1, 2):
         m = QPModule.create_gelfand_d(n, k // 2)
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
-        test_wgraph(m)
+        _test_wgraph(m)
 
 
 def test_gelfand_a(nin=5):
@@ -172,7 +226,7 @@ def test_hecke_gelfand_a(nin=4):
 
 
 def test_gelfand_bc(nin=4):
-    for n in range(nin + 1):
+    for n in range(2, nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_bc(n, k // 2)
             assert len({m.printer(m.reduced_word(i)) for i in m}) == m.size
@@ -192,7 +246,7 @@ def test_gelfand_bc(nin=4):
 
 def test_hecke_gelfand_bc(nin=3):
     q = polynomials.q
-    for n in range(nin + 1):
+    for n in range(2, nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_bc(n, k // 2)
             for e in m:
@@ -214,7 +268,7 @@ def test_hecke_gelfand_bc(nin=3):
 
 
 def test_gelfand_d(nin=4):
-    for n in range(3, nin + 1, 2):
+    for n in range(2, nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
             assert len({m.printer(m.reduced_word(i)) for i in m}) == m.size
@@ -242,7 +296,7 @@ def test_gelfand_d(nin=4):
 
 def test_hecke_gelfand_d(nin=4):
     q = polynomials.q
-    for n in range(3, nin + 1, 2):
+    for n in range(2, nin + 1):
         for k in range(0, n + 1, 2):
             m = QPModule.create_gelfand_d(n, k // 2)
             for e in m:

@@ -616,7 +616,14 @@ class QPModule:
 
     DIRECTORY = '/Users/emarberg/Desktop/examples/models/'
 
-    HECKE_A = 'HECKE_A'
+    HECKE_A = 'RIGHT_HECKE_A'
+    HECKE_BC = 'RIGHT_HECKE_BC'
+    HECKE_D = 'RIGHT_HECKE_D'
+
+    TWO_SIDED_HECKE_A = 'TWO_SIDED_HECKE_A'
+    TWO_SIDED_HECKE_BC = 'TWO_SIDED_HECKE_BC'
+    TWO_SIDED_HECKE_D = 'TWO_SIDED_HECKE_D'
+
     GELFAND_A = 'GELFAND_A'
     GELFAND_BC = 'GELFAND_BC'
     GELFAND_D = 'GELFAND_D'
@@ -815,11 +822,10 @@ class QPModule:
             dictionary = json.loads(file.read())
 
         family = dictionary['family']
-        rank = int(dictionary['rank'])
+        rank = dictionary['rank']
         layer = dictionary['layer']
-        layer = None if layer == 'None' else int(layer)
-        size = int(dictionary['size'])
-        stepsize = int(dictionary['stepsize'])
+        size = dictionary['size']
+        stepsize = dictionary['stepsize']
         height_bytes = int(dictionary['height_bytes'])
         module = cls(family, rank, layer, size, height_bytes)
         assert module.stepsize == stepsize
@@ -878,27 +884,68 @@ class QPModule:
         return frame
 
     @classmethod
-    def create_hecke_a(cls, n):
+    def create_hecke_classical(cls, family, n, size, height_bytes, coxeter_class):
         assert n >= 0
-        size = math.factorial(n + 1)
-        height_bytes = 1
-        module = cls(cls.HECKE_A, n, None, size, height_bytes)
+        rank = 2 * n if family in [cls.TWO_SIDED_HECKE_A, cls.TWO_SIDED_HECKE_BC, cls.TWO_SIDED_HECKE_D] else n
+        module = cls(family, rank, None, size, height_bytes)
         stepsize = module.stepsize
 
-        def multiply(ht, w, i):
-            ht += (1 if w(i + 1) < w(i + 2) else -1)
-            return ht, w * Permutation.s_i(i + 1)
+        def multiply(ht, w, j):
+            i = j % n
+            if coxeter_class == Permutation:
+                s = coxeter_class.s_i(i + 1)
+            else:
+                s = coxeter_class.s_i(i, w.rank)
+            ws = w * s if i == j else s * w
+            ht = ws.length()
+            return ht, ws
 
         def printer(word):
-            ht, v = 0, Permutation()
+            ht, v = 0, coxeter_class.identity(n)
             for i in word:
                 ht, v = multiply(ht, v, i)
             return ht, v
 
-        minima = [(0, Permutation())]
-        module.frame = cls.create(n, size, stepsize, height_bytes, minima, multiply)
+        minima = [(0, coxeter_class.identity(n))]
+        module.frame = cls.create(rank, size, stepsize, height_bytes, minima, multiply)
         module.printer = printer
         return module
+
+    @classmethod
+    def create_hecke_a(cls, n):
+        assert n >= 0
+        size = math.factorial(n + 1)
+        return cls.create_hecke_classical(cls.HECKE_A, n, size, 1, Permutation)
+
+    @classmethod
+    def create_hecke_bc(cls, n):
+        assert n >= 2
+        size = math.factorial(n) * 2**n
+        return cls.create_hecke_classical(cls.HECKE_BC, n, size, 1, SignedPermutation)
+
+    @classmethod
+    def create_hecke_d(cls, n):
+        assert n >= 2
+        size = math.factorial(n) * 2**(n - 1)
+        return cls.create_hecke_classical(cls.HECKE_D, n, size, 1, EvenSignedPermutation)
+
+    @classmethod
+    def create_two_sided_hecke_a(cls, n):
+        assert n >= 0
+        size = math.factorial(n + 1)
+        return cls.create_hecke_classical(cls.TWO_SIDED_HECKE_A, n, size, 1, Permutation)
+
+    @classmethod
+    def create_two_sided_hecke_bc(cls, n):
+        assert n >= 2
+        size = math.factorial(n) * 2**n
+        return cls.create_hecke_classical(cls.TWO_SIDED_HECKE_BC, n, size, 1, SignedPermutation)
+
+    @classmethod
+    def create_two_sided_hecke_d(cls, n):
+        assert n >= 2
+        size = math.factorial(n) * 2**(n - 1)
+        return cls.create_hecke_classical(cls.TWO_SIDED_HECKE_D, n, size, 1, EvenSignedPermutation)
 
     @classmethod
     def create_gelfand_a(cls, n, k, plus=True):
@@ -933,6 +980,7 @@ class QPModule:
 
     @classmethod
     def create_gelfand_bc(cls, n, k, plus=True):
+        assert n >= 2
         assert 0 <= 2 * k <= n
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
@@ -971,7 +1019,6 @@ class QPModule:
     @classmethod
     def create_gelfand_d(cls, n, k, plus=True):
         assert n >= 2
-        assert n % 2 != 0
         assert 0 <= 2 * k <= n
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
@@ -1010,7 +1057,7 @@ class QPModule:
 
         w = SignedPermutation(*(
             [1 + i + (-1)**i for i in range(2 * k)] +
-            [i for i in range(2 * k + 1, n + 1)]
+            [i for i in range(2 * k + 1, (n + 1) if n % 2 != 0 else (n + 2))]
         ))
 
         def printer(word):
@@ -1063,7 +1110,6 @@ class QPModule:
     @classmethod
     def slow_create_gelfand_d(cls, n, k, plus=True):
         assert n >= 2
-        assert n % 2 != 0
         assert 0 <= 2 * k <= n
 
         m = 2 * n - 2 * k

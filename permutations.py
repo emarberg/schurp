@@ -15,6 +15,9 @@ SYMPLECTIC_HECKE_ATOMS_CACHE = {}
 
 class Permutation:
 
+    def identity(self, n=None):
+        return Permutation()
+
     def star(self, n):
         return Permutation(*[n + 1 - self(i) for i in range(n, 0, -1)])
 
