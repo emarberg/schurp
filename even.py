@@ -429,6 +429,14 @@ class EvenSignedPermutation(SignedMixin):
             self._ldes = self.inverse().right_descent_set
         return self._ldes
 
+    def half_signs(self):
+        k = len([i for i in range(1, self.rank + 1) if -i != self(i) < 0])
+        assert k % 2 == 0
+        return k // 2
+
+    def length(self):
+        return len(self)
+
     def __len__(self):
         if self._len is None:
             self._len = 0

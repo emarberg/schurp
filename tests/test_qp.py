@@ -1,4 +1,4 @@
-from qp import QPWGraph, QPModule
+from qp import QPWGraph, QPModule, gelfand_d_printer
 import polynomials
 from signed import SignedPermutation
 import random
@@ -62,15 +62,7 @@ def test_create():
     assert set(m.weak_descents(0)) == set()
     assert set(m.weak_ascents(0)) == {0}
 
-    m = QPModule.create_gelfand_a(1, 1, False)
-    assert set(m.weak_descents(0)) == set()
-    assert set(m.weak_ascents(0)) == {0}
-
     m = QPModule.create_gelfand_a(1, 1)
-    assert set(m.weak_descents(0)) == {0}
-    assert set(m.weak_ascents(0)) == set()
-
-    m = QPModule.create_gelfand_a(1, 0, False)
     assert set(m.weak_descents(0)) == {0}
     assert set(m.weak_ascents(0)) == set()
 
@@ -268,20 +260,23 @@ def test_hecke_gelfand_d(nin=4):
 
 
 def test_formula_gelfand_d(nin=5):
+    def truncated(n, k, e):
+        return gelfand_d_printer(n, k // 2)(m.reduced_word(e))[1]
+
     for n in range(3, nin + 1, 2):
         for k in range(0, n + 1, 2):
-            m = QPModule.create_gelfand_d(n, k // 2, plus=False)
+            m = QPModule.create_gelfand_d(n, k // 2)
             for e in m:
-                v = m.permutation(e)
-                a = (-1)**v.dkappa()
+                v = truncated(n, k, e)
+                a = (-1)**v.half_signs()
                 for i in range(n):
                     f = m.operate(e, i)
-                    w = m.permutation(f)
+                    w = truncated(n, k, f)
                     s = SignedPermutation.ds_i(i if i > 0 else -1, n)
                     if i > 0 and abs(v(i)) != i and abs(v(i + 1)) != i + 1:
                         if abs(v(i)) == i + 1 and abs(v(i + 1)) == i:
                             assert e == f
-                            assert i in m.weak_ascents(e)
+                            assert i in m.weak_descents(e)
                         elif v(i) < v(i + 1):
                             assert m.length(e) < m.length(f)
                         elif v(i) > v(i + 1):
@@ -301,14 +296,14 @@ def test_formula_gelfand_d(nin=5):
                             assert m.length(e) > m.length(f)
                         else:
                             assert e == f
-                            assert i in m.weak_descents(e)
+                            assert i in m.weak_ascents(e)
                         assert w == s * v * s
 
                     if i == 0 and abs(v(1)) != 1 and abs(v(2)) != 2:
                         # print(m.height(e), ':', v, '*', i, '->', w, ':', m.height(f))
                         if abs(v(1)) == 2 and abs(v(2)) == 1:
                             assert e == f
-                            assert i in m.weak_ascents(e)
+                            assert i in m.weak_descents(e)
                         elif (v(1) < 0 and v(2) < 0) or 0 < v(2) < -v(1) or 0 < v(1) < -v(2):
                             assert m.length(e) > m.length(f)
                         else:
@@ -329,5 +324,5 @@ def test_formula_gelfand_d(nin=5):
                             assert m.length(e) > m.length(f)
                         else:
                             assert e == f
-                            assert i in m.weak_descents(e)
+                            assert i in m.weak_ascents(e)
                         assert w == s * v * t
