@@ -27,6 +27,11 @@ class Tableau:
     def __iter__(self):
         return self.mapping.__iter__()
 
+    def restrict(self, n):
+        n = MarkedNumber(n) if type(n) == int else n
+        assert type(n) == MarkedNumber
+        return Tableau({k: v for k, v in self.mapping.items() if v <= n})
+
     def durfee(self):
         i = 0
         while (i + 1, i + 1) in self.mapping:

@@ -5,7 +5,7 @@ from utils import rsk
 import random
 
 
-def test_hecke_cells_a(n=3):
+def test_hecke_cells_a(n=4):
     m = QPModule.create_hecke_a(n)
     w = QPWGraph(m)
     w.compute_wgraph()
@@ -19,18 +19,23 @@ def test_hecke_cells_a(n=3):
         assert len(r) == 1
 
 
-def test_gelfand_cells_a(n=3, sgn=True):
+def test_gelfand_cells_a(n=4):
     cells = []
-    for k in [n + 1]:#range(0, n + 2, 2):
+    for k in range(0, n + 2, 2):
         m = QPModule.create_gelfand_a(n, k // 2)
-        w = QPWGraph(m, sgn=sgn)
+        w = QPWGraph(m, sgn=False)
         w.compute_wgraph()
         cells += w.cells
 
+    seen = set()
     for c in cells:
+        r = {rsk(w)[1].restrict(n + 1).partition() for w in c}
         print(c)
-        print({rsk(w)[1] for w in c})
+        print({rsk(w)[1].restrict(n + 1) for w in c})
         print()
+        assert len(r) == 1
+        assert not r.issubset(seen)
+        seen |= r
 
 
 
