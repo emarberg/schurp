@@ -1,12 +1,42 @@
 from qp import QPWGraph, QPModule, gelfand_d_printer
 import polynomials
 from signed import SignedPermutation
+from utils import rsk
 import random
+
+
+def test_hecke_cells_a(n=3):
+    m = QPModule.create_hecke_a(n)
+    w = QPWGraph(m)
+    w.compute_wgraph()
+    cells = w.cells
+    w.print_wgraph()
+    for c in cells:
+        r = {rsk(w)[0] for w in c}
+        print(c)
+        print(r)
+        print()
+        assert len(r) == 1
+
+
+def test_gelfand_cells_a(n=3, sgn=True):
+    cells = []
+    for k in [n + 1]:#range(0, n + 2, 2):
+        m = QPModule.create_gelfand_a(n, k // 2)
+        w = QPWGraph(m, sgn=sgn)
+        w.compute_wgraph()
+        cells += w.cells
+
+    for c in cells:
+        print(c)
+        print({rsk(w)[1] for w in c})
+        print()
+
 
 
 def test_qpwgraph(n=6, k=3):
     m = QPModule.create_gelfand_a(n, k)
-    w = QPWGraph(m)
+    w = QPWGraph(m, False)
     w.frame = bytearray(w.size)
 
     random.seed(12345)
@@ -28,17 +58,20 @@ def test_qpwgraph(n=6, k=3):
 def test_qpwgraph_cbasis(n=3):
     m = QPModule.create_hecke_a(n)
     w = QPWGraph(m)
-    w.compute()
-    for i in m:
-        for j in m:
+    w.compute_cbasis()
+    for j in m:
+        for i in m:
             f = w.get_cbasis_polynomial(i, j)
+            if f:
+                print(m.permutation(i), m.permutation(j), f, w.get_cbasis_leading(i, j), m.height(j) - m.height(i))
             assert f.is_zero() or f.is_positive()
+        print()
 
 
 def test_qpwgraph_speed(n=4):
     m = QPModule.create_hecke_a(n)
     w1 = QPWGraph(m)
-    w1.compute()
+    w1.compute_cbasis()
     w2 = QPWGraph(m)
     w2._slowcompute()
     assert w1.frame == w2.frame
@@ -96,23 +129,13 @@ def test_slow_gelfand_d(nin=6):
             assert m == slow
 
 
-def _test_wgraph(m, check=False):
-    w = QPWGraph(m, sgn=True)
+def _test_wgraph(m, sgn=None):
+    w = QPWGraph(m, sgn=sgn)
     w.write()
-    w.compute(verbose=True)
+    w.compute_cbasis(verbose=True)
     w.write()
-    read = QPWGraph.read(m.get_directory(), sgn=True)
+    read = QPWGraph.read(m.get_directory(), sgn=sgn)
     assert w == read
-
-    v = QPWGraph(m, sgn=False)
-    v.write()
-    v.compute(verbose=True)
-    v.write()
-    read = QPWGraph.read(m.get_directory(), sgn=False)
-    assert v == read
-
-    if check:
-        assert v.frame == w.frame
 
 
 
@@ -121,19 +144,19 @@ def test_io_two_sided_hecke(n=3):
     m.write()
     read = QPModule.read(m.get_directory())
     assert m == read
-    _test_wgraph(m, True)
+    _test_wgraph(m)
 
     m = QPModule.create_two_sided_hecke_bc(n)
     m.write()
     read = QPModule.read(m.get_directory())
     assert m == read
-    _test_wgraph(m, True)
+    _test_wgraph(m)
 
     m = QPModule.create_two_sided_hecke_d(n)
     m.write()
     read = QPModule.read(m.get_directory())
     assert m == read
-    _test_wgraph(m, True)
+    _test_wgraph(m)
 
 
 def test_io_hecke(n=3):
@@ -141,19 +164,19 @@ def test_io_hecke(n=3):
     m.write()
     read = QPModule.read(m.get_directory())
     assert m == read
-    _test_wgraph(m, True)
+    _test_wgraph(m)
 
     m = QPModule.create_hecke_bc(n)
     m.write()
     read = QPModule.read(m.get_directory())
     assert m == read
-    _test_wgraph(m, True)
+    _test_wgraph(m)
 
     m = QPModule.create_hecke_d(n)
     m.write()
     read = QPModule.read(m.get_directory())
     assert m == read
-    _test_wgraph(m, True)
+    _test_wgraph(m)
 
 
 def test_io_a(n=3):
@@ -162,7 +185,8 @@ def test_io_a(n=3):
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
-        _test_wgraph(m)
+        _test_wgraph(m, True)
+        _test_wgraph(m, False)
 
 
 def test_io_bcd(n=3):
@@ -171,13 +195,15 @@ def test_io_bcd(n=3):
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
-        _test_wgraph(m)
+        _test_wgraph(m, True)
+        _test_wgraph(m, False)
     for k in range(0, n + 1, 2):
         m = QPModule.create_gelfand_d(n, k // 2)
         m.write()
         read = QPModule.read(m.get_directory())
         assert m == read
-        _test_wgraph(m)
+        _test_wgraph(m, True)
+        _test_wgraph(m, False)
 
 
 def test_gelfand_a(nin=5):

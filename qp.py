@@ -8,21 +8,118 @@ import json
 import math
 import time
 from pathlib import Path
+import subprocess
 
 
 class QPWGraph:
 
-    def __init__(self, qpmodule, sgn=False, nbytes=8, setup=True):
+    def __init__(self, qpmodule, sgn=None, nbytes=8, setup=True):
         self.qpmodule = qpmodule
         self.sgn = sgn
         self.nbytes = nbytes
         self.frame = None
-        self.is_computed = False
+        self.is_cbasis_computed = False
+        self.is_wgraph_computed = False
+
+        assert sgn is not None or qpmodule.layer is None
+
+        self.wgraph = None
+        self.cells = None
 
         if setup:
             self.setup()
         else:
             self.is_setup = False
+
+    def compute_wgraph(self):
+        if not self.is_cbasis_computed:
+            self.compute_cbasis()
+        assert not self.is_wgraph_computed
+
+        self.wgraph = []
+        for x in self.qpmodule:
+            asc_x = self.weak_ascents[x] | self.strict_ascents[x]
+            for y in self.qpmodule:
+                asc_y = self.weak_ascents[y] | self.strict_ascents[y]
+                if (asc_x | asc_y) != asc_y:
+                    mu = self.get_cbasis_leading(x, y) + self.get_cbasis_leading(y, x)
+                    if mu != 0:
+                        self.wgraph.append((x, y, mu))
+        self.wgraph.sort()
+
+        self._wgraph_edges = {}
+        for x, y, _ in self.wgraph:
+            self._wgraph_edges[x] = self._wgraph_edges.get(x, []) + [y]
+
+        self._compute_cells()
+        self.is_wgraph_computed = True
+
+    def print_wgraph(self):
+        if not self.is_wgraph_computed:
+            self.compute_wgraph()
+
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [fontname="courier"];']
+
+        for x in self.qpmodule:
+            s += ['    "%s";' % str(self._permutation(x))]
+
+        s += ['    "%s" -> "%s";' % (str(self._permutation(x)), str(self._permutation(y))) for (x, y, _) in self.wgraph]
+        s += ['}']
+        s = '\n'.join(s)
+
+        directory = self.qpmodule.get_directory()
+        Path(directory).mkdir(parents=True, exist_ok=True)
+
+        dotfile = directory + ('wgraph.dot' if self.sgn is None else 'wgraph.unsigned.dot' if self.sgn else 'wgraph.signed.dot')
+        with open(dotfile, 'w') as f:
+            f.write(s)
+
+        pngfile = directory + ('wgraph.png' if self.sgn is None else 'wgraph.unsigned.png' if self.sgn else 'wgraph.signed.png')
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+
+    def _compute_cells(self):
+        self.cells = []
+
+        edges = {}
+        for x, y, _ in self.wgraph:
+            edges[x] = edges.get(x, []) + [y]
+
+        def strong_connect(v, stack, visited, lowlinks, onstack, index):
+            visited[v] = index
+            lowlink[v] = index
+            index += 1
+            stack.append(v)
+            onstack[v] = True
+            for w in edges.get(v, []):
+                if visited[w] is None:
+                    stack, visited, lowlinks, onstack, index = strong_connect(w, stack, visited, lowlink, onstack, index)
+                    lowlink[v] = min(lowlink[v], lowlink[w])
+                elif onstack[w]:
+                    lowlink[v] = min(lowlink[v], visited[w])
+            if lowlink[v] == visited[v]:
+                cell = set()
+                while True:
+                    w = stack.pop()
+                    cell.add(self._permutation(w))
+                    onstack[w] = False
+                    if w == v:
+                        break
+                self.cells.append(cell)
+            return stack, visited, lowlinks, onstack, index
+
+        visited = [None for _ in self.qpmodule]
+        lowlink = [None for _ in self.qpmodule]
+        onstack = [False for _ in self.qpmodule]
+        index = 0
+        stack = []
+
+        for v in self.qpmodule:
+            if visited[v] is None:
+                stack, visited, lowlinks, onstack, index = strong_connect(v, stack, visited, lowlink, onstack, index)
 
     def setup(self, verbose=True):
         t0 = time.time()
@@ -160,17 +257,19 @@ class QPWGraph:
             self.odd_intervals == other.odd_intervals and \
             self.odd_invleft == other.odd_invleft and \
             self.odd_invright == other.odd_invright and \
-            self.is_computed == other.is_computed and \
+            self.is_cbasis_computed == other.is_cbasis_computed and \
             self.frame == other.frame
 
     def get_filename(self):
-        return self.qpmodule.get_directory() + '.'.join([
-            'wgraph',
-            'signed' if self.sgn else 'unsigned',
-        ])
+        if self.sgn is None:
+            return self.qpmodule.get_directory() + 'wgraph'
+        elif self.sgn:
+            return self.qpmodule.get_directory() + 'wgraph.signed'
+        else:
+            return self.qpmodule.get_directory() + 'wgraph.unsigned'
 
     @classmethod
-    def read(cls, directory, sgn=False, nbytes=8):
+    def read(cls, directory, sgn=None, nbytes=8):
         qpmodule = QPModule.read(directory)
         wgraph = QPWGraph(qpmodule, sgn, nbytes, setup=False)
         wgraph._read()
@@ -192,7 +291,7 @@ class QPWGraph:
         self.sbytes = dictionary['sbytes']
         self.gbytes = dictionary['gbytes']
         self.is_setup = dictionary['is_setup']
-        self.is_computed = dictionary['is_computed']
+        self.is_cbasis_computed = dictionary['is_cbasis_computed']
 
         if self.is_setup:
             aux = self.qpmodule.get_directory() + 'aux/'
@@ -216,7 +315,7 @@ class QPWGraph:
                 self.odd_invleft.append(self._read_bytes(aux + 'odd_invleft.%s.b' % i))
                 self.odd_invright.append(self._read_bytes(aux + 'odd_invright.%s.b' % i))
 
-        if self.is_computed:
+        if self.is_cbasis_computed:
             bytefile = self.get_filename() + '.cbasis.b'
             with open(bytefile, 'rb') as file:
                 self.frame = bytearray(file.read())
@@ -259,7 +358,7 @@ class QPWGraph:
             self._write_bytes(aux + 'odd_invleft.%s.b' % i, self.odd_invleft[i])
             self._write_bytes(aux + 'odd_invright.%s.b' % i, self.odd_invright[i])
 
-        if not self.is_computed:
+        if not self.is_cbasis_computed:
             return
 
         self._write_bytes(filename + '.cbasis.b', self.frame)
@@ -278,7 +377,7 @@ class QPWGraph:
             'sbytes': self.sbytes,
             'gbytes': self.gbytes,
             'is_setup': self.is_setup,
-            'is_computed': self.is_computed,
+            'is_cbasis_computed': self.is_cbasis_computed,
         }
 
     def _weak_ascents(self, i):
@@ -370,6 +469,9 @@ class QPWGraph:
         start = n * self.sbytes
         return self._int(self.odd_invright[s][start:start + self.sbytes])
 
+    def _permutation(self, n):
+        return self.qpmodule.permutation(n)
+
     def _height(self, n):
         return self.qpmodule.height(n)
 
@@ -403,6 +505,8 @@ class QPWGraph:
 
     def get_cbasis_leading(self, i, j):
         if self._height(i) >= self._height(j):
+            return 0
+        if (self._height(j) - self._height(i)) % 2 == 0:
             return 0
         start, space = self.address_cbasis(i, j)
         stop = start + space
@@ -478,7 +582,7 @@ class QPWGraph:
 
     def _slowcompute(self, verbose=False):
         assert self.is_setup
-        assert not self.is_computed
+        assert not self.is_cbasis_computed
 
         t0 = time.time()
         self.frame = bytearray(self.size)
@@ -530,11 +634,11 @@ class QPWGraph:
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
         print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
-        self.is_computed = True
+        self.is_cbasis_computed = True
 
-    def compute(self, verbose=False):
+    def compute_cbasis(self, verbose=False):
         assert self.is_setup
-        assert not self.is_computed
+        assert not self.is_cbasis_computed
 
         t0 = time.time()
         self.frame = bytearray(self.size)
@@ -578,7 +682,7 @@ class QPWGraph:
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
         print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
-        self.is_computed = True
+        self.is_cbasis_computed = True
 
 
 class QPModuleElement:
@@ -637,6 +741,7 @@ class QPModule:
         self.height_bytes = height_bytes
         self.frame = frame
         self.printer = printer
+        self.permutation_cache = {}
 
     def expand(self, n):
         if self.printer:
@@ -1024,42 +1129,45 @@ class QPModule:
             raise Exception
 
     def permutation(self, n):
-        w = self.generator(self.family, self.rank, self.layer)
-        for i in self.reduced_word(n):
+        if n not in self.permutation_cache:
+            w = self.generator(self.family, self.rank, self.layer)
+            for i in self.reduced_word(n):
+                if self.family == self.HECKE_A:
+                    w *= Permutation.s_i(i + 1)
+                elif self.family == self.HECKE_BC:
+                    w *= SignedPermutation.s_i(i, w.rank)
+                elif self.family == self.HECKE_D:
+                    w *= EvenSignedPermutation.s_i(i, w.rank)
+                elif self.family == self.TWO_SIDED_HECKE_A:
+                    m = self.rank // 2
+                    s = Permutation.s_i((i % m) + 1)
+                    w = w * s if i % m == i else s * w
+                elif self.family == self.TWO_SIDED_HECKE_BC:
+                    m = self.rank // 2
+                    s = SignedPermutation.s_i(i % m, w.rank)
+                    w = w * s if i % m == i else s * w
+                elif self.family == self.TWO_SIDED_HECKE_D:
+                    m = self.rank // 2
+                    s = EvenSignedPermutation.s_i(i % m, w.rank)
+                    w = w * s if i % m == i else s * w
+                elif self.family == self.GELFAND_A:
+                    s = Permutation.s_i(i + 1)
+                    w = s * w * s
+                elif self.family == self.GELFAND_BC:
+                    s = SignedPermutation.s_i(i, w.rank)
+                    w = s * w * s
+                elif self.family == self.GELFAND_D:
+                    s = EvenSignedPermutation.s_i(i, w.rank)
+                    w = s * w * s
+                else:
+                    raise Exception
             if self.family == self.HECKE_A:
-                w *= Permutation.s_i(i + 1)
-            elif self.family == self.HECKE_BC:
-                w *= SignedPermutation.s_i(i, w.rank)
-            elif self.family == self.HECKE_D:
-                w *= EvenSignedPermutation.s_i(i, w.rank)
+                self.permutation_cache[n] = tuple(w(i) for i in range(1, self.rank + 2))
             elif self.family == self.TWO_SIDED_HECKE_A:
-                m = self.rank // 2
-                s = Permutation.s_i((i % m) + 1)
-                w = w * s if i % m == i else s * w
-            elif self.family == self.TWO_SIDED_HECKE_BC:
-                m = self.rank // 2
-                s = SignedPermutation.s_i(i % m, w.rank)
-                w = w * s if i % m == i else s * w
-            elif self.family == self.TWO_SIDED_HECKE_A:
-                m = self.rank // 2
-                s = EvenSignedPermutation.s_i(i % m, w.rank)
-                w = w * s if i % m == i else s * w
-            elif self.family == self.HECKE_BC:
-                w *= SignedPermutation.s_i(i, w.rank)
-            elif self.family == self.HECKE_D:
-                w *= EvenSignedPermutation.s_i(i, w.rank)
-            if self.family == self.GELFAND_A:
-                s = Permutation.s_i(i + 1)
-                w = s * w * s
-            elif self.family == self.GELFAND_BC:
-                s = SignedPermutation.s_i(i, w.rank)
-                w = s * w * s
-            elif self.family == self.GELFAND_D:
-                s = EvenSignedPermutation.s_i(i, w.rank)
-                w = s * w * s
+                self.permutation_cache[n] = tuple(w(i) for i in range(1, self.rank // 2 + 2))
             else:
-                raise Exception
-        return w
+                self.permutation_cache[n] = tuple(w.oneline)
+        return self.permutation_cache[n]
 
     @classmethod
     def slow_create_gelfand_a(cls, n, k):
