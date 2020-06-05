@@ -992,7 +992,7 @@ class QPModule:
 
     @classmethod
     def generator(cls, family, n, k=None):
-        if family == cls.HECKE_A or family == cls.TWO_SIDED_HECKE_A
+        if family == cls.HECKE_A or family == cls.TWO_SIDED_HECKE_A:
             return Permutation()
         elif family == cls.HECKE_BC:
             return SignedPermutation.identity(n)
@@ -1020,6 +1020,8 @@ class QPModule:
                 [n + 1 + i for i in range(n - 2 * k)] +
                 [2 * k + 1 + i for i in range(n - 2 * k)]
             ))
+        else:
+            raise Exception
 
     def permutation(self, n):
         w = self.generator(self.family, self.rank, self.layer)
@@ -1055,6 +1057,8 @@ class QPModule:
             elif self.family == self.GELFAND_D:
                 s = EvenSignedPermutation.s_i(i, w.rank)
                 w = s * w * s
+            else:
+                raise Exception
         return w
 
     @classmethod
