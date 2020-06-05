@@ -879,7 +879,7 @@ class QPModule:
         return self.directory(self.family, self.rank, self.layer)
 
     @classmethod
-    def directory(cls, family, rank, layer):
+    def directory(cls, family, rank, layer=None):
         file = cls.DIRECTORY + family + str(rank)
         if layer is not None:
             file += '_BLOCK' + str(layer)
@@ -904,6 +904,30 @@ class QPModule:
         metafile = directory + 'module.meta'
         with open(metafile, 'w') as file:
             file.write(json.dumps(self.metadata()))
+
+    @classmethod
+    def read_two_sided_hecke_a(cls, n):
+        return cls.read(cls.directory(cls.TWO_SIDED_HECKE_A, 2 * n))
+
+    @classmethod
+    def read_two_sided_hecke_bc(cls, n):
+        return cls.read(cls.directory(cls.TWO_SIDED_HECKE_BC, 2 * n))
+
+    @classmethod
+    def read_two_sided_hecke_d(cls, n):
+        return cls.read(cls.directory(cls.TWO_SIDED_HECKE_D, 2 * n))
+
+    @classmethod
+    def read_hecke_a(cls, n):
+        return cls.read(cls.directory(cls.HECKE_A, n))
+
+    @classmethod
+    def read_hecke_bc(cls, n):
+        return cls.read(cls.directory(cls.HECKE_BC, n))
+
+    @classmethod
+    def read_hecke_d(cls, n):
+        return cls.read(cls.directory(cls.HECKE_D, n))
 
     @classmethod
     def read_gelfand_a(cls, n, k):

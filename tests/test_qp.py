@@ -5,38 +5,90 @@ from utils import rsk
 import random
 
 
-def test_hecke_cells_a(n=4):
-    m = QPModule.create_hecke_a(n)
-    w = QPWGraph(m)
-    w.compute_wgraph()
-    cells = w.cells
-    w.print_wgraph()
-    for c in cells:
-        r = {rsk(w)[0] for w in c}
-        print(c)
-        print(r)
-        print()
-        assert len(r) == 1
-
-
-def test_gelfand_cells_a(n=4):
-    cells = []
-    for k in range(0, n + 2, 2):
-        m = QPModule.create_gelfand_a(n, k // 2)
-        w = QPWGraph(m, sgn=False)
+def test_hecke_cells_a(nn=4):
+    for n in range(nn + 1):
+        m = QPModule.create_hecke_a(n)
+        w = QPWGraph(m)
         w.compute_wgraph()
-        cells += w.cells
+        cells = w.cells
+        w.print_wgraph()
+        for c in cells:
+            r = {rsk(w)[0] for w in c}
+            print(c)
+            print(r)
+            print()
+            assert len(r) == 1
 
-    seen = set()
-    for c in cells:
-        r = {rsk(w)[1].restrict(n + 1).partition() for w in c}
-        print(c)
-        print({rsk(w)[1].restrict(n + 1) for w in c})
-        print()
-        assert len(r) == 1
-        assert not r.issubset(seen)
-        seen |= r
 
+def test_two_sided_cells_a(nn=4):
+    for n in range(nn + 1):
+        m = QPModule.create_two_sided_hecke_a(n)
+        w = QPWGraph(m)
+        w.compute_wgraph()
+        cells = w.cells
+        w.print_wgraph()
+
+        seen = set()
+        for c in cells:
+            r = {rsk(w)[0].partition() for w in c}
+            print(c)
+            print(r)
+            print()
+            assert len(r) == 1
+            assert not r.issubset(seen)
+            seen |= r
+
+
+def test_gelfand_cells_a(nn=4):
+    for n in range(nn + 1):
+        cells = []
+        for k in [n + 1]: #range(0, n + 2, 2):
+            m = QPModule.read_gelfand_a(n, k // 2)
+            w = QPWGraph.read(m.get_directory(), sgn=False)
+            w.compute_wgraph()
+            cells += w.cells
+        print(n, len(cells))
+        seen = set()
+        for c in cells:
+            r = {rsk(w)[1].restrict(n + 1).partition() for w in c}
+            # print(c)
+            # print({rsk(w)[1].restrict(n + 1) for w in c})
+            # print()
+            assert len(r) == 1
+            assert not r.issubset(seen)
+            seen |= r
+
+
+def test_gelfand_signed_a(nn=4):
+    for n in range(nn + 1):
+        cells = []
+        for k in [n + 1]: #range(0, n + 2, 2):
+            m = QPModule.read_gelfand_a(n, k // 2)
+            w = QPWGraph.read(m.get_directory(), sgn=True)
+            w.compute_wgraph()
+            cells += w.cells
+        print(n, len(cells))
+
+
+def test_gelfand_cells_bc(nn=4):
+    for n in range(2, nn + 1):
+        cells = []
+        for k in range(0, n + 1, 2):
+            m = QPModule.read_gelfand_bc(n, k // 2)
+            w = QPWGraph.read(m.get_directory(), sgn=False)
+            w.compute_wgraph()
+            cells += w.cells
+        print(n, len(cells))
+
+
+def test_two_sided_cells_bc(nn=4):
+    for n in range(2, nn + 1):
+        m = QPModule.read_two_sided_hecke_bc(n)
+        w = QPWGraph.read(m.get_directory())
+        w.compute_wgraph()
+        cells = w.cells
+        w.print_wgraph()
+        print(n, len(cells))
 
 
 def test_qpwgraph(n=6, k=3):
