@@ -773,7 +773,7 @@ class SignedPermutation(SignedMixin):
     def dstar(self):
         return SignedPermutation(*[-self(i) if abs(self(i)) == i > 2 else self(i) for i in range(1, self.rank + 1)])
 
-    def dkappa(self):
+    def half_signs(self):
         k = len([i for i in range(1, self.rank + 1) if -i != self(i) < 0])
         assert k % 2 == 0
         return k // 2

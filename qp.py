@@ -645,9 +645,6 @@ class QPModule:
             word = self.reduced_word(n)
             return len(word), word
 
-    def permutation(self, n):
-        return self.expand(n)[1]
-
     def length(self, n):
         return self.height(n)
 
@@ -948,7 +945,7 @@ class QPModule:
         return cls.create_hecke_classical(cls.TWO_SIDED_HECKE_D, n, size, 1, EvenSignedPermutation)
 
     @classmethod
-    def create_gelfand_a(cls, n, k, plus=True):
+    def create_gelfand_a(cls, n, k):
         assert 0 <= 2 * k <= n + 1
 
         size = math.factorial(n + 1) // math.factorial(k) // 2**k // math.factorial(n + 1 - 2 * k)
@@ -956,31 +953,13 @@ class QPModule:
         module = cls(cls.GELFAND_A, n, k, size, height_bytes)
         stepsize = module.stepsize
 
-        def conjugate(ht, w, i):
-            i += 1
-            if w(i) == i and w(i + 1) == i + 1:
-                return ht, (w, plus)
-            if w(i) == i + 1 and w(i + 1) == i:
-                return ht, (w, not plus)
-            s = Permutation.s_i(i)
-            return ht + 1, s * w * s
-
-        w = Permutation(*[1 + i + (-1)**i for i in range(2 * k)])
-
-        def printer(word):
-            ht, v = 0, w
-            for i in word:
-                ht, v = conjugate(ht, v, i)
-            return ht, v
-
-        minima = [(0, w)]
-        module.frame = cls.create(n, size, stepsize, height_bytes, minima, conjugate)
-        module.printer = printer
+        minima = [(0, gelfand_a_start(n, k))]
+        module.frame = cls.create(n, size, stepsize, height_bytes, minima, gelfand_a_conjugate)
+        module.printer = gelfand_a_printer(n, k)
         return module
 
     @classmethod
-    def create_gelfand_bc(cls, n, k, plus=True):
-        assert n >= 2
+    def create_gelfand_bc(cls, n, k):
         assert 0 <= 2 * k <= n
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
@@ -988,36 +967,13 @@ class QPModule:
         module = cls(cls.GELFAND_BC, n, k, size, height_bytes)
         stepsize = module.stepsize
 
-        def conjugate(ht, w, i):
-            s = SignedPermutation.s_i(i, w.rank)
-            if i == 0 and w(1) in [-1, 1]:
-                return ht + 1, w * s
-            if i > 0 and abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
-                return ht, (w, not plus)
-            if i > 0 and w(i) == i and w(i + 1) == i + 1:
-                return ht, (w, plus)
-            if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
-                return ht, (w, plus)
-            return ht + 1, s * w * s
-
-        w = SignedPermutation(*(
-            [1 + i + (-1)**i for i in range(2 * k)] +
-            [i for i in range(2 * k + 1, n + 1)]
-        ))
-
-        def printer(word):
-            ht, v = 0, w
-            for i in word:
-                ht, v = conjugate(ht, v, i)
-            return ht, v
-
-        minima = [(0, w)]
-        module.frame = cls.create(n, size, stepsize, height_bytes, minima, conjugate)
-        module.printer = printer
+        minima = [(0, gelfand_bc_start(n, k))]
+        module.frame = cls.create(n, size, stepsize, height_bytes, minima, gelfand_bc_conjugate)
+        module.printer = gelfand_bc_printer(n, k)
         return module
 
     @classmethod
-    def create_gelfand_d(cls, n, k, plus=True):
+    def create_gelfand_d(cls, n, k):
         assert n >= 2
         assert 0 <= 2 * k <= n
 
@@ -1029,97 +985,115 @@ class QPModule:
         module = cls(cls.GELFAND_D, n, k, size, height_bytes)
         stepsize = module.stepsize
 
-        def conjugate(ht, w, i):
-            if i == 0:
-                s = SignedPermutation.ds_i(-1, w.rank)
-                t = SignedPermutation.ds_i(1, w.rank)
-                if abs(w(1)) != 1 and abs(w(2)) != 2:
-                    if w * s == s * w:
-                        return ht, (w, not plus)
-                    return ht + 1, s * w * s
-                if (w(1) == 1 and w(2) == 2) or (w(1) == -1 and w(2) == -2):
-                    return ht + 1, s * w * t
-                if (w(1) == 1 and w(2) == -2) or (w(1) == -1 and w(2) == 2):
-                    return ht, (w, plus)
-                if (abs(w(1)) == 1 and abs(w(2)) != 2) or (abs(w(1)) != 1 and abs(w(2)) == 2):
-                    return ht + 1, (s * w * s).dstar()
-                raise Exception
-
-            if abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
-                return ht, (w, not plus)
-            if w(i) == i and w(i + 1) == i + 1:
-                return ht, (w, plus)
-            if w(i) == -i and w(i + 1) == -i - 1:
-                return ht, (w, plus)
-
-            s = SignedPermutation.ds_i(i, w.rank)
-            return ht + 1, s * w * s
-
-        w = SignedPermutation(*(
-            [1 + i + (-1)**i for i in range(2 * k)] +
-            [i for i in range(2 * k + 1, (n + 1) if n % 2 != 0 else (n + 2))]
-        ))
-
-        def printer(word):
-            ht, v = 0, w
-            for i in word:
-                ht, v = conjugate(ht, v, i)
-            return ht, v
-
-        minima = [(0, w)]
-        module.frame = cls.create(n, size, stepsize, height_bytes, minima, conjugate)
-        module.printer = printer
+        minima = [(0, gelfand_d_start(n, k))]
+        module.frame = cls.create(n, size, stepsize, height_bytes, minima, gelfand_d_conjugate)
+        module.printer = gelfand_d_printer(n, k)
         return module
 
     @classmethod
-    def slow_create_gelfand_a(cls, n, k, plus=True):
+    def generator(cls, family, n, k=None):
+        if family == cls.HECKE_A or family == cls.TWO_SIDED_HECKE_A
+            return Permutation()
+        elif family == cls.HECKE_BC:
+            return SignedPermutation.identity(n)
+        elif family == cls.HECKE_D:
+            return EvenSignedPermutation.identity(n)
+        elif family == cls.TWO_SIDED_HECKE_BC:
+            return SignedPermutation.identity(n // 2)
+        elif family == cls.TWO_SIDED_HECKE_D:
+            return EvenSignedPermutation.identity(n // 2)
+        elif family == cls.GELFAND_A:
+            return Permutation(*(
+                [1 + i + (-1)**i for i in range(2 * k)] +
+                [n + 2 + i for i in range(n + 1 - 2 * k)] +
+                [2 * k + 1 + i for i in range(n + 1 - 2 * k)]
+            ))
+        elif family == cls.GELFAND_BC:
+            return SignedPermutation(*(
+                [1 + i + (-1)**i for i in range(2 * k)] +
+                [n + 1 + i for i in range(n - 2 * k)] +
+                [2 * k + 1 + i for i in range(n - 2 * k)]
+            ))
+        elif family == cls.GELFAND_D:
+            return EvenSignedPermutation(*(
+                [1 + i + (-1)**i for i in range(2 * k)] +
+                [n + 1 + i for i in range(n - 2 * k)] +
+                [2 * k + 1 + i for i in range(n - 2 * k)]
+            ))
+
+    def permutation(self, n):
+        w = self.generator(self.family, self.rank, self.layer)
+        for i in self.reduced_word(n):
+            if self.family == self.HECKE_A:
+                w *= Permutation.s_i(i + 1)
+            elif self.family == self.HECKE_BC:
+                w *= SignedPermutation.s_i(i, w.rank)
+            elif self.family == self.HECKE_D:
+                w *= EvenSignedPermutation.s_i(i, w.rank)
+            elif self.family == self.TWO_SIDED_HECKE_A:
+                m = self.rank // 2
+                s = Permutation.s_i((i % m) + 1)
+                w = w * s if i % m == i else s * w
+            elif self.family == self.TWO_SIDED_HECKE_BC:
+                m = self.rank // 2
+                s = SignedPermutation.s_i(i % m, w.rank)
+                w = w * s if i % m == i else s * w
+            elif self.family == self.TWO_SIDED_HECKE_A:
+                m = self.rank // 2
+                s = EvenSignedPermutation.s_i(i % m, w.rank)
+                w = w * s if i % m == i else s * w
+            elif self.family == self.HECKE_BC:
+                w *= SignedPermutation.s_i(i, w.rank)
+            elif self.family == self.HECKE_D:
+                w *= EvenSignedPermutation.s_i(i, w.rank)
+            if self.family == self.GELFAND_A:
+                s = Permutation.s_i(i + 1)
+                w = s * w * s
+            elif self.family == self.GELFAND_BC:
+                s = SignedPermutation.s_i(i, w.rank)
+                w = s * w * s
+            elif self.family == self.GELFAND_D:
+                s = EvenSignedPermutation.s_i(i, w.rank)
+                w = s * w * s
+        return w
+
+    @classmethod
+    def slow_create_gelfand_a(cls, n, k):
         assert 0 <= 2 * k <= n + 1
 
         m = 2 * n + 2 - 2 * k
         a = [Permutation.s_i(i) for i in range(n + 2, m)]
         s = {i: Permutation.s_i(i + 1) for i in range(n + 1)}
-        w = Permutation(*(
-            [1 + i + (-1)**i for i in range(2 * k)] +
-            [n + 2 + i for i in range(n + 1 - 2 * k)] +
-            [2 * k + 1 + i for i in range(n + 1 - 2 * k)]
-        ))
+        w = cls.generator(cls.GELFAND_A, n, k)
 
         size = math.factorial(n + 1) // math.factorial(k) // 2**k // math.factorial(n + 1 - 2 * k)
         height_bytes = 1
         module = cls(cls.GELFAND_A, n, k, size, height_bytes)
-        return cls.create_gelfand_classical(plus, module, a, s, w)
+        return cls.create_gelfand_classical(module, a, s, w)
 
     @classmethod
-    def slow_create_gelfand_bc(cls, n, k, plus=True):
+    def slow_create_gelfand_bc(cls, n, k):
         assert 0 <= 2 * k <= n
 
         m = 2 * n - 2 * k
         a = [SignedPermutation.s_i(i, m) for i in range(n + 1, m)]
         s = {i: SignedPermutation.s_i(i, m) for i in range(n)}
-        w = SignedPermutation(*(
-            [1 + i + (-1)**i for i in range(2 * k)] +
-            [n + 1 + i for i in range(n - 2 * k)] +
-            [2 * k + 1 + i for i in range(n - 2 * k)]
-        ))
+        w = cls.generator(cls.GELFAND_BC, n, k)
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
         height_bytes = 1
         module = cls(cls.GELFAND_BC, n, k, size, height_bytes)
-        return cls.create_gelfand_classical(plus, module, a, s, w)
+        return cls.create_gelfand_classical(module, a, s, w)
 
     @classmethod
-    def slow_create_gelfand_d(cls, n, k, plus=True):
+    def slow_create_gelfand_d(cls, n, k):
         assert n >= 2
         assert 0 <= 2 * k <= n
 
         m = 2 * n - 2 * k
         a = [EvenSignedPermutation.s_i(i, m) for i in range(n + 1, m)]
         s = {i: EvenSignedPermutation.s_i(i, m) for i in range(n)}
-        w = EvenSignedPermutation(*(
-            [1 + i + (-1)**i for i in range(2 * k)] +
-            [n + 1 + i for i in range(n - 2 * k)] +
-            [2 * k + 1 + i for i in range(n - 2 * k)]
-        ))
+        w = cls.generator(cls.GELFAND_D, n, k)
 
         size = math.factorial(n) * 2**(n - 2 * k) // math.factorial(k) // math.factorial(n - 2 * k)
         assert size % 2 == 0
@@ -1127,17 +1101,16 @@ class QPModule:
 
         height_bytes = 1
         module = cls(cls.GELFAND_D, n, k, size, height_bytes)
-        return cls.create_gelfand_classical(plus, module, a, s, w)
+        return cls.create_gelfand_classical(module, a, s, w)
 
     @classmethod
-    def create_gelfand_classical(cls, plus, module, a, s, w):
-
+    def create_gelfand_classical(cls, module, a, s, w):
         def conjugate(ht, u, i):
             if u * s[i] * u in a:
-                return ht, (u, plus)
+                return ht, (u, True)
             v = s[i] * u * s[i]
             if v == u:
-                return ht, (u, not plus)
+                return ht, (u, False)
             return ht + 1, v
 
         def printer(word):
@@ -1157,3 +1130,107 @@ class QPModule:
         )
         module.printer = printer
         return module
+
+
+def gelfand_a_conjugate(ht, w, i):
+    i += 1
+    if w(i) == i and w(i + 1) == i + 1:
+        return ht, (w, True)
+    if w(i) == i + 1 and w(i + 1) == i:
+        return ht, (w, False)
+    s = Permutation.s_i(i)
+    return ht + 1, s * w * s
+
+
+def gelfand_a_start(n, k):
+    return Permutation(*[1 + i + (-1)**i for i in range(2 * k)])
+
+
+def gelfand_a_printer(n, k):
+    w = gelfand_a_start(n, k)
+
+    def printer(word):
+        ht, v = 0, w
+        for i in word:
+            ht, v = gelfand_a_conjugate(ht, v, i)
+        return ht, v
+
+    return printer
+
+
+def gelfand_bc_conjugate(ht, w, i):
+    s = SignedPermutation.s_i(i, w.rank)
+    if i == 0 and w(1) in [-1, 1]:
+        return ht + 1, w * s
+    if i > 0 and abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
+        return ht, (w, False)
+    if i > 0 and w(i) == i and w(i + 1) == i + 1:
+        return ht, (w, True)
+    if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
+        return ht, (w, True)
+    return ht + 1, s * w * s
+
+
+def gelfand_bc_start(n, k):
+    return SignedPermutation(*(
+        [1 + i + (-1)**i for i in range(2 * k)] +
+        [i for i in range(2 * k + 1, n + 1)]
+    ))
+
+
+def gelfand_bc_printer(n, k):
+    w = gelfand_bc_start(n, k)
+
+    def printer(word):
+        ht, v = 0, w
+        for i in word:
+            ht, v = gelfand_bc_conjugate(ht, v, i)
+        return ht, v
+
+    return printer
+
+
+def gelfand_d_conjugate(ht, w, i):
+    if i == 0:
+        s = SignedPermutation.ds_i(-1, w.rank)
+        t = SignedPermutation.ds_i(1, w.rank)
+        if abs(w(1)) != 1 and abs(w(2)) != 2:
+            if w * s == s * w:
+                return ht, (w, False)
+            return ht + 1, s * w * s
+        if (w(1) == 1 and w(2) == 2) or (w(1) == -1 and w(2) == -2):
+            return ht + 1, s * w * t
+        if (w(1) == 1 and w(2) == -2) or (w(1) == -1 and w(2) == 2):
+            return ht, (w, True)
+        if (abs(w(1)) == 1 and abs(w(2)) != 2) or (abs(w(1)) != 1 and abs(w(2)) == 2):
+            return ht + 1, (s * w * s).dstar()
+        raise Exception
+
+    if abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
+        return ht, (w, False)
+    if w(i) == i and w(i + 1) == i + 1:
+        return ht, (w, True)
+    if w(i) == -i and w(i + 1) == -i - 1:
+        return ht, (w, True)
+
+    s = SignedPermutation.ds_i(i, w.rank)
+    return ht + 1, s * w * s
+
+
+def gelfand_d_start(n, k):
+    return SignedPermutation(*(
+        [1 + i + (-1)**i for i in range(2 * k)] +
+        [i for i in range(2 * k + 1, n + 1)]
+    ))
+
+
+def gelfand_d_printer(n, k):
+    w = gelfand_d_start(n, k)
+
+    def printer(word):
+        ht, v = 0, w
+        for i in word:
+            ht, v = gelfand_d_conjugate(ht, v, i)
+        return ht, v
+
+    return printer
