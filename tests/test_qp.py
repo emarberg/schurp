@@ -1,7 +1,8 @@
 from qp import QPWGraph, QPModule, gelfand_d_printer
 import polynomials
+from permutations import Permutation
 from signed import SignedPermutation
-from utils import rsk
+from utils import rsk, gelfand_rsk
 import random
 
 
@@ -58,10 +59,7 @@ def test_gelfand_cells_a(nn=4):
         print(n, len(cells))
         seen = set()
         for c in cells:
-            r = {rsk(w)[1].restrict(n + 1).partition() for w in c}
-            # print(c)
-            # print({rsk(w)[1].restrict(n + 1) for w in c})
-            # print()
+            r = {gelfand_rsk(w, sgn=False).restrict(n + 1).partition() for w in c}
             assert len(r) == 1
             assert not r.issubset(seen)
             seen |= r
@@ -82,8 +80,16 @@ def test_gelfand_signed_a(nn=4):
                 w.write()
             w.compute_wgraph()
             w.print_wgraph()
-            cells += w.cells
+            g = Permutation.longest_element(n + 1 - 2 * (k // 2)).shift(n + 1)
+            cells += [{tuple((g * Permutation(*x) * g).oneline) for x in c} for c in w.cells]
+            # cells += [{tuple(i + 1 if a > n + 1 else a for i, a in enumerate(x[:n + 1])) for x in c} for c in w.cells]
         print(n, len(cells))
+        seen = set()
+        for c in cells:
+            r = {gelfand_rsk(w, sgn=True).restrict(n + 1).partition() for w in c}
+            assert len(r) == 1
+            assert not r.issubset(seen)
+            seen |= r
 
 
 def test_gelfand_cells_bc(nn=4, sgn=False):

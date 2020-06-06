@@ -192,6 +192,9 @@ class Tableau:
     def entries(self):
         return self.mapping.values()
 
+    def get(self, i, j):
+        return self.entry(i, j)
+
     def entry(self, i, j):
         return self.mapping.get((i, j), None)
 
@@ -733,6 +736,7 @@ class Tableau:
         return cls.inverse_rsk(p, q) + (a.number,)
 
     def rsk_insert(self, p, j=0):
+        p = MarkedNumber(p) if type(p) == int else p
         if p is None:
             return (j, self)
 
