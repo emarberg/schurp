@@ -24,7 +24,9 @@ class QPWGraph:
         assert sgn is not None or qpmodule.layer is None
 
         self.wgraph = None
+        self.molecule = None
         self.cells = None
+        self.molecules = None
 
         if setup:
             self.setup()
@@ -51,7 +53,15 @@ class QPWGraph:
         for x, y, _ in self.wgraph:
             self._wgraph_edges[x] = self._wgraph_edges.get(x, []) + [y]
 
-        self._compute_cells()
+        edges = {}
+        for x, y, _ in self.wgraph:
+            edges[x] = edges.get(x, []) + [y]
+
+        self.cells = self._compute_cells(edges)
+
+        edges = {x: [y for y in edges[x] if x in edges.get(y, [])] for x in edges}
+
+        self.molecules = self._compute_cells(edges)
         self.is_wgraph_computed = True
 
     def print_wgraph(self):
@@ -81,12 +91,8 @@ class QPWGraph:
         pngfile = directory + ('wgraph.png' if self.sgn is None else 'wgraph.unsigned.png' if self.sgn else 'wgraph.signed.png')
         subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
-    def _compute_cells(self):
-        self.cells = []
-
-        edges = {}
-        for x, y, _ in self.wgraph:
-            edges[x] = edges.get(x, []) + [y]
+    def _compute_cells(self, edges):
+        cells = []
 
         def strong_connect(v, stack, visited, lowlinks, onstack, index):
             visited[v] = index
@@ -108,7 +114,7 @@ class QPWGraph:
                     onstack[w] = False
                     if w == v:
                         break
-                self.cells.append(cell)
+                cells.append(cell)
             return stack, visited, lowlinks, onstack, index
 
         visited = [None for _ in self.qpmodule]
@@ -120,6 +126,8 @@ class QPWGraph:
         for v in self.qpmodule:
             if visited[v] is None:
                 stack, visited, lowlinks, onstack, index = strong_connect(v, stack, visited, lowlink, onstack, index)
+
+        return cells
 
     def setup(self, verbose=True):
         t0 = time.time()
@@ -579,7 +587,7 @@ class QPWGraph:
         for x in range(a, b):
             yield self._int(interval[x * self.sbytes:(x + 1) * self.sbytes])
 
-    def _slowcompute(self, verbose=False):
+    def _slowcompute(self, verbose=True):
         assert self.is_setup
         assert not self.is_cbasis_computed
 
@@ -921,15 +929,15 @@ class QPModule:
         return cls.read(cls.directory(cls.TWO_SIDED_HECKE_D, 2 * n))
 
     @classmethod
-    def read_hecke_a(cls, n):
+    def read_hecke_a(cls, n, layer=None):
         return cls.read(cls.directory(cls.HECKE_A, n))
 
     @classmethod
-    def read_hecke_bc(cls, n):
+    def read_hecke_bc(cls, n, layer=None):
         return cls.read(cls.directory(cls.HECKE_BC, n))
 
     @classmethod
-    def read_hecke_d(cls, n):
+    def read_hecke_d(cls, n, layer=None):
         return cls.read(cls.directory(cls.HECKE_D, n))
 
     @classmethod
@@ -1041,19 +1049,19 @@ class QPModule:
         return module
 
     @classmethod
-    def create_hecke_a(cls, n):
+    def create_hecke_a(cls, n, layer=None):
         assert n >= 0
         size = math.factorial(n + 1)
         return cls.create_hecke_classical(cls.HECKE_A, n, size, 1, Permutation)
 
     @classmethod
-    def create_hecke_bc(cls, n):
+    def create_hecke_bc(cls, n, layer=None):
         assert n >= 2
         size = math.factorial(n) * 2**n
         return cls.create_hecke_classical(cls.HECKE_BC, n, size, 1, SignedPermutation)
 
     @classmethod
-    def create_hecke_d(cls, n):
+    def create_hecke_d(cls, n, layer=None):
         assert n >= 2
         size = math.factorial(n) * 2**(n - 1)
         return cls.create_hecke_classical(cls.HECKE_D, n, size, 1, EvenSignedPermutation)

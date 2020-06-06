@@ -8,10 +8,10 @@ import random
 
 def test_hecke_cells_a(nn=3):
     for n in range(nn + 1):
-        m = QPModule.create_hecke_a(n)
-        w = QPWGraph(m)
+        w = read_or_create(n, None, None, QPModule.read_hecke_a, QPModule.create_hecke_a)
         w.compute_wgraph()
         cells = w.cells
+        molecules = w.molecules
         w.print_wgraph()
         for c in cells:
             r = {rsk(w)[0] for w in c}
@@ -19,6 +19,27 @@ def test_hecke_cells_a(nn=3):
             print(r)
             print()
             assert len(r) == 1
+        assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
+
+
+def test_hecke_cells_bc(nn=3):
+    for n in range(2, nn + 1):
+        w = read_or_create(n, None, None, QPModule.read_hecke_bc, QPModule.create_hecke_bc)
+        w.compute_wgraph()
+        cells = w.cells
+        molecules = w.molecules
+        w.print_wgraph()
+        assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
+
+
+def test_hecke_cells_d(nn=3):
+    for n in range(2, nn + 1):
+        w = read_or_create(n, None, None, QPModule.read_hecke_d, QPModule.create_hecke_d)
+        w.compute_wgraph()
+        cells = w.cells
+        molecules = w.molecules
+        w.print_wgraph()
+        assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
 def test_two_sided_cells_a(nn=3):
@@ -28,7 +49,7 @@ def test_two_sided_cells_a(nn=3):
         w.compute_wgraph()
         cells = w.cells
         w.print_wgraph()
-
+        molecules = w.molecules
         seen = set()
         for c in cells:
             r = {rsk(w)[0].partition() for w in c}
@@ -38,24 +59,35 @@ def test_two_sided_cells_a(nn=3):
             assert len(r) == 1
             assert not r.issubset(seen)
             seen |= r
+        assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
+
+
+def read_or_create(rank, layer, sgn, read, create):
+    try:
+        m = read(rank, layer)
+        w = QPWGraph.read(m.get_directory(), sgn=sgn)
+        if not w.is_cbasis_computed:
+            w.compute_cbasis()
+            w.write()
+    except FileNotFoundError:
+        m = create(rank, layer)
+        w = QPWGraph(m, sgn=sgn)
+        w.compute_cbasis()
+        m.write()
+        w.write()
+    return w
 
 
 def test_gelfand_cells_a(nn=4):
     for n in range(nn + 1):
         cells = []
+        molecules = []
         for k in range(0, n + 2, 2):
-            try:
-                m = QPModule.read_gelfand_a(n, k // 2)
-                w = QPWGraph.read(m.get_directory(), sgn=False)
-            except FileNotFoundError:
-                m = QPModule.create_gelfand_a(n, k // 2)
-                w = QPWGraph(m, sgn=False)
-                w.compute_cbasis()
-                m.write()
-                w.write()
+            w = read_or_create(n, k // 2, False, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
             w.compute_wgraph()
             w.print_wgraph()
             cells += w.cells
+            molecules += w.molecules
         print(n, len(cells))
         seen = set()
         for c in cells:
@@ -63,24 +95,19 @@ def test_gelfand_cells_a(nn=4):
             assert len(r) == 1
             assert not r.issubset(seen)
             seen |= r
+        assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
 def test_gelfand_signed_a(nn=4):
     for n in range(nn + 1):
         cells = []
+        molecules = []
         for k in range(0, n + 2, 2):
-            try:
-                m = QPModule.read_gelfand_a(n, k // 2)
-                w = QPWGraph.read(m.get_directory(), sgn=True)
-            except FileNotFoundError:
-                m = QPModule.create_gelfand_a(n, k // 2)
-                w = QPWGraph(m, sgn=True)
-                w.compute_cbasis()
-                m.write()
-                w.write()
+            w = read_or_create(n, k // 2, True, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
             w.compute_wgraph()
             w.print_wgraph()
             cells += w.cells
+            molecules += w.molecules
         print(n, len(cells))
         seen = set()
         for c in cells:
@@ -88,25 +115,45 @@ def test_gelfand_signed_a(nn=4):
             assert len(r) == 1
             assert not r.issubset(seen)
             seen |= r
+        assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
-def test_gelfand_cells_bc(nn=4, sgn=False):
-    for n in range(2, nn + 1):
-        cells = []
-        for k in range(0, n + 1, 2):
-            try:
-                m = QPModule.read_gelfand_bc(n, k // 2)
-                w = QPWGraph.read(m.get_directory(), sgn)
-            except FileNotFoundError:
-                m = QPModule.create_gelfand_bc(n, k // 2)
-                w = QPWGraph(m, sgn)
-                w.compute_cbasis()
-                m.write()
-                w.write()
-            w.compute_wgraph()
-            w.print_wgraph()
-            cells += w.cells
-        print(n, len(cells))
+def test_gelfand_cells_bc(nn=4):
+    for sgn in [False, True]:
+        for n in range(2, nn + 1):
+            cells = []
+            molecules = []
+            for k in range(0, n + 1, 2):
+                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
+                w.compute_wgraph()
+                w.print_wgraph()
+                print(n, k, len(w.cells))
+                cells += w.cells
+                molecules += w.molecules
+            print(sgn, n, len(cells))
+            # for c in cells:
+            #     print(c)
+            #     print()
+            assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
+
+
+def test_gelfand_cells_d(nn=4):
+    for sgn in [False, True]:
+        for n in range(2, nn + 1):
+            cells = []
+            molecules = []
+            for k in range(0, n + 1, 2):
+                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
+                w.compute_wgraph()
+                w.print_wgraph()
+                print(n, k, sum([len(c) for c in w.cells]))
+                cells += w.cells
+                molecules += w.molecules
+            print(sgn, n, len(cells))
+            for c in cells:
+                print(c)
+                print()
+            assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
 def test_two_sided_cells_bc(nn=3):
