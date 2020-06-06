@@ -260,26 +260,24 @@ class QPWGraph:
             self.is_cbasis_computed == other.is_cbasis_computed and \
             self.frame == other.frame
 
-    def get_filename(self):
-        if self.sgn is None:
-            return self.qpmodule.get_directory() + 'wgraph'
-        elif self.sgn:
-            return self.qpmodule.get_directory() + 'wgraph.signed'
+    def get_directory(self):
+        if not self.sgn:
+            return self.qpmodule.get_directory() + 'unsigned/'
         else:
-            return self.qpmodule.get_directory() + 'wgraph.unsigned'
+            return self.qpmodule.get_directory() + 'signed/'
 
     @classmethod
     def read(cls, directory, sgn=None, nbytes=8):
         qpmodule = QPModule.read(directory)
+        directory += 'unsigned/' if not sgn else 'signed/'
         wgraph = QPWGraph(qpmodule, sgn, nbytes, setup=False)
         wgraph._read()
         return wgraph
 
     def _read(self):
-        metafile = self.get_filename() + '.meta'
+        metafile = self.get_directory() + 'wgraph.meta'
         with open(metafile, 'r') as file:
             dictionary = json.loads(file.read())
-
         assert self.sgn == dictionary['sgn']
         assert self.nbytes == dictionary['nbytes']
         self.heights = dictionary['heights']
@@ -294,7 +292,7 @@ class QPWGraph:
         self.is_cbasis_computed = dictionary['is_cbasis_computed']
 
         if self.is_setup:
-            aux = self.qpmodule.get_directory() + 'aux/'
+            aux = self.get_directory() + 'aux/'
             self.suboffsets = self._read_bytes(aux + 'suboffsets.b')
             self.addresses = self._read_bytes(aux + 'addresses.b')
             self.weak_ascents = self._read_bytes(aux + 'weak_ascents.b')
@@ -316,7 +314,7 @@ class QPWGraph:
                 self.odd_invright.append(self._read_bytes(aux + 'odd_invright.%s.b' % i))
 
         if self.is_cbasis_computed:
-            bytefile = self.get_filename() + '.cbasis.b'
+            bytefile = self.get_directory() + 'wgraph.cbasis.b'
             with open(bytefile, 'rb') as file:
                 self.frame = bytearray(file.read())
 
@@ -332,16 +330,17 @@ class QPWGraph:
 
     def write(self):
         self.qpmodule.write()
-        filename = self.get_filename()
+        directory = self.get_directory()
+        Path(directory).mkdir(parents=True, exist_ok=True)
 
-        metafile = filename + '.meta'
+        metafile = directory + 'wgraph.meta'
         with open(metafile, 'w') as file:
             file.write(json.dumps(self.metadata()))
 
         if not self.is_setup:
             return
 
-        aux = self.qpmodule.get_directory() + 'aux/'
+        aux = directory + 'aux/'
         Path(aux).mkdir(parents=True, exist_ok=True)
 
         self._write_bytes(aux + 'suboffsets.b', self.suboffsets)
@@ -361,7 +360,7 @@ class QPWGraph:
         if not self.is_cbasis_computed:
             return
 
-        self._write_bytes(filename + '.cbasis.b', self.frame)
+        self._write_bytes(directory + 'wgraph.cbasis.b', self.frame)
 
     def metadata(self):
         assert self.is_setup
@@ -587,7 +586,8 @@ class QPWGraph:
         t0 = time.time()
         self.frame = bytearray(self.size)
 
-        print('Computing canonical basis:')
+        if verbose:
+            print('Computing canonical basis:')
         progress = 0
 
         for j in self.qpmodule:
@@ -633,17 +633,19 @@ class QPWGraph:
                     mu = self.get_cbasis_leading(x, sj)
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
-        print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+        if verbose:
+            print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
         self.is_cbasis_computed = True
 
-    def compute_cbasis(self, verbose=False):
+    def compute_cbasis(self, verbose=True):
         assert self.is_setup
         assert not self.is_cbasis_computed
 
         t0 = time.time()
         self.frame = bytearray(self.size)
 
-        print('Computing canonical basis:')
+        if verbose:
+            print('Computing canonical basis:')
         progress = 0
 
         start = 0
@@ -681,7 +683,8 @@ class QPWGraph:
                     mu = self.get_cbasis_leading(x, sj)
                     self._safe_add(start, self.get_cbasis(i, x), (hj - hx) // 2, -mu)
 
-        print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+        if verbose:
+            print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
         self.is_cbasis_computed = True
 
 
