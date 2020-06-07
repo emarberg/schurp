@@ -33,10 +33,15 @@ class QPWGraph:
         else:
             self.is_setup = False
 
-    def compute_wgraph(self):
+    def compute_wgraph(self, verbose=True):
         if not self.is_cbasis_computed:
             self.compute_cbasis()
         assert not self.is_wgraph_computed
+
+        t0 = time.time()
+        if verbose:
+            print()
+            print('Computing canonical basis:')
 
         self.wgraph = []
         for x in self.qpmodule:
@@ -49,19 +54,27 @@ class QPWGraph:
                         self.wgraph.append((x, y, mu))
         self.wgraph.sort()
 
-        self._wgraph_edges = {}
-        for x, y, _ in self.wgraph:
-            self._wgraph_edges[x] = self._wgraph_edges.get(x, []) + [y]
-
         edges = {}
         for x, y, _ in self.wgraph:
             edges[x] = edges.get(x, []) + [y]
 
+        if verbose:
+            print('* calculated edges (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+            t0 = time.time()
+
         self.cells = self._compute_cells(edges)
+
+        if verbose:
+            print('* calculated cells (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+            t0 = time.time()
 
         edges = {x: [y for y in edges[x] if x in edges.get(y, [])] for x in edges}
 
         self.molecules = self._compute_cells(edges)
+
+        if verbose:
+            print('* calculated molecules (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+            print()
         self.is_wgraph_computed = True
 
     def print_wgraph(self):
