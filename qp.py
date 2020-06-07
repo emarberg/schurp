@@ -21,29 +21,112 @@ class QPWGraph:
         self.is_cbasis_computed = False
         self.is_wgraph_computed = False
 
-        assert sgn is not None or qpmodule.layer is None
-
+        self.wbytes = None
         self.wgraph = None
-        self.molecule = None
-        self.cells = None
-        self.molecules = None
+        self.wgraph_addresses = None
+
+        assert sgn is not None or qpmodule.layer is None
 
         if setup:
             self.setup()
         else:
             self.is_setup = False
 
+    def get_wgraph_edges(self, w, include_label=False):
+        assert self.is_wgraph_computed
+        start = self._int(self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes])
+        stop = self._int(self.wgraph_addresses[(w + 1) * self.wbytes:(w + 2) * self.wbytes])
+        for i in range(start, stop, self.sbytes + self.nbytes):
+            y = self._int(self.wgraph[i:i + self.sbytes])
+            if include_label:
+                mu = self._int(self.wgraph[i + self.sbytes:i + self.sbytes + self.nbytes], signed=True)
+                yield (y, mu)
+            else:
+                yield y
+
+    def get_simple_edges(self, w):
+        assert self.is_wgraph_computed
+        for y in self.get_wgraph_edges(w):
+            if w in set(self.get_wgraph_edges(y)):
+                yield y
+
     def compute_wgraph(self, verbose=True):
         if not self.is_cbasis_computed:
             self.compute_cbasis()
-        assert not self.is_wgraph_computed
 
         t0 = time.time()
         if verbose:
             print()
-            print('Computing canonical basis:')
+            print('Computing W-graph, cells, and molecules:')
 
-        self.wgraph = []
+        if not self.is_wgraph_computed:
+            count = 0
+            for w in self.qpmodule:
+                asc_w = self.weak_ascents[w] | self.strict_ascents[w]
+                for y in range(w):
+                    asc_y = self.weak_ascents[y] | self.strict_ascents[y]
+                    if (asc_w | asc_y) != asc_y:
+                        count += int(self.get_cbasis_leading(y, w) != 0)
+                count += len({
+                    self.qpmodule.operate(w, s)
+                    for s in self.qpmodule.strict_ascents(w)
+                })
+
+            if verbose:
+                print('* calculated size %s of edge set (%s seconds)' % (str(count), str(int(1000 * (time.time() - t0)) / 1000.0)))
+                t0 = time.time()
+
+            self.wbytes = self._bytes(count * (self.sbytes + self.nbytes))
+            self.wgraph_addresses = bytearray((self.qpmodule.size + 1) * self.wbytes)
+            self.wgraph = bytearray(count * (self.sbytes + self.nbytes))
+
+            def add_edge(start, y, mu):
+                if mu != 0:
+                    self.wgraph[start:start + self.sbytes] = y.to_bytes(self.sbytes, byteorder='big', signed=False)
+                    start += self.sbytes
+                    self.wgraph[start:start + self.nbytes] = mu.to_bytes(self.nbytes, byteorder='big', signed=True)
+                    start += self.nbytes
+                return start
+
+            start = 0
+            for w in self.qpmodule:
+                self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes] = start.to_bytes(self.wbytes, byteorder='big', signed=False)
+                asc_w = self.weak_ascents[w] | self.strict_ascents[w]
+                for y in range(w):
+                    asc_y = self.weak_ascents[y] | self.strict_ascents[y]
+                    if (asc_w | asc_y) != asc_y:
+                        mu = self.get_cbasis_leading(y, w)
+                        start = add_edge(start, y, mu)
+                for y in sorted({
+                    self.qpmodule.operate(w, s)
+                    for s in self.qpmodule.strict_ascents(w)
+                }):
+                    start = add_edge(start, y, 1)
+            w = self.qpmodule.size
+            self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes] = start.to_bytes(self.wbytes, byteorder='big', signed=False)
+
+            if verbose:
+                print('* wrote edges (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+                t0 = time.time()
+
+        self.is_wgraph_computed = True
+        self.cells = self._compute_cells(self.get_wgraph_edges)
+
+        if verbose:
+            print('* calculated cells (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+            t0 = time.time()
+
+        self.molecules = self._compute_cells(self.get_simple_edges)
+
+        if verbose:
+            print('* calculated molecules (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+            print()
+
+    def slow_compute_wgraph(self):
+        if not self.is_cbasis_computed:
+            self.compute_cbasis()
+
+        wgraph = []
         for x in self.qpmodule:
             asc_x = self.weak_ascents[x] | self.strict_ascents[x]
             for y in self.qpmodule:
@@ -51,31 +134,14 @@ class QPWGraph:
                 if (asc_x | asc_y) != asc_y:
                     mu = self.get_cbasis_leading(x, y) + self.get_cbasis_leading(y, x)
                     if mu != 0:
-                        self.wgraph.append((x, y, mu))
-        self.wgraph.sort()
+                        wgraph.append((x, y, mu))
+        wgraph.sort()
 
         edges = {}
-        for x, y, _ in self.wgraph:
-            edges[x] = edges.get(x, []) + [y]
+        for x, y, mu in wgraph:
+            edges[x] = edges.get(x, []) + [(y, mu)]
 
-        if verbose:
-            print('* calculated edges (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
-            t0 = time.time()
-
-        self.cells = self._compute_cells(edges)
-
-        if verbose:
-            print('* calculated cells (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
-            t0 = time.time()
-
-        edges = {x: [y for y in edges[x] if x in edges.get(y, [])] for x in edges}
-
-        self.molecules = self._compute_cells(edges)
-
-        if verbose:
-            print('* calculated molecules (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
-            print()
-        self.is_wgraph_computed = True
+        return edges
 
     def print_wgraph(self):
         if not self.is_wgraph_computed:
@@ -88,9 +154,9 @@ class QPWGraph:
         s += ['    node [fontname="courier"];']
 
         for x in self.qpmodule:
-            s += ['    "%s";' % str(self._permutation(x))]
+            s += ['    "%s";' % str(self.permutation(x))]
 
-        s += ['    "%s" -> "%s";' % (str(self._permutation(x)), str(self._permutation(y))) for (x, y, _) in self.wgraph]
+        s += ['    "%s" -> "%s";' % (str(self.permutation(x)), str(self.permutation(y))) for x in self.qpmodule for y in self.get_wgraph_edges(x)]
         s += ['}']
         s = '\n'.join(s)
 
@@ -104,6 +170,14 @@ class QPWGraph:
         pngfile = directory + ('wgraph.png' if self.sgn is None else 'wgraph.unsigned.png' if self.sgn else 'wgraph.signed.png')
         subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
+    def get_molecules_as_permutations(self):
+        assert self.is_wgraph_computed
+        return [tuple(self.permutation(i) for i in c) for c in self.molecules]
+
+    def get_cells_as_permutations(self):
+        assert self.is_wgraph_computed
+        return [tuple(self.permutation(i) for i in c) for c in self.cells]
+
     def _compute_cells(self, edges):
         cells = []
 
@@ -113,7 +187,7 @@ class QPWGraph:
             index += 1
             stack.append(v)
             onstack[v] = True
-            for w in edges.get(v, []):
+            for w in edges(v):
                 if visited[w] is None:
                     stack, visited, lowlinks, onstack, index = strong_connect(w, stack, visited, lowlink, onstack, index)
                     lowlink[v] = min(lowlink[v], lowlink[w])
@@ -123,7 +197,7 @@ class QPWGraph:
                 cell = set()
                 while True:
                     w = stack.pop()
-                    cell.add(self._permutation(w))
+                    cell.add(w)
                     onstack[w] = False
                     if w == v:
                         break
@@ -279,7 +353,11 @@ class QPWGraph:
             self.odd_invleft == other.odd_invleft and \
             self.odd_invright == other.odd_invright and \
             self.is_cbasis_computed == other.is_cbasis_computed and \
-            self.frame == other.frame
+            self.is_wgraph_computed == other.is_wgraph_computed and \
+            self.frame == other.frame and \
+            self.wgraph == other.wgraph and \
+            self.wgraph_addresses == other.wgraph_addresses and \
+            self.wbytes == other.wbytes
 
     def get_directory(self):
         if not self.sgn:
@@ -309,8 +387,10 @@ class QPWGraph:
         self.abytes = dictionary['abytes']
         self.sbytes = dictionary['sbytes']
         self.gbytes = dictionary['gbytes']
+        self.wbytes = dictionary['wbytes']
         self.is_setup = dictionary['is_setup']
         self.is_cbasis_computed = dictionary['is_cbasis_computed']
+        self.is_wgraph_computed = dictionary['is_wgraph_computed']
 
         if self.is_setup:
             aux = self.get_directory() + 'aux/'
@@ -338,6 +418,18 @@ class QPWGraph:
             bytefile = self.get_directory() + 'wgraph.cbasis.b'
             with open(bytefile, 'rb') as file:
                 self.frame = bytearray(file.read())
+
+        if self.is_wgraph_computed:
+            bytefile = self.get_directory() + 'wgraph.edges.b'
+            with open(bytefile, 'rb') as file:
+                self.wgraph = bytearray(file.read())
+
+            bytefile = self.get_directory() + 'wgraph.addresses.b'
+            with open(bytefile, 'rb') as file:
+                self.wgraph_addresses = bytearray(file.read())
+
+            self.cells = self._compute_cells(self.get_wgraph_edges)
+            self.molecules = self._compute_cells(self.get_simple_edges)
 
     @classmethod
     def _read_bytes(cls, filename):
@@ -383,6 +475,12 @@ class QPWGraph:
 
         self._write_bytes(directory + 'wgraph.cbasis.b', self.frame)
 
+        if not self.is_wgraph_computed:
+            return
+
+        self._write_bytes(directory + 'wgraph.edges.b', self.wgraph)
+        self._write_bytes(directory + 'wgraph.addresses.b', self.wgraph_addresses)
+
     def metadata(self):
         assert self.is_setup
         return {
@@ -396,8 +494,10 @@ class QPWGraph:
             'abytes': self.abytes,
             'sbytes': self.sbytes,
             'gbytes': self.gbytes,
+            'wbytes': self.wbytes,
             'is_setup': self.is_setup,
             'is_cbasis_computed': self.is_cbasis_computed,
+            'is_wgraph_computed': self.is_wgraph_computed,
         }
 
     def _weak_ascents(self, i):
@@ -489,7 +589,7 @@ class QPWGraph:
         start = n * self.sbytes
         return self._int(self.odd_invright[s][start:start + self.sbytes])
 
-    def _permutation(self, n):
+    def permutation(self, n):
         return self.qpmodule.permutation(n)
 
     def _height(self, n):
@@ -930,15 +1030,15 @@ class QPModule:
             file.write(json.dumps(self.metadata()))
 
     @classmethod
-    def read_two_sided_hecke_a(cls, n):
+    def read_two_sided_hecke_a(cls, n, layer=None):
         return cls.read(cls.directory(cls.TWO_SIDED_HECKE_A, 2 * n))
 
     @classmethod
-    def read_two_sided_hecke_bc(cls, n):
+    def read_two_sided_hecke_bc(cls, n, layer=None):
         return cls.read(cls.directory(cls.TWO_SIDED_HECKE_BC, 2 * n))
 
     @classmethod
-    def read_two_sided_hecke_d(cls, n):
+    def read_two_sided_hecke_d(cls, n, layer=None):
         return cls.read(cls.directory(cls.TWO_SIDED_HECKE_D, 2 * n))
 
     @classmethod
@@ -1080,19 +1180,19 @@ class QPModule:
         return cls.create_hecke_classical(cls.HECKE_D, n, size, 1, EvenSignedPermutation)
 
     @classmethod
-    def create_two_sided_hecke_a(cls, n):
+    def create_two_sided_hecke_a(cls, n, layer=None):
         assert n >= 0
         size = math.factorial(n + 1)
         return cls.create_hecke_classical(cls.TWO_SIDED_HECKE_A, n, size, 1, Permutation)
 
     @classmethod
-    def create_two_sided_hecke_bc(cls, n):
+    def create_two_sided_hecke_bc(cls, n, layer=None):
         assert n >= 2
         size = math.factorial(n) * 2**n
         return cls.create_hecke_classical(cls.TWO_SIDED_HECKE_BC, n, size, 1, SignedPermutation)
 
     @classmethod
-    def create_two_sided_hecke_d(cls, n):
+    def create_two_sided_hecke_d(cls, n, layer=None):
         assert n >= 2
         size = math.factorial(n) * 2**(n - 1)
         return cls.create_hecke_classical(cls.TWO_SIDED_HECKE_D, n, size, 1, EvenSignedPermutation)

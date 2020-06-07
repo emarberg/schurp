@@ -1,6 +1,5 @@
 from qp import QPWGraph, QPModule, gelfand_d_printer
 import polynomials
-from permutations import Permutation
 from signed import SignedPermutation
 from utils import rsk, gelfand_rsk
 import random
@@ -22,13 +21,22 @@ def read_or_create(rank, layer, sgn, read, create):
     return w
 
 
+def read_or_compute_wgraph(w, check=False):
+    if not w.is_wgraph_computed:
+        w.compute_wgraph()
+        w.write()
+    if check:
+        edges = w.slow_compute_wgraph()
+        for x in w.qpmodule:
+            assert sorted(w.get_wgraph_edges(x, True)) == sorted(edges.get(x, []))
+
+
 def test_hecke_cells_a(nn=3):
     for n in range(nn + 1):
         w = read_or_create(n, None, None, QPModule.read_hecke_a, QPModule.create_hecke_a)
-        w.compute_wgraph()
-        cells = w.cells
-        molecules = w.molecules
-        w.print_wgraph()
+        read_or_compute_wgraph(w)
+        cells = w.get_cells_as_permutations()
+        molecules = w.get_molecules_as_permutations()
         for c in cells:
             r = {rsk(w)[0] for w in c}
             print(c)
@@ -41,31 +49,27 @@ def test_hecke_cells_a(nn=3):
 def test_hecke_cells_bc(nn=3):
     for n in range(2, nn + 1):
         w = read_or_create(n, None, None, QPModule.read_hecke_bc, QPModule.create_hecke_bc)
-        w.compute_wgraph()
+        read_or_compute_wgraph(w)
         cells = w.cells
         molecules = w.molecules
-        w.print_wgraph()
         assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
 def test_hecke_cells_d(nn=3):
     for n in range(2, nn + 1):
         w = read_or_create(n, None, None, QPModule.read_hecke_d, QPModule.create_hecke_d)
-        w.compute_wgraph()
+        read_or_compute_wgraph(w)
         cells = w.cells
         molecules = w.molecules
-        w.print_wgraph()
         assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
 def test_two_sided_cells_a(nn=3):
     for n in range(nn + 1):
-        m = QPModule.create_two_sided_hecke_a(n)
-        w = QPWGraph(m)
-        w.compute_wgraph()
-        cells = w.cells
-        w.print_wgraph()
-        molecules = w.molecules
+        w = read_or_create(n, None, None, QPModule.read_two_sided_hecke_a, QPModule.create_two_sided_hecke_a)
+        read_or_compute_wgraph(w)
+        cells = w.get_cells_as_permutations()
+        molecules = w.get_molecules_as_permutations()
         seen = set()
         for c in cells:
             r = {rsk(w)[0].partition() for w in c}
@@ -80,33 +84,15 @@ def test_two_sided_cells_a(nn=3):
 
 def test_two_sided_cells_bc(nn=3):
     for n in range(2, nn + 1):
-        try:
-            m = QPModule.read_two_sided_hecke_bc(n)
-            w = QPWGraph.read(m.get_directory())
-        except FileNotFoundError:
-            m = QPModule.create_two_sided_hecke_bc(n)
-            w = QPWGraph(m)
-            w.compute_cbasis()
-            m.write()
-            w.write()
-        w.compute_wgraph()
-        w.print_wgraph()
+        w = read_or_create(n, None, None, QPModule.read_two_sided_hecke_bc, QPModule.create_two_sided_hecke_bc)
+        read_or_compute_wgraph(w)
         print(n, len(w.cells))
 
 
 def test_two_sided_cells_d(nn=3):
     for n in range(2, nn + 1):
-        try:
-            m = QPModule.read_two_sided_hecke_d(n)
-            w = QPWGraph.read(m.get_directory())
-        except FileNotFoundError:
-            m = QPModule.create_two_sided_hecke_d(n)
-            w = QPWGraph(m)
-            w.compute_cbasis()
-            m.write()
-            w.write()
-        w.compute_wgraph()
-        w.print_wgraph()
+        w = read_or_create(n, None, None, QPModule.read_two_sided_hecke_d, QPModule.create_two_sided_hecke_d)
+        read_or_compute_wgraph(w)
         print(n, len(w.cells))
 
 
@@ -117,20 +103,19 @@ def test_gelfand_cells_a(nn=4):
             molecules = []
             for k in range(0, n + 2, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
-                w.compute_wgraph()
-                w.print_wgraph()
-                cells += w.cells
-                molecules += w.molecules
-            print('sgn =', sgn, 'n =', n, '::', len(cells), len(molecules))
+                read_or_compute_wgraph(w)
+                cells += w.get_cells_as_permutations()
+                molecules += w.get_molecules_as_permutations()
+            print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
             print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
             print()
-            # seen = set()
-            # for c in cells:
-            #     r = {gelfand_rsk(w, n + 1, sgn=True).partition() for w in c}
-            #     assert len(r) == 1
-            #     assert not r.issubset(seen)
-            #     seen |= r
-            # assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
+            seen = set()
+            for c in cells:
+                r = {gelfand_rsk(x, n + 1, sgn=sgn).partition() for x in c}
+                assert len(r) == 1
+                assert not r.issubset(seen)
+                seen |= r
+            assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
 def test_gelfand_cells_bc(nn=4):
@@ -140,12 +125,11 @@ def test_gelfand_cells_bc(nn=4):
             molecules = []
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
-                w.compute_wgraph()
-                w.print_wgraph()
+                read_or_compute_wgraph(w)
                 print(n, k, len(w.cells))
                 cells += w.cells
                 molecules += w.molecules
-            print('sgn =', sgn, 'n =', n, len(cells), len(molecules))
+            print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
             # for c in cells:
             #     print(c)
             #     print()
@@ -160,12 +144,11 @@ def test_gelfand_cells_d(nn=4):
             molecules = []
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
-                w.compute_wgraph()
-                w.print_wgraph()
+                read_or_compute_wgraph(w)
                 print(n, k, sum([len(c) for c in w.cells]))
                 cells += w.cells
                 molecules += w.molecules
-            print('sgn =', sgn, 'n =', n, len(cells), len(molecules))
+            print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
             # for c in cells:
             #     print(c)
             #     print()
