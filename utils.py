@@ -24,6 +24,10 @@ def truncate_a(w, n):
     return tuple(i + 1 if a > n else a for i, a in enumerate(w[:n]))
 
 
+def truncate_bc(w, n):
+    return tuple(i + 1 if a > n else -i - 1 if a < -n else a for i, a in enumerate(w[:n]))
+
+
 def gelfand_rsk(w, n, sgn):
     assert all(w[w[i - 1] - 1] == i for i in range(1, len(w) + 1))
 
