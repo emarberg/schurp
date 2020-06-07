@@ -36,10 +36,11 @@ class QPWGraph:
         assert self.is_wgraph_computed
         start = self._int(self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes])
         stop = self._int(self.wgraph_addresses[(w + 1) * self.wbytes:(w + 2) * self.wbytes])
-        for i in range(start, stop, self.sbytes + self.nbytes):
-            y = self._int(self.wgraph[i:i + self.sbytes])
+        for i in range(start, stop):
+            s = i * (self.sbytes + self.nbytes)
+            y = self._int(self.wgraph[s:s + self.sbytes])
             if include_label:
-                mu = self._int(self.wgraph[i + self.sbytes:i + self.sbytes + self.nbytes], signed=True)
+                mu = self._int(self.wgraph[s + self.sbytes:s + self.sbytes + self.nbytes], signed=True)
                 yield (y, mu)
             else:
                 yield y
@@ -62,48 +63,42 @@ class QPWGraph:
         if not self.is_wgraph_computed:
             count = 0
             for w in self.qpmodule:
-                asc_w = self.weak_ascents[w] | self.strict_ascents[w]
+                asc_w = self._weak_ascents(w) | self._strict_ascents(w)
                 for y in range(w):
-                    asc_y = self.weak_ascents[y] | self.strict_ascents[y]
+                    asc_y = self._weak_ascents(y) | self._strict_ascents(y)
                     if (asc_w | asc_y) != asc_y:
                         count += int(self.get_cbasis_leading(y, w) != 0)
-                count += len({
-                    self.qpmodule.operate(w, s)
-                    for s in self.qpmodule.strict_ascents(w)
-                })
+                count += len({self.qpmodule.operate(w, s) for s in self.qpmodule.strict_ascents(w)})
 
             if verbose:
                 print('* calculated size %s of edge set (%s seconds)' % (str(count), str(int(1000 * (time.time() - t0)) / 1000.0)))
                 t0 = time.time()
 
-            self.wbytes = self._bytes(count * (self.sbytes + self.nbytes))
+            self.wbytes = self._bytes(count)
             self.wgraph_addresses = bytearray((self.qpmodule.size + 1) * self.wbytes)
             self.wgraph = bytearray(count * (self.sbytes + self.nbytes))
 
             def add_edge(start, y, mu):
                 if mu != 0:
-                    self.wgraph[start:start + self.sbytes] = y.to_bytes(self.sbytes, byteorder='big', signed=False)
-                    start += self.sbytes
-                    self.wgraph[start:start + self.nbytes] = mu.to_bytes(self.nbytes, byteorder='big', signed=True)
-                    start += self.nbytes
+                    s = start * (self.sbytes + self.nbytes)
+                    self.wgraph[s:s + self.sbytes] = y.to_bytes(self.sbytes, byteorder='big', signed=False)
+                    s += self.sbytes
+                    self.wgraph[s:s + self.nbytes] = mu.to_bytes(self.nbytes, byteorder='big', signed=True)
+                    start += 1
                 return start
 
             start = 0
             for w in self.qpmodule:
                 self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes] = start.to_bytes(self.wbytes, byteorder='big', signed=False)
-                asc_w = self.weak_ascents[w] | self.strict_ascents[w]
+                asc_w = self._weak_ascents(w) | self._strict_ascents(w)
                 for y in range(w):
-                    asc_y = self.weak_ascents[y] | self.strict_ascents[y]
+                    asc_y = self._weak_ascents(y) | self._strict_ascents(y)
                     if (asc_w | asc_y) != asc_y:
                         mu = self.get_cbasis_leading(y, w)
                         start = add_edge(start, y, mu)
-                for y in sorted({
-                    self.qpmodule.operate(w, s)
-                    for s in self.qpmodule.strict_ascents(w)
-                }):
+                for y in sorted({self.qpmodule.operate(w, s) for s in self.qpmodule.strict_ascents(w)}):
                     start = add_edge(start, y, 1)
-            w = self.qpmodule.size
-            self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes] = start.to_bytes(self.wbytes, byteorder='big', signed=False)
+            self.wgraph_addresses[-self.wbytes:] = start.to_bytes(self.wbytes, byteorder='big', signed=False)
 
             if verbose:
                 print('* wrote edges (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
@@ -128,9 +123,9 @@ class QPWGraph:
 
         wgraph = []
         for x in self.qpmodule:
-            asc_x = self.weak_ascents[x] | self.strict_ascents[x]
+            asc_x = self._weak_ascents(x) | self._strict_ascents(x)
             for y in self.qpmodule:
-                asc_y = self.weak_ascents[y] | self.strict_ascents[y]
+                asc_y = self._weak_ascents(y) | self._strict_ascents(y)
                 if (asc_x | asc_y) != asc_y:
                     mu = self.get_cbasis_leading(x, y) + self.get_cbasis_leading(y, x)
                     if mu != 0:
@@ -172,11 +167,11 @@ class QPWGraph:
 
     def get_molecules_as_permutations(self):
         assert self.is_wgraph_computed
-        return [tuple(self.permutation(i) for i in c) for c in self.molecules]
+        return {tuple(self.permutation(i) for i in c) for c in self.molecules}
 
     def get_cells_as_permutations(self):
         assert self.is_wgraph_computed
-        return [tuple(self.permutation(i) for i in c) for c in self.cells]
+        return {tuple(self.permutation(i) for i in c) for c in self.cells}
 
     def _compute_cells(self, edges):
         cells = []
@@ -518,7 +513,12 @@ class QPWGraph:
 
     @classmethod
     def _bytes(cls, n):
-        return max(1, math.ceil(math.log2(max(1, n / 8.0))))
+        assert n >= 0
+        ans = 1
+        n = n // 256
+        while n > 0:
+            ans, n = ans + 1, n // 256
+        return ans
 
     def _compute_intervals(self, parity):
         def is_descent(n, i):
