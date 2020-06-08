@@ -32,6 +32,9 @@ class QPWGraph:
         else:
             self.is_setup = False
 
+    def get_wgraph_size(self):
+        return self._int(self.wgraph_addresses[-self.wbytes:])
+
     def get_wgraph_edges(self, w, include_label=False):
         assert self.is_wgraph_computed
         start = self._int(self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes])
@@ -162,11 +165,11 @@ class QPWGraph:
 
     def get_molecules_as_permutations(self):
         assert self.is_wgraph_computed
-        return {tuple(self.permutation(i) for i in c) for c in self.molecules}
+        return {tuple(sorted(self.permutation(i) for i in c)) for c in self.molecules}
 
     def get_cells_as_permutations(self):
         assert self.is_wgraph_computed
-        return {tuple(self.permutation(i) for i in c) for c in self.cells}
+        return {tuple(sorted(self.permutation(i) for i in c)) for c in self.cells}
 
     def _compute_cells(self, edges):
         cells = []
@@ -584,7 +587,7 @@ class QPWGraph:
         return self._int(self.odd_invright[s][start:start + self.sbytes])
 
     def permutation(self, n):
-        return self.qpmodule.permutation(n)
+        return self.qpmodule.permutation(n, self.sgn)
 
     def _height(self, n):
         return self.qpmodule.height(n)
@@ -1238,7 +1241,7 @@ class QPModule:
         return module
 
     @classmethod
-    def generator(cls, family, n, k=None):
+    def generator(cls, family, n, k=None, sgn=None):
         if family == cls.HECKE_A or family == cls.TWO_SIDED_HECKE_A:
             return Permutation()
         elif family == cls.HECKE_BC:
@@ -1254,25 +1257,34 @@ class QPModule:
                 [1 + i + (-1)**i for i in range(2 * k)] +
                 [n + 2 + i for i in range(n + 1 - 2 * k)] +
                 [2 * k + 1 + i for i in range(n + 1 - 2 * k)]
+            )) if not sgn else Permutation(*(
+                [1 + i + (-1)**i for i in range(2 * k)] +
+                [i for i in range(2 * n + 2 - 2 * k, 2 * k, -1)]
             ))
         elif family == cls.GELFAND_BC:
             return SignedPermutation(*(
                 [1 + i + (-1)**i for i in range(2 * k)] +
                 [n + 1 + i for i in range(n - 2 * k)] +
                 [2 * k + 1 + i for i in range(n - 2 * k)]
+            )) if not sgn else SignedPermutation(*(
+                [1 + i + (-1)**i for i in range(2 * k)] +
+                [i for i in range(2 * n - 2 * k, 2 * k, -1)]
             ))
         elif family == cls.GELFAND_D:
             return EvenSignedPermutation(*(
                 [1 + i + (-1)**i for i in range(2 * k)] +
                 [n + 1 + i for i in range(n - 2 * k)] +
                 [2 * k + 1 + i for i in range(n - 2 * k)]
+            )) if not sgn else EvenSignedPermutation(*(
+                [1 + i + (-1)**i for i in range(2 * k)] +
+                [i for i in range(2 * n - 2 * k, 2 * k, -1)]
             ))
         else:
             raise Exception
 
-    def permutation(self, n):
+    def permutation(self, n, sgn=None):
         if n not in self.permutation_cache:
-            w = self.generator(self.family, self.rank, self.layer)
+            w = self.generator(self.family, self.rank, self.layer, sgn)
             for i in self.reduced_word(n):
                 if self.family == self.HECKE_A:
                     w *= Permutation.s_i(i + 1)
@@ -1303,6 +1315,8 @@ class QPModule:
                     w = s * w * s
                 else:
                     raise Exception
+            if self.family == self.GELFAND_D and sgn and self.layer % 2 != self.rank % 2:
+                w = w.star()
             if self.family == self.HECKE_A:
                 self.permutation_cache[n] = tuple(w(i) for i in range(1, self.rank + 2))
             elif self.family == self.TWO_SIDED_HECKE_A:

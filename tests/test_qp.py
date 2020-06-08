@@ -63,7 +63,7 @@ def test_hecke_cells_a(nn=4):
             # print(r)
             # print()
             assert len(r) == 1
-        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
+        print('n =', n, '::', '#edges =', w.get_wgraph_size(), '#cells =', len(cells), '#molecules =', len(molecules))
         print()
         assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
@@ -74,7 +74,7 @@ def test_hecke_cells_bc(nn=4):
         read_or_compute_wgraph(w)
         cells = w.cells
         molecules = w.molecules
-        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
+        print('n =', n, '::', '#edges =', w.get_wgraph_size(), '#cells =', len(cells), '#molecules =', len(molecules))
         print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
         print()
 
@@ -84,7 +84,7 @@ def test_hecke_cells_d(nn=4):
         read_or_compute_wgraph(w)
         cells = w.cells
         molecules = w.molecules
-        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
+        print('n =', n, '::', '#edges =', w.get_wgraph_size(), '#cells =', len(cells), '#molecules =', len(molecules))
         print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
         print()
 
@@ -103,7 +103,7 @@ def test_two_sided_cells_a(nn=4):
             assert len(r) == 1
             assert not r.issubset(seen)
             seen |= r
-        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
+        print('n =', n, '::', '#edges =', w.get_wgraph_size(), '#cells =', len(cells), '#molecules =', len(molecules))
         assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
         # cells = [set(c) for c in w.get_cells_as_permutations()]
@@ -127,7 +127,7 @@ def test_two_sided_cells_bc(nn=4):
     for n in range(2, nn + 1):
         w = read_or_create(n, None, None, QPModule.read_two_sided_hecke_bc, QPModule.create_two_sided_hecke_bc)
         read_or_compute_wgraph(w)
-        print('rank =', n, '#cells =', len(w.cells), '#molecules =', len(w.molecules))
+        print('rank =', n, '#edges =', w.get_wgraph_size(), '#cells =', len(w.cells), '#molecules =', len(w.molecules))
         # cells = [set(c) for c in w.get_cells_as_permutations()]
 
         # print()
@@ -148,7 +148,7 @@ def test_two_sided_cells_d(nn=4):
     for n in range(2, nn + 1):
         w = read_or_create(n, None, None, QPModule.read_two_sided_hecke_d, QPModule.create_two_sided_hecke_d)
         read_or_compute_wgraph(w)
-        print('rank =', n, '#cells =', len(w.cells), '#molecules =', len(w.molecules))
+        print('rank =', n, '#edges =', w.get_wgraph_size(), '#cells =', len(w.cells), '#molecules =', len(w.molecules))
 
         # cells = [set(c) for c in w.get_cells_as_permutations()]
 
@@ -167,17 +167,18 @@ def test_two_sided_cells_d(nn=4):
 
 
 def test_gelfand_cells_a(nn=5, s=None):
-    for sgn in ([False, True] if s is None else [s]):
-        for n in range(nn + 1):
+    for n in range(nn + 1):
+        for sgn in ([False, True] if s is None else [s]):
             cells = []
             molecules = []
+            edges = []
             for k in range(0, n + 2, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
                 read_or_compute_wgraph(w)
                 cells += w.get_cells_as_permutations()
                 molecules += w.get_molecules_as_permutations()
-            print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
-            print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
+                edges += [w.get_wgraph_size()]
+            print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             print()
             seen = {}
             for c in cells:
@@ -200,41 +201,68 @@ def test_gelfand_cells_a(nn=5, s=None):
 
 
 def test_gelfand_cells_bc(nn=5, s=None):
-    for sgn in ([False, True] if s is None else [s]):
-        for n in range(2, nn + 1):
+    cellmap = {}
+    for n in range(2, nn + 1):
+        cellmap[n] = {}
+        for sgn in ([False, True] if s is None else [s]):
+            cellmap[n][sgn] = set()
             cells = []
             molecules = []
+            edges = []
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
                 read_or_compute_wgraph(w)
                 print(n, k, len(w.cells))
                 cells += w.cells
                 molecules += w.molecules
-            print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
-            # for c in cells:
-            #     print(c)
-            #     print()
-            print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
+                edges += [w.get_wgraph_size()]
+                cellmap[n][sgn] |= w.get_cells_as_permutations()
             print()
+            print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
+            print()
+            if (not sgn) in cellmap[n]:
+                negated = {tuple(sorted(tuple(-a for a in c) for c in cell)) for cell in cellmap[n][not sgn]}
+                if negated != cellmap[n][sgn]:
+                    for c in sorted(cellmap[n][sgn], key=len):
+                        print('1 ', c)
+                    print()
+                    for c in sorted(negated, key=len):
+                        print('2 ', c)
+                assert negated == cellmap[n][sgn]
+                print('* isomorphism checked\n')
 
 
 def test_gelfand_cells_d(nn=5, s=None):
-    for sgn in ([False, True] if s is None else [s]):
-        for n in range(2, nn + 1):
+    cellmap = {}
+    for n in range(2, nn + 1):
+        cellmap[n] = {}
+        for sgn in ([False, True] if s is None else [s]):
+            cellmap[n][sgn] = set()
             cells = []
             molecules = []
+            edges = []
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
                 read_or_compute_wgraph(w)
                 print(n, k, len(w.cells))
                 cells += w.cells
                 molecules += w.molecules
-            print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
-            # for c in cells:
-            #     print(c)
-            #     print()
-            print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
+                edges += [w.get_wgraph_size()]
+                cellmap[n][sgn] |= w.get_cells_as_permutations()
             print()
+            print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
+            print()
+            if (not sgn) in cellmap[n]:
+                negated = {tuple(sorted(tuple(-a for a in c) for c in cell)) for cell in cellmap[n][not sgn]}
+                if negated != cellmap[n][sgn]:
+                    for c in sorted(cellmap[n][sgn], key=len):
+                        print('1 ', c)
+                    print()
+                    for c in sorted(negated, key=len):
+                        print('2 ', c)
+                    assert negated == cellmap[n][sgn]
+                print('* isomorphism checked\n')
+
 
 
 def test_qpwgraph(n=6, k=3):
