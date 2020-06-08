@@ -184,6 +184,8 @@ def test_gelfand_cells_a(nn=5, s=None):
             seen = {}
             for c in cells:
                 r = {gelfand_rsk(x, n + 1, sgn=sgn).partition() for x in c}
+                if not sgn:
+                    assert all(gelfand_rsk(x, n + 1, sgn=sgn) == rsk(x)[0].restrict(n + 1) for x in c)
                 mu = next(iter(r))
                 if len(r) != 1 or mu in seen:
                     print(c)
