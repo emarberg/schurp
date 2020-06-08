@@ -209,12 +209,8 @@ class QPWGraph:
     def setup(self, verbose=True):
         t0 = time.time()
         if verbose:
-            a1 = str(self.qpmodule.family)
-            a2 = str(self.qpmodule.rank)
-            a3 = str(self.qpmodule.layer)
-            b = len(self.qpmodule)
             print()
-            print('QPWGraph for %s, %s, %s (%s elements)' % (a1, a2, a3, b))
+            print(self)
             print()
             print('* computing heights', end='') # noqa
 

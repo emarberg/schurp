@@ -1,6 +1,7 @@
 from qp import QPWGraph, QPModule, gelfand_d_printer
 import polynomials
 from signed import SignedPermutation
+from tableaux import Tableau
 from utils import rsk, gelfand_rsk, truncate_a, truncate_bc
 import random
 
@@ -36,6 +37,10 @@ def read_or_compute_wgraph(w, check=False):
                 raise Exception
 
 
+def test_gelfand_rsk():
+    assert gelfand_rsk((4, 3, 2, 1), 3, False) == Tableau({(1, 1): 1, (2, 1): 2, (3, 1): 3})
+
+
 def test_bytes():
     assert QPWGraph._bytes(0) == 1
     assert QPWGraph._bytes(1) == 1
@@ -54,10 +59,12 @@ def test_hecke_cells_a(nn=4):
         molecules = w.get_molecules_as_permutations()
         for c in cells:
             r = {rsk(w)[0] for w in c}
-            print(c)
-            print(r)
-            print()
+            # print(c)
+            # print(r)
+            # print()
             assert len(r) == 1
+        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
+        print()
         assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
@@ -67,8 +74,9 @@ def test_hecke_cells_bc(nn=4):
         read_or_compute_wgraph(w)
         cells = w.cells
         molecules = w.molecules
+        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
         print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
-
+        print()
 
 def test_hecke_cells_d(nn=4):
     for n in range(2, nn + 1):
@@ -76,8 +84,9 @@ def test_hecke_cells_d(nn=4):
         read_or_compute_wgraph(w)
         cells = w.cells
         molecules = w.molecules
+        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
         print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
-
+        print()
 
 def test_two_sided_cells_a(nn=4):
     for n in range(nn + 1):
@@ -88,77 +97,77 @@ def test_two_sided_cells_a(nn=4):
         seen = set()
         for c in w.get_cells_as_permutations():
             r = {rsk(w)[0].partition() for w in c}
-            print(c)
-            print(r)
-            print()
+            # print(c)
+            # print(r)
+            # print()
             assert len(r) == 1
             assert not r.issubset(seen)
             seen |= r
+        print('n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
         assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
-        cells = [set(c) for c in w.get_cells_as_permutations()]
-
-        print()
-        for sgn in [True, False]:
-            for k in range(0, n + 2, 2):
-                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
-                read_or_compute_wgraph(w)
-                gelfand_cells = [{truncate_a(t, n + 1) for t in c} for c in w.get_cells_as_permutations()]
-                for c in gelfand_cells:
-                    b = all(c & sup == c or c & sup == set() for sup in cells)
-                    print('sgn =', sgn, '::', 'k =', k, '::', b, '::', c)
-                    r = {gelfand_rsk(x, n + 1, sgn=sgn).partition() for x in c}
-                    print()
-        print()
-        print()
+        # cells = [set(c) for c in w.get_cells_as_permutations()]
+        #
+        # print()
+        # for sgn in [True, False]:
+        #     for k in range(0, n + 2, 2):
+        #         w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
+        #         read_or_compute_wgraph(w)
+        #         gelfand_cells = [{truncate_a(t, n + 1) for t in c} for c in w.get_cells_as_permutations()]
+        #         for c in gelfand_cells:
+        #             b = all(c & sup == c or c & sup == set() for sup in cells)
+        #             print('sgn =', sgn, '::', 'k =', k, '::', b, '::', c)
+        #             r = {gelfand_rsk(x, n + 1, sgn=sgn).partition() for x in c}
+        #             print()
+        # print()
+        # print()
 
 
 def test_two_sided_cells_bc(nn=4):
     for n in range(2, nn + 1):
         w = read_or_create(n, None, None, QPModule.read_two_sided_hecke_bc, QPModule.create_two_sided_hecke_bc)
         read_or_compute_wgraph(w)
-        print('rank =', n, '#cells =', len(w.cells))
+        print('rank =', n, '#cells =', len(w.cells), '#molecules =', len(w.molecules))
+        # cells = [set(c) for c in w.get_cells_as_permutations()]
 
-        cells = [set(c) for c in w.get_cells_as_permutations()]
-
-        print()
-        for sgn in [True, False]:
-            for k in range(0, n + 1, 2):
-                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
-                read_or_compute_wgraph(w)
-                gelfand_cells = [{truncate_bc(t, n) for t in c} for c in w.get_cells_as_permutations()]
-                for c in gelfand_cells:
-                    b = all(c & sup == c or c & sup == set() for sup in cells)
-                    print('sgn =', sgn, '::', 'k =', k, '::', b, '::', c)
-                    print()
-        print()
-        print()
+        # print()
+        # for sgn in [True, False]:
+        #     for k in range(0, n + 1, 2):
+        #         w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
+        #         read_or_compute_wgraph(w)
+        #         gelfand_cells = [{truncate_bc(t, n) for t in c} for c in w.get_cells_as_permutations()]
+        #         for c in gelfand_cells:
+        #             b = all(c & sup == c or c & sup == set() for sup in cells)
+        #             print('sgn =', sgn, '::', 'k =', k, '::', b, '::', c)
+        #             print()
+        # print()
+        # print()
 
 
 def test_two_sided_cells_d(nn=4):
     for n in range(2, nn + 1):
         w = read_or_create(n, None, None, QPModule.read_two_sided_hecke_d, QPModule.create_two_sided_hecke_d)
         read_or_compute_wgraph(w)
-        print('rank =', n, '#cells =', len(w.cells))
+        print('rank =', n, '#cells =', len(w.cells), '#molecules =', len(w.molecules))
 
-        cells = [set(c) for c in w.get_cells_as_permutations()]
+        # cells = [set(c) for c in w.get_cells_as_permutations()]
 
-        print()
-        for sgn in [True, False]:
-            for k in range(0, n + 1, 2):
-                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
-                read_or_compute_wgraph(w)
-                gelfand_cells = [{truncate_bc(t, n) for t in c} for c in w.get_cells_as_permutations()]
-                for c in gelfand_cells:
-                    b = all(c & sup == c or c & sup == set() for sup in cells)
-                    print('sgn =', sgn, '::', 'k =', k, '::', b, '::', c)
-                    print()
-        print()
-        print()
+        # print()
+        # for sgn in [True, False]:
+        #     for k in range(0, n + 1, 2):
+        #         w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
+        #         read_or_compute_wgraph(w)
+        #         gelfand_cells = [{truncate_bc(t, n) for t in c} for c in w.get_cells_as_permutations()]
+        #         for c in gelfand_cells:
+        #             b = all(c & sup == c or c & sup == set() for sup in cells)
+        #             print('sgn =', sgn, '::', 'k =', k, '::', b, '::', c)
+        #             print()
+        # print()
+        # print()
 
 
-def test_gelfand_cells_a(nn=5):
-    for sgn in [False, True]:
+def test_gelfand_cells_a(nn=5, s=None):
+    for sgn in ([False, True] if s is None else [s]):
         for n in range(nn + 1):
             cells = []
             molecules = []
@@ -170,17 +179,28 @@ def test_gelfand_cells_a(nn=5):
             print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
             print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
             print()
-            seen = set()
+            seen = {}
             for c in cells:
                 r = {gelfand_rsk(x, n + 1, sgn=sgn).partition() for x in c}
+                mu = next(iter(r))
+                if len(r) != 1 or mu in seen:
+                    print(c)
+                    print()
+                    print(seen[mu])
+                    print()
+                    print({gelfand_rsk(x, n + 1, sgn=sgn) for x in c})
+                    print()
+                    print()
+                    print(r)
+                    print()
                 assert len(r) == 1
                 assert not r.issubset(seen)
-                seen |= r
+                seen[mu] = c
             assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
 
 
-def test_gelfand_cells_bc(nn=5):
-    for sgn in [False, True]:
+def test_gelfand_cells_bc(nn=5, s=None):
+    for sgn in ([False, True] if s is None else [s]):
         for n in range(2, nn + 1):
             cells = []
             molecules = []
@@ -198,15 +218,15 @@ def test_gelfand_cells_bc(nn=5):
             print()
 
 
-def test_gelfand_cells_d(nn=5):
-    for sgn in [False, True]:
+def test_gelfand_cells_d(nn=5, s=None):
+    for sgn in ([False, True] if s is None else [s]):
         for n in range(2, nn + 1):
             cells = []
             molecules = []
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
                 read_or_compute_wgraph(w)
-                print(n, k, sum([len(c) for c in w.cells]))
+                print(n, k, len(w.cells))
                 cells += w.cells
                 molecules += w.molecules
             print('sgn =', sgn, 'n =', n, '::', '#cells =', len(cells), '#molecules =', len(molecules))
