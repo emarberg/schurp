@@ -587,7 +587,7 @@ class QPWGraph:
         return self._int(self.odd_invright[s][start:start + self.sbytes])
 
     def permutation(self, n):
-        return self.qpmodule.permutation(n, self.sgn)
+        return self.qpmodule.permutation(n, True)
 
     def _height(self, n):
         return self.qpmodule.height(n)

@@ -1,6 +1,7 @@
 from qp import QPWGraph, QPModule, gelfand_d_printer
 import polynomials
 from signed import SignedPermutation
+from even import EvenSignedPermutation
 from tableaux import Tableau
 from utils import rsk, gelfand_rsk, truncate_a, truncate_bc
 import random
@@ -221,7 +222,12 @@ def test_gelfand_cells_bc(nn=5, s=None):
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             print()
             if (not sgn) in cellmap[n]:
-                negated = {tuple(sorted(tuple(-a for a in c) for c in cell)) for cell in cellmap[n][not sgn]}
+                def toggle(c):
+                    x = SignedPermutation(*[-a for a in c])
+                    s = SignedPermutation(*(list(range(1 , n + 1)) + list(range(x.rank, n, -1))))
+                    return tuple((s * x * s).oneline)
+
+                negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
                 if negated != cellmap[n][sgn]:
                     for c in sorted(cellmap[n][sgn], key=len):
                         print('1 ', c)
@@ -253,7 +259,15 @@ def test_gelfand_cells_d(nn=5, s=None):
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             print()
             if (not sgn) in cellmap[n]:
-                negated = {tuple(sorted(tuple(-a for a in c) for c in cell)) for cell in cellmap[n][not sgn]}
+                def toggle(c):
+                    x = EvenSignedPermutation(*[-a for a in c])
+                    s = EvenSignedPermutation(*(list(range(1 , n + 1)) + list(range(x.rank, n, -1))))
+                    x = s * x * s
+                    if x.rank % 4 != 0:
+                        x = x.star()
+                    return tuple(x.oneline)
+
+                negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
                 if negated != cellmap[n][sgn]:
                     for c in sorted(cellmap[n][sgn], key=len):
                         print('1 ', c)
