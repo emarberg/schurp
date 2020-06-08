@@ -1113,8 +1113,10 @@ class QPModule:
                 else:
                     ht, y = operate(wht, w, i)
                     if y == (w, True):
+                        # i is weak ascent
                         frame[start:start + stepsize] = bytes(stepsize * [0xFF])
                     elif y == (w, False):
+                        # i is weak descent
                         frame[start:start + stepsize] = bytes((stepsize - 1) * [0xFF] + [0xFE])
                     else:
                         if y not in origins:
