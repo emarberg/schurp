@@ -63,11 +63,9 @@ class QPWGraph:
         if not self.is_wgraph_computed:
             count = 0
             for w in self.qpmodule:
-                asc_w = self._weak_ascents(w) | self._strict_ascents(w)
                 for y in range(w):
-                    asc_y = self._weak_ascents(y) | self._strict_ascents(y)
-                    if (asc_w | asc_y) != asc_y:
-                        count += int(self.get_cbasis_leading(y, w) != 0)
+                    if (self._ascents(w) | self._ascents(y)) != self._ascents(y) and self.get_cbasis_leading(y, w) != 0:
+                        count += 1
                 count += len({self.qpmodule.operate(w, s) for s in self.qpmodule.strict_ascents(w)})
 
             if verbose:
@@ -90,12 +88,9 @@ class QPWGraph:
             start = 0
             for w in self.qpmodule:
                 self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes] = start.to_bytes(self.wbytes, byteorder='big', signed=False)
-                asc_w = self._weak_ascents(w) | self._strict_ascents(w)
                 for y in range(w):
-                    asc_y = self._weak_ascents(y) | self._strict_ascents(y)
-                    if (asc_w | asc_y) != asc_y:
-                        mu = self.get_cbasis_leading(y, w)
-                        start = add_edge(start, y, mu)
+                    if (self._ascents(w) | self._ascents(y)) != self._ascents(y):
+                        start = add_edge(start, y, self.get_cbasis_leading(y, w))
                 for y in sorted({self.qpmodule.operate(w, s) for s in self.qpmodule.strict_ascents(w)}):
                     start = add_edge(start, y, 1)
             self.wgraph_addresses[-self.wbytes:] = start.to_bytes(self.wbytes, byteorder='big', signed=False)
@@ -495,6 +490,9 @@ class QPWGraph:
             'is_wgraph_computed': self.is_wgraph_computed,
         }
 
+    def _ascents(self, i):
+        return self._weak_ascents(i) | self._strict_ascents(i)
+
     def _weak_ascents(self, i):
         return self._int(self.weak_ascents[i * self.gbytes:(i + 1) * self.gbytes])
 
@@ -603,7 +601,7 @@ class QPWGraph:
         return int.from_bytes(step, byteorder='big', signed=signed)
 
     def __repr__(self):
-        a = self.qpmodule.get_directory().split('/')[-1]
+        a = str((self.qpmodule.family, self.qpmodule.rank, self.qpmodule.layer, self.sgn))
         b = len(self.qpmodule)
         s = ['QPWGraph for %s (%s elements)' % (a, b)]
         return '\n'.join(s)
