@@ -21,7 +21,14 @@ def test_specific_primed_insertion():
     q = Tableau.from_string("1,1,1,3';2,2").shift()
     r = Tableau.from_string("1,1,1,3';2,3").shift()
 
-    assert (p, q) == involution_insert(*f)
+    i, j = involution_insert(*f)
+    print(f)
+    print(p)
+    print(q)
+    print(i)
+    print(j)
+    print()
+    assert (p, q) == (i, j)
     assert (p, r) == involution_insert(*g)
 
 
