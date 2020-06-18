@@ -54,7 +54,7 @@ class QPWGraph:
             if w in set(self.get_wgraph_edges(y)):
                 yield y
 
-    def compute_wgraph(self, verbose=True):
+    def compute_wgraph(self, write=True, verbose=True):
         if not self.is_cbasis_computed:
             self.compute_cbasis()
 
@@ -103,6 +103,9 @@ class QPWGraph:
                 t0 = time.time()
 
         self.is_wgraph_computed = True
+        if write:
+            self.write()
+
         self.cells = self._compute_cells(self.get_wgraph_edges)
 
         if verbose:
@@ -755,7 +758,7 @@ class QPWGraph:
             print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
         self.is_cbasis_computed = True
 
-    def compute_cbasis(self, verbose=True):
+    def compute_cbasis(self, write=True, verbose=True):
         assert self.is_setup
         assert not self.is_cbasis_computed
 
@@ -803,7 +806,10 @@ class QPWGraph:
 
         if verbose:
             print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+
         self.is_cbasis_computed = True
+        if write:
+            self.write()
 
 
 class QPModuleElement:
