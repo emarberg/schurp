@@ -25,6 +25,9 @@ class QPWGraph:
         self.wgraph = None
         self.wgraph_addresses = None
 
+        self.cells = None
+        self.molecules = None
+
         assert sgn is not None or qpmodule.layer is None
 
         if setup:
@@ -54,14 +57,14 @@ class QPWGraph:
             if w in set(self.get_wgraph_edges(y)):
                 yield y
 
-    def compute_wgraph(self, write=True, verbose=True):
+    def compute_wgraph(self, verbose=True):
         if not self.is_cbasis_computed:
             self.compute_cbasis()
 
         t0 = time.time()
         if verbose:
             print()
-            print('Computing W-graph, cells, and molecules:')
+            print('Computing W-graph:')
 
         if not self.is_wgraph_computed:
             count = 0
@@ -103,20 +106,28 @@ class QPWGraph:
                 t0 = time.time()
 
         self.is_wgraph_computed = True
-        if write:
-            self.write()
 
-        self.cells = self._compute_cells(self.get_wgraph_edges)
+    def compute_cells(self, verbose=True):
+        assert self.is_wgraph_computed
 
+        t0 = time.time()
         if verbose:
-            print('* calculated cells (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
-            t0 = time.time()
-
-        self.molecules = self._compute_cells(self.get_simple_edges)
-
-        if verbose:
-            print('* calculated molecules (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
             print()
+            print('Computing cells and molecules:')
+
+        if self.cells is None:
+            self.cells = self._compute_cells(self.get_wgraph_edges)
+
+            if verbose:
+                print('* calculated cells (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+                t0 = time.time()
+
+        if self.molecules is None:
+            self.molecules = self._compute_cells(self.get_simple_edges)
+
+            if verbose:
+                print('* calculated molecules (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
+                print()
 
     def slow_compute_wgraph(self):
         if not self.is_cbasis_computed:
@@ -758,7 +769,7 @@ class QPWGraph:
             print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
         self.is_cbasis_computed = True
 
-    def compute_cbasis(self, write=True, verbose=True):
+    def compute_cbasis(self, verbose=True):
         assert self.is_setup
         assert not self.is_cbasis_computed
 
@@ -808,8 +819,6 @@ class QPWGraph:
             print('Done computing (%s seconds elapsed)' % str(int(1000 * (time.time() - t0)) / 1000.0))
 
         self.is_cbasis_computed = True
-        if write:
-            self.write()
 
 
 class QPModuleElement:

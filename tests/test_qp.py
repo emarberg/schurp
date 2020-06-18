@@ -36,6 +36,7 @@ def read_or_compute_wgraph(w, check=False):
                 print('* ', edges.get(x, []))
                 print()
                 raise Exception
+    w.compute_cells()
 
 
 def test_gelfand_rsk():
