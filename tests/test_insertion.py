@@ -32,9 +32,42 @@ def test_specific_primed_insertion():
     assert (p, r) == involution_insert(*g)
 
 
-def test_primed_insertion():
-    for n in range(5):
-        for k in range(5):
+def test_primed_ck(bound=5):
+    def check(v, w):
+        assert involution_insert(Word(*w))[0] == involution_insert(Word(*v))[0]
+
+    for n in range(bound):
+        for pi in Permutation.involutions(n):
+            for w in pi.get_primed_involution_words():
+                if len(w) < 2:
+                    continue
+                a, b = w[:2]
+                if (a < 0 and b > 0) or (a > 0 and b < 0):
+                    v = (-b, -a) + w[2:]
+                else:
+                    v = (b, a) + w[2:]
+                check(v, w)
+                for i in range(len(w) - 2):
+                    a, b, c = w[i:i + 3]
+                    v = w
+                    if a == c:
+                        v = w[:i] + (b, a, b) + w[i + 3:]
+                    elif -a == c > 0:
+                        v = w[:i] + (b, c, -b) + w[i + 3:]
+                    elif -a == c < 0:
+                        v = w[:i] + (-b, a, b) + w[i + 3:]
+                    elif abs(a) < abs(c) < abs(b) or abs(b) < abs(c) < abs(a):
+                        v = w[:i] + (b, a, c) + w[i + 3:]
+                    elif abs(b) < abs(a) < abs(c) or abs(c) < abs(a) < abs(b):
+                        v = w[:i] + (a, c, b) + w[i + 3:]
+                    if v == w:
+                        continue
+                    check(v, w)
+
+
+def test_primed_insertion(bound=5):
+    for n in range(bound):
+        for k in range(bound):
             seen = {}
             for pi in Permutation.involutions(n):
                 fac = [
@@ -45,11 +78,11 @@ def test_primed_insertion():
                 for f in fac:
                     print('f =', f)
                     p, q = involution_insert(*f)
-                    print('\n', p, q)
-                    print(seen.get((p, q), None))
+                    # print('\n', p, q)
+                    # print(seen.get((p, q), None))
                     assert (p, q) not in seen
                     seen[(p, q)] = f
-                    print()
+                    # print()
 
 
 n = 4

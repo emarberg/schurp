@@ -880,7 +880,7 @@ class Tableau:
             for i, b in enumerate(tup):
                 if abs(a) > abs(b):
                     continue
-
+                # print('j =', j, 'a =', a, 'cdir =', cdir, 'tup =', tup, 'i =', i + 1, 'b =', b)
                 if a == b:
                     assert not a.is_primed()
                     b = MarkedNumber(abs(tup[i + 1]))
@@ -891,15 +891,15 @@ class Tableau:
                     b = -tup[i + 1]
                     assert b.is_primed()
                     new = tup
-                elif b.is_primed() and a == -b and ((i > 0 and not cdir) or (i + 2 != j and cdir)):
+                elif b.is_primed() and a == -b and not (i == 0 and not cdir):
                     b = tup[i + 1]
                     assert not b.is_primed()
                     new = tup[:i] + (-tup[i], -tup[i + 1]) + tup[i + 2:]
-                elif b.is_primed() and a == -b:
+                elif b.is_primed() and a == -b and i == 0 and not cdir:
                     b = tup[i + 1]
                     assert not b.is_primed()
                     new = tup
-                    cdir = cdir or (i == 0)
+                    cdir = True
 
                 elif not cdir and i == 0 and not b.is_primed() and not a.is_primed():
                     new = (a,) + tup[1:]
