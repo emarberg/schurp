@@ -34,7 +34,7 @@ def test_specific_primed_insertion():
 
 def test_primed_ck(bound=5):
     def check(v, w):
-        assert involution_insert(Word(*w))[0] == involution_insert(Word(*v))[0]
+        return involution_insert(Word(*w))[0] == involution_insert(Word(*v))[0]
 
     for n in range(bound):
         for pi in Permutation.involutions(n):
@@ -42,7 +42,7 @@ def test_primed_ck(bound=5):
                 if len(w) < 2:
                     continue
                 a, b = w[:2]
-                if (a < 0 and b > 0) or (a > 0 and b < 0):
+                if abs(abs(a) - abs(b)) == 1 and ((a < 0 and b > 0) or (a > 0 and b < 0)):
                     v = (-b, -a) + w[2:]
                 else:
                     v = (b, a) + w[2:]
@@ -62,7 +62,12 @@ def test_primed_ck(bound=5):
                         v = w[:i] + (a, c, b) + w[i + 3:]
                     if v == w:
                         continue
-                    check(v, w)
+                    if not check(v, w):
+                        print(v)
+                        print(involution_insert(Word(*v))[0])
+                        print(w)
+                        print(involution_insert(Word(*w))[0])
+                        raise Exception
 
 
 def test_primed_insertion(bound=5):
