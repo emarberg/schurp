@@ -57,6 +57,12 @@ def chinese_class(w, n):
             nextadd |= set(span(w, seen))
         add = nextadd
 
+
+def read_grothendieck(n):
+    with open('gdata/g%s.py' % n, 'r') as f:
+        return eval(f.read())
+
+
 def longest_grothendieck(n):
     s = InvGrothendieck.top(n)
     m = Permutation.longest_element(n).involution_length()
