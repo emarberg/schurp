@@ -15,6 +15,7 @@ FPF_SCHUBERT_CACHE = {}
 INV_SCHUBERT_CACHE = {}
 GROTHENDIECK_CACHE = {}
 FPF_GROTHENDIECK_CACHE = {}
+INV_GROTHENDIECK_CACHE = {}
 
 
 class AbstractSchubert(object):
@@ -69,16 +70,17 @@ class AbstractSchubert(object):
 
     @classmethod
     def decompose(cls, f):
-        if not f.is_zero():
+        ans = Vector()
+        while not f.is_zero():
             m = cls.least_term(f)
             code = max(m) * [0] if m else []
             for i, v in m.items():
                 code[i - 1] = v
             code = tuple(code)
             w = cls.from_code(code)
-            return Vector({w: f[m]}) + cls.decompose(f - f[m] * cls.get(w))
-        else:
-            return Vector()
+            ans += Vector({w: f[m]})
+            f = f - f[m] * cls.get(w)
+        return ans
 
 
 class Schubert(AbstractSchubert):
@@ -124,7 +126,7 @@ class Schubert(AbstractSchubert):
 
 class Grothendieck(Schubert):
 
-    beta = X(0)
+    beta = -1
 
     @classmethod
     def cache(cls):
@@ -256,3 +258,31 @@ class InvSchubert(AbstractSchubert):
     @classmethod
     def from_code(cls, code):
         return Permutation.from_involution_code(code)
+
+
+class InvGrothendieck(InvSchubert):
+
+    beta = -1
+
+    @classmethod
+    def cache(cls):
+        return INV_GROTHENDIECK_CACHE
+
+    @classmethod
+    def top(cls, n):
+        s = one()
+        for i in range(1, n + 1):
+            for j in range(i, n + 1 - i):
+                s *= (x(i) + x(j) + cls.beta * x(i) * x(j))
+        return s
+
+    @classmethod
+    def product(cls, w):
+        s = one()
+        for i, j in w.involution_rothe_diagram():
+            s *= (x(i) + x(j) + cls.beta * x(i) * x(j))
+        return s
+
+    @classmethod
+    def divided_difference(cls, f, i):
+        raise NotImplementedError

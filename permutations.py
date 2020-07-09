@@ -513,6 +513,15 @@ class Permutation:
             ans = ans[:-1]
         return tuple(ans)
 
+    def print_matrix(self, sep='.'):
+        n = self.rank
+        ans = []
+        for i in self.oneline:
+            row = n * [sep]
+            row[i - 1] = '*'
+            ans += [' '.join(row)]
+        print('\n'.join(ans))
+
     def code(self):
         return self.code_helper(self.rothe_diagram())
 

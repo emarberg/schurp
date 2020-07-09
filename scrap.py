@@ -2,6 +2,57 @@ from symmetric import *
 from partitions import *
 
 
+
+from schubert import *
+
+def chinese_class(w):
+    seen = {w}
+    yield w
+    for i in range(len(w) - 2):
+        c, a, b = w[i: i + 3]
+        if a < b < c:
+            for v in [
+                w[:i] + (b, c, a) + w[i + 3:],
+                w[:i] + (c, b, a) + w[i + 3:],
+            ]:
+                if v not in seen:
+                    seen.add(v)
+                    yield v
+
+        b, c, a = w[i: i + 3]
+        if a < b < c:
+            for v in [
+                w[:i] + (c, a, b) + w[i + 3:],
+                w[:i] + (c, b, a) + w[i + 3:],
+            ]:
+                if v not in seen:
+                    seen.add(v)
+                    yield v
+
+        c, b, a = w[i: i + 3]
+        if a < b < c:
+            for v in [
+                w[:i] + (b, c, a) + w[i + 3:],
+                w[:i] + (c, a, b) + w[i + 3:],
+            ]:
+                if v not in seen:
+                    seen.add(v)
+                    yield v
+
+def longest_grothendieck(n):
+    s = InvGrothendieck.top(n)
+    m = Permutation.longest_element(n).involution_length()
+    d = Grothendieck.decompose(s)
+    f = {
+        tuple(w.inverse().oneline): c * (-X(0))**(w.length() - m) for w, c in d.dictionary.items()
+    }
+    a = set(f)
+    for w in a:
+        c = set(chinese_class(w))
+        print(c.issubset(a), ' is subset of ', a)
+
+
+
 # cache = {}
 # for n in range(13):
 #     print(' . . .', n)
