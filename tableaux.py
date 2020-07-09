@@ -843,6 +843,48 @@ class Tableau:
         assert tab.is_increasing()
         return tab.eg_insert(p, j)
 
+    def mixed_insert(self, p, j=1, column_dir=False, verbose=True):
+        if p is None:
+            return (j, column_dir, self)
+
+        def sgn(x):
+            return -1 if x.number < 0 else 1
+
+        def bump(a, cdir, tup):
+            for i, b in enumerate(tup):
+                if abs(a) >= abs(b):
+                    continue
+                if not cdir and i == 0:
+                    new = (a,) + tup[1:]
+                    b = MarkedNumber((abs(b) - 1) * sgn(b))
+                    cdir = True
+                else:
+                    new = tup[:i] + (MarkedNumber(abs(a) * sgn(b)),) + tup[i + 1:]
+                    b = MarkedNumber(abs(b) * sgn(a))
+                    cdir = abs(b) % 2 != 0
+                return (b, cdir, new, i)
+            return (None, cdir, tup + (a,), None)
+
+        row, col = self.get_row(j), self.get_column(j)
+
+        if column_dir:
+            p, column_dir, col, i = bump(p, column_dir, col)
+            tab = self.replace_column(j, col)
+
+            if column_dir:
+                j += 1
+            else:
+                j = i + 2
+        else:
+            p, column_dir, row, i = bump(p, column_dir, row)
+            tab = self.replace_row(j, row, shifted=True)
+
+            if column_dir:
+                j = i + j + 1
+            else:
+                j += 1
+        return tab.mixed_insert(p, j, column_dir, verbose=verbose)
+
     def sagan_worley_insert(self, p, j=0, column_dir=False, verbose=True):
         if p is None:
             return (j, column_dir, self)

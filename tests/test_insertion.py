@@ -13,6 +13,48 @@ from crystals import (
 from permutations import Permutation
 
 
+def invert_fac(f):
+    w = []
+    for i, a in enumerate(f):
+        for j in a:
+            while abs(j) >= len(w):
+                w += [0]
+            w[abs(j)] = i + 1 if j > 0 else -i - 1
+    return Word(*w[1:])
+
+
+def test_mixed_insert():
+    w = Word(3, 3, 2, 3, 3, 2, 1, 2, 3)
+    p = Tableau.from_string("1,2',2,3',3;2,3',3;3").shift()
+    q = Tableau.from_string("1,2,4,5,9;3,6,8;7").shift()
+    assert w.mixed_insert() == (p, q)
+
+    testset = {
+        Permutation.from_involution_word(*w) for w in Permutation.all(7)
+    }
+    for pi in [Permutation(4, 2, 3, 1), Permutation(3, 4, 1, 2), Permutation(3, 5, 1, 6, 2, 4)] + list(testset):
+        for k in [2, 3, 4]:
+            fac = [
+                tuple([Word(*i) for i in tup])
+                for x in pi.get_primed_involution_words()
+                for tup in OrthogonalCrystalGenerator.get_increasing_primed_factorizations(x, k)
+            ]
+
+            for f in fac:
+                w = invert_fac(f)
+                p, q = involution_insert(*f)
+                pp, qq = w.mixed_insert()
+                print('pi =', pi)
+                print('f =', f)
+                print(p, q)
+                print('w =', w)
+                print(pp, qq)
+                print()
+                assert p == qq
+                assert q == pp
+    print(len(testset))
+
+
 def test_specific_primed_insertion():
     f = (Word(1, 4, 5), Word(3, -4), Word(2,))
     g = (Word(1, 4, 5), Word(3,), Word(2, -4))
