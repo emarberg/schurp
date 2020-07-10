@@ -1,4 +1,16 @@
 from schubert import *
+from collections import defaultdict
+
+
+def up(w, n):
+    for i in range(len(w) - 2):
+        c, a, b = w[i: i + 3]
+        if a < b < c and c != n + 1:
+            for v in [
+                w[:i] + (b, c, a) + w[i + 3:],
+            ]:
+                yield v
+
 
 def chinese_class(w, n):
     def span(w, seen):
@@ -15,7 +27,6 @@ def chinese_class(w, n):
             if v not in seen:
                 seen.add(v)
                 yield v
-
 
         for i in range(len(w) - 2):
             c, a, b = w[i: i + 3]
@@ -63,6 +74,46 @@ def read_grothendieck(n):
         return eval(f.read())
 
 
+def _nested(w):
+    y = 0
+    for j in range(2, len(w) + 1):
+        for i in range(len(w) - j + 1):
+            if all(w[i + k] > w[i + k + 1] for k in range(j - 1)):
+                if i + j >= len(w) or w[i + j - 1] < w[i + j]:
+                    if i == 0 or w[i - 1] < w[i]:
+                        for p in _nested(w[:i] + w[i + j:]):
+                            a = ((w[i:i + j]),) + p
+                            yield a
+                            y += 1
+    if y == 0:
+        yield ()
+
+
+def nested(w):
+    def num(s):
+        ans = 0
+        while s:
+            ans = 10 * ans + s[0]
+            s = s[1:]
+        return ans
+
+    pairs = {
+        tuple([num(t) for t in seq])
+        for seq in set(_nested(w))
+    }
+    # b = True
+    # while b:
+    #     b = False
+    #     remove = set()
+    #     for x in pairs:
+    #         for y in pairs:
+    #             if x != y and set(x).issubset(set(y)):
+    #                 b = True
+    #                 remove.add(x)
+    #     pairs -= remove
+    return pairs
+
+
 def longest_grothendieck(n):
     s = InvGrothendieck.top(n)
     m = Permutation.longest_element(n).involution_length()
@@ -78,15 +129,20 @@ def longest_grothendieck(n):
         c = set(chinese_class(w, n))
         classes.append(c)
         t = c.issubset(a)
-        print(t, ':', c, ' is subset')
+        # print(t, ':', c, ' is subset')
         assert t
     assert len(classes) == 1
     print()
-    a = sorted(a, key=lambda x:(Permutation(*x).rank,Permutation(*x).length()))
+    d = defaultdict(int)
+    a = sorted(a, key=lambda x: (f[x].substitute(0, 1), f[x].degree(), f[x], x))
+    for w in a:
+        if len(w) > n:
+            continue
+        d[f[w]] += 1
+        print('  ', w, ':', f[w].set(0, 1))  # , '  :  ', Permutation(*w).get_reduced_words())
+        # for v in sorted(a):
+        #     if v != w and w == tuple(i for i in v if i <= n):
+        #         print('  ', v, ':', f[v])
+        # print()
+    print(d)
     return a
-    # for w in a:
-    #     for v in a:
-    #         if v < w:
-    #             if len(v) == len(w) and len([i for i in range(len(v)) if v[i] != w[i]]) == 3:
-    #                 print(v, '<->', w)
-

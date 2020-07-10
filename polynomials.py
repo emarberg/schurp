@@ -217,6 +217,9 @@ class MPolynomial:
                 x = x + MPolynomial({new_term: self.coeffs[term]})
         return x
 
+    def degree(self):
+        return self.total_degree()
+
     def total_degree(self):
         ans = None
         for ind in self.coeffs:
@@ -237,6 +240,9 @@ class MPolynomial:
     @classmethod
     def one(cls):
         return cls.monomial(1, 0)
+
+    def set(self, i, e):
+        return self.substitute(i, e)
 
     def substitute(self, i, e):
         ans = 0
