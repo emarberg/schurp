@@ -3,7 +3,7 @@ import polynomials
 from signed import SignedPermutation
 from even import EvenSignedPermutation
 from tableaux import Tableau
-from utils import rsk, gelfand_rsk, truncate_a, truncate_bc
+from qp_utils import rsk, gelfand_rsk, truncate_a, truncate_bc
 import random
 
 
@@ -80,6 +80,7 @@ def test_hecke_cells_bc(nn=4):
         print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
         print()
 
+
 def test_hecke_cells_d(nn=4):
     for n in range(2, nn + 1):
         w = read_or_create(n, None, None, QPModule.read_hecke_d, QPModule.create_hecke_d)
@@ -89,6 +90,7 @@ def test_hecke_cells_d(nn=4):
         print('n =', n, '::', '#edges =', w.get_wgraph_size(), '#cells =', len(cells), '#molecules =', len(molecules))
         print('* cells == molecules:', sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules]))
         print()
+
 
 def test_two_sided_cells_a(nn=4):
     for n in range(nn + 1):
@@ -227,7 +229,7 @@ def test_gelfand_cells_bc(nn=5, s=None):
             if (not sgn) in cellmap[n]:
                 def toggle(c):
                     x = SignedPermutation(*[-a for a in c])
-                    s = SignedPermutation(*(list(range(1 , n + 1)) + list(range(x.rank, n, -1))))
+                    s = SignedPermutation(*(list(range(1, n + 1)) + list(range(x.rank, n, -1))))
                     return tuple((s * x * s).oneline)
 
                 negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
@@ -264,7 +266,7 @@ def test_gelfand_cells_d(nn=5, s=None):
             if (not sgn) in cellmap[n]:
                 def toggle(c):
                     x = EvenSignedPermutation(*[-a for a in c])
-                    s = EvenSignedPermutation(*(list(range(1 , n + 1)) + list(range(x.rank, n, -1))))
+                    s = EvenSignedPermutation(*(list(range(1, n + 1)) + list(range(x.rank, n, -1))))
                     x = s * x * s
                     if x.rank % 4 != 0:
                         x = x.star()

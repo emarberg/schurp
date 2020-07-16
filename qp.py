@@ -3,12 +3,114 @@ from signed import SignedPermutation
 from even import EvenSignedPermutation
 import polynomials
 from vectors import Vector
+from qp_utils import (
+    gelfand_a_conjugate,
+    gelfand_a_start,
+    gelfand_a_printer,
+    gelfand_bc_conjugate,
+    gelfand_bc_start,
+    gelfand_bc_printer,
+    gelfand_d_conjugate,
+    gelfand_d_start,
+    gelfand_d_printer,
+)
 from heapq import heappush, heappop
 import json
 import math
 import time
 from pathlib import Path
 import subprocess
+
+
+def process_gelfand(read, create, pprint, rank, layers, sgns):
+    ans = {}
+    for layer in layers:
+        for sgn in sgns:
+            try:
+                m = read(rank, layer)
+            except FileNotFoundError:
+                m = create(rank, layer)
+                m.write()
+
+            try:
+                w = QPWGraph.read(m.get_directory(), sgn=sgn)
+            except FileNotFoundError:
+                w = QPWGraph(m, sgn=sgn)
+                w.write()
+
+            if not w.is_cbasis_computed:
+                w.compute_cbasis()
+                w.write()
+
+            if not w.is_wgraph_computed:
+                w.compute_wgraph()
+                w.write()
+
+            w.compute_cells()
+            w.print_wgraph(pprint(w))
+            w.print_cells(pprint(w))
+            ans[(rank, layer, sgn)] = (m, w)
+    return ans
+
+
+def a_letter(i, rank):
+    if i > rank + 1:
+        return '+'
+    else:
+        return str(i)
+
+
+def process_gelfand_a(rank, layers=None, sgns=None):
+    read = QPModule.read_gelfand_a
+    create = QPModule.create_gelfand_a
+    layers = range((rank + 1) // 2 + 1) if layers is None else layers
+    sgns = [True, False] if sgns is None else sgns
+
+    def pprint(w):
+        def f(x):
+            return ''.join([a_letter(i, rank) for i in w.permutation(x)[:rank + 1]])
+        return f
+
+    return process_gelfand(read, create, pprint, rank, layers, sgns)
+
+
+def b_letter(i, rank):
+    if i > rank:
+        return '+'
+    if i < -rank:
+        return '-'
+    if i < 0:
+        return str(-i) + '\u0305'
+    else:
+        return str(i)
+
+
+def process_gelfand_bc(rank, layers=None, sgns=None):
+    read = QPModule.read_gelfand_bc
+    create = QPModule.create_gelfand_bc
+    layers = range(rank // 2 + 1) if layers is None else layers
+    sgns = [True, False] if sgns is None else sgns
+
+    def pprint(w):
+        def f(x):
+            return ''.join([b_letter(i, rank) for i in w.permutation(x)[:rank]])
+        return f
+
+    return process_gelfand(read, create, pprint, rank, layers, sgns)
+
+
+def process_gelfand_d(rank, layers=None, sgns=None):
+    read = QPModule.read_gelfand_d
+    create = QPModule.create_gelfand_d
+    layers = range(rank // 2 + 1) if layers is None else layers
+    sgns = [True, False] if sgns is None else sgns
+
+    def pprint(w):
+        def f(x):
+            return ''.join([b_letter(i, rank) for i in w.permutation(x)[:rank]])
+        return f
+
+    return process_gelfand(read, create, pprint, rank, layers, sgns)
 
 
 class QPWGraph:
@@ -150,32 +252,55 @@ class QPWGraph:
 
         return edges
 
-    def print_wgraph(self):
-        if not self.is_wgraph_computed:
-            self.compute_wgraph()
-
+    @classmethod
+    def dot(cls, vertices, edges, pprint):
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
         s += ['    node [fontname="courier"];']
 
-        for x in self.qpmodule:
-            s += ['    "%s";' % str(self.permutation(x))]
+        for x in vertices:
+            s += ['    "%s";' % pprint(x)]
 
-        s += ['    "%s" -> "%s";' % (str(self.permutation(x)), str(self.permutation(y))) for x in self.qpmodule for y in self.get_wgraph_edges(x)]
+        s += ['    "%s" -> "%s";' % (pprint(x), pprint(y)) for x in vertices for y in edges(x)]
         s += ['}']
         s = '\n'.join(s)
+        return s
 
-        directory = self.qpmodule.get_directory()
+    def print_wgraph(self, pprint=str):
+        assert self.is_wgraph_computed
+
+        s = self.dot(self.qpmodule, self.get_wgraph_edges, pprint)
+        directory = self.get_directory()
         Path(directory).mkdir(parents=True, exist_ok=True)
 
-        dotfile = directory + ('wgraph.dot' if self.sgn is None else 'wgraph.unsigned.dot' if self.sgn else 'wgraph.signed.dot')
+        dotfile = directory + 'aux/wgraph.dot'
         with open(dotfile, 'w') as f:
             f.write(s)
 
-        pngfile = directory + ('wgraph.png' if self.sgn is None else 'wgraph.unsigned.png' if self.sgn else 'wgraph.signed.png')
+        pngfile = directory + 'wgraph.png'
         subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+
+    def print_cells(self, pprint=str):
+        assert self.is_wgraph_computed
+
+        for i, cell in enumerate(sorted(self.cells, key=len)):
+            fname = 'cell_size%s_%s' % (str(len(cell)), str(i))
+
+            def edges(x):
+                return [y for y in self.get_wgraph_edges(x) if y in cell]
+
+            s = self.dot(cell, edges, pprint)
+
+            dotfile = self.get_directory() + 'aux/%s.dot' % fname
+            with open(dotfile, 'w') as f:
+                f.write(s)
+
+            directory = self.get_directory() + 'cells/'
+            Path(directory).mkdir(parents=True, exist_ok=True)
+            pngfile = directory + '%s.png' % fname
+            subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
     def get_molecules_as_permutations(self):
         assert self.is_wgraph_computed
@@ -1067,15 +1192,21 @@ class QPModule:
 
     @classmethod
     def read_gelfand_a(cls, n, k):
-        return cls.read(cls.directory(cls.GELFAND_A, n, k))
+        ans = cls.read(cls.directory(cls.GELFAND_A, n, k))
+        ans.printer = gelfand_a_printer(n, k)
+        return ans
 
     @classmethod
     def read_gelfand_bc(cls, n, k):
-        return cls.read(cls.directory(cls.GELFAND_BC, n, k))
+        ans = cls.read(cls.directory(cls.GELFAND_BC, n, k))
+        ans.printer = gelfand_bc_printer(n, k)
+        return ans
 
     @classmethod
     def read_gelfand_d(cls, n, k):
-        return cls.read(cls.directory(cls.GELFAND_D, n, k))
+        ans = cls.read(cls.directory(cls.GELFAND_D, n, k))
+        ans.printer = gelfand_d_printer(n, k)
+        return ans
 
     @classmethod
     def read(cls, directory):
@@ -1415,107 +1546,3 @@ class QPModule:
         )
         module.printer = printer
         return module
-
-
-def gelfand_a_conjugate(ht, w, i):
-    i += 1
-    if w(i) == i and w(i + 1) == i + 1:
-        return ht, (w, True)
-    if w(i) == i + 1 and w(i + 1) == i:
-        return ht, (w, False)
-    s = Permutation.s_i(i)
-    return ht + 1, s * w * s
-
-
-def gelfand_a_start(n, k):
-    return Permutation(*[1 + i + (-1)**i for i in range(2 * k)])
-
-
-def gelfand_a_printer(n, k):
-    w = gelfand_a_start(n, k)
-
-    def printer(word):
-        ht, v = 0, w
-        for i in word:
-            ht, v = gelfand_a_conjugate(ht, v, i)
-        return ht, v
-
-    return printer
-
-
-def gelfand_bc_conjugate(ht, w, i):
-    s = SignedPermutation.s_i(i, w.rank)
-    if i == 0 and w(1) in [-1, 1]:
-        return ht + 1, w * s
-    if i > 0 and abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
-        return ht, (w, False)
-    if i > 0 and w(i) == i and w(i + 1) == i + 1:
-        return ht, (w, True)
-    if i > 0 and w(i) == -i and w(i + 1) == -i - 1:
-        return ht, (w, True)
-    return ht + 1, s * w * s
-
-
-def gelfand_bc_start(n, k):
-    return SignedPermutation(*(
-        [1 + i + (-1)**i for i in range(2 * k)] +
-        [i for i in range(2 * k + 1, n + 1)]
-    ))
-
-
-def gelfand_bc_printer(n, k):
-    w = gelfand_bc_start(n, k)
-
-    def printer(word):
-        ht, v = 0, w
-        for i in word:
-            ht, v = gelfand_bc_conjugate(ht, v, i)
-        return ht, v
-
-    return printer
-
-
-def gelfand_d_conjugate(ht, w, i):
-    if i == 0:
-        s = SignedPermutation.ds_i(-1, w.rank)
-        t = SignedPermutation.ds_i(1, w.rank)
-        if abs(w(1)) != 1 and abs(w(2)) != 2:
-            if w * s == s * w:
-                return ht, (w, False)
-            return ht + 1, s * w * s
-        if (w(1) == 1 and w(2) == 2) or (w(1) == -1 and w(2) == -2):
-            return ht + 1, s * w * t
-        if (w(1) == 1 and w(2) == -2) or (w(1) == -1 and w(2) == 2):
-            return ht, (w, True)
-        if (abs(w(1)) == 1 and abs(w(2)) != 2) or (abs(w(1)) != 1 and abs(w(2)) == 2):
-            return ht + 1, (s * w * s).dstar()
-        raise Exception
-
-    if abs(w(i)) == i + 1 and abs(w(i + 1)) == i:
-        return ht, (w, False)
-    if w(i) == i and w(i + 1) == i + 1:
-        return ht, (w, True)
-    if w(i) == -i and w(i + 1) == -i - 1:
-        return ht, (w, True)
-
-    s = SignedPermutation.ds_i(i, w.rank)
-    return ht + 1, s * w * s
-
-
-def gelfand_d_start(n, k):
-    return SignedPermutation(*(
-        [1 + i + (-1)**i for i in range(2 * k)] +
-        [i for i in range(2 * k + 1, n + 1)]
-    ))
-
-
-def gelfand_d_printer(n, k):
-    w = gelfand_d_start(n, k)
-
-    def printer(word):
-        ht, v = 0, w
-        for i in word:
-            ht, v = gelfand_d_conjugate(ht, v, i)
-        return ht, v
-
-    return printer
