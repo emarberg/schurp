@@ -788,7 +788,6 @@ class QPWGraph:
         ans = 0 * polynomials.q(0)
         start = 0
         for e in range(1 + (j - i - 1) // 2):
-            print('e =', e)
             ans += polynomials.q(2 * e) * self._int(c[start:start + self.nbytes], signed=True)
             start += self.nbytes
         ans *= polynomials.q(self.qpmodule.height(i) - self.qpmodule.height(j))
