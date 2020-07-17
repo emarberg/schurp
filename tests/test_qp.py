@@ -5,6 +5,7 @@ from even import EvenSignedPermutation
 from tableaux import Tableau
 from qp_utils import rsk, gelfand_rsk, truncate_a, truncate_bc
 import random
+import pytest
 
 
 def read_or_create(rank, layer, sgn, read, create):
@@ -37,6 +38,180 @@ def read_or_compute_wgraph(w, check=False):
                 print()
                 raise Exception
     w.compute_cells()
+
+
+@pytest.mark.slow
+def test_gelfand_a_positivity(n=8):
+    # fails for n >= 8
+    for sgn in [False, True]:
+        print('type A, n =', n, 'sgn =', sgn)
+        values = set()
+        for k in range(0, n + 2, 2):
+            w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
+            read_or_compute_wgraph(w)
+            for i in w.qpmodule:
+                for j, mu in w.get_wgraph_edges(i, True):
+                    values.add(mu)
+                    if mu < 0:
+                        print('k =', k, (i, j), values)
+                        print(w.get_cbasis_polynomial(j, i))
+                        print(list(w.get_wgraph_edges(i, True)))
+                        return
+        print('* success:', values)
+        print()
+    assert False
+
+
+def test_gelfand_bc_positivity(n=4):
+    # fails n >= 4
+    for sgn in [False, True]:
+        print('type BC, n =', n, 'sgn =', sgn)
+        values = set()
+        for k in range(0, n + 1, 2):
+            w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
+            read_or_compute_wgraph(w)
+            for i in w.qpmodule:
+                for j, mu in w.get_wgraph_edges(i, True):
+                    values.add(mu)
+                    if mu < 0:
+                        print('k =', k, (i, j), values)
+                        print(w.get_cbasis_polynomial(j, i))
+                        print(list(w.get_wgraph_edges(i, True)))
+                        return
+        print('* success:', values)
+        print()
+    assert False
+
+
+@pytest.mark.slow
+def test_gelfand_d_positivity(n=7):
+    # fails n >= 7
+    for sgn in [False, True]:
+        print('type D, n =', n, 'sgn =', sgn)
+        values = set()
+        for k in range(0, n + 1, 2):
+            w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
+            read_or_compute_wgraph(w)
+            for i in w.qpmodule:
+                for j, mu in w.get_wgraph_edges(i, True):
+                    values.add(mu)
+                    if mu < 0:
+                        print('k =', k, (i, j), values)
+                        print(w.get_cbasis_polynomial(j, i))
+                        print(list(w.get_wgraph_edges(i, True)))
+                        return
+        print('* success:', values)
+        print()
+    assert False
+
+
+def b_toggle(n):
+    def toggle(c):
+        x = SignedPermutation(*[-a for a in c])
+        s = SignedPermutation(*(list(range(1, n + 1)) + list(range(x.rank, n, -1))))
+        return tuple((s * x * s).oneline)
+    return toggle
+
+
+def test_gelfand_bc_duality(nn=4):
+    read, create = QPModule.read_gelfand_bc, QPModule.create_gelfand_bc
+    for n in range(2, nn + 1):
+        toggle = b_toggle(n)
+        for k in range(0, n + 1, 2):
+            w = read_or_create(n, k // 2, True, read, create)
+            read_or_compute_wgraph(w)
+
+            v = read_or_create(n, k // 2, False, read, create)
+            read_or_compute_wgraph(v)
+
+            duality, index, jndex = {}, {}, {}
+            for i in w.qpmodule:
+                index[w.permutation(i)] = i
+            for j in v.qpmodule:
+                jndex[v.permutation(j)] = j
+            for c in index:
+                duality[c] = jndex[toggle(c)]
+
+            print('n =', n, 'k =', k)
+            for x, i in index.items():
+                ii = duality[x]
+                for j, mu in w.get_wgraph_edges(i, True):
+                    y = w.permutation(j)
+                    jj = duality[y]
+                    assert (ii, mu) in v.get_wgraph_edges(jj, True)
+            print('* success\n')
+
+            # for x, i in index.items():
+            #     for y, j in index.items():
+            #         if i == j:
+            #             continue
+            #         f = w.get_cbasis_polynomial(i, j)
+            #         ii = duality[x]
+            #         jj = duality[y]
+            #         xx = v.permutation(ii)
+            #         yy = v.permutation(jj)
+            #         g = v.get_cbasis_polynomial(jj, ii)
+            #         if f != g and (polynomials.q_coeff(f, -1) != 0 or polynomials.q_coeff(g, -1) != 0):
+            #             print('  ', i, j, ':', f, '<->', x, y)
+            #             print('  ', ii, jj, ':', g, '<->', xx, yy)
+            #             print()
+            #             assert polynomials.q_coeff(f, -1) == polynomials.q_coeff(g, -1)
+
+
+def d_toggle(n):
+    def toggle(c):
+        x = EvenSignedPermutation(*[-a for a in c])
+        s = EvenSignedPermutation(*(list(range(1, n + 1)) + list(range(x.rank, n, -1))))
+        x = s * x * s
+        if x.rank % 4 != 0:
+            x = x.star()
+        return tuple(x.oneline)
+    return toggle
+
+
+def test_gelfand_d_duality(nn=4):
+    read, create = QPModule.read_gelfand_d, QPModule.create_gelfand_d
+    for n in range(2, nn + 1):
+        toggle = d_toggle(n)
+        for k in range(0, n + 1, 2):
+            w = read_or_create(n, k // 2, True, read, create)
+            read_or_compute_wgraph(w)
+
+            v = read_or_create(n, k // 2, False, read, create)
+            read_or_compute_wgraph(v)
+
+            duality, index, jndex = {}, {}, {}
+            for i in w.qpmodule:
+                index[w.permutation(i)] = i
+            for j in v.qpmodule:
+                jndex[v.permutation(j)] = j
+            for c in index:
+                duality[c] = jndex[toggle(c)]
+
+            print('n =', n, 'k =', k)
+            for x, i in index.items():
+                ii = duality[x]
+                for j, mu in w.get_wgraph_edges(i, True):
+                    y = w.permutation(j)
+                    jj = duality[y]
+                    assert (ii, mu) in v.get_wgraph_edges(jj, True)
+            print('* success\n')
+
+            # for x, i in index.items():
+            #     for y, j in index.items():
+            #         if i == j:
+            #             continue
+            #         f = w.get_cbasis_polynomial(i, j)
+            #         ii = duality[x]
+            #         jj = duality[y]
+            #         xx = v.permutation(ii)
+            #         yy = v.permutation(jj)
+            #         g = v.get_cbasis_polynomial(jj, ii)
+            #         if f != g and (polynomials.q_coeff(f, -1) != 0 or polynomials.q_coeff(g, -1) != 0):
+            #             print('  ', i, j, ':', f, '<->', x, y)
+            #             print('  ', ii, jj, ':', g, '<->', xx, yy)
+            #             print()
+            #             assert polynomials.q_coeff(f, -1) == polynomials.q_coeff(g, -1)
 
 
 def test_gelfand_rsk():
@@ -227,11 +402,7 @@ def test_gelfand_cells_bc(nn=5, s=None):
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             print()
             if (not sgn) in cellmap[n]:
-                def toggle(c):
-                    x = SignedPermutation(*[-a for a in c])
-                    s = SignedPermutation(*(list(range(1, n + 1)) + list(range(x.rank, n, -1))))
-                    return tuple((s * x * s).oneline)
-
+                toggle = b_toggle(n)
                 negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
                 if negated != cellmap[n][sgn]:
                     for c in sorted(cellmap[n][sgn], key=len):
@@ -264,14 +435,7 @@ def test_gelfand_cells_d(nn=5, s=None):
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             print()
             if (not sgn) in cellmap[n]:
-                def toggle(c):
-                    x = EvenSignedPermutation(*[-a for a in c])
-                    s = EvenSignedPermutation(*(list(range(1, n + 1)) + list(range(x.rank, n, -1))))
-                    x = s * x * s
-                    if x.rank % 4 != 0:
-                        x = x.star()
-                    return tuple(x.oneline)
-
+                toggle = d_toggle(n)
                 negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
                 if negated != cellmap[n][sgn]:
                     for c in sorted(cellmap[n][sgn], key=len):
@@ -281,7 +445,6 @@ def test_gelfand_cells_d(nn=5, s=None):
                         print('2 ', c)
                     assert negated == cellmap[n][sgn]
                 print('* isomorphism checked\n')
-
 
 
 def test_qpwgraph(n=6, k=3):

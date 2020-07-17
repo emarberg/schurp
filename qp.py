@@ -213,7 +213,7 @@ class QPWGraph:
         assert self.is_wgraph_computed
 
         t0 = time.time()
-        if verbose:
+        if verbose and (self.cells is None or self.molecules is None):
             print()
             print('Computing cells and molecules:')
 
@@ -788,8 +788,10 @@ class QPWGraph:
         ans = 0 * polynomials.q(0)
         start = 0
         for e in range(1 + (j - i - 1) // 2):
-            ans += polynomials.q(e) * self._int(c[start:start + self.nbytes], signed=True)
+            print('e =', e)
+            ans += polynomials.q(2 * e) * self._int(c[start:start + self.nbytes], signed=True)
             start += self.nbytes
+        ans *= polynomials.q(self.qpmodule.height(i) - self.qpmodule.height(j))
         return ans
 
     def set_cbasis(self, i, j, v, set_bytes=True):

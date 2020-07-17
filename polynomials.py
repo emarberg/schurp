@@ -8,6 +8,10 @@ def q(i):
     return MPolynomial.monomial(0xFFFFFFFFFFFFFF)**i
 
 
+def q_coeff(f, degree):
+    return f.coefficient(0xFFFFFFFFFFFFFF, degree)
+
+
 def X(i):
     return MPolynomial.monomial(i)
 
@@ -401,6 +405,8 @@ class MPolynomial:
     def __pow__(self, i):
         if i == 0:
             return MPolynomial.monomial(0, 0)
+        if i == 1:
+            return self
         if i < 0:
             if len(self.coeffs) == 1:
                 new_coeffs = {}
@@ -413,7 +419,7 @@ class MPolynomial:
                     new_coeffs[HashableDict(new_ind)] = self.coeffs[ind]
                 return MPolynomial(new_coeffs)
             return None
-        return self * (self**(i - 1))
+        return self**(i // 2) * self**(i - i // 2)
 
     def nnz(self):
         nonzeros = 0
