@@ -85,18 +85,18 @@ def b_letter(i, rank):
         return str(i)
 
 
+def b_print(w):
+    def f(x):
+        return ''.join([b_letter(i, w.rank) for i in w.permutation(x)[:w.rank]])
+    return f
+
+
 def process_gelfand_bc(rank, layers=None, sgns=None):
     read = QPModule.read_gelfand_bc
     create = QPModule.create_gelfand_bc
     layers = range(rank // 2 + 1) if layers is None else layers
     sgns = [True, False] if sgns is None else sgns
-
-    def pprint(w):
-        def f(x):
-            return ''.join([b_letter(i, rank) for i in w.permutation(x)[:rank]])
-        return f
-
-    return process_gelfand(read, create, pprint, rank, layers, sgns)
+    return process_gelfand(read, create, b_print, rank, layers, sgns)
 
 
 def process_gelfand_d(rank, layers=None, sgns=None):
@@ -136,6 +136,10 @@ class QPWGraph:
             self.setup()
         else:
             self.is_setup = False
+
+    @property
+    def rank(self):
+        return self.qpmodule.rank
 
     def get_wgraph_size(self):
         return self._int(self.wgraph_addresses[-self.wbytes:])

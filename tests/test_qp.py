@@ -1,9 +1,10 @@
-from qp import QPWGraph, QPModule, gelfand_d_printer
+from qp import QPWGraph, QPModule, gelfand_d_printer, b_print
 import polynomials
+from polynomials import q_coeff
 from signed import SignedPermutation
 from even import EvenSignedPermutation
 from tableaux import Tableau
-from qp_utils import rsk, gelfand_rsk, truncate_a, truncate_bc
+from qp_utils import rsk, gelfand_rsk
 import random
 import pytest
 
@@ -141,21 +142,19 @@ def test_gelfand_bc_duality(nn=4):
                     assert (ii, mu) in v.get_wgraph_edges(jj, True)
             print('* success\n')
 
-            # for x, i in index.items():
-            #     for y, j in index.items():
-            #         if i == j:
-            #             continue
-            #         f = w.get_cbasis_polynomial(i, j)
-            #         ii = duality[x]
-            #         jj = duality[y]
-            #         xx = v.permutation(ii)
-            #         yy = v.permutation(jj)
-            #         g = v.get_cbasis_polynomial(jj, ii)
-            #         if f != g and (polynomials.q_coeff(f, -1) != 0 or polynomials.q_coeff(g, -1) != 0):
-            #             print('  ', i, j, ':', f, '<->', x, y)
-            #             print('  ', ii, jj, ':', g, '<->', xx, yy)
-            #             print()
-            #             assert polynomials.q_coeff(f, -1) == polynomials.q_coeff(g, -1)
+            for y, j in index.items():
+                for x, i in index.items():
+                    if i == j:
+                        continue
+                    f = w.get_cbasis_polynomial(i, j)
+                    ii = duality[x]
+                    jj = duality[y]
+                    g = v.get_cbasis_polynomial(jj, ii)
+                    if f != g and (q_coeff(f, -1) != 0 or q_coeff(g, -1) != 0):
+                        print('  ', i, j, ':', f, '<->', b_print(w)(i), b_print(w)(j))
+                        print('  ', ii, jj, ':', g, '<->', b_print(w)(ii), b_print(w)(jj))
+                        print()
+                        assert q_coeff(f, -1) == q_coeff(g, -1)
 
 
 def d_toggle(n):
@@ -207,11 +206,11 @@ def test_gelfand_d_duality(nn=4):
             #         xx = v.permutation(ii)
             #         yy = v.permutation(jj)
             #         g = v.get_cbasis_polynomial(jj, ii)
-            #         if f != g and (polynomials.q_coeff(f, -1) != 0 or polynomials.q_coeff(g, -1) != 0):
+            #         if f != g and (q_coeff(f, -1) != 0 or q_coeff(g, -1) != 0):
             #             print('  ', i, j, ':', f, '<->', x, y)
             #             print('  ', ii, jj, ':', g, '<->', xx, yy)
             #             print()
-            #             assert polynomials.q_coeff(f, -1) == polynomials.q_coeff(g, -1)
+            #             assert q_coeff(f, -1) == q_coeff(g, -1)
 
 
 def test_gelfand_rsk():
