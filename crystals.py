@@ -14,7 +14,7 @@ import tests.test_keys as testkeys
 import subprocess
 
 
-BASE_DIRECTORY = '/Users/emarberg/Desktop/examples/crystals/'
+BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
 
 class OrthogonalCrystalGenerator:

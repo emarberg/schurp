@@ -6,7 +6,7 @@ import os
 
 class Pipedream:
 
-    DIRECTORY = '/Users/emarberg/Dropbox/involution-words/Pipedreams/examples/'
+    DIRECTORY = '/Users/emarberg/examples/pipedreams/examples/'
 
     @classmethod
     def from_word(cls, *words):

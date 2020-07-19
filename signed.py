@@ -988,7 +988,7 @@ class SignedPermutation(SignedMixin):
 
 class SignedAtomsGraph:
 
-    DIRECTORY = '/Users/emarberg/Dropbox/stanley-type-c/atoms/'
+    DIRECTORY = '/Users/emarberg/examples/stanley-type-c/atoms/'
 
     def tikz(self):
         pre = [

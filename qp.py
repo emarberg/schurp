@@ -984,7 +984,7 @@ class QPModuleElement:
 
 class QPModule:
 
-    DIRECTORY = '/Users/emarberg/Desktop/examples/models/'
+    DIRECTORY = '/Users/emarberg/examples/models/'
 
     HECKE_A = 'RIGHT_HECKE_A'
     HECKE_BC = 'RIGHT_HECKE_BC'

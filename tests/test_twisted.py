@@ -164,7 +164,7 @@ def print_atoms_span(n=3):
         s += ['}']
         s = '\n'.join(s)
         name = ''.join([str(v(i)) for i in range(1, n + 1)])
-        file = '/Users/emarberg/Desktop/examples/atoms/'
+        file = '/Users/emarberg/examples/atoms/'
         dotfile = file + 'dot/AIII/' + name + '.dot'
         pngfile = file + 'png/AIII/' + name + '.png'
         with open(dotfile, 'w') as f:
