@@ -116,6 +116,37 @@ class Partition:
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    @classmethod
+    def growth_diagram(cls, dictionary):
+        dictionary = {k: 1 for k in dictionary} if type(dictionary) == set else dictionary
+        n = max([0] + [i for i, _ in dictionary])
+        m = max([0] + [j for _, j in dictionary])
+        g = [[Partition() for _ in range(m + 1)] for _ in range(n + 1)]
+        for i in range(1, n + 1):
+            for j in range(1, m + 1):
+                carry, k = dictionary.get((i, j), 0), 1
+                rho, mu, nu = g[i - 1][j - 1], g[i - 1][j], g[i][j - 1]
+                lam = []
+                while True:
+                    v = max(mu(k), nu(k)) + carry
+                    if v == 0:
+                        break
+                    lam.append(v)
+                    carry, k = min(mu(k), nu(k)) - rho(k), k + 1
+                g[i][j] = Partition(*lam)
+        return g
+
+    @classmethod
+    def print_growth_diagram(cls, g):
+        g = cls.growth_diagram(g) if type(g) != list else g
+        g = [[str(mu) for mu in row] for row in g]
+        m = max([0] + [len(mu) for row in g for mu in row])
+        g = [[mu + (m - len(mu)) * ' ' for mu in row] for row in g]
+        print()
+        for row in g:
+            print(' '.join(row))
+        print()
+
     def tuple(self):
         return tuple(self.parts)
 
