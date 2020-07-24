@@ -117,10 +117,10 @@ class Partition:
         })
 
     @classmethod
-    def growth_diagram(cls, dictionary):
+    def growth_diagram(cls, dictionary, m=None, n=None):
         dictionary = {k: 1 for k in dictionary} if type(dictionary) == set else dictionary
-        n = max([0] + [i for i, _ in dictionary])
-        m = max([0] + [j for _, j in dictionary])
+        n = max([0] + [i for i, _ in dictionary]) if n is None else n
+        m = max([0] + [j for _, j in dictionary]) if m is None else m
         g = [[Partition() for _ in range(m + 1)] for _ in range(n + 1)]
         for i in range(1, n + 1):
             for j in range(1, m + 1):
