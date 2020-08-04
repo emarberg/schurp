@@ -344,6 +344,30 @@ class Permutation:
             PRIMED_INVOLUTION_WORDS[oneline] = words
         return PRIMED_INVOLUTION_WORDS[oneline]
 
+    def dominant_component(self):
+        ans = set()
+        i = 1
+        while self(i) > 1:
+            j = 1
+            while not any(y == self(x) for x in range(1, i + 1) for y in range(1, j +1)):
+                ans.add((i, j))
+                j += 1
+            i += 1
+        return ans
+
+    def outer_corners(self):
+        n = self.rank + 1
+        dom = self.dominant_component()
+        return {
+            (i, j)
+            for i in range(1, n + 1)
+            for j in range(1, n + 1)
+            if (i, j) not in dom and
+            (i == 1 or (i - 1, j) in dom) and
+            (j == 1 or (i, j - 1) in dom)
+        }
+
+
     @classmethod
     def all(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
