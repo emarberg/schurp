@@ -116,6 +116,166 @@ class Partition:
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    def add_box_to_row(self, row):
+        p = self
+        parts = [p(i) + (1 if i == row else 0) for i in range(1, max(len(p), row) + 1)]
+        return Partition(*parts)
+
+    def add_box_to_column(self, col, shift):
+        shape = {(i, i + j - 1) for (i, j) in self.shape} if shift else set(self.shape)
+        a = [i for (i, j) in shape if j == col]
+        row = max(a) + 1 if a else 1
+        shape.add((row, col))
+        if shift:
+            assert all((i, j - 1) in shape or i == j for (i, j) in shape)
+        else:
+            assert all((i, j - 1) in shape or j == 1 for (i, j) in shape)
+        parts = []
+        for (i, j) in shape:
+            while i - 1 >= len(parts):
+                parts += [0]
+            parts[i - 1] += 1
+        return Partition(*parts)
+
+    @classmethod
+    def union(cls, p, q):
+        parts = [max(p(i), q(i)) for i in range(1, max(len(p), len(q)) + 1)]
+        return Partition(*parts)
+
+    @classmethod
+    def shifted_growth_diagram(cls, dictionary, m=None, n=None):
+        def shdiff(nu, lam):
+            boxes = nu.shape - lam.shape
+            assert len(boxes) == 1
+            i, j = next(iter(boxes.positions))
+            return (i, i + j - 1)
+
+        dictionary = {(a, i + 1) for i, a in enumerate(dictionary)} if type(dictionary) in [list, tuple] else dictionary
+        dictionary = {k: 1 for k in dictionary} if type(dictionary) == set else dictionary
+        n = max([0] + [i for i, _ in dictionary]) if n is None else n
+        m = max([0] + [j for _, j in dictionary]) if m is None else m
+
+        g = [[Partition() for _ in range(m + 1)] for _ in range(n + 1)]
+        edges = [[False for _ in range(m + 1)] for _ in range(n + 1)]
+        corners = [[None for _ in range(m + 1)] for _ in range(n + 1)]
+
+        for i in range(1, n + 1):
+            for j in range(1, m + 1):
+                v = dictionary.get((i, j), 0)
+                assert v in [0, 1]
+                lam, nu, mu = g[i - 1][j - 1], g[i - 1][j], g[i][j - 1]
+                if v == 1 and lam(1) == mu(1):
+                    # case (1)
+                    # print('case 1')
+                    gamma = mu.add_box_to_row(row=1)
+                elif v == 1:
+                    # case (2)
+                    # print('case 2')
+                    assert lam(1) + 1 == mu(1)
+                    gamma = mu
+                    corners[i][j] = 1
+                elif mu == lam:
+                    # case (3a)
+                    # print('case 3a')
+                    gamma = nu
+                    edges[i][j] = edges[i - 1][j]
+                    corners[i][j] = corners[i - 1][j]
+                elif nu == lam and not edges[i - 1][j] and corners[i - 1][j] is None:
+                    # case (3b)
+                    # print('case 3b')
+                    gamma = mu
+                elif not mu.contains(nu):
+                    # case (4)
+                    # print('case 4')
+                    gamma = Partition.union(nu, mu)
+                    edges[i][j] = edges[i - 1][j]
+                elif lam != nu:
+                    a, b = shdiff(nu, lam)
+                    row = {(x, x + y - 1) for (x, y) in mu.shape - lam.shape if x == a + 1}
+                    col = {(x, x + y - 1) for (x, y) in mu.shape - lam.shape if x + y - 1 == b + 1}
+
+                    if not edges[i][j - 1] and a != b:
+                        if len(row) == 0:
+                            # case (5)
+                            # print('case 5')
+                            gamma = mu.add_box_to_row(a + 1)
+                        else:
+                            # case (6)
+                            # print('case 6')
+                            gamma = mu
+                            corners[i][j] = a + 1
+                    else:
+                        if len(col) == 0:
+                            # case (7)
+                            # print('case 7')
+                            gamma = mu.add_box_to_column(b + 1, shift=True)
+                            edges[i][j] = True
+                        else:
+                            # case (8)
+                            # print('case 8')
+                            gamma = mu
+                            edges[i][j] = True
+                            corners[i][j] = b + 1
+                elif lam == nu and not edges[i - 1][j]:
+                    a = corners[i - 1][j]
+                    b = nu(a) + a - 1
+                    skew = {(x, x + y - 1) for (x, y) in mu.shape - lam.shape}
+                    if (a, b + 1) not in skew and (a + 1, b) not in skew:
+                        # case (9)
+                        # print('case 9')
+                        gamma = mu
+                        corners[i][j] = a
+                    elif (a + 1, b) in skew:
+                        # case (10)
+                        # print('case 10')
+                        gamma = mu
+                        corners[i][j] = a + 1
+                    elif (a, b + 1) in skew and not any(x == a + 1 for (x, y) in skew):
+                        if a == b:
+                            # case (12)
+                            # print('case 12')
+                            gamma = mu
+                            edges[i][j] = True
+                            corners[i][j] = a + 1
+                        else:
+                            # case (11)
+                            # print('case 11')
+                            gamma = mu.add_box_to_row(a + 1)
+
+                elif lam == nu and edges[i - 1][j]:
+                    b = corners[i - 1][j]
+                    a = max([x for (x, y) in nu.shape if x + y - 1 == b])
+                    skew = {(x, x + y - 1) for (x, y) in mu.shape - lam.shape}
+
+                    if (a, b + 1) not in skew and (a + 1, b) not in skew:
+                        # case (13)
+                        # print('case 13')
+                        gamma = mu
+                        corners[i][j] = b
+                        edges[i][j] = True
+                    elif (a, b + 1) in skew:
+                        # case (14)
+                        # print('case 14')
+                        gamma = mu
+                        corners[i][j] = b + 1
+                        edges[i][j] = True
+                    elif (a + 1, b) in skew and not any(y == b + 1 for (x, y) in skew):
+                        # case (15)
+                        # print('case 15')
+                        gamma = mu.add_box_to_column(b + 1, shift=True)
+                        edges[i][j] = True
+                    else:
+                        raise Exception
+                else:
+                    raise Exception
+
+                # print(i, j, gamma)
+                # Partition.print_growth_diagram(g)
+                # Partition.print_growth_diagram(edges)
+                # Partition.print_growth_diagram(corners)
+                g[i][j] = gamma
+        return g, edges, corners
+
     @classmethod
     def growth_diagram(cls, dictionary, m=None, n=None):
         dictionary = {k: 1 for k in dictionary} if type(dictionary) == set else dictionary
@@ -140,10 +300,10 @@ class Partition:
     def print_growth_diagram(cls, g):
         g = cls.growth_diagram(g) if type(g) != list else g
         g = [[str(mu) for mu in row] for row in g]
-        m = max([0] + [len(mu) for row in g for mu in row])
+        m = max([6] + [len(mu) for row in g for mu in row])
         g = [[mu + (m - len(mu)) * ' ' for mu in row] for row in g]
         print()
-        for row in g:
+        for row in reversed(g):
             print(' '.join(row))
         print()
 
