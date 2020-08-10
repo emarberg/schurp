@@ -665,6 +665,29 @@ class Tableau:
         return self.replace_row(j, self.get_row(j) + (v, ), shifted)
 
     @classmethod
+    def from_shifted_growth_diagram(cls, growth, edges, corners):
+        def shdiff(nu, lam):
+            return next(iter(Partition.skew(nu, lam, shifted=True)))
+
+        p, q = Tableau(), Tableau()
+        n, m = len(growth) - 1, len(growth[0]) - 1 if growth else 0
+
+        for i in range(1, n + 1):
+            mu, nu = growth[i][m], growth[i - 1][m]
+            for a, b in Partition.skew(mu, nu, shifted=True):
+                p = p.add(a, b, i)
+
+        for i in range(1, m + 1):
+            mu, nu = growth[n][i], growth[n][i - 1]
+            v = -i if edges[n][i] else i
+            j = corners[n][i]
+            assert mu != nu
+            a, b = shdiff(mu, nu)
+            q = q.add(a, b, v)
+
+        return p, q
+
+    @classmethod
     def bump(cls, p, column_dir, sequence):
         assert all(sequence[i + 1] > sequence[i] for i in range(len(sequence) - 1))
         if len(sequence) == 0 or p > sequence[-1]:

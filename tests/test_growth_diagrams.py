@@ -1,6 +1,10 @@
 from partitions import Partition
+from permutations import Permutation
+from tableaux import Tableau
+from words import Word
 import itertools
 import random
+
 
 def test_basic():
     m = {(1, 1): 1, (1, 2): 1, (3, 1): 1, (4, 1): 1, (2, 2): 1}
@@ -49,3 +53,20 @@ def test_shifted():
 
     ctest = [[None, None, None, None, None, None, None, None], [None, None, None, None, 1, None, None, None], [None, None, None, None, 2, 1, None, 1], [None, None, None, None, 2, 1, None, None], [None, None, None, None, 3, None, 2, None]]
     assert c == ctest
+
+
+def test_shifted_growth_words(n=5):
+    for a in Permutation.involutions(n):
+        for w in a.get_involution_words():
+            p, q = Word(*w).involution_insert()
+            g, e, c = Partition.shifted_growth_diagram(w)
+            pp, qq = Tableau.from_shifted_growth_diagram(g, e, c)
+            # print(w)
+            # print(p)
+            # print(pp)
+            # print(q)
+            # print(qq)
+            # Partition.print_growth_diagram(g)
+            # Partition.print_growth_diagram(e)
+            # Partition.print_growth_diagram(c)
+            assert p == pp and q == qq

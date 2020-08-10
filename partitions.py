@@ -145,10 +145,7 @@ class Partition:
     @classmethod
     def shifted_growth_diagram(cls, dictionary, m=None, n=None):
         def shdiff(nu, lam):
-            boxes = nu.shape - lam.shape
-            assert len(boxes) == 1
-            i, j = next(iter(boxes.positions))
-            return (i, i + j - 1)
+            return next(iter(Partition.skew(nu, lam, shifted=True)))
 
         dictionary = {(a, i + 1) for i, a in enumerate(dictionary)} if type(dictionary) in [list, tuple] else dictionary
         dictionary = {k: 1 for k in dictionary} if type(dictionary) == set else dictionary
@@ -194,25 +191,21 @@ class Partition:
                     row = {(x, x + y - 1) for (x, y) in mu.shape - lam.shape if x == a + 1}
                     col = {(x, x + y - 1) for (x, y) in mu.shape - lam.shape if x + y - 1 == b + 1}
 
-                    if not edges[i][j - 1] and a != b:
+                    if not edges[i - 1][j] and a != b:
                         if len(row) == 0:
                             # case (5)
-                            # print('case 5')
                             gamma = mu.add_box_to_row(a + 1)
                         else:
                             # case (6)
-                            # print('case 6')
                             gamma = mu
                             corners[i][j] = a + 1
                     else:
                         if len(col) == 0:
                             # case (7)
-                            # print('case 7')
                             gamma = mu.add_box_to_column(b + 1, shift=True)
                             edges[i][j] = True
                         else:
                             # case (8)
-                            # print('case 8')
                             gamma = mu
                             edges[i][j] = True
                             corners[i][j] = b + 1
@@ -222,24 +215,20 @@ class Partition:
                     skew = {(x, x + y - 1) for (x, y) in mu.shape - lam.shape}
                     if (a, b + 1) not in skew and (a + 1, b) not in skew:
                         # case (9)
-                        # print('case 9')
                         gamma = mu
                         corners[i][j] = a
                     elif (a + 1, b) in skew:
                         # case (10)
-                        # print('case 10')
                         gamma = mu
                         corners[i][j] = a + 1
                     elif (a, b + 1) in skew and not any(x == a + 1 for (x, y) in skew):
                         if a == b:
                             # case (12)
-                            # print('case 12')
                             gamma = mu
                             edges[i][j] = True
                             corners[i][j] = a + 1
                         else:
                             # case (11)
-                            # print('case 11')
                             gamma = mu.add_box_to_row(a + 1)
 
                 elif lam == nu and edges[i - 1][j]:
@@ -249,19 +238,16 @@ class Partition:
 
                     if (a, b + 1) not in skew and (a + 1, b) not in skew:
                         # case (13)
-                        # print('case 13')
                         gamma = mu
                         corners[i][j] = b
                         edges[i][j] = True
                     elif (a, b + 1) in skew:
                         # case (14)
-                        # print('case 14')
                         gamma = mu
                         corners[i][j] = b + 1
                         edges[i][j] = True
                     elif (a + 1, b) in skew and not any(y == b + 1 for (x, y) in skew):
                         # case (15)
-                        # print('case 15')
                         gamma = mu.add_box_to_column(b + 1, shift=True)
                         edges[i][j] = True
                     else:
@@ -269,10 +255,6 @@ class Partition:
                 else:
                     raise Exception
 
-                # print(i, j, gamma)
-                # Partition.print_growth_diagram(g)
-                # Partition.print_growth_diagram(edges)
-                # Partition.print_growth_diagram(corners)
                 g[i][j] = gamma
         return g, edges, corners
 
@@ -306,6 +288,11 @@ class Partition:
         for row in reversed(g):
             print(' '.join(row))
         print()
+
+    @classmethod
+    def skew(cls, mu, nu, shifted=False):
+        s = set(mu.shape - nu.shape)
+        return {(i, i + j - 1) for (i, j) in s} if shifted else s
 
     def tuple(self):
         return tuple(self.parts)
