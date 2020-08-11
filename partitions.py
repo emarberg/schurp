@@ -252,10 +252,16 @@ class Partition:
                         gamma = mu
                         corners[i][j] = b + 1
                         edges[i][j] = True
-                    elif (a + 1, b) in skew and not any(y == b + 1 for (x, y) in skew):
-                        # case (15)
-                        gamma = mu.add_box_to_column(b + 1, shift=True)
-                        edges[i][j] = True
+                    elif (a + 1, b) in skew:
+                        if any(y == b + 1 for (x, y) in skew):
+                            # case (??)
+                            gamma = mu
+                            corners[i][j] = b + 1
+                            edges[i][j] = True
+                        else:
+                            # case (15)
+                            gamma = mu.add_box_to_column(b + 1, shift=True)
+                            edges[i][j] = True
                     else:
                         raise Exception
                 else:

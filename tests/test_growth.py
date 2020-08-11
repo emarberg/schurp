@@ -36,7 +36,7 @@ def test_symmetric(n=4):
                 assert emp == sigma
 
 
-def test_shifted():
+def test_shifted_growth_diagram():
     w = (4, 2, 1, 1, 2, 3, 2)
     g, e, c = Partition.shifted_growth_diagram(w)
 
@@ -63,6 +63,20 @@ def test_shifted():
     p, q = Tableau.from_shifted_growth_diagram(g, e, c)
     print(p)
     print(q)
+    pp, qq = Word(*w).involution_insert()
+    assert p == pp and q == qq
+
+    w = (1, 3, 2, 5, 6, 4, 3, 5, 2, 4, 5, 6)
+    g, e, c = Partition.shifted_growth_diagram(w)
+    Partition.print_growth_diagram(g)
+    Partition.print_growth_diagram(e)
+    Partition.print_growth_diagram(c)
+
+    p, q = Tableau.from_shifted_growth_diagram(g, e, c)
+    print(p)
+    print(q)
+    pp, qq = Word(*w).involution_insert()
+    assert p == pp and q == qq
 
 
 def test_shifted_growth_words(n=5):
