@@ -54,6 +54,16 @@ def test_shifted():
     ctest = [[None, None, None, None, None, None, None, None], [None, None, None, None, 1, None, None, None], [None, None, None, None, 2, 1, None, 1], [None, None, None, None, 2, 1, None, None], [None, None, None, None, 3, None, 2, None]]
     assert c == ctest
 
+    w = (4, 5, 1, 2, 3, 4, 6, 5, 6, 4)
+    g, e, c = Partition.shifted_growth_diagram(w)
+    Partition.print_growth_diagram(g)
+    Partition.print_growth_diagram(e)
+    Partition.print_growth_diagram(c)
+
+    p, q = Tableau.from_shifted_growth_diagram(g, e, c)
+    print(p)
+    print(q)
+
 
 def test_shifted_growth_words(n=5):
     for a in Permutation.involutions(n):
