@@ -680,6 +680,12 @@ class Permutation:
         self.oneline = oneline
         self.cycles = self.get_cycles(oneline)
 
+    def sgn(self):
+        return (-1)**len([c for c in self.cycles if len(c) % 2 == 0])
+
+    def sign(self):
+        return self.sgn()
+
     def is_right_descent(self, i):
         return self(i) > self(i + 1)
 

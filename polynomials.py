@@ -194,8 +194,11 @@ class MPolynomial:
             return max(v)
         return 0
 
+    def values(self):
+        return set(self.coeffs.values())
+
     def truncate(self, nvar):
-        return MPolynomial({m: v for m, v in self.coeffs.items() if not any(i > nvar for i in m)})
+        return self.__class__({m: v for m, v in self.coeffs.items() if not any(i > nvar for i in m)})
 
     def __bool__(self):
         return not self.is_zero()
@@ -203,22 +206,22 @@ class MPolynomial:
     def __init__(self, coeffs={}):
         self.coeffs = coeffs
 
-    @staticmethod
-    def monomial(index, power=1):
+    @classmethod
+    def monomial(cls, index, power=1):
         if power == 0:
-            return MPolynomial({HashableDict({}): 1})
+            return cls({HashableDict({}): 1})
 
         ind = HashableDict({index: power})
-        return MPolynomial({ind: 1})
+        return cls({ind: 1})
 
     def coefficient(self, index, power):
-        x = MPolynomial()
+        x = self.__class__()
         for term in self.coeffs:
             if (index in term and term[index] == power) or (power == 0 and not (index in term)):
                 new_term = HashableDict(term.copy())
                 if power != 0:
                     del new_term[index]
-                x = x + MPolynomial({new_term: self.coeffs[term]})
+                x = x + self.__class__({new_term: self.coeffs[term]})
         return x
 
     def degree(self):
@@ -243,7 +246,11 @@ class MPolynomial:
 
     @classmethod
     def one(cls):
-        return cls.monomial(1, 0)
+        return cls({HashableDict({}): 1})
+
+    @classmethod
+    def zero(cls):
+        return cls()
 
     def set(self, i, e):
         return self.substitute(i, e)
@@ -289,7 +296,7 @@ class MPolynomial:
 
     def __add__(self, other):
         if isinstance(other, int):
-            other = other * MPolynomial.monomial(0, 0)
+            other = other * self.one()
 
         newcoeffs = self.coeffs.copy()
         for i in other.coeffs:
@@ -297,7 +304,7 @@ class MPolynomial:
             if newcoeffs[i] == 0:
                 del newcoeffs[i]
 
-        return MPolynomial(newcoeffs)
+        return self.__class__(newcoeffs)
 
     __radd__ = __add__
 
@@ -311,11 +318,11 @@ class MPolynomial:
         return -(self - other)
 
     def __lt__(self, other):
-        other = MPolynomial.one() * other if type(other) == int else other
+        other = self.one() * other if type(other) == int else other
         return all(v > 0 for v in (other - self).coeffs.values())
 
     def __gt__(self, other):
-        other = MPolynomial.one() * other if type(other) == int else other
+        other = self.one() * other if type(other) == int else other
         return all(v > 0 for v in (self - other).coeffs.values())
 
     def is_positive(self):
@@ -325,10 +332,10 @@ class MPolynomial:
         return not any(v < 0 for c in self.coeffs for v in c.values())
 
     def isobaric_divided_difference(self, i):
-        return (self * MPolynomial.monomial(i, 1)).divided_difference(i)
+        return (self * self.monomial(i, 1)).divided_difference(i)
 
     def toggle(self, i):
-        ans = MPolynomial()
+        ans = self.__class__()
         for index, coeff in self.coeffs.items():
             new_index = HashableDict(index.copy())
             if i + 1 in index:
@@ -339,7 +346,7 @@ class MPolynomial:
                 new_index[i + 1] = index[i]
             elif i + 1 in new_index:
                 del new_index[i + 1]
-            ans += MPolynomial({new_index: coeff})
+            ans += self.__class__({new_index: coeff})
         return ans
 
     @classmethod
@@ -349,34 +356,34 @@ class MPolynomial:
             b = index.get(i + 1, 0)
             d = max(a, b) - min(a, b)
 
-            x = MPolynomial.monomial(i, 1)
-            y = MPolynomial.monomial(i + 1, 1)
-            ans = MPolynomial()
+            x = cls.monomial(i, 1)
+            y = cls.monomial(i + 1, 1)
+            ans = cls()
 
             new_index = HashableDict(index.copy())
             new_index[i] = min(a, b)
             new_index[i + 1] = min(a, b)
-            tmp = MPolynomial({new_index: 1})
+            tmp = cls({new_index: 1})
 
             sgn = 1 if a == max(a, b) else -1
             for j in range(d):
                 ans += sgn * tmp * x**j * y**(d - 1 - j)
             DIVIDED_DIFFERENCE_CACHE[(i, index)] = ans
-            ell = len(DIVIDED_DIFFERENCE_CACHE)
+            # ell = len(DIVIDED_DIFFERENCE_CACHE)
             # if ell % 100 == 0:
             #    print(' . . . Divided Differences cache:', ell)
         return DIVIDED_DIFFERENCE_CACHE[(i, index)]
 
     def divided_difference(self, i):
-        ans = MPolynomial()
+        ans = self.__class__()
         for index, coeff in self.coeffs.items():
             ans += self.divided_difference_helper(i, index) * coeff
         return ans
 
     def __mul__(self, f):
         if type(f) == int:
-            return self * MPolynomial({HashableDict({}): f})
-        if type(f) != MPolynomial:
+            return self * self.__class__({HashableDict({}): f})
+        if type(f) != type(self):
             return f.__rmul__(self)
         newcoeffs = {}
         for i in self.coeffs:
@@ -389,10 +396,10 @@ class MPolynomial:
                     newcoeffs[k] = self[i] * f[j]
                 if newcoeffs[k] == 0:
                     del newcoeffs[k]
-        return MPolynomial(newcoeffs)
+        return self.__class__(newcoeffs)
 
     def __rmul__(self, other):
-        if type(other) not in [MPolynomial, int]:
+        if type(other) not in [type(self), int]:
             return other.__mul__(self)
         else:
             return self.__mul__(other)
@@ -400,11 +407,11 @@ class MPolynomial:
     def __floordiv__(self, other):
         assert type(other) in [int]
         coeffs = {m: c // other for (m, c) in self.coeffs.items() if c / other}
-        return MPolynomial(coeffs)
+        return self.__class__(coeffs)
 
     def __pow__(self, i):
         if i == 0:
-            return MPolynomial.monomial(0, 0)
+            return self.one()
         if i == 1:
             return self
         if i < 0:
@@ -417,7 +424,7 @@ class MPolynomial:
                     for key in new_ind:
                         new_ind[key] *= i
                     new_coeffs[HashableDict(new_ind)] = self.coeffs[ind]
-                return MPolynomial(new_coeffs)
+                return self.__class__(new_coeffs)
             return None
         return self**(i // 2) * self**(i - i // 2)
 
@@ -434,8 +441,8 @@ class MPolynomial:
     def constant_term(self):
         return self[HashableDict({})]
 
-    @staticmethod
-    def letters(i):
+    @classmethod
+    def letters(cls, i):
         # if i == 0:
         #     return "x"
         # if i == 1:
@@ -463,13 +470,13 @@ class MPolynomial:
         if i < 0:
             return "y_" + str(-i)
 
-    @staticmethod
-    def index_to_str(ind):
+    @classmethod
+    def index_to_str(cls, ind):
 
         s = ''
         for i in ind:
             if ind[i] != 0:
-                s = s + ' ' + MPolynomial.letters(i)
+                s = s + ' ' + cls.letters(i)
                 if ind[i] != 1:
                     s = s + "^" + str(ind[i])
         # s = '(' + s[1:] + ')'
@@ -493,7 +500,7 @@ class MPolynomial:
             return (c,) + tuple(ans)
 
         for i in sorted(filtered, key=sorter):
-            monomial = MPolynomial.index_to_str(i)
+            monomial = self.index_to_str(i)
             coeff = str(abs(self[i]))
 
             if coeff == "1" and monomial != "":
@@ -526,4 +533,4 @@ def y(i):
 
 
 def one():
-    return x(1)**0
+    return MPolynomial.one()
