@@ -242,7 +242,7 @@ class MPolynomial:
         return ans
 
     def __iter__(self):
-        return self.coeffs.__iter__()
+        return sorted(self.coeffs, key=self.sorter).__iter__()
 
     @classmethod
     def one(cls):
@@ -485,21 +485,22 @@ class MPolynomial:
             s = ""
         return s
 
+    @classmethod
+    def sorter(cls, index):
+        ans = []
+        c = 0
+        for i in sorted(index):
+            c += index[i]
+            ans += abs(index[i]) * [-i]
+        return (c,) + tuple(ans)
+
     def __repr__(self):
         if self.nnz() == 0:
             return '0'
         s = ''
         filtered = filter(lambda x: self[x] != 0, self.coeffs)
 
-        def sorter(index):
-            ans = []
-            c = 0
-            for i in sorted(index):
-                c += index[i]
-                ans += abs(index[i]) * [-i]
-            return (c,) + tuple(ans)
-
-        for i in sorted(filtered, key=sorter):
+        for i in sorted(filtered, key=self.sorter):
             monomial = self.index_to_str(i)
             coeff = str(abs(self[i]))
 

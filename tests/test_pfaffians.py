@@ -40,6 +40,17 @@ class PfPol(MPolynomial):
         assert i > 0
         return "x_{%i,%i}" % cls.to_pair(i)
 
+    @classmethod
+    def sorter(cls, index):
+        big = 10
+        assert not any(max(cls.to_pair(p)) > big for p in index)
+        return tuple(
+            # reverse lexicographic term order
+            index.get(cls.from_pair(i, j), 0)
+            for i in range(big, 0, -1)
+            for j in range(i - 1, 0, -1)
+        )
+
     @cached_value(PFAFFIAN_CACHE)
     def pfminor(cls, a, b): # noqa
         verbose = False
@@ -147,6 +158,95 @@ class PfPol(MPolynomial):
     @classmethod
     def determinant(cls, i, j=None):
         return cls._minor(i, j)
+
+
+def transform(x, y):
+    if len(x) < 2 or x[1] > y[0]:
+        return x, y
+    assert x[0] < y[0]
+    i = [_ for _ in range(1, len(x)) if y[0] >= x[_]][-1]
+    if y[i] <= x[0]:
+        x, y = tuple(reversed(y[:i + 1])) + x[i + 1:], tuple(reversed(x[:i + 1])) + y[i + 1:]
+    newx, newy = transform(x[1:i + 1], y[1:i + 1])
+    return (x[0],) + newx + x[i + 1:], (y[0],) + newy + y[i + 1:]
+
+
+def twists(x, y):
+    ans = 0
+    for i in range(len(x)):
+        for j in range(i + 1, len(y)):
+            b, c = x[i], x[j]
+            d, a = y[i], y[j]
+            if a < b < c < d:
+                ans += 1
+    return ans
+
+
+def test_relation(q=7):
+    t = tuple(range(1, 2 * q + 1))
+    for x in itertools.combinations(t, q):
+        for y in itertools.combinations(tuple(reversed(t)), q):
+            m = twists(x, y)
+            tx, ty = transform(x, y)
+            if m > 0:
+                print('A =', x)
+                print('B =', y)
+                print()
+                print('twists =', m)
+                print()
+                print('transformed A =', tx)
+                print('transformed B =', ty)
+                print()
+                print('twists =', twists(tx, ty))
+                print()
+                print()
+                print()
+            assert all(tx[i] < tx[i + 1] for i in range(q - 1))
+            assert all(ty[i] > ty[i + 1] for i in range(q - 1))
+            assert twists(tx, ty) == 0
+
+
+def test_leading(m=2):
+    r = tuple(range(1, 1 + 2 * m))
+    for k in range(m, 2 * m):
+        for b in itertools.combinations(r, k):
+            b = tuple(reversed(b))
+            for a in itertools.combinations(r, k):
+                dot = tuple(zip(a, b))
+                if any(x == y for (x, y) in dot):
+                    continue
+                pairs = {(x, y) if x > y else (y, x) for (x, y) in dot}
+                a_tilde = tuple(x for (x, y) in dot if (y, x) not in dot)
+
+                t = tuple(i if i in a_tilde else 0 for i in a)
+
+                print('A:', a)
+                print('B:', b)
+                print()
+                print('dot =', dot)
+                print('pairs =', pairs)
+                print()
+                print('A:', t)
+                print('B:', b)
+
+                u = PfPol.one()
+                for (x, y) in pairs:
+                    u *= PfPol.monomial(x, y)
+
+                block = PfPol.blockpf(a_tilde, b)
+                f = PfPol({list(block)[0]: 1})
+
+                print()
+                print('f_AB =', block)
+                print()
+                print('u =', u)
+                print('f =', f)
+                print()
+                print('twists =', twists(a, b))
+                assert u == f or twists(a, b) > 0
+                print()
+                print()
+                print()
 
 
 def test_blockfp(m=7):
