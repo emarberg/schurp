@@ -38,8 +38,44 @@ def type_b_principal_specialization(w, degree_cutoff):
     return ans * 2**w.ell_zero()
 
 
+def backstable_schubert(w, degree_cutoff):
+    assert type(w) == Permutation
+    ans = 0
+    for a_seq in w.get_reduced_words():
+        for i_seq in backstable_compatible_sequences(a_seq, degree_cutoff):
+            term = X(0) ** 0
+            for i in i_seq:
+                term *= X(i)
+            ans += term
+    return ans
+
+
+def type_c_schubert(w, degree_cutoff):
+    assert type(w) == SignedPermutation
+    ans = 0
+    for a_seq in w.get_signed_reduced_words():
+        for i_seq in backstable_compatible_sequences(a_seq, degree_cutoff):
+            term = X(0) ** 0
+            for i in i_seq:
+                term *= X(i)
+            ans += term
+    return ans * 2**w.ell_zero()
+
+
 def type_c_principal_specialization(w, degree_cutoff):
     return type_b_principal_specialization(w, degree_cutoff)
+
+
+def type_d_schubert(w, degree_cutoff):
+    assert type(w) == EvenSignedPermutation
+    ans = 0
+    for a_seq in w.get_signed_reduced_words():
+        for i_seq in backstable_compatible_sequences(a_seq, degree_cutoff):
+            term = X(0) ** 0
+            for i in i_seq:
+                term *= X(i)
+            ans += term
+    return ans
 
 
 def type_d_principal_specialization(w, degree_cutoff):
@@ -199,7 +235,7 @@ def test_principal_specialization(n=4, degree_cutoff=-6):
     for i, w in enumerate(Permutation.all(n)):
         r = comaj_formula(w, degree_cutoff)
         s = principal_specialization(w, degree_cutoff)
-        print(total - i, 'w =', w, '->', s == r)
+        print(total - i, 'w =', w, '->', s == r, r)
         assert r == s
 
 
@@ -208,7 +244,7 @@ def test_type_b_principal_specialization(n=2, degree_cutoff=-10):
     for i, w in enumerate(SignedPermutation.all(n)):
         r = type_b_comaj_formula(w, degree_cutoff)
         s = type_b_principal_specialization(w, degree_cutoff)
-        print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r == s)
+        print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r == s, r)
         assert r == s
 
 
@@ -217,7 +253,7 @@ def test_type_c_principal_specialization(n=3, degree_cutoff=-10):
     for i, w in enumerate(SignedPermutation.all(n)):
         r = type_c_comaj_formula(w, degree_cutoff)
         s = type_c_principal_specialization(w, degree_cutoff)
-        print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r, '=?=', s)
+        print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r == s, r)
         assert r == s
 
 
@@ -226,5 +262,5 @@ def test_type_d_principal_specialization(n=3, degree_cutoff=-10):
     for i, w in enumerate(EvenSignedPermutation.all(n)):
         r = type_d_comaj_formula(w, degree_cutoff)
         s = type_d_principal_specialization(w, degree_cutoff)
-        print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r, '=?=', s)
+        print(total - i, 'w =', w, '=', w.get_reduced_word(), '->', r == s, r)
         assert r == s

@@ -45,6 +45,10 @@ class PfPol(MPolynomial):
         big = 10
         assert not any(max(cls.to_pair(p)) > big for p in index)
         return tuple(
+            # # lexicographic term order
+            # -index.get(cls.from_pair(i, j), 0)
+            # for i in range(big + 1)
+            # for j in range(i - 1, 0, -1)
             # reverse lexicographic term order
             index.get(cls.from_pair(i, j), 0)
             for i in range(big, 0, -1)
