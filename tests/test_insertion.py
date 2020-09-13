@@ -1,16 +1,42 @@
 from words import (
     Word,
-    HopfPermutation,
     get_involution_words,
     get_fpf_involution_words,
     Tableau,
     involution_insert
 )
+from hopf import HopfPermutation
 from crystals import (
     OrthogonalCrystalGenerator,
-    SymplecticCrystalGenerator
+    # SymplecticCrystalGenerator
 )
 from permutations import Permutation
+
+
+def test_primed_crystals(n=5, k=4):
+    for pi in Permutation.involutions(n):
+        for w in pi.get_primed_involution_words():
+            for f in Word.increasing_factorizations(w, k):
+                p1, q1 = involution_insert(*f)
+
+                for i in range(-1, k):
+                    g = Word.incr_crystal_f(f, i)
+
+                    if g is not None:
+                        p2, q2 = involution_insert(*g)
+                        assert p1 == p2
+                        assert q1.shifted_crystal_f(i) == q2
+                    else:
+                        assert q1.shifted_crystal_f(i) is None
+
+                    g = Word.incr_crystal_e(f, i)
+
+                    if g is not None:
+                        p2, q2 = involution_insert(*g)
+                        assert p1 == p2
+                        assert q1.shifted_crystal_e(i) == q2
+                    else:
+                        assert q1.shifted_crystal_e(i) is None
 
 
 def invert_fac(f):
@@ -29,10 +55,10 @@ def test_mixed_insert():
     q = Tableau.from_string("1,2,4,5,9;3,6,8;7").shift()
     assert w.mixed_insert() == (p, q)
 
-    testset = {
-        Permutation.from_involution_word(*w) for w in Permutation.all(7)
-    }
-    for pi in [Permutation(4, 2, 3, 1), Permutation(3, 4, 1, 2), Permutation(3, 5, 1, 6, 2, 4)] + list(testset):
+    # testset = {
+    #     Permutation.from_involution_word(*w) for w in Permutation.all(5)
+    # }
+    for pi in [Permutation(4, 2, 3, 1), Permutation(3, 4, 1, 2), Permutation(3, 5, 1, 6, 2, 4)]: # + list(testset):
         for k in [2, 3, 4]:
             fac = [
                 tuple([Word(*i) for i in tup])
@@ -52,7 +78,8 @@ def test_mixed_insert():
                 print()
                 assert p == qq
                 assert q == pp
-    print(len(testset))
+
+    # print(len(testset))
 
 
 def test_specific_primed_insertion():

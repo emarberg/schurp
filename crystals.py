@@ -1,11 +1,7 @@
 from words import (
     involution_insert,
     fpf_insert,
-    HopfPermutation,
-    reduce_oneline,
-    reduce_fpf,
     Word,
-    get_involution_words,
     get_fpf_involution_words
 )
 from permutations import Permutation

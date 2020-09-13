@@ -27,6 +27,12 @@ class Tableau:
     def __iter__(self):
         return self.mapping.__iter__()
 
+    def shifted_crystal_e(self, index):
+        pass
+
+    def shifted_crystal_f(self, index):
+        pass
+
     def restrict(self, n):
         n = MarkedNumber(n) if type(n) == int else n
         assert type(n) == MarkedNumber
