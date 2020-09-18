@@ -13,30 +13,40 @@ from crystals import (
 from permutations import Permutation
 
 
-def test_primed_crystals(n=5, k=4):
+def test_primed_crystals(n=7, k=5):
     for pi in Permutation.involutions(n):
-        for w in pi.get_primed_involution_words():
+        for w in pi.get_involution_words():
             for f in Word.increasing_factorizations(w, k):
                 p1, q1 = involution_insert(*f)
 
-                for i in range(-1, k):
+                for i in range(1, k):
                     g = Word.incr_crystal_f(f, i)
 
-                    if g is not None:
-                        p2, q2 = involution_insert(*g)
+                    try:
+                        if g is not None:
+                            p2, q2 = involution_insert(*g)
+                            assert p1 == p2
+                            assert q1.shifted_crystal_f(i) == q2
+                        else:
+                            assert q1.shifted_crystal_f(i) is None
+                    except AssertionError:
+                        print(f, '--%s-->' % i, g)
+                        print(q1)
+                        print()
+                        print(q2)
+                        print()
+                        print(q1.shifted_crystal_f(i))
+                        print()
+                        input('')
                         assert p1 == p2
-                        assert q1.shifted_crystal_f(i) == q2
-                    else:
-                        assert q1.shifted_crystal_f(i) is None
+                    # g = Word.incr_crystal_e(f, i)
 
-                    g = Word.incr_crystal_e(f, i)
-
-                    if g is not None:
-                        p2, q2 = involution_insert(*g)
-                        assert p1 == p2
-                        assert q1.shifted_crystal_e(i) == q2
-                    else:
-                        assert q1.shifted_crystal_e(i) is None
+                    # if g is not None:
+                    #     p2, q2 = involution_insert(*g)
+                    #     assert p1 == p2
+                    #     assert q1.shifted_crystal_e(i) == q2
+                    # else:
+                    #     assert q1.shifted_crystal_e(i) is None
 
 
 def invert_fac(f):

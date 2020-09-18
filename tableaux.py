@@ -27,11 +27,113 @@ class Tableau:
     def __iter__(self):
         return self.mapping.__iter__()
 
+    def __getitem__(self, item):
+        return self.mapping.get(item, None)
+
+    def shifted_crystal_word(self):
+        rows = [
+            (i, j, self.mapping[(i, j)])
+            for (i, j) in sorted(self.mapping, key=lambda x:(-x[0], x[1]))
+        ]
+        cols = [
+            (i, j, self.mapping[(i, j)])
+            for (i, j) in sorted(self.mapping, key=lambda x:(-x[1], x[0]))
+        ]
+
+        word, positions = [], []
+        a, b = 0, 0
+        for t in range(max(self.max_row, self.max_column), 0, -1):
+            while a < len(cols) and cols[a][1] == t:
+                (i, j, v) = cols[a]
+                if v.is_marked():
+                    word.append(v)
+                    positions.append((i, j))
+                a += 1
+            while b < len(rows) and rows[b][0] == t:
+                (i, j, v) = rows[b]
+                if not v.is_marked():
+                    word.append(v)
+                    positions.append((i, j))
+                b += 1
+        return word, positions
+
     def shifted_crystal_e(self, index):
         pass
 
     def shifted_crystal_f(self, index):
-        pass
+        word, positions = self.shifted_crystal_word()
+
+        p, queue = None, []
+        for i in range(len(word)):
+            v = abs(word[i])
+            if v == index + 1:
+                queue.append(i)
+            elif v == index and queue:
+                queue.pop()
+            elif v == index:
+                p = i
+
+        # print('p:', word, p, 'index:', index)
+
+        if p is None:
+            return
+
+        x, (a, b) = word[p], positions[p]
+        y = self[(a + 1, b)]
+        z = self[(a, b + 1)]
+
+        # print('x:', x, '(a, b):', (a, b), '\n')
+
+        if not x.is_marked():
+            if z is not None and z.number == -index - 1:
+                # print('\n* case L1(a)\n')
+                return self.set(a, b, z).set(a, b + 1, -z)
+            if y is None or abs(y) > index + 1:
+                # print('\n* case L1(b)\n')
+                return self.set(a, b, index + 1)
+
+            rx, ry = a + 1, b
+            while True:
+                if self[(rx, ry)].is_marked():
+                    if (rx + 1, ry) not in self or abs(self[(rx + 1, ry)]) != index + 1:
+                        break
+                    rx += 1
+                else:
+                    if (rx, ry - 1) not in self or abs(self[(rx, ry - 1)]) != index + 1:
+                        break
+                    ry -= 1
+
+            ans = self
+            if self[(rx, ry)].is_marked():
+                ans = ans.set(rx, ry, index + 1)
+
+            # print('\n* case L1(c)\n')
+            return ans.set(a, b, -index - 1)
+
+        else:
+            if y is not None and y.number == index:
+                # print('\n* case L2(a)\n')
+                return self.set(a, b, index).set(a + 1, b, -index - 1)
+            if z is None or z.number == index + 1 or abs(z) >= index + 2:
+                # print('\n* case L2(b)\n')
+                return self.set(a, b, -index - 1)
+
+            ans = self
+
+            rx, ry = a, b
+            while True:
+                if not self[(rx, ry)].is_marked() and ((rx, ry + 1) not in self or self[(rx, ry + 1)] not in [MarkedNumber(index), MarkedNumber(-index - 1)]):
+                    ans = ans.set(rx, ry, -index - 1)
+                    break
+                if (rx - 1, ry) in self and abs(self[(rx - 1, ry)]) == index:
+                    rx -= 1
+                elif (rx, ry + 1) in self and abs(self[(rx, ry + 1)]) == index:
+                    ry += 1
+                else:
+                    break
+
+            # print('\n* case L2(c)\n')
+            return ans.set(a, b, index)
 
     def restrict(self, n):
         n = MarkedNumber(n) if type(n) == int else n

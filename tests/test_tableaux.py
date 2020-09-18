@@ -1,6 +1,14 @@
 from tableaux import Tableau
+from marked import MarkedNumber
 from partitions import Partition, StrictPartition
 from words import Word
+
+
+def test_shifted_crystal_word():
+    tab = Tableau.from_string("1,1,4',4;,2,4',5';,,4,5")
+    word, positions = tab.shifted_crystal_word()
+    assert word == [MarkedNumber(i) for i in [-5, -4, -4, 4, 5, 2, 1, 1, 4]]
+    assert all(tab[box] == word[i] for i, box in enumerate(positions))
 
 
 def test_standard():
