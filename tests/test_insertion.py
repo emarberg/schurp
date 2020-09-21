@@ -13,14 +13,16 @@ from crystals import (
 from permutations import Permutation
 
 
-def test_primed_crystals(n=7, k=5):
+def test_primed_crystals(n=4, k=2):
     for pi in Permutation.involutions(n):
-        for w in pi.get_involution_words():
+        for w in pi.get_primed_involution_words():
             for f in Word.increasing_factorizations(w, k):
+                f = tuple(tuple(_) for _ in f)
                 p1, q1 = involution_insert(*f)
 
                 for i in range(1, k):
                     g = Word.incr_crystal_f(f, i)
+                    assert g is None or Word.incr_crystal_e(g, i) == f
 
                     try:
                         if g is not None:
@@ -31,11 +33,15 @@ def test_primed_crystals(n=7, k=5):
                             assert q1.shifted_crystal_f(i) is None
                     except AssertionError:
                         print(f, '--%s-->' % i, g)
+                        print('insertion tableaux:')
+                        print(p1)
+                        print(p2)
+                        print('recording tableaux:')
                         print(q1)
                         print()
                         print(q2)
                         print()
-                        print(q1.shifted_crystal_f(i))
+                        print(q1.shifted_crystal_f(i, True))
                         print()
                         input('')
                         assert p1 == p2

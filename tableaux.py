@@ -60,7 +60,7 @@ class Tableau:
     def shifted_crystal_e(self, index):
         pass
 
-    def shifted_crystal_f(self, index):
+    def shifted_crystal_f(self, index, verbose=False):
         word, positions = self.shifted_crystal_word()
 
         p, queue = None, []
@@ -82,14 +82,17 @@ class Tableau:
         y = self[(a + 1, b)]
         z = self[(a, b + 1)]
 
-        # print('x:', x, '(a, b):', (a, b), '\n')
+        if verbose:
+            print('x:', x, '(a, b):', (a, b), '\n')
 
         if not x.is_marked():
             if z is not None and z.number == -index - 1:
-                # print('\n* case L1(a)\n')
+                if verbose:
+                    print('\n* case L1(a)\n')
                 return self.set(a, b, z).set(a, b + 1, -z)
             if y is None or abs(y) > index + 1:
-                # print('\n* case L1(b)\n')
+                if verbose:
+                    print('\n* case L1(b)\n')
                 return self.set(a, b, index + 1)
 
             rx, ry = a + 1, b
@@ -104,18 +107,27 @@ class Tableau:
                     ry -= 1
 
             ans = self
-            if self[(rx, ry)].is_marked():
+            if self[(rx, ry)].is_marked() and rx != ry:
                 ans = ans.set(rx, ry, index + 1)
+            elif rx == ry and self[(rx, ry)].is_marked() and self[(rx - 1, ry - 1)] == MarkedNumber(index):
+                ans = ans.set(rx, ry, index + 1)
+                ans = ans.set(rx - 1, ry - 1, -index)
+            elif rx == ry and not self[(rx, ry)].is_marked() and self[(rx - 1, ry - 1)] == MarkedNumber(-index):
+                ans = ans.set(rx, ry, -index - 1)
+                ans = ans.set(rx - 1, ry - 1, index)
 
-            # print('\n* case L1(c)\n')
+            if verbose:
+                print('\n* case L1(c)\n')
             return ans.set(a, b, -index - 1)
 
         else:
             if y is not None and y.number == index:
-                # print('\n* case L2(a)\n')
+                if verbose:
+                    print('\n* case L2(a)\n')
                 return self.set(a, b, index).set(a + 1, b, -index - 1)
             if z is None or z.number == index + 1 or abs(z) >= index + 2:
-                # print('\n* case L2(b)\n')
+                if verbose:
+                    print('\n* case L2(b)\n')
                 return self.set(a, b, -index - 1)
 
             ans = self
@@ -132,7 +144,8 @@ class Tableau:
                 else:
                     break
 
-            # print('\n* case L2(c)\n')
+            if verbose:
+                print('\n* case L2(c)\n')
             return ans.set(a, b, index)
 
     def restrict(self, n):

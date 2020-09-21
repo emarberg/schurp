@@ -51,9 +51,18 @@ class Word:
             if left:
                 b = left[0]
                 ans[1] = [x for x in ans[1] if x != b]
-                while b in ans[0] or -b in ans[0]:
-                    b = (b - 1) if b > 0 else (b + 1)
-                ans[0] = sorted(ans[0] + [b], key=abs)
+
+                a = b
+                while a in ans[0] or -a in ans[0]:
+                    a = (a - 1) if a > 0 else (a + 1)
+                ans[0] = sorted(ans[0] + [a], key=abs)
+
+                if a > 0:
+                    for t in range(a, b):
+                        if -t - 1 in ans[0]:
+                            ans[0] = sorted([x for x in ans[0] if x != -t - 1] + [t + 1], key=abs)
+                            ans[1] = sorted([x for x in ans[1] if x != t] + [-t], key=abs)
+
             else:
                 return None
             return tuple(tup[:index - 1]) + tuple(tuple(a) for a in ans) + tuple(tup[index + 1:])
@@ -87,9 +96,17 @@ class Word:
             if left:
                 a = left[-1]
                 ans[0] = [x for x in ans[0] if x != a]
-                while a in ans[1] or -a in ans[1]:
-                    a = (a + 1) if a > 0 else (a - 1)
-                ans[1] = sorted(ans[1] + [a], key=abs)
+
+                b = a
+                while b in ans[1] or -b in ans[1]:
+                    b = (b + 1) if b > 0 else (b - 1)
+                ans[1] = sorted(ans[1] + [b], key=abs)
+
+                if a > 0:
+                    for t in range(a, b):
+                        if -t in ans[1]:
+                            ans[0] = sorted([x for x in ans[0] if x != t + 1] + [-t - 1], key=abs)
+                            ans[1] = sorted([x for x in ans[1] if x != -t] + [t], key=abs)
             else:
                 return None
             return tuple(tup[:index - 1]) + tuple(tuple(a) for a in ans) + tuple(tup[index + 1:])
