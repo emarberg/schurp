@@ -186,7 +186,7 @@ def twists(x, y):
     return ans
 
 
-def test_relation(q=7):
+def test_relation(q=5):
     t = tuple(range(1, 2 * q + 1))
     for x in itertools.combinations(t, q):
         for y in itertools.combinations(tuple(reversed(t)), q):
@@ -253,7 +253,7 @@ def test_leading(m=2):
                 print()
 
 
-def test_blockfp(m=7):
+def test_blockfp(m=5):
     r = tuple(range(1, 1 + m))
     for k in range(m):
         for l in range(k + 1):
@@ -274,7 +274,7 @@ def test_blockfp(m=7):
                     assert (g == block)
 
 
-def test_pfminor(m=7):
+def test_pfminor(m=5):
     for i in range(m):
         a = tuple(t + 1 for t in range(i))
         b = tuple(i + t for t in a)
@@ -296,7 +296,7 @@ def test_pfminor(m=7):
         print()
 
 
-def test_pfaffian(m=7):
+def test_pfaffian(m=5):
     for i in range(m):
         print(i)
         assert PfPol.pfaffian(i) ** 2 == PfPol.minor(i)
