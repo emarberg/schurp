@@ -61,6 +61,22 @@ class Tableau:
         pass
 
     def shifted_crystal_f(self, index, verbose=False):
+        if index == 0:
+            if (1, 1) not in self or self[(1, 1)] != MarkedNumber(1):
+                return None
+            return self.set(1, 1, -1)
+
+        if index == -1:
+            ones = [cell for cell in self if abs(self[cell]) == 1]
+            if len(ones) == 0:
+                return None
+            if len([cell for cell in self if self[cell] == MarkedNumber(-2) and cell[0] == 1]) > 0:
+                return None
+            a, b = max(ones)
+            assert a == 1
+            v = MarkedNumber(2) if (b == 1 and self[(a, b)] == MarkedNumber(1)) else MarkedNumber(-2)
+            return self.set(a, b, v)
+
         word, positions = self.shifted_crystal_word()
 
         p, queue = None, []
