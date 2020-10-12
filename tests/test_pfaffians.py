@@ -96,7 +96,7 @@ class PfPol(MPolynomial):
         i = list(range(1, i + 1)) if type(i) == int else i
         ans = cls.zero()
         for z in Permutation.fpf_involutions(len(i)):
-            c = (-1) ** (z.fpf_involution_length() + len(i) // 2)
+            c = (-1) ** (z.fpf_involution_length())
             v = cls.one()
             for t in range(1, len(i) + 1):
                 if z(t) < t:
@@ -112,7 +112,7 @@ class PfPol(MPolynomial):
         for z in Permutation.fpf_involutions(n):
             if any(len(b) < z(t) for t in range(len(b) + 1, n + 1)):
                 continue
-            c = (-1) ** (z.fpf_involution_length() + n // 2)
+            c = (-1) ** (z.fpf_involution_length())
             v = cls.one()
             for t in range(1, n + 1):
                 if z(t) < t:
@@ -210,7 +210,7 @@ def test_relation(q=5):
             assert twists(tx, ty) == 0
 
 
-def test_leading(m=2):
+def test_leading(m=3):
     r = tuple(range(1, 1 + 2 * m))
     for k in range(m, 2 * m):
         for b in itertools.combinations(r, k):
@@ -296,7 +296,12 @@ def test_pfminor(m=5):
         print()
 
 
-def test_pfaffian(m=5):
+def test_pfaffian(m=7):
+    assert PfPol.pfaffian(1) == 0
+    assert PfPol.pfaffian(2) == PfPol.monomial(1, 2)
+    assert PfPol.pfaffian(3) == 0
+    assert PfPol.pfaffian(4) == PfPol.monomial(1, 2) * PfPol.monomial(3, 4) - PfPol.monomial(1, 3) * PfPol.monomial(2, 4) + PfPol.monomial(2, 3) * PfPol.monomial(1, 4) 
+
     for i in range(m):
         print(i)
         assert PfPol.pfaffian(i) ** 2 == PfPol.minor(i)
