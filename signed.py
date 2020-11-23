@@ -22,6 +22,9 @@ atoms_d_cache = {}
 
 class SignedMixin:
 
+    def __abs__(self):
+        return Permutation(*[abs(self(i)) for i in range(1, self.rank + 1)])
+
     def pair(self):
         n = self.rank
         return sorted([
@@ -271,6 +274,14 @@ class SignedPermutation(SignedMixin):
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
         return str(self)
+
+    @classmethod
+    def reflections(cls, n):
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1):
+                yield cls.reflection_t(i, j, n)
+                yield cls.reflection_s(i, j, n)
+            yield cls.reflection_s(i, i, n)
 
     @classmethod
     def all(cls, n):

@@ -598,7 +598,7 @@ class Word:
             elif v.number % 2 == 0:
                 v = MarkedNumber(abs(v) // 2)
             else:
-                v = MarkedNumber(-(abs(abs(v)) + 1) // 2)
+                v = MarkedNumber(-(abs(v) + 1) // 2)
             mapping[(i, j)] = v
         return Tableau(mapping), q
 

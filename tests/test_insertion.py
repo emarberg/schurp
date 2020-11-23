@@ -71,10 +71,10 @@ def test_mixed_insert():
     q = Tableau.from_string("1,2,4,5,9;3,6,8;7").shift()
     assert w.mixed_insert() == (p, q)
 
-    # testset = {
-    #     Permutation.from_involution_word(*w) for w in Permutation.all(5)
-    # }
-    for pi in [Permutation(4, 2, 3, 1), Permutation(3, 4, 1, 2), Permutation(3, 5, 1, 6, 2, 4)]: # + list(testset):
+    testset = {
+        Permutation.from_involution_word(*w) for w in Permutation.all(5)
+    }
+    for pi in list(testset):
         for k in [2, 3, 4]:
             fac = [
                 tuple([Word(*i) for i in tup])

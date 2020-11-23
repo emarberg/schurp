@@ -41,6 +41,18 @@ class Tableau:
         ]
 
         word, positions = [], []
+
+        # for i, j, v in cols:
+        #     if v.is_marked():
+        #         word.append(v)
+        #         positions.append((i, j))
+        # for i, j, v in rows:
+        #     if not v.is_marked():
+        #         word.append(v)
+        #         positions.append((i, j))
+
+        # return word, positions
+
         a, b = 0, 0
         for t in range(max(self.max_row, self.max_column), 0, -1):
             while a < len(cols) and cols[a][1] == t:
@@ -55,6 +67,7 @@ class Tableau:
                     word.append(v)
                     positions.append((i, j))
                 b += 1
+        assert len(word) == len(positions) == len(self)
         return word, positions
 
     def shifted_crystal_e(self, index):

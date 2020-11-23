@@ -142,6 +142,20 @@ def test_gelfand_bc_duality(nn=4):
                     assert (ii, mu) in v.get_wgraph_edges(jj, True)
             print('* success\n')
 
+            for y, j in index.items():
+                for x, i in index.items():
+                    summation = []
+                    for z, k in index.items():
+                        f = w.get_cbasis_polynomial(i, k)
+                        g = v.get_cbasis_polynomial(duality[y], duality[z])
+                        c = (-1) ** (w.qpmodule.height(i) + w.qpmodule.height(k))
+                        term = c * f * g
+                        if term != 0:
+                            summation += [term]
+                    print('  ', i, j, ':', summation)
+                    assert sum(summation) in [0, 1]
+                    assert (sum(summation) == 1) == (i == j)
+
             # for y, j in index.items():
             #     for x, i in index.items():
             #         if i == j:
@@ -179,6 +193,7 @@ def test_gelfand_d_duality(nn=4):
             v = read_or_create(n, k // 2, False, read, create)
             read_or_compute_wgraph(v)
 
+            print('\nn =', n, 'k =', k)
             duality, index, jndex = {}, {}, {}
             for i in w.qpmodule:
                 index[w.permutation(i)] = i
@@ -187,7 +202,6 @@ def test_gelfand_d_duality(nn=4):
             for c in index:
                 duality[c] = jndex[toggle(c)]
 
-            print('n =', n, 'k =', k)
             for x, i in index.items():
                 ii = duality[x]
                 for j, mu in w.get_wgraph_edges(i, True):
@@ -195,6 +209,20 @@ def test_gelfand_d_duality(nn=4):
                     jj = duality[y]
                     assert (ii, mu) in v.get_wgraph_edges(jj, True)
             print('* success\n')
+
+            for y, j in index.items():
+                for x, i in index.items():
+                    summation = []
+                    for z, k in index.items():
+                        f = w.get_cbasis_polynomial(i, k)
+                        g = v.get_cbasis_polynomial(duality[y], duality[z])
+                        c = (-1) ** (w.qpmodule.height(i) + w.qpmodule.height(k))
+                        term = c * f * g
+                        if term != 0:
+                            summation += [term]
+                    print('  ', i, j, ':', summation)
+                    assert sum(summation) in [0, 1]
+                    assert (sum(summation) == 1) == (i == j)
 
             # for x, i in index.items():
             #     for y, j in index.items():

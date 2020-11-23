@@ -38,6 +38,13 @@ class EvenSignedPermutation(SignedMixin):
         return str(self)
 
     @classmethod
+    def reflections(cls, n):
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1):
+                yield cls.reflection_t(i, j, n)
+                yield cls.reflection_s(i, j, n)
+
+    @classmethod
     def all(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
             for v in range(2**n):

@@ -2,6 +2,25 @@ from even import EvenSignedPermutation
 import subprocess
 
 
+def test_is_perfect(m=5):
+    def is_perfect(w):
+        for t in EvenSignedPermutation.reflections(n):
+            wtw = w * t.star() * w.star()
+            if t * wtw != wtw * t:
+                return False
+        return True
+
+    seen = {}
+    for n in range(3, m + 1):
+        for w in EvenSignedPermutation.twisted_involutions(n):
+            if is_perfect(w):
+                seen[abs(w)] = seen.get(abs(w), []) + [w]
+
+        for w, enum in seen.items():
+            print(w.cycle_repr(), enum)
+        assert len(seen) == 1 and list(seen)[0].is_identity()
+
+
 def test_get_minimal_fpf_involution():
     cls = EvenSignedPermutation
     assert cls.get_minimal_fpf_involution(1) == cls(1)
