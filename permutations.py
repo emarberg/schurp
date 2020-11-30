@@ -26,6 +26,12 @@ class Permutation:
         return len(self.oneline)
 
     @classmethod
+    def reflections(cls, n):
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1):
+                yield cls.t_ij(i, j)
+
+    @classmethod
     def get_grassmannian(cls, *mu):
         oneline = tuple(i + 1 + a for i, a in enumerate(sorted(mu)))
         if oneline:
@@ -366,7 +372,6 @@ class Permutation:
             (i == 1 or (i - 1, j) in dom) and
             (j == 1 or (i, j - 1) in dom)
         }
-
 
     @classmethod
     def all(cls, n):

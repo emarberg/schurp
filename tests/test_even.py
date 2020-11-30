@@ -3,17 +3,17 @@ import subprocess
 
 
 def test_is_perfect(m=5):
-    def is_perfect(w):
+    def is_perfect(w, n):
         for t in EvenSignedPermutation.reflections(n):
             wtw = w * t.star() * w.star()
             if t * wtw != wtw * t:
                 return False
         return True
 
-    seen = {}
     for n in range(3, m + 1):
+        seen = {}
         for w in EvenSignedPermutation.twisted_involutions(n):
-            if is_perfect(w):
+            if is_perfect(w, n):
                 seen[abs(w)] = seen.get(abs(w), []) + [w]
 
         for w, enum in seen.items():

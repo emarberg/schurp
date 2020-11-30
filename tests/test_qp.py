@@ -384,8 +384,9 @@ def test_gelfand_cells_a(nn=5, s=None):
                 cells += w.get_cells_as_permutations()
                 molecules += w.get_molecules_as_permutations()
                 edges += [w.get_wgraph_size()]
+                # w.print_wgraph()
+                # w.print_cells()
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
-            print()
             seen = {}
             for c in cells:
                 r = {gelfand_rsk(x, n + 1, sgn=sgn).partition() for x in c}
@@ -406,6 +407,7 @@ def test_gelfand_cells_a(nn=5, s=None):
                 assert not r.issubset(seen)
                 seen[mu] = c
             assert sorted([sorted(c) for c in cells]) == sorted([sorted(c) for c in molecules])
+        print()
 
 
 def test_gelfand_cells_bc(nn=5, s=None):
@@ -425,9 +427,9 @@ def test_gelfand_cells_bc(nn=5, s=None):
                 molecules += w.molecules
                 edges += [w.get_wgraph_size()]
                 cellmap[n][sgn] |= w.get_cells_as_permutations()
-            print()
+                # w.print_wgraph()
+                # w.print_cells()
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
-            print()
             if (not sgn) in cellmap[n]:
                 toggle = b_toggle(n)
                 negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
@@ -438,7 +440,8 @@ def test_gelfand_cells_bc(nn=5, s=None):
                     for c in sorted(negated, key=len):
                         print('2 ', c)
                 assert negated == cellmap[n][sgn]
-                print('* isomorphism checked\n')
+                # print('* isomorphism checked\n')
+        print()
 
 
 def test_gelfand_cells_d(nn=5, s=None):
@@ -453,14 +456,14 @@ def test_gelfand_cells_d(nn=5, s=None):
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
                 read_or_compute_wgraph(w)
-                print(n, k, len(w.cells))
+                # print(n, k, len(w.cells))
                 cells += w.cells
                 molecules += w.molecules
                 edges += [w.get_wgraph_size()]
                 cellmap[n][sgn] |= w.get_cells_as_permutations()
-            print()
+                # w.print_wgraph()
+                # w.print_cells()
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
-            print()
             if (not sgn) in cellmap[n]:
                 toggle = d_toggle(n)
                 negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
@@ -471,7 +474,8 @@ def test_gelfand_cells_d(nn=5, s=None):
                     for c in sorted(negated, key=len):
                         print('2 ', c)
                     assert negated == cellmap[n][sgn]
-                print('* isomorphism checked\n')
+                # print('* isomorphism checked\n')
+        print()
 
 
 def test_qpwgraph(n=6, k=3):

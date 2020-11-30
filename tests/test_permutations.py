@@ -75,3 +75,23 @@ def test_fpf_involution_codes():
 def test_from_fpf_involution_codes():
     w = Permutation(3, 5, 1, 6, 2, 4)
     assert Permutation.from_fpf_involution_code(w.fpf_involution_code()) == w
+
+
+def test_is_perfect(m=5):
+    def is_perfect(w, n):
+        for t in Permutation.reflections(n):
+            wtw = w * t.star(n) * w.star(n)
+            if t * wtw != wtw * t:
+                return False
+        return True
+
+    for n in range(m + 1):
+        seen = {}
+        for w in Permutation.twisted_involutions(n):
+            if is_perfect(w, n):
+                seen[w] = 1
+
+        for w in seen:
+            print(n, ':', (w * Permutation.longest_element(n)).cycle_repr())
+        # assert len(seen) == 1 and list(seen)[0].is_identity()
+

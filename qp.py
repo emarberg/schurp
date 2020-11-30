@@ -262,7 +262,8 @@ class QPWGraph:
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
-        s += ['    node [fontname="courier"];']
+        s += ['    node [shape=point];']
+#        s += ['    node [fontname="courier"];']
 
         for x in vertices:
             s += ['    "%s";' % pprint(x)]
@@ -283,14 +284,22 @@ class QPWGraph:
         with open(dotfile, 'w') as f:
             f.write(s)
 
-        pngfile = directory + 'wgraph.png'
-        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+        tag = self.qpmodule.family + str(self.qpmodule.rank)
+        if self.qpmodule.layer is not None:
+            tag += '_BLOCK' + str(self.qpmodule.layer)
+
+        pngfile = directory + 'wgraph_%s.png' % tag
+        subprocess.run(["sfdp", "-Tpng", dotfile, "-o", pngfile])
 
     def print_cells(self, pprint=str):
         assert self.is_wgraph_computed
 
+        tag = self.qpmodule.family + str(self.qpmodule.rank)
+        if self.qpmodule.layer is not None:
+            tag += '_BLOCK' + str(self.qpmodule.layer)
+
         for i, cell in enumerate(sorted(self.cells, key=len)):
-            fname = 'cell_size%s_%s' % (str(len(cell)), str(i))
+            fname = 'cell_size%s_%s_%s' % (str(len(cell)), str(i), tag)
 
             def edges(x):
                 return [y for y in self.get_wgraph_edges(x) if y in cell]
@@ -304,7 +313,7 @@ class QPWGraph:
             directory = self.get_directory() + 'cells/'
             Path(directory).mkdir(parents=True, exist_ok=True)
             pngfile = directory + '%s.png' % fname
-            subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+            subprocess.run(["sfdp", "-Tpng", dotfile, "-o", pngfile])
 
     def get_molecules_as_permutations(self):
         assert self.is_wgraph_computed
