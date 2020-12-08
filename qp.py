@@ -256,19 +256,33 @@ class QPWGraph:
 
         return edges
 
-    @classmethod
-    def dot(cls, vertices, edges, pprint):
+    def dot(self, vertices, edges, pprint):
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
         s += ['    node [shape=point];']
+        s += ['    nodesep=0.5;']
 #        s += ['    node [fontname="courier"];']
 
         for x in vertices:
             s += ['    "%s";' % pprint(x)]
 
-        s += ['    "%s" -> "%s";' % (pprint(x), pprint(y)) for x in vertices for y in edges(x)]
+        for x in vertices:
+            for y in edges(x):
+                if x in edges(y):
+                    if x < y:
+                        s += ['    "%s" -> "%s" [arrowhead=none];' % (pprint(x), pprint(y))]
+                else:
+                    s += ['    "%s" -> "%s" [color=red];' % (pprint(x), pprint(y))]
+
+        heights = {}
+        for n in vertices:
+            h = self.qpmodule.height(n)
+            heights[h] = heights.get(h, []) + [pprint(n) + ';']
+        for h, col in heights.items():
+            s += ['    {rank = same; ' + ' '.join(col) + '}']
+
         s += ['}']
         s = '\n'.join(s)
         return s
@@ -289,7 +303,7 @@ class QPWGraph:
             tag += '_BLOCK' + str(self.qpmodule.layer)
 
         pngfile = directory + 'wgraph_%s.png' % tag
-        subprocess.run(["sfdp", "-Tpng", dotfile, "-o", pngfile])
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
     def print_cells(self, pprint=str):
         assert self.is_wgraph_computed
@@ -313,7 +327,7 @@ class QPWGraph:
             directory = self.get_directory() + 'cells/'
             Path(directory).mkdir(parents=True, exist_ok=True)
             pngfile = directory + '%s.png' % fname
-            subprocess.run(["sfdp", "-Tpng", dotfile, "-o", pngfile])
+            subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
     def get_molecules_as_permutations(self):
         assert self.is_wgraph_computed

@@ -384,7 +384,7 @@ def test_gelfand_cells_a(nn=5, s=None):
                 cells += w.get_cells_as_permutations()
                 molecules += w.get_molecules_as_permutations()
                 edges += [w.get_wgraph_size()]
-                # w.print_wgraph()
+                w.print_wgraph()
                 # w.print_cells()
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             seen = {}
@@ -422,12 +422,12 @@ def test_gelfand_cells_bc(nn=5, s=None):
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
                 read_or_compute_wgraph(w)
-                print(n, k, len(w.cells))
+                # print(n, k, len(w.cells))
                 cells += w.cells
                 molecules += w.molecules
                 edges += [w.get_wgraph_size()]
                 cellmap[n][sgn] |= w.get_cells_as_permutations()
-                # w.print_wgraph()
+                w.print_wgraph()
                 # w.print_cells()
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             if (not sgn) in cellmap[n]:
@@ -461,7 +461,7 @@ def test_gelfand_cells_d(nn=5, s=None):
                 molecules += w.molecules
                 edges += [w.get_wgraph_size()]
                 cellmap[n][sgn] |= w.get_cells_as_permutations()
-                # w.print_wgraph()
+                w.print_wgraph()
                 # w.print_cells()
             print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
             if (not sgn) in cellmap[n]:
