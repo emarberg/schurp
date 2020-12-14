@@ -227,11 +227,10 @@ class SignedMixin:
     def __str__(self):
         s = []
         for i in self.oneline:
-            s += [str(abs(i))]
-            if i < 0:
-                s += ['\u0305']
+            s += [str(abs(i)) + ('\u0305' if i < 0 else '')]
         if s:
-            return ''.join(s)
+            sep = '' if len(self.oneline) < 10 else ' '
+            return sep.join(s)
         else:
             return '1'
 

@@ -90,6 +90,10 @@ class EvenSignedPermutation(SignedMixin):
     def is_twisted_involution(self):
         return self.is_involution(True)
 
+    def is_abs_fpf_involution(self):
+        n = self.rank
+        return all(abs(self(i)) != i for i in range(1, n + 1))
+
     def is_fpf_involution(self):
         n = self.rank
         if n % 2 == 0:

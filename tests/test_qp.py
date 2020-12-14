@@ -9,6 +9,73 @@ import random
 import pytest
 
 
+def test_duality_d_diagrams(n):
+    def elems(n):
+        ans = set()
+
+        for k in range(0, n + 1, 2):
+            try:
+                m = QPModule.read_gelfand_d(n, k // 2)
+            except FileNotFoundError:
+                m = QPModule.create_gelfand_d(n, k // 2)
+            for i in m:
+                oneline = m.permutation(i)
+                oneline += tuple(i - (-1) ** i for i in range(len(oneline) + 1, 2 * n + 1))
+                ans.add(EvenSignedPermutation(*oneline))
+        return ans
+
+    def varphi(v):
+        a = [i for i in range(1, n + 1) if abs(v(i)) <= n]
+
+        forward = {i + 1: a[i] for i in range(len(a))}
+        backward = {}
+        for i in range(len(a)):
+            backward[a[i]] = i + 1
+            backward[-a[i]] = -i - 1
+
+        b = [i for i in range(-n, n + 1) if v(i) > n]
+        e = len([i for i in b if i < 0])
+        if e % 2 == 0:
+            w = EvenSignedPermutation(*(a + b))
+            z = EvenSignedPermutation(*[backward[v(forward[i])] for i in range(1, len(a) + 1)])
+        else:
+            w = EvenSignedPermutation(*([-a[0]] + a[1:] + b))
+            z = EvenSignedPermutation(*[backward[v(forward[i])] for i in range(1, len(a) + 1)]).star()
+        return w, z, len(a) // 2
+
+    def iota(v):
+        e = n + len([i for i in range(1, n + 1) if abs(v(i)) > n])
+        x = EvenSignedPermutation(*([-i for i in v.oneline[:e]] + [i for i in v.oneline[e:]]))
+        s = EvenSignedPermutation(*(list(range(1, n + 1)) + list(range(e, n, -1)) + list(range(e + 1, 2 * n + 1))))
+        x = s * x * s
+        if e % 4 != 0:
+            x = x.star()
+        return x
+
+    dictionary = {}
+    for v in elems(n):
+        w1, z1, k = varphi(v)
+        w2, z2, _ = varphi(iota(v))
+
+        if (n + k) % 2 != 0:
+            w2 = w2.star()
+            z2 = z2.star()
+
+        if n % 2 != 0:
+            z1 = z1.star()
+
+        dictionary[k] = dictionary.get(k, []) + [(w1, z1, w2, z2)]
+
+    for k in sorted(dictionary):
+        for w1, z1, w2, z2 in dictionary[k]:
+            print('n =', n, '| k =', k, '|', v, '|', w1.inverse() * w2, z1.inverse() * z2)
+
+            u = EvenSignedPermutation(*([-i for i in range(1, 1 + 2 * k)] + list(range(n, 2 * k, -1))))
+            assert z2 == z1 * EvenSignedPermutation.longest_element(2 * k)
+            assert w2 == w1 * u * EvenSignedPermutation.longest_element(n)
+        print()
+
+
 def read_or_create(rank, layer, sgn, read, create):
     try:
         m = read(rank, layer)
@@ -136,25 +203,32 @@ def test_gelfand_bc_duality(nn=4):
             print('n =', n, 'k =', k)
             for x, i in index.items():
                 ii = duality[x]
+
+                asc_i = set(w.qpmodule.strict_ascents(i)) | set(w.qpmodule.weak_ascents(i))
+                asc_ii = set(v.qpmodule.strict_ascents(ii)) | set(v.qpmodule.weak_descents(ii))
+                gen = set(range(n))
+                print(asc_i, gen - asc_ii)
+                assert asc_i == gen - asc_ii
+
                 for j, mu in w.get_wgraph_edges(i, True):
                     y = w.permutation(j)
                     jj = duality[y]
                     assert (ii, mu) in v.get_wgraph_edges(jj, True)
             print('* success\n')
 
-            for y, j in index.items():
-                for x, i in index.items():
-                    summation = []
-                    for z, k in index.items():
-                        f = w.get_cbasis_polynomial(i, k)
-                        g = v.get_cbasis_polynomial(duality[y], duality[z])
-                        c = (-1) ** (w.qpmodule.height(i) + w.qpmodule.height(k))
-                        term = c * f * g
-                        if term != 0:
-                            summation += [term]
-                    print('  ', i, j, ':', summation)
-                    assert sum(summation) in [0, 1]
-                    assert (sum(summation) == 1) == (i == j)
+            # for y, j in index.items():
+            #     for x, i in index.items():
+            #         summation = []
+            #         for z, k in index.items():
+            #             f = w.get_cbasis_polynomial(i, k)
+            #             g = v.get_cbasis_polynomial(duality[y], duality[z])
+            #             c = (-1) ** (w.qpmodule.height(i) + w.qpmodule.height(k))
+            #             term = c * f * g
+            #             if term != 0:
+            #                 summation += [term]
+            #         print('  ', i, j, ':', summation)
+            #         assert sum(summation) in [0, 1]
+            #         assert (sum(summation) == 1) == (i == j)
 
             # for y, j in index.items():
             #     for x, i in index.items():
@@ -204,25 +278,33 @@ def test_gelfand_d_duality(nn=4):
 
             for x, i in index.items():
                 ii = duality[x]
+
+                asc_i = set(w.qpmodule.strict_ascents(i)) | set(w.qpmodule.weak_ascents(i))
+                asc_ii = set(v.qpmodule.strict_ascents(ii)) | set(v.qpmodule.weak_descents(ii))
+                if len(x) % 4 != 0:
+                    asc_ii = {(j - 1 if j == 1 else j + 1 if j == 0 else j) for j in asc_ii}
+                gen = set(range(n))
+                assert asc_i == gen - asc_ii
+
                 for j, mu in w.get_wgraph_edges(i, True):
                     y = w.permutation(j)
                     jj = duality[y]
                     assert (ii, mu) in v.get_wgraph_edges(jj, True)
             print('* success\n')
 
-            for y, j in index.items():
-                for x, i in index.items():
-                    summation = []
-                    for z, k in index.items():
-                        f = w.get_cbasis_polynomial(i, k)
-                        g = v.get_cbasis_polynomial(duality[y], duality[z])
-                        c = (-1) ** (w.qpmodule.height(i) + w.qpmodule.height(k))
-                        term = c * f * g
-                        if term != 0:
-                            summation += [term]
-                    print('  ', i, j, ':', summation)
-                    assert sum(summation) in [0, 1]
-                    assert (sum(summation) == 1) == (i == j)
+            # for y, j in index.items():
+            #     for x, i in index.items():
+            #         summation = []
+            #         for z, k in index.items():
+            #             f = w.get_cbasis_polynomial(i, k)
+            #             g = v.get_cbasis_polynomial(duality[y], duality[z])
+            #             c = (-1) ** (w.qpmodule.height(i) + w.qpmodule.height(k))
+            #             term = c * f * g
+            #             if term != 0:
+            #                 summation += [term]
+            #         print('  ', i, j, ':', summation)
+            #         assert sum(summation) in [0, 1]
+            #         assert (sum(summation) == 1) == (i == j)
 
             # for x, i in index.items():
             #     for y, j in index.items():
