@@ -1,6 +1,7 @@
 from qp import QPWGraph, QPModule, gelfand_d_printer, b_print
 import polynomials
 from polynomials import q_coeff
+from permutations import Permutation
 from signed import SignedPermutation
 from even import EvenSignedPermutation
 from tableaux import Tableau
@@ -9,15 +10,177 @@ import random
 import pytest
 
 
-def test_duality_d_diagrams(n):
+def test_a_descents(n):
     def elems(n):
         ans = set()
+        for k in range(0, n, 2):
+            try:
+                m = QPModule.read_gelfand_a(n - 1, k // 2)
+            except FileNotFoundError:
+                m = QPModule.create_gelfand_a(n - 1, k // 2)
+                m.write()
+            for i in m:
+                oneline = m.permutation(i)
+                oneline += tuple(i - (-1) ** i for i in range(len(oneline) + 1, 2 * n + 1))
+                ans.add(Permutation(*oneline))
+        return ans
 
+    def varphi(v):
+        a = [i for i in range(1, n + 1) if abs(v(i)) <= n]
+
+        forward = {i + 1: a[i] for i in range(len(a))}
+        backward = {}
+        for i in range(len(a)):
+            backward[a[i]] = i + 1
+            backward[-a[i]] = -i - 1
+
+        b = [i for i in range(-n, n + 1) if v(i) > n]
+        w = Permutation(*(a + b))
+        z = Permutation(*[backward[v(forward[i])] for i in range(1, len(a) + 1)])
+        return w, z
+
+    # test descents
+    s = Permutation.s_i
+
+    def is_min_coset_rep(w, z):
+        k = z.rank
+        return all(w(i) < w(i + 1) for i in range(1, k)) and all(w(i) < w(i + 1) for i in range(k + 1, n))
+
+    def sigma(w, z, i):
+        a = s(i)
+        if is_min_coset_rep(a * w, z):
+            return 0
+        b = w**-1 * a * w
+        if b * z * b != z:
+            return 0
+        if b in {s(i) for i in range(1, z.rank)}:
+            return -1
+        return 1
+
+    def height(w, z, i):
+        a = s(i)
+        if is_min_coset_rep(a * w, z):
+            return len(a * w) - len(w)
+        b = w**-1 * a * w
+        return (len(b * z * b) - len(z)) // 2
+
+    for v in elems(n):
+        w, z = varphi(v)
+
+        # des^=
+        vdes_weak = {i for i in range(1, n) if s(i) * v * s(i) == v}
+        wdes_weak = {i for i in range(1, n) if sigma(w, z, i) == -1}
+        # print(v, w, z, z.rank, vdes_weak, wdes_weak)
+        assert vdes_weak == wdes_weak
+
+        # asc^=
+        vasc_weak = {i for i in range(1, n) if v * s(i) * v in {s(i) for i in range(n + 1, 2 * n)}}
+        wasc_weak = {i for i in range(1, n) if sigma(w, z, i) == 1}
+        assert vasc_weak == wasc_weak
+
+        # des^<
+        vdes_strict = {i for i in range(1, n) if len(s(i) * v) < len(v)} - vdes_weak - vasc_weak
+        wdes_strict = {i for i in range(1, n) if height(w, z, i) == -1}
+        assert vdes_strict == wdes_strict
+
+        # asc^<
+        vasc_strict = {i for i in range(1, n) if len(s(i) * v) > len(v)} - vdes_weak - vasc_weak
+        wasc_strict = {i for i in range(1, n) if height(w, z, i) == 1}
+        assert vasc_strict == wasc_strict
+
+
+def test_bc_descents(n):
+    def elems(n):
+        ans = set()
+        for k in range(0, n + 1, 2):
+            try:
+                m = QPModule.read_gelfand_bc(n, k // 2)
+            except FileNotFoundError:
+                m = QPModule.create_gelfand_bc(n, k // 2)
+                m.write()
+            for i in m:
+                oneline = m.permutation(i)
+                oneline += tuple(i - (-1) ** i for i in range(len(oneline) + 1, 2 * n + 1))
+                ans.add(SignedPermutation(*oneline))
+        return ans
+
+    def varphi(v):
+        a = [i for i in range(1, n + 1) if abs(v(i)) <= n]
+
+        forward = {i + 1: a[i] for i in range(len(a))}
+        backward = {}
+        for i in range(len(a)):
+            backward[a[i]] = i + 1
+            backward[-a[i]] = -i - 1
+
+        b = [i for i in range(-n, n + 1) if v(i) > n]
+        w = SignedPermutation(*(a + b))
+        z = SignedPermutation(*[backward[v(forward[i])] for i in range(1, len(a) + 1)])
+        return w, z
+
+    # test descents
+    s = SignedPermutation.s_i
+
+    def is_min_coset_rep(w, z):
+        k = z.rank
+        if k > 0 and w(1) < 0:
+            return False
+        return all(w(i) < w(i + 1) for i in range(1, k)) and all(w(i) < w(i + 1) for i in range(k + 1, n))
+
+    def sigma(w, z, i):
+        a = s(i, n)
+        if is_min_coset_rep(a * w, z):
+            return 0
+        b = w**-1 * a * w
+        y = SignedPermutation(*[z(i) if i <= z.rank else i for i in range(1, n + 1)])
+        if b * y * b != y:
+            return 0
+        if b in {s(i, n) for i in range(z.rank)}:
+            return -1
+        return 1
+
+    def height(w, z, i):
+        a = s(i, n)
+        if is_min_coset_rep(a * w, z):
+            return len(a * w) - len(w)
+        b = w**-1 * a * w
+        y = SignedPermutation(*[z(i) if i <= z.rank else i for i in range(1, n + 1)])
+        return (len(b * y * b) - len(y)) // 2
+
+    for v in elems(n):
+        w, z = varphi(v)
+
+        # des^=
+        vdes_weak = {i for i in range(n) if s(i, 2 * n) * v * s(i, 2 * n) == v}
+        wdes_weak = {i for i in range(n) if sigma(w, z, i) == -1}
+        # print(v, w, z, z.rank, vdes_weak, wdes_weak)
+        assert vdes_weak == wdes_weak
+
+        # asc^=
+        vasc_weak = {i for i in range(n) if v * s(i, 2 * n) * v in {s(i, 2 * n) for i in range(n + 1, 2 * n)}}
+        wasc_weak = {i for i in range(n) if sigma(w, z, i) == 1}
+        assert vasc_weak == wasc_weak
+
+        # des^<
+        vdes_strict = {i for i in range(n) if len(s(i, 2 * n) * v) < len(v)} - vdes_weak - vasc_weak
+        wdes_strict = {i for i in range(n) if height(w, z, i) == -1}
+        assert vdes_strict == wdes_strict
+
+        # asc^<
+        vasc_strict = {i for i in range(n) if len(s(i, 2 * n) * v) > len(v)} - vdes_weak - vasc_weak
+        wasc_strict = {i for i in range(n) if height(w, z, i) == 1}
+        assert vasc_strict == wasc_strict
+
+
+def test_d_descents(n):
+    def elems(n):
+        ans = set()
         for k in range(0, n + 1, 2):
             try:
                 m = QPModule.read_gelfand_d(n, k // 2)
             except FileNotFoundError:
                 m = QPModule.create_gelfand_d(n, k // 2)
+                m.write()
             for i in m:
                 oneline = m.permutation(i)
                 oneline += tuple(i - (-1) ** i for i in range(len(oneline) + 1, 2 * n + 1))
@@ -52,24 +215,74 @@ def test_duality_d_diagrams(n):
             x = x.star()
         return x
 
+    # test descents
+    s = EvenSignedPermutation.s_i
+
+    def is_min_coset_rep(w, z):
+        k = z.rank
+        if k > 0 and abs(w(1)) > w(2):
+            return False
+        return all(w(i) < w(i + 1) for i in range(2, k)) and all(w(i) < w(i + 1) for i in range(k + 1, n))
+
+    def sigma(w, z, i):
+        a = s(i, n)
+        if is_min_coset_rep(a * w, z):
+            return 0
+        b = w**-1 * a * w
+        y = EvenSignedPermutation(*[z(i) if i <= z.rank else i for i in range(1, n + 1)])
+        if b * y * b != y:
+            return 0
+        if b in {s(i, n) for i in range(z.rank)}:
+            return -1
+        return 1
+
+    def height(w, z, i):
+        a = s(i, n)
+        if is_min_coset_rep(a * w, z):
+            return len(a * w) - len(w)
+        b = w**-1 * a * w
+        y = EvenSignedPermutation(*[z(i) if i <= z.rank else i for i in range(1, n + 1)])
+        return (len(b * y * b) - len(y)) // 2
+
+    for v in elems(n):
+        w, z, _ = varphi(v)
+
+        # des^=
+        vdes_weak = {i for i in range(n) if s(i, 2 * n) * v * s(i, 2 * n) == v}
+        wdes_weak = {i for i in range(n) if sigma(w, z, i) == -1}
+        # print(v, w, z, z.rank, vdes_weak, wdes_weak)
+        assert vdes_weak == wdes_weak
+
+        # asc^=
+        vasc_weak = {i for i in range(n) if v * s(i, 2 * n) * v in {s(i, 2 * n) for i in range(n + 1, 2 * n)}}
+        wasc_weak = {i for i in range(n) if sigma(w, z, i) == 1}
+        assert vasc_weak == wasc_weak
+
+        # des^<
+        vdes_strict = {i for i in range(n) if len(s(i, 2 * n) * v) < len(v)} - vdes_weak - vasc_weak
+        wdes_strict = {i for i in range(n) if height(w, z, i) == -1}
+        assert vdes_strict == wdes_strict
+
+        # asc^<
+        vasc_strict = {i for i in range(n) if len(s(i, 2 * n) * v) > len(v)} - vdes_weak - vasc_weak
+        wasc_strict = {i for i in range(n) if height(w, z, i) == 1}
+        assert vasc_strict == wasc_strict
+
+    # test duality
     dictionary = {}
     for v in elems(n):
         w1, z1, k = varphi(v)
         w2, z2, _ = varphi(iota(v))
-
         if (n + k) % 2 != 0:
             w2 = w2.star()
             z2 = z2.star()
-
         if n % 2 != 0:
             z1 = z1.star()
-
         dictionary[k] = dictionary.get(k, []) + [(w1, z1, w2, z2)]
 
     for k in sorted(dictionary):
         for w1, z1, w2, z2 in dictionary[k]:
             print('n =', n, '| k =', k, '|', v, '|', w1.inverse() * w2, z1.inverse() * z2)
-
             u = EvenSignedPermutation(*([-i for i in range(1, 1 + 2 * k)] + list(range(n, 2 * k, -1))))
             assert z2 == z1 * EvenSignedPermutation.longest_element(2 * k)
             assert w2 == w1 * u * EvenSignedPermutation.longest_element(n)
