@@ -10,6 +10,64 @@ import random
 import pytest
 
 
+def test_gelfand_recurrences():
+    for sgn in [True, False]:
+        modules = []
+        for n in range(5):
+            for k in range(0, n + 2, 2):
+                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_a, QPModule.create_gelfand_a)
+                modules.append(w)
+        for n in range(5):
+            for k in range(0, n + 1, 2):
+                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
+                modules.append(w)
+        for n in range(2, 5):
+            for k in range(0, n + 1, 2):
+                w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
+                modules.append(w)
+        for w in modules:
+            m = w.qpmodule
+            print(m.family, m.rank, m.layer)
+
+            def p(i, j):
+                return w.get_cbasis_polynomial(i, j, False)
+
+            def des(i):
+                if sgn:
+                    return set(m.weak_ascents(i)) | set(m.strict_descents(i))
+                else:
+                    return set(m.weak_descents(i)) | set(m.strict_descents(i))
+
+            def asc(i):
+                if sgn:
+                    return set(m.weak_descents(i)) | set(m.strict_ascents(i))
+                else:
+                    return set(m.weak_ascents(i)) | set(m.strict_ascents(i))
+
+            def sigma(i, j, s):
+                ans = 0
+                sj = m.operate(j, s)
+                for k in range(i, sj):
+                    if s in des(k):
+                        ans += polynomials.q(m.height(j) - m.height(k)) * w.get_cbasis_leading(k, sj) * p(i, k)
+                return ans
+
+            for t in m:
+                for u in m:
+                    for s in des(t) | asc(t):
+                        su = m.operate(u, s)
+                        st = m.operate(t, s)
+
+                        if s in des(t):
+                            assert p(u, t) == p(su, t)
+                        if s in m.strict_descents(t) and s in des(u):
+                            assert p(u, t) == p(u, st) * polynomials.q(2) + p(su, st) - sigma(u, t, s)
+                        if s in m.strict_descents(t) and s in m.strict_ascents(u):
+                            assert p(u, t) == p(u, st) + p(su, st) * polynomials.q(2) - sigma(u, t, s)
+                        if s in des(t) and s in (m.weak_descents(u) if sgn else m.weak_ascents(u)):
+                            assert p(u, t) == 0
+
+
 def test_a_descents(n):
     def elems(n):
         ans = set()

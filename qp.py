@@ -808,7 +808,7 @@ class QPWGraph:
         start, space = self._address_cbasis(i, j, hi, hj)
         return self.frame[start:start + space]
 
-    def get_cbasis_polynomial(self, i, j):
+    def get_cbasis_polynomial(self, i, j, shiftdown=True):
         if i == j:
             return polynomials.q(0)
         c = self.get_cbasis(i, j)
@@ -817,7 +817,8 @@ class QPWGraph:
         for e in range(1 + (j - i - 1) // 2):
             ans += polynomials.q(2 * e) * self._int(c[start:start + self.nbytes], signed=True)
             start += self.nbytes
-        ans *= polynomials.q(self.qpmodule.height(i) - self.qpmodule.height(j))
+        if shiftdown:
+            ans *= polynomials.q(self.qpmodule.height(i) - self.qpmodule.height(j))
         return ans
 
     def set_cbasis(self, i, j, v, set_bytes=True):
