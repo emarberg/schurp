@@ -4,7 +4,6 @@ from marked import MarkedNumber
 from collections import defaultdict
 import itertools
 import numpy
-from PIL import Image, ImageDraw, ImageColor
 import random
 
 
@@ -175,6 +174,7 @@ class Word:
         return self._fpf_involutions
 
     def draw_trajectories(self, k=10, filename='test.png'):
+        from PIL import Image, ImageDraw, ImageColor
         n = max(self.elements) + 1
         t = random.sample(range(1, n + 1), k)
         colors = random.sample(list(ImageColor.colormap), k)
@@ -208,6 +208,7 @@ class Word:
         image.save('images/trajectories/' + filename)
 
     def draw_fpf_trajectories(self, k=10, filename='test.png'):
+        from PIL import Image, ImageDraw, ImageColor
         n = max(self.elements) + 1
         t = random.sample(range(1, n // 2 + 1), k)
         t = [(2 * i - 1, 2 * i) for i in t]
@@ -250,6 +251,7 @@ class Word:
         image.save('images/trajectories/' + filename)
 
     def print_permutation(self, m, filename='test.png'):
+        from PIL import Image, ImageDraw, ImageColor
         pi = self.permutation_sequence[m]
         n = len(pi)
         h = 1000
@@ -273,6 +275,7 @@ class Word:
             print(m, '. . .')
 
     def print_fpf(self, m, filename='test.png'):
+        from PIL import Image, ImageDraw, ImageColor
         invol = self.fpf_sequence[m]
         n = len(invol)
         h = 5 * n + 10

@@ -23,9 +23,13 @@ class MarkedNumber:
         return MarkedNumber(-self.number)
 
     def __add__(self, other):
+        if type(other) == int:
+            other = MarkedNumber(other)
         return MarkedNumber(self.number + other.number)
 
     def __sub__(self, other):
+        if type(other) == int:
+            other = MarkedNumber(other)
         return MarkedNumber(self.number - other.number)
 
     def increment(self):

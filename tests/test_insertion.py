@@ -5,6 +5,7 @@ from words import (
     Tableau,
     involution_insert
 )
+from marked import MarkedNumber
 from hopf import HopfPermutation
 from crystals import (
     OrthogonalCrystalGenerator,
@@ -117,9 +118,63 @@ def test_specific_primed_insertion():
     assert (p, r) == involution_insert(*g)
 
 
+def doperator(tab, index):
+    def find(t, a):
+        for i, j in t:
+            if abs(t.get(i, j)) == a:
+                return i, j
+
+    def locations(t, x):
+        a, b, c = None, None, None
+        w = t.shifted_reading_word()
+        for i in range(len(w)):
+            a = i if abs(w[i]) == x else a
+            b = i if abs(w[i]) == (x + 1) else b
+            c = i if abs(w[i]) == (x + 2) else c
+        return a, b, c
+
+    if index == 0:
+        i, j = find(tab, 2)
+        return tab.set(i, j, -tab.get(i, j))
+
+    a, b, c = locations(tab, index)
+    if a < b < c or c < b < a:
+        return tab
+
+    i1, j1 = find(tab, index)
+    i2, j2 = find(tab, index + 1)
+    i3, j3 = find(tab, index + 2)
+
+    x1, x3 = tab.get(i1, j1), tab.get(i3, j3)
+
+    if i1 == j1 and i3 == j3 and x1.number * x3.number < 0:
+        tab = tab.set(i1, j1, -x1).set(i3, j3, -x3)
+
+    if b < a < c or c < a < b:
+        i1, j1, i2, j2 = i2, j2, i3, j3
+
+    x1, x2 = tab.get(i1, j1), tab.get(i2, j2)
+
+    if i1 == i2 or j1 == j2:
+        tab = tab.set(i1, j1, -x1 if i1 != j1 else x1)
+        tab = tab.set(i2, j2, -x2 if i2 != j2 else x2)
+    else:
+        tab = tab.set(i1, j1, x1 - 1 if x1.number < 0 else x1 + 1)
+        tab = tab.set(i2, j2, x2 + 1 if x2.number < 0 else x2 - 1)
+
+    return tab
+
+
 def test_primed_ck(bound=5):
-    def check(v, w):
-        return involution_insert(Word(*w))[0] == involution_insert(Word(*v))[0]
+    records = {}
+
+    def check(v, w, i):
+        v = tuple(Word(a) for a in v)
+        w = tuple(Word(a) for a in w)
+        p, q = involution_insert(*v)
+        _, r = involution_insert(*w)
+        records[i] = records.get(i, []) + [(v, w, q, r)]
+        return involution_insert(*w)[0] == involution_insert(*v)[0]
 
     for n in range(bound):
         for pi in Permutation.involutions(n):
@@ -127,11 +182,11 @@ def test_primed_ck(bound=5):
                 if len(w) < 2:
                     continue
                 a, b = w[:2]
-                if abs(abs(a) - abs(b)) == 1 and ((a < 0 and b > 0) or (a > 0 and b < 0)):
+                if (a < 0 and b > 0) or (a > 0 and b < 0):
                     v = (-b, -a) + w[2:]
                 else:
                     v = (b, a) + w[2:]
-                check(v, w)
+                check(v, w, 0)
                 for i in range(len(w) - 2):
                     a, b, c = w[i:i + 3]
                     v = w
@@ -147,12 +202,23 @@ def test_primed_ck(bound=5):
                         v = w[:i] + (a, c, b) + w[i + 3:]
                     if v == w:
                         continue
-                    if not check(v, w):
+                    if not check(v, w, i + 1):
                         print(v)
                         print(involution_insert(Word(*v))[0])
                         print(w)
                         print(involution_insert(Word(*w))[0])
                         raise Exception
+            for i in records:
+                for v, w, q, r in records[i]:
+                    if i > 0:
+                        if doperator(q, i) != r:
+                            print('\n\n\n')
+                            print(q)
+                            print(r)
+                            print(i, ':', q.shifted_reading_word())
+                            print(doperator(q, i))
+                            input('\n?')
+            records = {}
 
 
 def test_primed_insertion(bound=5):

@@ -869,6 +869,16 @@ class Tableau:
             self.mapping[key].number for key in sorted(self.mapping, key=lambda x: (-x[0], x[1]))
         )
 
+    def column_reading_word(self):
+        return tuple(
+            self.mapping[key].number for key in sorted(self.mapping, key=lambda x: (x[1], -x[0]))
+        )
+
+    def shifted_reading_word(self):
+        a = tuple(i for i in reversed(self.column_reading_word()) if i < 0)
+        b = tuple(i for i in self.row_reading_word() if i > 0)
+        return a + b
+
     @classmethod
     def inverse_sagan_worley(cls, p, q):
         n = len(p)
