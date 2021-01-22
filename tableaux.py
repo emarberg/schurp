@@ -30,6 +30,18 @@ class Tableau:
     def __getitem__(self, item):
         return self.mapping.get(item, None)
 
+    @classmethod
+    def shifted_from_rows(cls, rows):
+        return cls.from_rows(rows, True)
+
+    @classmethod
+    def from_rows(cls, rows, shifted=False):
+        mapping = {}
+        for i in range(len(rows)):
+            for j in range(len(rows[i])):
+                mapping[(i + 1, j + 1 + (i if shifted else 0))] = rows[i][j]
+        return Tableau(mapping)
+
     def shifted_crystal_word(self):
         rows = [
             (i, j, self.mapping[(i, j)])
@@ -863,6 +875,15 @@ class Tableau:
     def remove(self, i, j):
         assert (i, j) in self
         return Tableau({a: b for a, b in self.mapping.items() if a != (i, j)})
+
+    def get_rows(self):
+        ans = []
+        for i, j in sorted(self.mapping):
+            n = self.mapping[(i, j)].number
+            while i > len(ans):
+                ans.append([])
+            ans[i - 1].append(n)
+        return ans
 
     def row_reading_word(self):
         return tuple(
