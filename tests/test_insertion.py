@@ -145,10 +145,12 @@ def doperator(tab, index):
     i2, j2 = find(tab, index + 1)
     i3, j3 = find(tab, index + 2)
 
-    x1, x3 = tab.get(i1, j1), tab.get(i3, j3)
+    x1 = tab.get(i1, j1)
+    x2 = tab.get(i2, j2)
+    x3 = tab.get(i3, j3)
 
     if i1 == j1 and i3 == j3 and x1.number * x3.number < 0:
-        tab = tab.set(i1, j1, -x1).set(i3, j3, -x3)
+        return tab.set(i1, j1, -x1).set(i2, j2, -x2).set(i3, j3, -x3)
 
     if b < a < c or c < a < b:
         i1, j1, i2, j2 = i2, j2, i3, j3
@@ -165,60 +167,77 @@ def doperator(tab, index):
     return tab
 
 
-def test_primed_ck(bound=5):
-    records = {}
-
+def _test_primed_ck(w, records):
     def check(v, w, i):
         v = tuple(Word(a) for a in v)
         w = tuple(Word(a) for a in w)
         p, q = involution_insert(*v)
-        _, r = involution_insert(*w)
+        pp, r = involution_insert(*w)
+        if doperator(q, i) != r:
+            print(i)
+            print(q)
+            print(doperator(q, i))
+            print(r)
+            assert False
         records[i] = records.get(i, []) + [(v, w, q, r)]
-        return involution_insert(*w)[0] == involution_insert(*v)[0]
+        return p == pp
 
+    if len(w) < 2:
+        return
+    a, b = w[:2]
+    if (a < 0 and b > 0) or (a > 0 and b < 0):
+        v = (-b, -a) + w[2:]
+    else:
+        v = (b, a) + w[2:]
+
+    assert check(v, w, 0)
+
+    for i in range(len(w) - 2):
+        a, b, c = w[i:i + 3]
+        v = w
+        if a == c:
+            v = w[:i] + (b, a, b) + w[i + 3:]
+        elif -a == c > 0:
+            v = w[:i] + (b, c, -b) + w[i + 3:]
+        elif -a == c < 0:
+            v = w[:i] + (-b, a, b) + w[i + 3:]
+        elif abs(a) < abs(c) < abs(b) or abs(b) < abs(c) < abs(a):
+            v = w[:i] + (b, a, c) + w[i + 3:]
+        elif abs(b) < abs(a) < abs(c) or abs(c) < abs(a) < abs(b):
+            v = w[:i] + (a, c, b) + w[i + 3:]
+        if v == w:
+            continue
+        if not check(v, w, i + 1):
+            print(v)
+            print(involution_insert(Word(*v))[0])
+            print(w)
+            print(involution_insert(Word(*w))[0])
+            raise Exception
+
+
+def test_random_primed_ck(bound=10):
+    for n in range(bound):
+        w = Permutation.random_primed_involution_word(n)
+        for i in range(len(w) + 1):
+            _test_primed_ck(w[:i], {})
+
+
+def test_primed_ck(bound=5):
     for n in range(bound):
         for pi in Permutation.involutions(n):
-            for w in pi.get_primed_involution_words():
-                if len(w) < 2:
-                    continue
-                a, b = w[:2]
-                if (a < 0 and b > 0) or (a > 0 and b < 0):
-                    v = (-b, -a) + w[2:]
-                else:
-                    v = (b, a) + w[2:]
-                check(v, w, 0)
-                for i in range(len(w) - 2):
-                    a, b, c = w[i:i + 3]
-                    v = w
-                    if a == c:
-                        v = w[:i] + (b, a, b) + w[i + 3:]
-                    elif -a == c > 0:
-                        v = w[:i] + (b, c, -b) + w[i + 3:]
-                    elif -a == c < 0:
-                        v = w[:i] + (-b, a, b) + w[i + 3:]
-                    elif abs(a) < abs(c) < abs(b) or abs(b) < abs(c) < abs(a):
-                        v = w[:i] + (b, a, c) + w[i + 3:]
-                    elif abs(b) < abs(a) < abs(c) or abs(c) < abs(a) < abs(b):
-                        v = w[:i] + (a, c, b) + w[i + 3:]
-                    if v == w:
-                        continue
-                    if not check(v, w, i + 1):
-                        print(v)
-                        print(involution_insert(Word(*v))[0])
-                        print(w)
-                        print(involution_insert(Word(*w))[0])
-                        raise Exception
-            for i in records:
-                for v, w, q, r in records[i]:
-                    if i > 0:
-                        if doperator(q, i) != r:
-                            print('\n\n\n')
-                            print(q)
-                            print(r)
-                            print(i, ':', q.shifted_reading_word())
-                            print(doperator(q, i))
-                            input('\n?')
             records = {}
+            for w in pi.get_primed_involution_words():
+                _test_primed_ck(w, records)
+            # for i in records:
+            #     for v, w, q, r in records[i]:
+            #         if i > 0:
+            #             if doperator(q, i) != r:
+            #                 print('\n\n\n')
+            #                 print(q)
+            #                 print(r)
+            #                 print(i, ':', q.shifted_reading_word())
+            #                 print(doperator(q, i))
+            #                 input('\n?')
 
 
 def test_primed_insertion(bound=5):
@@ -241,16 +260,13 @@ def test_primed_insertion(bound=5):
                     # print()
 
 
-n = 4
-
-
 def test_fpf_insertion():
     for w in get_fpf_involution_words((6, 5, 4, 3, 2, 1)):
         p, q, = Word(*w).fpf_insert()
         assert w == Tableau.inverse_fpf(p, q)
 
 
-def test_involution_p_tableaux():
+def test_involution_p_tableaux(n=4):
     k = 4
     for w in Permutation.involutions(n):
         for cg in OrthogonalCrystalGenerator.from_permutation(n, w, k):
@@ -262,7 +278,7 @@ def test_involution_p_tableaux():
             assert all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
 
 
-# def test_fpf_p_tableaux():
+# def test_fpf_p_tableaux(n=4):
 #     k = 4
 #     for w in HopfPermutation.fpf_involutions(n):
 #         cg = SymplecticCrystalGenerator(w.oneline, k)
@@ -274,7 +290,7 @@ def test_involution_p_tableaux():
 #         assert all(len(s & t) == 0 for s in shapes for t in shapes if s != t)
 
 
-def test_involution_insertion():
+def test_involution_insertion(n=4):
     a = list(HopfPermutation.involutions(n))
     for w in a:
         for e in get_involution_words(w.oneline):

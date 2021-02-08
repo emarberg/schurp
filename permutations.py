@@ -2,6 +2,7 @@ import itertools
 from tableaux import Tableau
 from partitions import Partition
 import operator
+import random
 
 REDUCED_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
@@ -64,6 +65,28 @@ class Permutation:
     @classmethod
     def random_involution_word(cls, n):
         return Tableau.random_inv_network(n)
+
+    @classmethod
+    def find_commutations(cls, iword):
+        ans = []
+        w = Permutation()
+        for index, i in enumerate(iword):
+            i = abs(i)
+            s = Permutation.s_i(i)
+            if w(i) == i and w(i + 1) == i + 1:
+                ans.append(index)
+                w = w * s
+            else:
+                w = s * w * s
+        return ans
+
+    @classmethod
+    def random_primed_involution_word(cls, n):
+        w = list(cls.random_involution_word(n))
+        for i in cls.find_commutations(w):
+            if random.randint(0, 1):
+                w[i] *= -1
+        return tuple(w)
 
     @classmethod
     def random_fpf_involution_word(cls, n):
