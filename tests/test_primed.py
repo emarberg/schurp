@@ -63,7 +63,7 @@ def extract_commutation_positions(rows):
     return ans
 
 
-def insert(iword):
+def insert_old_version(iword):
     def apply(s, pair):
         return tuple(sorted([s(i) for i in pair]))
 
@@ -114,7 +114,7 @@ def insert(iword):
 
 
 def primed_insert(a):
-    rows, diagonal_cycles, permuted_cycles, cycle_map = insert_alt(a)
+    rows, diagonal_cycles, permuted_cycles, cycle_map = insert(a)
     marks = marked_cycles(a)
     for box in permuted_cycles:
         sgn = marks[permuted_cycles[box]]
@@ -255,7 +255,7 @@ def extract_all_cycles(rows, rest):
     return ans
 
 
-def insert_alt(iword):
+def insert(iword):
     rows = []
     cycle_sequence = [[]]
     for n, a in enumerate(iword):
@@ -283,18 +283,15 @@ def insert_alt(iword):
             rows += [[a]]
         if transposed:
             rows = columns_to_shifted_rows(rows)
-        cycle_sequence.append(extract_all_cycles(rows, rest))
+        if a is not None or transposed:
+            cycle_sequence.append(extract_all_cycles(rows, rest))
 
-    cycle_sequence = [c + (len(rows) - len(c)) * [()] for c in cycle_sequence]
     permuted_cycles = {p: p for p in marked_cycles(iword)}
     for i in range(1, len(cycle_sequence)):
         a, b = cycle_sequence[i - 1], cycle_sequence[i]
-        diff = {tuple(sorted([a[t], b[t]])) for t in range(len(a)) if a[t] != b[t]}
-        assert len(diff) <= 1
-        if diff:
-            p, q = diff.pop()
-            if p and q:
-                permuted_cycles[p], permuted_cycles[q] = permuted_cycles[q], permuted_cycles[p]
+        for j in range(len(a)):
+            p, q = a[j], b[j]
+            permuted_cycles[p], permuted_cycles[q] = permuted_cycles[q], permuted_cycles[p]
 
     diagonal_cycles = {extract_cycle(rows[i][0], rows[:i + 1], []) for i in range(len(rows))}
     cycle_map = extract_commutation_positions(rows)

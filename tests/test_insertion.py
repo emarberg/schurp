@@ -138,8 +138,37 @@ def doperator(tab, index):
         return tab.set(i, j, -tab.get(i, j))
 
     a, b, c = locations(tab, index)
+
     if a < b < c or c < b < a:
         return tab
+
+    # if b < a < c or c < a < b:
+    #     index += 1
+
+    # i1, j1 = find(tab, index)
+    # i2, j2 = find(tab, index + 1)
+
+    # if i1 == j1 == i2 == j2 - 1:
+    #     i3, j3 = find(tab, index + 2)
+    #     if i3 == j3 == j2 == i1 + 1:
+    #         x1 = tab.get(i1, j1)
+    #         x2 = tab.get(i2, j2)
+    #         x3 = tab.get(i3, j3)
+    #         if x1.number * x3.number < 0:
+    #             return tab.set(i1, j1, -x1).set(i2, j2, -x2).set(i3, j3, -x3)
+    #         else:
+    #             return tab.set(i2, j2, -x2)
+
+    # if i2 == j2 == j1 == i1 + 1:
+    #     i0, j0 = find(tab, index - 1)
+    #     if i0 == j0 == i1 == j1 - 1:
+    #         x1 = tab.get(i0, j0)
+    #         x2 = tab.get(i1, j1)
+    #         x3 = tab.get(i2, j2)
+    #         if x1.number * x3.number < 0:
+    #             return tab.set(i0, j0, -x1).set(i1, j1, -x2).set(i2, j2, -x3)
+    #         else:
+    #             return tab.set(i1, j1, -x2)
 
     i1, j1 = find(tab, index)
     i2, j2 = find(tab, index + 1)
@@ -174,7 +203,7 @@ def _test_primed_ck(w, records):
         p, q = involution_insert(*v)
         pp, r = involution_insert(*w)
         if doperator(q, i) != r:
-            print(i)
+            print('i =', i)
             print(q)
             print(doperator(q, i))
             print(r)
