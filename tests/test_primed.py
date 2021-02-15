@@ -114,7 +114,7 @@ def insert_old_version(iword):
 
 
 def primed_insert(a):
-    rows, diagonal_cycles, permuted_cycles, cycle_map = insert(a)
+    rows, diagonal_cycles, permuted_cycles, cycle_map, tabs, paths = insert(a)
     marks = marked_cycles(a)
     for box in permuted_cycles:
         sgn = marks[permuted_cycles[box]]
@@ -123,13 +123,13 @@ def primed_insert(a):
     for box in diagonal_cycles:
         i, j = cycle_map[box]
         rows[i][j] = abs(rows[i][j])
-    return Tableau.shifted_from_rows(rows)
+    return Tableau.shifted_from_rows(rows), tabs, paths
 
 
 def test_primed_insertion(n=6):
     for w in Permutation.involutions(n):
         for a in w.get_primed_involution_words():
-            tab = primed_insert(a)
+            tab, inter, paths = primed_insert(a)
 
             v = tuple(Word(_) for _ in a)
             p, q = involution_insert(*v)
@@ -258,15 +258,20 @@ def extract_all_cycles(rows, rest):
 def insert(iword):
     rows = []
     cycle_sequence = [[]]
+    tabs = []
+    paths = []
     for n, a in enumerate(iword):
         rest = iword[n + 1:]
         transposed = False
         a = abs(a)
         i = 0
+        path = []
         while i < len(rows):
             j = [t for t in range(len(rows[i])) if a <= rows[i][t]]
             if j:
                 j = j[0]
+                b = rows[i][j] + int(rows[i][j] == a)
+                path += [(j + 1, i + 1, a, b) if transposed else (i + 1, i + j + 1, a, b)]
                 if rows[i][j] == a:
                     a = a + 1
                 else:
@@ -276,15 +281,19 @@ def insert(iword):
                     transposed = True
             else:
                 rows[i] += [a]
+                path += [(len(rows[i]), i + 1, a, None) if transposed else (i + 1, i + len(rows[i]), a, None)]
                 a = None
                 break
             i += 1
         if a is not None:
             rows += [[a]]
+            path += [(1, len(rows), a, None) if transposed else (len(rows), len(rows), a, None)]
         if transposed:
             rows = columns_to_shifted_rows(rows)
         if a is not None or transposed:
             cycle_sequence.append(extract_all_cycles(rows, rest))
+        paths.append(path)
+        tabs.append(Tableau.shifted_from_rows(rows))
 
     permuted_cycles = {p: p for p in marked_cycles(iword)}
     for i in range(1, len(cycle_sequence)):
@@ -295,4 +304,105 @@ def insert(iword):
 
     diagonal_cycles = {extract_cycle(rows[i][0], rows[:i + 1], []) for i in range(len(rows))}
     cycle_map = extract_commutation_positions(rows)
-    return rows, diagonal_cycles, permuted_cycles, cycle_map
+    return rows, diagonal_cycles, permuted_cycles, cycle_map, tabs, paths
+
+
+def _test_bumping_path(w):
+    def mid(path):
+        m = [i + 1 for i, a in enumerate(path) if a[0] == a[1]]
+        return m[0] if m else len(path)
+
+    def is_row_bumped(path, index):
+        return index + 1 <= mid(path)
+
+    _, _, _, _, tab, pat = insert(w)
+    for i in range(len(w) - 1):
+        a, b = w[i:i + 2]
+        p, q = pat[i:i + 2]
+        m = min(len(p), len(q))
+        try:
+            if a < b:
+                for j in range(m):
+                    if is_row_bumped(p, j):
+                        px, py, _, _ = p[j]
+                        qx, qy, _, _ = q[j]
+                        assert is_row_bumped(q, j)
+                        assert px == qx == j + 1
+                        assert py < qy
+
+                if is_row_bumped(p, len(p) - 1):
+                    assert is_row_bumped(q, len(q) - 1)
+                    px, py, _, _ = p[-1]
+                    qx, qy, _, _ = q[-1]
+                    assert py < qy
+                    assert px >= qx
+
+                for j in range(len(q)):
+                    if not is_row_bumped(q, j):
+                        px, py, _, _ = p[j]
+                        qx, qy, _, _ = q[j]
+                        assert not is_row_bumped(p, j)
+                        assert py == qy == j + 1
+                        assert px < qx
+
+                if mid(p) < len(p) and mid(q) < len(q):
+                    assert mid(p) < mid(q)
+
+                if not is_row_bumped(q, len(q) - 1):
+                    assert not is_row_bumped(p, len(p) - 1)
+                    px, py, _, _ = p[-1]
+                    qx, qy, _, _ = q[-1]
+                    assert py >= qy
+                    assert px < qx
+
+            if a > b:
+                for j in range(m):
+                    if is_row_bumped(q, j):
+                        px, py, _, _ = p[j]
+                        qx, qy, _, _ = q[j]
+                        assert is_row_bumped(p, j)
+                        assert px == qx == j + 1
+                        assert py >= qy
+
+                if not is_row_bumped(p, len(p) - 1):
+                    assert not is_row_bumped(q, len(q) - 1)
+                    px, py, _, _ = p[-1]
+                    qx, qy, _, _ = q[-1]
+                    assert py < qy
+                    assert px >= qx
+
+                for j in range(len(p)):
+                    if not is_row_bumped(p, j):
+                        px, py, _, _ = p[j]
+                        qx, qy, _, _ = q[j]
+                        assert not is_row_bumped(q, j)
+                        assert py == qy == j + 1
+                        assert px >= qx
+
+                if is_row_bumped(q, len(q) - 1):
+                    assert is_row_bumped(p, len(p) - 1)
+                    px, py, _, _ = p[-1]
+                    qx, qy, _, _ = q[-1]
+                    assert py >= qy
+                    assert px < qx
+        except:
+            print('a =', a, 'b =', b)
+            print(tab[i - 1])
+            print(tab[i])
+            print(tab[i + 1])
+            print(p)
+            print(q)
+            assert False
+
+
+def test_random_bumping_path(bound=10):
+    for n in range(bound):
+        w = Permutation.random_involution_word(n)
+        _test_bumping_path(w)
+
+
+def test_bumping_path(bound=5):
+    for n in range(bound):
+        for pi in Permutation.involutions(n):
+            for w in pi.get_involution_words():
+                _test_bumping_path(w)
