@@ -126,7 +126,7 @@ def primed_insert(a):
     return Tableau.shifted_from_rows(rows), tabs, paths
 
 
-def test_primed_insertion(n=6):
+def test_primed_insertion(n=5):
     for w in Permutation.involutions(n):
         for a in w.get_primed_involution_words():
             tab, inter, paths = primed_insert(a)
@@ -146,8 +146,10 @@ def test_primed_insertion(n=6):
 
 
 def batch_insert_sequential(tab, a):
+    tab = tab if type(tab) == Tableau else Tableau.shifted_from_rows(tab)
     word = tab.column_reading_word() + tuple(a)
-    return primed_insert(word)
+    ans, _, _ = primed_insert(word)
+    return ans
 
 
 def row_insert(row, a):
@@ -186,8 +188,8 @@ def batch_row_insert(tab, a):
 
 
 def batch_combine(top, bot):
-    top = Tableau.get_rows(top)
-    bot = Tableau.get_rows(bot)
+    top = top.get_rows()
+    bot = bot.get_rows()
     r = len(bot)
     top = shifted_rows_to_columns(top)
     bot = shifted_rows_to_columns(bot)
@@ -239,9 +241,10 @@ def test_batch_insert(n=5):
     for w in Permutation.involutions(n):
         for word in w.get_primed_involution_words():
             print(w, word)
-            p = primed_insert(word)
+            p, _, _ = primed_insert(word)
             for k in range(len(word)):
-                tab, a = primed_insert(word[:k]), word[k:]
+                tab, _, _ = primed_insert(word[:k])
+                a = word[k:]
                 q = batch_insert_sequential(tab, a)
                 assert p == q
                 r = batch_insert_parallel(tab, a)
@@ -271,7 +274,16 @@ def insert(iword):
             if j:
                 j = j[0]
                 b = rows[i][j] + int(rows[i][j] == a)
-                path += [(j + 1, i + 1, a, b) if transposed else (i + 1, i + j + 1, a, b)]
+                ###
+                if transposed:
+                    x, y = j + 1, i + 1
+                    x2, y2 = (x, y) if rows[i][j] != a else (x + 1, y)
+                    path += [(x, y, x2, y2, a, b)]
+                else:
+                    x, y = i + 1, i + j + 1
+                    x2, y2 = (x, y) if rows[i][j] != a else (x, y + 1)
+                    path += [(x, y, x2, y2, a, b)]
+                ###
                 if rows[i][j] == a:
                     a = a + 1
                 else:
@@ -281,13 +293,27 @@ def insert(iword):
                     transposed = True
             else:
                 rows[i] += [a]
-                path += [(len(rows[i]), i + 1, a, None) if transposed else (i + 1, i + len(rows[i]), a, None)]
+                ###
+                if transposed:
+                    x, y = len(rows[i]), i + 1
+                    path += [(x, y, x, y, a, None)]
+                else:
+                    x, y = i + 1, i + len(rows[i])
+                    path += [(x, y, x, y, a, None)]
+                ###
                 a = None
                 break
             i += 1
         if a is not None:
             rows += [[a]]
-            path += [(1, len(rows), a, None) if transposed else (len(rows), len(rows), a, None)]
+            ###
+            if transposed:
+                x, y = 1, len(rows)
+                path += [(x, y, x, y, a, None)]
+            else:
+                x, y = len(rows), len(rows)
+                path += [(x, y, x, y, a, None)]
+            ###
         if transposed:
             rows = columns_to_shifted_rows(rows)
         if a is not None or transposed:
@@ -324,23 +350,23 @@ def _test_bumping_path(w):
             if a < b:
                 for j in range(m):
                     if is_row_bumped(p, j):
-                        px, py, _, _ = p[j]
-                        qx, qy, _, _ = q[j]
+                        px, py, pxx, pyy, _, _ = p[j]
+                        qx, qy, qxx, qyy, _, _ = q[j]
                         assert is_row_bumped(q, j)
                         assert px == qx == j + 1
                         assert py < qy
 
                 if is_row_bumped(p, len(p) - 1):
                     assert is_row_bumped(q, len(q) - 1)
-                    px, py, _, _ = p[-1]
-                    qx, qy, _, _ = q[-1]
+                    px, py, pxx, pyy, _, _ = p[-1]
+                    qx, qy, qxx, qyy, _, _ = q[-1]
                     assert py < qy
                     assert px >= qx
 
                 for j in range(len(q)):
                     if not is_row_bumped(q, j):
-                        px, py, _, _ = p[j]
-                        qx, qy, _, _ = q[j]
+                        px, py, pxx, pyy, _, _ = p[j]
+                        qx, qy, qxx, qyy, _, _ = q[j]
                         assert not is_row_bumped(p, j)
                         assert py == qy == j + 1
                         assert px < qx
@@ -350,39 +376,39 @@ def _test_bumping_path(w):
 
                 if not is_row_bumped(q, len(q) - 1):
                     assert not is_row_bumped(p, len(p) - 1)
-                    px, py, _, _ = p[-1]
-                    qx, qy, _, _ = q[-1]
+                    px, py, pxx, pyy, _, _ = p[-1]
+                    qx, qy, qxx, qyy, _, _ = q[-1]
                     assert py >= qy
                     assert px < qx
 
             if a > b:
                 for j in range(m):
                     if is_row_bumped(q, j):
-                        px, py, _, _ = p[j]
-                        qx, qy, _, _ = q[j]
+                        px, py, pxx, pyy, _, _ = p[j]
+                        qx, qy, qxx, qyy, _, _ = q[j]
                         assert is_row_bumped(p, j)
                         assert px == qx == j + 1
                         assert py >= qy
 
                 if not is_row_bumped(p, len(p) - 1):
                     assert not is_row_bumped(q, len(q) - 1)
-                    px, py, _, _ = p[-1]
-                    qx, qy, _, _ = q[-1]
+                    px, py, pxx, pyy, _, _ = p[-1]
+                    qx, qy, qxx, qyy, _, _ = q[-1]
                     assert py < qy
                     assert px >= qx
 
                 for j in range(len(p)):
                     if not is_row_bumped(p, j):
-                        px, py, _, _ = p[j]
-                        qx, qy, _, _ = q[j]
+                        px, py, pxx, pyy, _, _ = p[j]
+                        qx, qy, qxx, qyy, _, _ = q[j]
                         assert not is_row_bumped(q, j)
                         assert py == qy == j + 1
                         assert px >= qx
 
                 if is_row_bumped(q, len(q) - 1):
                     assert is_row_bumped(p, len(p) - 1)
-                    px, py, _, _ = p[-1]
-                    qx, qy, _, _ = q[-1]
+                    px, py, pxx, pyy, _, _ = p[-1]
+                    qx, qy, qxx, qyy, _, _ = q[-1]
                     assert py >= qy
                     assert px < qx
         except:
