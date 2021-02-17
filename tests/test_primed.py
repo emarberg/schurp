@@ -342,6 +342,40 @@ def _test_bumping_path(w):
         return index + 1 <= mid(path)
 
     _, _, _, _, tab, pat = insert(w)
+    for i in range(len(w)):
+        p = pat[i]
+        j = mid(p)
+        try:
+            for t in range(j - 1):
+                x1, y1, xx1, yy1, _, _ = p[t]
+                x2, y2, xx2, yy2, _, _ = p[t + 1]
+                assert x1 == xx1 == t + 1 and x2 == xx2 == t + 2
+                assert y1 >= y2 >= j and yy1 >= yy2 >= j
+            for t in range(j, len(p) - 1):
+                x1, y1, xx1, yy1, _, _ = p[t]
+                x2, y2, xx2, yy2, _, _ = p[t + 1]
+                assert j >= x1 >= x2 and j + 1 >= xx1 >= xx2
+                assert y1 == yy1 == t + 1 and y2 == yy2 == t + 2
+            for s in range(j):
+                for t in range(j, len(p)):
+                    rx, ry, rxx, ryy, _, _ = p[s]
+                    cx, cy, cxx, cyy, _, _ = p[t]
+
+                    assert rx < cx or ry < cy
+                    assert rxx < cxx or ryy < cyy
+
+                    if s != j - 1 or t != j or ry == ryy:
+                        assert rxx < cx or ryy < cy
+                    else:
+                        assert ry == rx == rxx == cx == j
+                        assert cyy == cxx == cy == ryy == j + 1
+
+        except:
+            print(tab[i - 1])
+            print(tab[i])
+            print(p, mid(p))
+            assert False
+
     for i in range(len(w) - 1):
         a, b = w[i:i + 2]
         p, q = pat[i:i + 2]
@@ -353,23 +387,23 @@ def _test_bumping_path(w):
                         px, py, pxx, pyy, _, _ = p[j]
                         qx, qy, qxx, qyy, _, _ = q[j]
                         assert is_row_bumped(q, j)
-                        assert px == qx == j + 1
-                        assert py < qy
+                        assert px == qx == pxx == qxx == j + 1
+                        assert py < qy and pyy < qyy
 
                 if is_row_bumped(p, len(p) - 1):
                     assert is_row_bumped(q, len(q) - 1)
                     px, py, pxx, pyy, _, _ = p[-1]
                     qx, qy, qxx, qyy, _, _ = q[-1]
-                    assert py < qy
-                    assert px >= qx
+                    assert py < qy and pyy < qyy
+                    assert px >= qx and pxx >= qxx
 
                 for j in range(len(q)):
                     if not is_row_bumped(q, j):
                         px, py, pxx, pyy, _, _ = p[j]
                         qx, qy, qxx, qyy, _, _ = q[j]
                         assert not is_row_bumped(p, j)
-                        assert py == qy == j + 1
-                        assert px < qx
+                        assert py == qy == pyy == qyy == j + 1
+                        assert px < qx and pxx < qxx
 
                 if mid(p) < len(p) and mid(q) < len(q):
                     assert mid(p) < mid(q)
@@ -378,8 +412,8 @@ def _test_bumping_path(w):
                     assert not is_row_bumped(p, len(p) - 1)
                     px, py, pxx, pyy, _, _ = p[-1]
                     qx, qy, qxx, qyy, _, _ = q[-1]
-                    assert py >= qy
-                    assert px < qx
+                    assert py >= qy and pyy >= qyy
+                    assert px < qx and pxx < qxx
 
             if a > b:
                 for j in range(m):
@@ -387,30 +421,30 @@ def _test_bumping_path(w):
                         px, py, pxx, pyy, _, _ = p[j]
                         qx, qy, qxx, qyy, _, _ = q[j]
                         assert is_row_bumped(p, j)
-                        assert px == qx == j + 1
-                        assert py >= qy
+                        assert px == qx == pxx == qxx == j + 1
+                        assert py >= qy and pyy >= qyy
 
                 if not is_row_bumped(p, len(p) - 1):
                     assert not is_row_bumped(q, len(q) - 1)
                     px, py, pxx, pyy, _, _ = p[-1]
                     qx, qy, qxx, qyy, _, _ = q[-1]
-                    assert py < qy
-                    assert px >= qx
+                    assert py < qy and pyy < qyy
+                    assert px >= qx and pxx >= qxx
 
                 for j in range(len(p)):
                     if not is_row_bumped(p, j):
                         px, py, pxx, pyy, _, _ = p[j]
                         qx, qy, qxx, qyy, _, _ = q[j]
                         assert not is_row_bumped(q, j)
-                        assert py == qy == j + 1
-                        assert px >= qx
+                        assert py == qy == pyy == qyy == j + 1
+                        assert px >= qx and pxx >= qxx
 
                 if is_row_bumped(q, len(q) - 1):
                     assert is_row_bumped(p, len(p) - 1)
                     px, py, pxx, pyy, _, _ = p[-1]
                     qx, qy, qxx, qyy, _, _ = q[-1]
-                    assert py >= qy
-                    assert px < qx
+                    assert py >= qy and pyy >= qyy
+                    assert px < qx and pxx < qxx
         except:
             print('a =', a, 'b =', b)
             print(tab[i - 1])
