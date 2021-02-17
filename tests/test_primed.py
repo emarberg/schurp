@@ -346,6 +346,13 @@ def _test_bumping_path(w):
         p = pat[i]
         j = mid(p)
         try:
+            for t in range(len(p)):
+                x, y, xx, yy, _, _ = p[t]
+                if (x, y) != (xx, yy) and xx == yy:
+                    assert t == j
+                if (x, y) == (xx, yy) and xx == yy:
+                    assert t == j - 1
+
             for t in range(j - 1):
                 x1, y1, xx1, yy1, _, _ = p[t]
                 x2, y2, xx2, yy2, _, _ = p[t + 1]
