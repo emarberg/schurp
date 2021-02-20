@@ -9,6 +9,21 @@ from words import (
 )
 
 
+def commutations(iword):
+    ans = {}
+    w = Permutation()
+    for index, i in enumerate(iword):
+        i = abs(i)
+        s = Permutation.s_i(i)
+        if w(i) == i and w(i + 1) == i + 1:
+            ans[index] = (i, i + 1)
+            w = w * s
+        else:
+            ans = {k: (s(v[0]), s(v[1])) for (k, v) in ans.items()}
+            w = s * w * s
+    return ans
+
+
 def marked_cycles(iword):
     ans = {}
     w = Permutation()
@@ -324,8 +339,11 @@ def insert(iword):
     permuted_cycles = {p: p for p in marked_cycles(iword)}
     for i in range(1, len(cycle_sequence)):
         a, b = cycle_sequence[i - 1], cycle_sequence[i]
-        for j in range(len(a)):
-            p, q = a[j], b[j]
+        rng = [t for t in range(len(a)) if a[t] != b[t]]
+        pq = {a[j] for j in rng} | {b[j] for j in rng}
+        if pq:
+            assert len(pq) == 2
+            p, q = tuple(pq)
             permuted_cycles[p], permuted_cycles[q] = permuted_cycles[q], permuted_cycles[p]
 
     diagonal_cycles = {extract_cycle(rows[i][0], rows[:i + 1], []) for i in range(len(rows))}
@@ -468,8 +486,90 @@ def test_random_bumping_path(bound=10):
         _test_bumping_path(w)
 
 
-def test_bumping_path(bound=5):
+def test_bumping_path(bound=7):
     for n in range(bound):
         for pi in Permutation.involutions(n):
             for w in pi.get_involution_words():
                 _test_bumping_path(w)
+
+
+def gamma_map(tab, b=()):
+    rows = tab.get_rows() if type(tab) == Tableau else tab
+    word = ()
+    for row in reversed(rows):
+        word += tuple(row)
+    word += tuple(b)
+    comm = commutations(word)
+    ans = {}
+    for i in range(len(rows)):
+        for j in range(len(rows[i])):
+            index = j + sum([len(r) for r in rows[i + 1:]])
+            ans[(i + 1, i + j + 1)] = comm.get(index, None)
+    return ans
+
+
+def cseq(tab, b=()):
+    rows = tab.get_rows() if type(tab) == Tableau else tab
+    gamma = gamma_map(rows, b)
+    return [gamma[(i, i)] for i in range(1, 1 + len(rows))]
+
+
+def help_test_acb(w):
+    for i in range(len(w) - 2):
+        a, c, b = w[i: i + 3]
+        if a < b < c:
+            u = w[:i + 3]
+            v = w[:i] + (c, a, b)
+            trows, _, ttau, _, _, _ = insert(w[:i])
+            urows, _, utau, _, _, _ = insert(u)
+            vrows, _, vtau, _, _, _ = insert(v)
+            if len(urows) != len(trows) + 2 and utau != vtau:
+                print(u, '<->', v)
+                print()
+                print(ttau)
+                print(Tableau.shifted_from_rows(trows), cseq(trows, w[i: i + 3]))
+                #print(Tableau(gamma_map(trows, w[i: i + 3])))
+                trows, _, _, _, _, _ = insert(w[:i + 1])
+                print(Tableau.shifted_from_rows(trows), cseq(trows, w[i + 1: i + 3]))
+                #print(Tableau(gamma_map(trows, w[i + 1: i + 3])))
+                trows, _, _, _, _, _ = insert(w[:i + 2])
+                print(Tableau.shifted_from_rows(trows), cseq(trows, w[i + 2: i + 3]))
+                #print(Tableau(gamma_map(trows, w[i + 2: i + 3])))
+                trows, _, _, _, _, _ = insert(w[:i + 3])
+                print(Tableau.shifted_from_rows(trows), cseq(trows))
+                #print(Tableau(gamma_map(trows)))
+                print()
+                print('***')
+                print()
+                trows, _, _, _, _, _ = insert(v[:i])
+                print(Tableau.shifted_from_rows(trows), cseq(trows, v[i: i + 3]))
+                #print(Tableau(gamma_map(trows, v[i: i + 3])))
+                trows, _, _, _, _, _ = insert(v[:i + 1])
+                print(Tableau.shifted_from_rows(trows), cseq(trows, v[i + 1: i + 3]))
+                #print(Tableau(gamma_map(trows, v[i + 1: i + 3])))
+                trows, _, _, _, _, _ = insert(v[:i + 2])
+                print(Tableau.shifted_from_rows(trows), cseq(trows, v[i + 2: i + 3]))
+                #print(Tableau(gamma_map(trows, v[i + 2: i + 3])))
+                trows, _, _, _, _, _ = insert(v[:i + 3])
+                print(Tableau.shifted_from_rows(trows), cseq(trows))
+                #print(Tableau(gamma_map(trows)))
+                print()
+                print(utau)
+                print(vtau)
+                print()
+                assert urows == vrows
+                #assert utau == vtau
+                input('?')
+
+
+def test_random_acb(bound=10):
+    for n in range(bound):
+        w = Permutation.random_involution_word(n)
+        help_test_acb(w)
+
+
+def test_acb(bound=7):
+    for n in range(bound):
+        pi = Permutation.longest_element(n)
+        for w in pi.get_involution_words():
+            help_test_acb(w)
