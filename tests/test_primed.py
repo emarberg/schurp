@@ -507,6 +507,11 @@ def partial_insert(word, x):
     weak_row = weak_path[:j]
     weak_col = weak_path[j:]
 
+    j = [j for j in range(len(strict_path)) if strict_path[j][0] == strict_path[j][1]]
+    if j:
+        j = j[0] + 1
+    else:
+        j = len(strict_path)
     strict_row = strict_path[:j]
     strict_col = strict_path[j:]
 
@@ -520,12 +525,14 @@ def help_test_disjoint(a, u, v):
     intersect = set(w1) & set(w2)
     strict = set(s1) & set(s2)
 
-    assert strict.issubset(intersect)
-    count = [0, 0]
+    count = [0, 0, 0]
 
     def printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict):
-        print(a, u, v)
-        print(Tableau.shifted_from_rows(insert(a)[0]))
+        print('a =', a)
+        print('u =', u)
+        print('v =', v)
+        t0 = insert(a)[0]
+        print(Tableau.shifted_from_rows(t0))
         print(Tableau.shifted_from_rows(t1))
         print(Tableau.shifted_from_rows(t2))
         print(Tableau.shifted_from_rows(insert(a + (u, v))[0]))
@@ -537,6 +544,11 @@ def help_test_disjoint(a, u, v):
         print()
         print(intersect, ':', strict)
         print()
+        print(cseq(t0, (u, v)))
+        print(cseq(t1, (v,)))
+        print()
+        print(cseq(t0, (u, v)))
+        print(cseq(t2, (u,)))
         print('\n\n\n')
 
     if any(x != y for (x, y) in strict):
@@ -555,9 +567,32 @@ def help_test_disjoint(a, u, v):
             print('(2) cseq:', cseq(tt1), '==', cseq(tt2))
             assert False
 
-    # if not any(x != y for (x, y) in strict) and any(x != y for (x, y) in intersect):
-    #     printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
-    #     input('')
+    if not any(x != y for (x, y) in strict):
+        t3, w3, _, s3, _ = partial_insert(a + (v,), u)
+        t4, w4, _, s4, _ = partial_insert(a + (u,), v)
+        if s1 != s3 or w1 != w3:
+            printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
+            print(w3, s3, '!=', s1)
+            print(w4, s4, '!=', s2)
+            assert False
+
+    if not any(x != y for (x, y) in strict) and any(x != y for (x, y) in intersect):
+        try:
+            x = min([x for (x, y) in intersect if x != y])
+            c = w1[x - 1][1] - x + 1
+            y = w1[-1][0]
+            if x < y:
+                print(x, c, y)
+                count[2] += 1
+                rows = insert(a)[0]
+                val = rows[x - 1][c - 1]
+                for i in range(y - x):
+                    assert val + i in rows[x - 1 + i]
+                    assert val + i + 1 in rows[x - 1 + i]
+                assert (val + y - x + 2) in rows[y - 1] or (val + y - x + 1) in rows[y - 1]
+        except:
+            printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
+            assert False
 
     return count
 
@@ -568,9 +603,29 @@ def test_disjoint_simple():
     v = 4
     help_test_disjoint(a, u, v)
 
+    a = (3, 5, 4)
+    u = 1
+    v = 3
+    help_test_disjoint(a, u, v)
+
+    a = (4, 1, 6, 5)
+    u = 2
+    v = 4
+    help_test_disjoint(a, u, v)
+
+    a = (11, 8, 10, 3, 15, 7, 19, 20, 9, 4, 14, 17, 12, 2, 6, 11, 5, 1, 18, 13, 8, 4, 14, 3, 10, 22, 7, 8, 16, 2, 19, 12, 15, 11, 13, 17, 6, 14, 18, 1, 12, 16, 15, 20, 9, 17, 19, 7, 8, 9, 4, 18, 5, 10, 4, 9, 13, 14, 6, 19, 21, 22, 20, 11, 3, 16, 7, 6, 8, 12, 21, 19, 11, 7, 20, 18, 13)
+    u = 15
+    v = 17
+    help_test_disjoint(a, u, v)
+
+    a = (5, 1, 13, 3, 19, 15, 7, 11, 17, 21, 9, 10, 11, 4, 14, 12, 2, 8, 13, 11, 6, 16, 18, 9, 14, 15, 20, 5, 21, 3, 19, 14, 17, 18, 4, 16, 7, 17, 6, 12, 5, 13, 11, 10, 11, 14, 3, 2, 7, 18, 8, 12, 9, 20, 15, 19, 21, 11, 13, 6, 4)
+    u = 7
+    v = 10
+    help_test_disjoint(a, u, v)
+
 
 def test_random_disjoint(bound=30):
-    c1, c2 = 0, 0
+    c1, c2, c3 = 0, 0, 0
     for n in range(bound):
         w = Permutation.random_involution_word(n)
         for i in range(len(w) - 1):
@@ -581,12 +636,14 @@ def test_random_disjoint(bound=30):
                 count = help_test_disjoint(a, u, v)
                 c1 += count[0]
                 c2 += count[1]
-                print(c1, c2)
+                c3 += count[2]
+                print(c1, c2, c3)
 
 
 def test_disjoint(bound=7):
+    wseen = set()
     seen = set()
-    c1, c2 = 0, 0
+    c1, c2, c3 = 0, 0, 0
     for n in range(bound):
         pi = Permutation.longest_element(n)
         for w in pi.get_involution_words():
@@ -594,13 +651,20 @@ def test_disjoint(bound=7):
                 a = w[:i]
                 u = w[i]
                 v = w[i + 1]
+                if u + 1 >= v:
+                    continue
+                if (a, u, v) in wseen:
+                    continue
+                else:
+                    wseen.add((a, u, v))
                 t = Tableau.from_rows(insert(a)[0])
                 if u + 1 < v and (t, u, v) not in seen:
                     seen.add((t, u, v))
                     count = help_test_disjoint(a, u, v)
                     c1 += count[0]
                     c2 += count[1]
-                    print(c1, c2)
+                    c3 += count[2]
+                    print(c1, c2, c3)
 
 
 def gamma_map(tab, b=()):
