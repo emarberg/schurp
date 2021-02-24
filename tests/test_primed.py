@@ -493,6 +493,116 @@ def test_bumping_path(bound=7):
                 _test_bumping_path(w)
 
 
+def partial_insert(word, x):
+    rows, _, _, _, _, pat = insert(word + (x,))
+    weak_path = [(t[0], t[1]) for t in pat[-1]]
+    strict_path = [(t[2], t[3]) for t in pat[-1]]
+
+    j = [j for j in range(len(weak_path)) if weak_path[j][0] == weak_path[j][1]]
+    if j:
+        j = j[0] + 1
+    else:
+        j = len(weak_path)
+
+    weak_row = weak_path[:j]
+    weak_col = weak_path[j:]
+
+    strict_row = strict_path[:j]
+    strict_col = strict_path[j:]
+
+    return rows, weak_row, weak_col, strict_row, strict_col
+
+
+def help_test_disjoint(a, u, v):
+    t1, w1, _, s1, _ = partial_insert(a, u)
+    t2, w2, _, s2, _ = partial_insert(a, v)
+
+    intersect = set(w1) & set(w2)
+    strict = set(s1) & set(s2)
+
+    assert strict.issubset(intersect)
+    count = [0, 0]
+
+    def printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict):
+        print(a, u, v)
+        print(Tableau.shifted_from_rows(insert(a)[0]))
+        print(Tableau.shifted_from_rows(t1))
+        print(Tableau.shifted_from_rows(t2))
+        print(Tableau.shifted_from_rows(insert(a + (u, v))[0]))
+        print(Tableau.shifted_from_rows(insert(a + (v, u))[0]))
+        print()
+        print(w1, s1)
+        print()
+        print(w2, s2)
+        print()
+        print(intersect, ':', strict)
+        print()
+        print('\n\n\n')
+
+    if any(x != y for (x, y) in strict):
+        count[0] += 1
+        if cseq(t1, (v,)) != cseq(t2, (u,)):
+            printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
+            print('(1) cseq:', cseq(t1, (v,)), '==', cseq(t2, (u,)))
+            assert False
+
+    if len(intersect) == 0:
+        count[1] += 1
+        tt1 = insert(a + (u, v))[0]
+        tt2 = insert(a + (v, u))[0]
+        if cseq(tt1) != cseq(tt2):
+            printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
+            print('(2) cseq:', cseq(tt1), '==', cseq(tt2))
+            assert False
+
+    # if not any(x != y for (x, y) in strict) and any(x != y for (x, y) in intersect):
+    #     printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
+    #     input('')
+
+    return count
+
+
+def test_disjoint_simple():
+    a = (6, 4, 1, 5)
+    u = 2
+    v = 4
+    help_test_disjoint(a, u, v)
+
+
+def test_random_disjoint(bound=30):
+    c1, c2 = 0, 0
+    for n in range(bound):
+        w = Permutation.random_involution_word(n)
+        for i in range(len(w) - 1):
+            a = w[:i]
+            u = w[i]
+            v = w[i + 1]
+            if u + 1 < v:
+                count = help_test_disjoint(a, u, v)
+                c1 += count[0]
+                c2 += count[1]
+                print(c1, c2)
+
+
+def test_disjoint(bound=7):
+    seen = set()
+    c1, c2 = 0, 0
+    for n in range(bound):
+        pi = Permutation.longest_element(n)
+        for w in pi.get_involution_words():
+            for i in range(len(w) - 1):
+                a = w[:i]
+                u = w[i]
+                v = w[i + 1]
+                t = Tableau.from_rows(insert(a)[0])
+                if u + 1 < v and (t, u, v) not in seen:
+                    seen.add((t, u, v))
+                    count = help_test_disjoint(a, u, v)
+                    c1 += count[0]
+                    c2 += count[1]
+                    print(c1, c2)
+
+
 def gamma_map(tab, b=()):
     rows = tab.get_rows() if type(tab) == Tableau else tab
     word = ()
