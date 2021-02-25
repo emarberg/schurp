@@ -553,7 +553,24 @@ def help_test_disjoint(a, u, v):
 
     if any(x != y for (x, y) in strict):
         count[0] += 1
-        if cseq(t1, (v,)) != cseq(t2, (u,)):
+
+        q1 = involution_insert(*tuple(Word(_) for _ in a + (u,)))[1]
+        q2 = involution_insert(*tuple(Word(_) for _ in a + (v,)))[1]
+        n = len(a)
+        e1 = {_.number for _ in q1.entries()}
+        e2 = {_.number for _ in q2.entries()}
+        diag1 = {q1[box].number for box in q1 if box[0] == box[1]}
+        diag2 = {q2[box].number for box in q2 if box[0] == box[1]}
+
+        try:
+            assert cseq(t1, (v,)) == cseq(t2, (u,))
+
+            if -n - 1 in e1:
+                assert -n - 1 in e2
+
+            if n + 1 in diag1:
+                assert n + 1 in diag2
+        except:
             printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
             print('(1) cseq:', cseq(t1, (v,)), '==', cseq(t2, (u,)))
             assert False
@@ -562,9 +579,33 @@ def help_test_disjoint(a, u, v):
         count[1] += 1
         tt1 = insert(a + (u, v))[0]
         tt2 = insert(a + (v, u))[0]
-        if cseq(tt1) != cseq(tt2):
+
+        q1 = involution_insert(*tuple(Word(_) for _ in a + (u, v)))[1]
+        q2 = involution_insert(*tuple(Word(_) for _ in a + (v, u)))[1]
+        n = len(a)
+        e1 = {_.number for _ in q1.entries()}
+        e2 = {_.number for _ in q2.entries()}
+        diag1 = {q1[box].number for box in q1 if box[0] == box[1]}
+        diag2 = {q2[box].number for box in q2 if box[0] == box[1]}
+
+        try:
+            assert cseq(tt1) == cseq(tt2)
+
+            if -n - 1 in e1:
+                assert -n - 2 in e2
+            if -n - 2 in e1:
+                assert -n - 1 in e2
+
+            if n + 1 in diag1:
+                assert n + 2 in diag2
+            if n + 2 in diag1:
+                assert n + 1 in diag2
+
+        except:
             printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
             print('(2) cseq:', cseq(tt1), '==', cseq(tt2))
+            print(q1)
+            print(q2)
             assert False
 
     if not any(x != y for (x, y) in strict):
