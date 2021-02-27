@@ -729,6 +729,73 @@ def cseq(tab, b=()):
     return [gamma[(i, i)] for i in range(1, 1 + len(rows))]
 
 
+def help_test_gamma(w):
+    _, _, _, _, tabs, paths = insert(w)
+    tabs = [Tableau()] + tabs
+    for i in range(len(w)):
+        g1 = gamma_map(tabs[i], w[i:])
+        g2 = gamma_map(tabs[i + 1], w[i + 1:])
+        path = paths[i]
+
+        # print()
+        # print(w, i)
+        # print(tabs[i])
+        # print(tabs[i + 1])
+        # print(' first gamma map:', g1)
+        # print('second gamma map:', g2)
+        # print('path =', path)
+
+        row = tabs[i].row_reading_word()
+        gamma = [commutations(row + w[i:]).get(len(row), None)]
+        for (x1, y1, x2, y2, _, _) in path[:-1]:
+            if (x1, y1) == (x2, y2) and (x1 != y1 or gamma[-1] is not None):
+                gamma.append(g1[(x1, y1)])
+            else:
+                gamma.append(gamma[-1])
+
+        # print('gamma list =', gamma)
+        seen = set()
+        index = 0
+        for (x1, y1, x2, y2, _, _) in path:
+            # print('* index:', index, x1 == y1, gamma[index])
+            if (x1, y1) == (x2, y2):
+                if x1 != y1 or gamma[index] is not None:
+                    assert g2[(x1, y1)] == gamma[index]
+                else:
+                    assert g2[(x1, y1)] == g1[(x1, y1)]
+                seen.add((x1, y1))
+            elif x1 != y1 and x2 != y2:
+                assert g2[(x1, y1)] == g1[(x2, y2)]
+                assert g1[(x1, y1)] == g2[(x2, y2)]
+                seen.add((x1, y1))
+                seen.add((x2, y2))
+            elif x1 == y1:
+                x = x1
+                assert g2[(x, x)] == g1[(x + 1, x + 1)] and g2[(x, x)] is not None
+                assert g2[(x + 1, x + 1)] == g1[(x, x)] and g2[(x + 1, x + 1)] is not None
+                assert g1[(x, x + 1)] is None and g2[(x, x + 1)] is None
+                seen.add((x, x))
+                seen.add((x, x + 1))
+                seen.add((x + 1, x + 1))
+            index += 1
+        for box in g2:
+            if box not in seen:
+                assert g2[box] == g1[box]
+
+
+def test_random_gamma(bound=30):
+    for n in range(bound):
+        w = Permutation.random_involution_word(n)
+        help_test_gamma(w)
+
+
+def test_gamma(bound=7):
+    for n in range(bound):
+        pi = Permutation.longest_element(n)
+        for w in pi.get_involution_words():
+            help_test_gamma(w)
+
+
 def help_test_bac(w):
     for i in range(len(w) - 2):
         b, a, c = w[i: i + 3]
