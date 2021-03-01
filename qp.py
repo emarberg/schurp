@@ -144,6 +144,31 @@ class QPWGraph:
     def get_wgraph_size(self):
         return self._int(self.wgraph_addresses[-self.wbytes:])
 
+    @classmethod
+    def get_wgraph_weights_gelfand_a(cls, rank, sgn):
+        read, create = QPModule.read_gelfand_a, QPModule.create_gelfand_a
+        wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
+        return {mu for w in wgraphs for mu in w.get_wgraph_weights()}
+
+    @classmethod
+    def get_wgraph_weights_gelfand_bc(cls, rank, sgn):
+        read, create = QPModule.read_gelfand_bc, QPModule.create_gelfand_bc
+        wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+        return {mu for w in wgraphs for mu in w.get_wgraph_weights()}
+
+    @classmethod
+    def get_wgraph_weights_gelfand_d(cls, rank, sgn):
+        read, create = QPModule.read_gelfand_d, QPModule.create_gelfand_d
+        wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+        return {mu for w in wgraphs for mu in w.get_wgraph_weights()}
+
+    def get_wgraph_weights(self):
+        ans = set()
+        for w in self.qpmodule:
+            for _, mu in self.get_wgraph_edges(w, True):
+                ans.add(mu)
+        return ans
+
     def get_wgraph_edges(self, w, include_label=False):
         assert self.is_wgraph_computed
         start = self._int(self.wgraph_addresses[w * self.wbytes:(w + 1) * self.wbytes])
@@ -256,6 +281,131 @@ class QPWGraph:
 
         return edges
 
+    @classmethod
+    def _read_or_create(cls, read, create, rank, layer, sgn):
+        try:
+            m = read(rank, layer)
+            w = QPWGraph.read(m.get_directory(), sgn=sgn)
+            if not w.is_cbasis_computed:
+                w.compute_cbasis()
+                w.write()
+        except FileNotFoundError:
+            m = create(rank, layer)
+            w = QPWGraph(m, sgn=sgn)
+            w.compute_cbasis()
+            m.write()
+            w.write()
+        return w
+
+    @classmethod
+    def _print_gelfand_dotfile(cls, wgraphs, preprint, file):
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [width=0.2 height=0.2 margin=0.05 shape=box fontsize=12];']
+        s += ['    nodesep=0.25;']
+
+        for w in wgraphs:
+            vertices = w.qpmodule
+            edges = w.get_wgraph_edges
+
+            def label(mu):
+                return str(mu) if mu != 1 else ""
+
+            def pprint(x):
+                ascents = set(w.qpmodule.weak_descents(x) if w.sgn else w.qpmodule.weak_ascents(x)) | set(w.qpmodule.strict_ascents(x))
+                if w.qpmodule.family == QPModule.GELFAND_A:
+                    ascents = {i + 1 for i in ascents}
+                elif w.qpmodule.family == QPModule.GELFAND_D:
+                    ascents = {-1 if i == 0 else i for i in ascents}
+                ascents = '{' + ','.join([str(_) for _ in sorted(ascents)]) + '}'
+                return preprint(w, x) + '\\n' + ascents
+
+            for x in vertices:
+                s += ['    "%s";' % pprint(x)]
+
+            for x in vertices:
+                for y, mu in edges(x, True):
+                    if x in edges(y):
+                        if x < y:
+                            s += ['    "%s" -> "%s" [arrowhead=none label="%s"];' % (pprint(x), pprint(y), label(mu))]
+                    else:
+                        s += ['    "%s" -> "%s" [color=grey label="%s"];' % (pprint(x), pprint(y), label(mu))]
+
+            heights = {}
+            for n in vertices:
+                h = vertices.height(n)
+                heights[h] = heights.get(h, []) + ['"' + pprint(n) + '";']
+            for h, col in heights.items():
+                s += ['    {rank = same; ' + ' '.join(col) + '}']
+
+        s += ['}']
+        s = '\n'.join(s)
+
+        directory = QPModule.DIRECTORY + 'pictures/'
+        Path(directory).mkdir(parents=True, exist_ok=True)
+
+        file = directory + file
+
+        dotfile = file + '.dot'
+        with open(dotfile, 'w') as f:
+            f.write(s)
+
+        pngfile = file + '.png'
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+
+    @classmethod
+    def print_gelfand_a(cls, rank, sgn=None):
+        read, create = QPModule.read_gelfand_a, QPModule.create_gelfand_a
+
+        def preprint(w, x):
+            tup = list(w.permutation(x))
+            while len(tup) < 2 * (rank + 1):
+                v = len(tup)
+                tup.append(v + 2)
+                tup.append(v + 1)
+            return ('' if len(tup) < 10 else ' ').join([str(v) for v in tup])
+
+        for sgn in [True, False] if sgn is None else [sgn]:
+            wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
+            file =  'wgraph_gelfand_a%s_%s' % (rank, "n" if sgn else "m")
+            cls._print_gelfand_dotfile(wgraphs, preprint, file)
+
+    @classmethod
+    def print_gelfand_bc(cls, rank, sgn=None):
+        read, create = QPModule.read_gelfand_bc, QPModule.create_gelfand_bc
+
+        def preprint(w, x):
+            tup = list(w.permutation(x))
+            while len(tup) < 2 * rank:
+                v = len(tup)
+                tup.append(v + 2)
+                tup.append(v + 1)
+            return ('' if len(tup) < 10 else ' ').join([str(abs(v)) + ('\u0305' if v < 0 else '') for v in tup])
+
+        for sgn in [True, False] if sgn is None else [sgn]:
+            wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+            file =  'wgraph_gelfand_bc%s_%s' % (rank, "n" if sgn else "m")
+            cls._print_gelfand_dotfile(wgraphs, preprint, file)
+
+    @classmethod
+    def print_gelfand_d(cls, rank, sgn=None):
+        read, create = QPModule.read_gelfand_d, QPModule.create_gelfand_d
+
+        def preprint(w, x):
+            tup = list(w.permutation(x))
+            while len(tup) < 2  * rank:
+                v = len(tup)
+                tup.append(v + 2)
+                tup.append(v + 1)
+            return ('' if len(tup) < 10 else ' ').join([str(abs(v)) + ('\u0305' if v < 0 else '') for v in tup])
+
+        for sgn in [True, False] if sgn is None else [sgn]:
+            wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+            file =  'wgraph_gelfand_d%s_%s' % (rank, "n" if sgn else "m")
+            cls._print_gelfand_dotfile(wgraphs, preprint, file)
+
     def dot(self, vertices, edges, pprint):
         s = []
         s += ['digraph G {']
@@ -286,6 +436,7 @@ class QPWGraph:
         s += ['}']
         s = '\n'.join(s)
         return s
+
 
     def print_wgraph(self, pprint=str):
         assert self.is_wgraph_computed
