@@ -728,6 +728,7 @@ def test_two_sided_cells_d(nn=4):
 def test_gelfand_cells_a(nn=5, s=None):
     for n in range(nn + 1):
         for sgn in ([False, True] if s is None else [s]):
+            vertices = []
             cells = []
             molecules = []
             edges = []
@@ -737,9 +738,10 @@ def test_gelfand_cells_a(nn=5, s=None):
                 cells += w.get_cells_as_permutations()
                 molecules += w.get_molecules_as_permutations()
                 edges += [w.get_wgraph_size()]
-                w.print_wgraph()
+                vertices += [w.qpmodule.size]
+                # w.print_wgraph()
                 # w.print_cells()
-            print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
+            print('sgn =', sgn, 'n =', n, '::', '#vertices =', vertices, '(', sum(vertices), ')', '#edges =', edges, '(', sum(edges), ')', 'cells =', len(cells), '#molecules =', len(molecules), 'weights =', QPWGraph.get_wgraph_weights_gelfand_a(n, sgn))
             seen = {}
             for c in cells:
                 r = {gelfand_rsk(x, n + 1, sgn=sgn).partition() for x in c}
@@ -772,6 +774,7 @@ def test_gelfand_cells_bc(nn=5, s=None):
             cells = []
             molecules = []
             edges = []
+            vertices = []
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_bc, QPModule.create_gelfand_bc)
                 read_or_compute_wgraph(w)
@@ -779,10 +782,11 @@ def test_gelfand_cells_bc(nn=5, s=None):
                 cells += w.cells
                 molecules += w.molecules
                 edges += [w.get_wgraph_size()]
+                vertices += [w.qpmodule.size]
                 cellmap[n][sgn] |= w.get_cells_as_permutations()
-                w.print_wgraph()
+                # w.print_wgraph()
                 # w.print_cells()
-            print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
+            print('sgn =', sgn, 'n =', n, '::', '#vertices =', vertices, '(', sum(vertices), ')', '#edges =', edges, '(', sum(edges), ')', 'cells =', len(cells), '#molecules =', len(molecules), 'weights =', QPWGraph.get_wgraph_weights_gelfand_bc(n, sgn))
             if (not sgn) in cellmap[n]:
                 toggle = b_toggle(n)
                 negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
@@ -806,6 +810,7 @@ def test_gelfand_cells_d(nn=5, s=None):
             cells = []
             molecules = []
             edges = []
+            vertices = []
             for k in range(0, n + 1, 2):
                 w = read_or_create(n, k // 2, sgn, QPModule.read_gelfand_d, QPModule.create_gelfand_d)
                 read_or_compute_wgraph(w)
@@ -813,10 +818,11 @@ def test_gelfand_cells_d(nn=5, s=None):
                 cells += w.cells
                 molecules += w.molecules
                 edges += [w.get_wgraph_size()]
+                vertices += [w.qpmodule.size]
                 cellmap[n][sgn] |= w.get_cells_as_permutations()
-                w.print_wgraph()
+                # w.print_wgraph()
                 # w.print_cells()
-            print('sgn =', sgn, 'n =', n, '::', '#edges =', edges, '#cells =', len(cells), '#molecules =', len(molecules))
+            print('sgn =', sgn, 'n =', n, '::', '#vertices =', vertices, '(', sum(vertices), ')', '#edges =', edges, '(', sum(edges), ')', 'cells =', len(cells), '#molecules =', len(molecules), 'weights =', QPWGraph.get_wgraph_weights_gelfand_d(n, sgn))
             if (not sgn) in cellmap[n]:
                 toggle = d_toggle(n)
                 negated = {tuple(sorted(toggle(c) for c in cell)) for cell in cellmap[n][not sgn]}
