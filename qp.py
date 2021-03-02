@@ -129,6 +129,8 @@ class QPWGraph:
 
         self.cells = None
         self.molecules = None
+        self.components = None
+        self.undirected_edges = None
 
         assert sgn is not None or qpmodule.layer is None
 
@@ -145,28 +147,71 @@ class QPWGraph:
         return self._int(self.wgraph_addresses[-self.wbytes:])
 
     @classmethod
-    def get_wgraph_weights_gelfand_a(cls, rank, sgn):
+    def _combine_maps(cls, maps):
+        ans = {}
+        for m in maps:
+            for k, v in m.items():
+                ans[k] = ans.get(k, 0) + v
+        return ans
+
+    @classmethod
+    def gelfand_a(cls, rank, layer, sgn):
         read, create = QPModule.read_gelfand_a, QPModule.create_gelfand_a
-        wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
-        return {mu for w in wgraphs for mu in w.get_wgraph_weights()}
+        return cls._read_or_create(read, create, rank, layer, sgn)
+
+    @classmethod
+    def gelfand_bc(cls, rank, layer, sgn):
+        read, create = QPModule.read_gelfand_bc, QPModule.create_gelfand_bc
+        return cls._read_or_create(read, create, rank, layer, sgn)
+
+    @classmethod
+    def gelfand_d(cls, rank, layer, sgn):
+        read, create = QPModule.read_gelfand_d, QPModule.create_gelfand_d
+        return cls._read_or_create(read, create, rank, layer, sgn)
+
+    @classmethod
+    def get_wgraph_weights_gelfand_a(cls, rank, sgn):
+        wgraphs = [cls.gelfand_a(rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
+        return cls._combine_maps([w.get_wgraph_weights() for w in wgraphs])
 
     @classmethod
     def get_wgraph_weights_gelfand_bc(cls, rank, sgn):
-        read, create = QPModule.read_gelfand_bc, QPModule.create_gelfand_bc
-        wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
-        return {mu for w in wgraphs for mu in w.get_wgraph_weights()}
+        wgraphs = [cls.gelfand_bc(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+        return cls._combine_maps([w.get_wgraph_weights() for w in wgraphs])
 
     @classmethod
     def get_wgraph_weights_gelfand_d(cls, rank, sgn):
-        read, create = QPModule.read_gelfand_d, QPModule.create_gelfand_d
-        wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
-        return {mu for w in wgraphs for mu in w.get_wgraph_weights()}
+        wgraphs = [cls.gelfand_d(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+        return cls._combine_maps([w.get_wgraph_weights() for w in wgraphs])
 
     def get_wgraph_weights(self):
-        ans = set()
+        ans = {}
         for w in self.qpmodule:
             for _, mu in self.get_wgraph_edges(w, True):
-                ans.add(mu)
+                ans[mu] = ans.get(mu, 0) + 1
+        return ans
+
+    @classmethod
+    def get_cell_weights_gelfand_a(cls, rank, sgn):
+        wgraphs = [cls.gelfand_a(rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
+        return cls._combine_maps([w.get_cell_weights() for w in wgraphs])
+
+    @classmethod
+    def get_cell_weights_gelfand_bc(cls, rank, sgn):
+        wgraphs = [cls.gelfand_bc(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+        return cls._combine_maps([w.get_cell_weights() for w in wgraphs])
+
+    @classmethod
+    def get_cell_weights_gelfand_d(cls, rank, sgn):
+        wgraphs = [cls.gelfand_d(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+        return cls._combine_maps([w.get_cell_weights() for w in wgraphs])
+
+    def get_cell_weights(self):
+        ans = {}
+        for w in self.qpmodule:
+            for y, mu in self.get_wgraph_edges(w, True):
+                if any(y in cell and w in cell for cell in self.cells):
+                    ans[mu] = ans.get(mu, 0) + 1
         return ans
 
     def get_wgraph_edges(self, w, include_label=False):
@@ -259,6 +304,21 @@ class QPWGraph:
             if verbose:
                 print('* calculated molecules (%s seconds)' % str(int(1000 * (time.time() - t0)) / 1000.0))
                 print()
+
+    def compute_weakly_connected_components(self, verbose=True):
+        if self.components is None:
+            assert self.is_wgraph_computed
+            if self.undirected_edges is None:
+                self.undirected_edges = {}
+                for w in self.qpmodule:
+                    for y in self.get_wgraph_edges(w):
+                        self.undirected_edges[w] = self.undirected_edges.get(w, set()) | {y}
+                        self.undirected_edges[y] = self.undirected_edges.get(y, set()) | {w}
+            self.components = self._compute_cells(lambda w: self.undirected_edges.get(w, set()))
+
+    def count_weakly_connected_components(self):
+        self.compute_weakly_connected_components()
+        return len(self.components)
 
     def slow_compute_wgraph(self):
         if not self.is_cbasis_computed:
@@ -357,8 +417,6 @@ class QPWGraph:
 
     @classmethod
     def print_gelfand_a(cls, rank, sgn=None):
-        read, create = QPModule.read_gelfand_a, QPModule.create_gelfand_a
-
         def preprint(w, x):
             tup = list(w.permutation(x))
             while len(tup) < 2 * (rank + 1):
@@ -368,14 +426,12 @@ class QPWGraph:
             return ('' if len(tup) < 10 else ' ').join([str(v) for v in tup])
 
         for sgn in [True, False] if sgn is None else [sgn]:
-            wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
-            file =  'wgraph_gelfand_a%s_%s' % (rank, "n" if sgn else "m")
+            wgraphs = [cls.gelfand_a(rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
+            file = 'wgraph_gelfand_a%s_%s' % (rank, "n" if sgn else "m")
             cls._print_gelfand_dotfile(wgraphs, preprint, file)
 
     @classmethod
     def print_gelfand_bc(cls, rank, sgn=None):
-        read, create = QPModule.read_gelfand_bc, QPModule.create_gelfand_bc
-
         def preprint(w, x):
             tup = list(w.permutation(x))
             while len(tup) < 2 * rank:
@@ -385,25 +441,23 @@ class QPWGraph:
             return ('' if len(tup) < 10 else ' ').join([str(abs(v)) + ('\u0305' if v < 0 else '') for v in tup])
 
         for sgn in [True, False] if sgn is None else [sgn]:
-            wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
-            file =  'wgraph_gelfand_bc%s_%s' % (rank, "n" if sgn else "m")
+            wgraphs = [cls.gelfand_bc(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+            file = 'wgraph_gelfand_bc%s_%s' % (rank, "n" if sgn else "m")
             cls._print_gelfand_dotfile(wgraphs, preprint, file)
 
     @classmethod
     def print_gelfand_d(cls, rank, sgn=None):
-        read, create = QPModule.read_gelfand_d, QPModule.create_gelfand_d
-
         def preprint(w, x):
             tup = list(w.permutation(x))
-            while len(tup) < 2  * rank:
+            while len(tup) < 2 * rank:
                 v = len(tup)
                 tup.append(v + 2)
                 tup.append(v + 1)
             return ('' if len(tup) < 10 else ' ').join([str(abs(v)) + ('\u0305' if v < 0 else '') for v in tup])
 
         for sgn in [True, False] if sgn is None else [sgn]:
-            wgraphs = [cls._read_or_create(read, create, rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
-            file =  'wgraph_gelfand_d%s_%s' % (rank, "n" if sgn else "m")
+            wgraphs = [cls.gelfand_d(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
+            file = 'wgraph_gelfand_d%s_%s' % (rank, "n" if sgn else "m")
             cls._print_gelfand_dotfile(wgraphs, preprint, file)
 
     def dot(self, vertices, edges, pprint):
@@ -436,7 +490,6 @@ class QPWGraph:
         s += ['}']
         s = '\n'.join(s)
         return s
-
 
     def print_wgraph(self, pprint=str):
         assert self.is_wgraph_computed
@@ -489,6 +542,10 @@ class QPWGraph:
         return {tuple(sorted(self.permutation(i) for i in c)) for c in self.cells}
 
     def _compute_cells(self, edges):
+        return self.compute_strongly_connected_components(self.qpmodule, edges)
+
+    @classmethod
+    def compute_strongly_connected_components(cls, vertices, edges):
         cells = []
 
         def strong_connect(v, stack, visited, lowlinks, onstack, index):
@@ -514,13 +571,13 @@ class QPWGraph:
                 cells.append(cell)
             return stack, visited, lowlinks, onstack, index
 
-        visited = [None for _ in self.qpmodule]
-        lowlink = [None for _ in self.qpmodule]
-        onstack = [False for _ in self.qpmodule]
+        visited = {_: None for _ in vertices}
+        lowlink = {_: None for _ in vertices}
+        onstack = {_: False for _ in vertices}
         index = 0
         stack = []
 
-        for v in self.qpmodule:
+        for v in vertices:
             if visited[v] is None:
                 stack, visited, lowlinks, onstack, index = strong_connect(v, stack, visited, lowlink, onstack, index)
 
