@@ -747,7 +747,11 @@ def help_test_gamma(w):
 
         row = tabs[i].row_reading_word()
         gamma = [commutations(row + w[i:]).get(len(row), None)]
-        for (x1, y1, x2, y2, _, _) in path[:-1]:
+        ww = [w[i]] + [tabs[i].get(x2, y2).number for (_, _, x2, y2, _, _) in path[:-1]]
+        for j in range(len(path) - 1):
+            (x1, y1, x2, y2, _, _) = path[j]
+            if x1 == y1:
+                assert gamma[-1] is None or ww[j] < ww[j + 1]
             if (x1, y1) == (x2, y2) and (x1 != y1 or gamma[-1] is not None):
                 gamma.append(g1[(x1, y1)])
             else:
