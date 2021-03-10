@@ -518,6 +518,108 @@ def partial_insert(word, x):
     return rows, weak_row, weak_col, strict_row, strict_col
 
 
+def help_test_disjoint_cap(a, u, v):
+    t0 = Tableau.shifted_from_rows(insert(a)[0])
+    t1, weak_row1, weak_col1, strict_row1, strict_col1 = partial_insert(a, u)
+    t2, weak_row2, weak_col2, strict_row2, strict_col2 = partial_insert(a, v)
+
+    if set(weak_row1) & set(weak_row2):
+        return
+
+    t3, weak_row3, weak_col3, strict_row3, strict_col3 = partial_insert(a + (u,), v)
+
+    def print_tab(tab, weak, strict):
+        tab = Tableau.shifted_from_rows(tab)
+        tab = Tableau({b: v for b, v in tab.mapping.items() if b in strict or b in weak})
+        print(tab)
+
+    cap = set(strict_row2) & set(strict_col1)
+
+    # print_tab(t0.get_rows(), weak_col1, strict_col1)
+    # print_tab(t1, weak_col1, strict_col1)
+    # print()
+    # print_tab(t2, weak_row2, strict_row2)
+    # print_tab(t3, weak_row3, strict_row3)
+    # print()
+
+    assert len(cap) <= 1
+
+    count = [0, 0, 0, 0]
+    if len(cap) == 1:
+        (i, j) = next(iter(cap))
+        t1 = Tableau.shifted_from_rows(t1)
+
+        try:
+            if (i, j) in t0:
+                assert weak_row2[i:] == weak_row3[i:]
+                assert strict_row2[i:] == strict_row3[i:]
+
+            if (i, j - 1) not in strict_col1 and (i, j) in weak_col1 and (i, j) in t0:
+                assert (i, j) in strict_row3 or (i, j + 1) in strict_row3
+                assert (i + 1, j) in strict_row3
+                assert (i + 1, j) in strict_row2
+                assert (i + 1, j) in weak_row2
+                count[0] += 1
+            elif (i, j) not in t0:
+                assert len(strict_col2) == len(strict_col3) == 0
+                assert weak_row3[-1] in [(i, j + 1), (i + 1, j)]
+                assert len(set(weak_row3[-1])) != 1
+                assert weak_row2[-1] == (i, j)
+                count[1] += 1
+            elif (i, j) not in weak_col1:
+                assert (i, j) in strict_row3
+                count[2] += 1
+            elif (i, j - 1) in strict_col1 and (i, j) in weak_col1:
+                assert (i, j + 1) in strict_row3
+                count[3] += 1
+            else:
+                assert False
+        except:
+            print(i, j)
+            print('\ntab =\n', t0)
+            print('a =', a)
+            print('u =', u)
+            print('v =', v)
+            print(strict_col1, strict_row2, strict_row3)
+            assert False
+    return count
+
+
+def test_random_disjoint_cap(bound=30):
+    count = [0, 0, 0, 0]
+    for n in range(bound):
+        w = Permutation.random_involution_word(n)
+        for i in range(len(w) - 1):
+            a, u, v = w[:i], w[i], w[i + 1]
+            if u + 1 < v:
+                incr = help_test_disjoint_cap(a, u, v)
+                count = [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                print(count)
+
+
+def test_disjoint_cap(bound=7):
+    wseen = set()
+    seen = set()
+    count = [0, 0, 0, 0]
+    for n in range(bound):
+        pi = Permutation.longest_element(n)
+        for w in pi.get_involution_words():
+            for i in range(len(w) - 1):
+                a, u, v = w[:i], w[i], w[i + 1]
+                if u + 1 >= v:
+                    continue
+                if (a, u, v) in wseen:
+                    continue
+                else:
+                    wseen.add((a, u, v))
+                tab = Tableau.from_rows(insert(a)[0])
+                if u + 1 < v and (tab, u, v) not in seen:
+                    seen.add((tab, u, v))
+                    incr = help_test_disjoint_cap(a, u, v)
+                    count = [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                    print(count)
+
+
 def help_test_disjoint(a, u, v):
     t1, w1, _, s1, _ = partial_insert(a, u)
     t2, w2, _, s2, _ = partial_insert(a, v)
