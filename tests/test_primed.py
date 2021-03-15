@@ -646,23 +646,39 @@ def help_test_disjoint_cap(a, u, v):
 
     #     input('')
 
-    assert len(cap) <= 1
+    try:
+        assert len(cap) <= 1
 
-    count = [0, 0, 0, 0]
-    if len(cap) == 0:
-        assert b1 == b2
-    if len(cap) == 1:
-        (i, j) = next(iter(cap))
-        x = t1[i - 1][j - i]
-        y = b1[i - 1][2]
-        t1 = Tableau.shifted_from_rows(t1)
+        alt = set(weak_row2) & set(strict_col1)
+        if alt:
+            assert len(alt) == 1
+            (i, j) = next(iter(alt))
+            assert (i, j) in cap or (i, j + 1) in cap
+        alt = set(strict_row2) & (set(weak_col1) - set(strict_col1))
+        if alt:
+            assert len(alt) == 1
+            (i, j) = next(iter(alt))
+            assert (i + 1, j) in cap
+        alt = (set(weak_row2) - set(strict_row2)) & (set(weak_col1) - set(strict_col1))
+        if alt:
+            assert len(alt) == 1
+            (i, j) = next(iter(alt))
+            assert (i + 1, j + 1) in cap
 
-        # a0
-        #    b1 b2 ... bk bk+1 bk+2 ... bk+l
-        #    a1 a2 ... ak bk   bk+1 ... bk+l-1 c
-        #
+        count = [0, 0, 0, 0]
+        if len(cap) == 0:
+            assert b1 == b2
+        if len(cap) == 1:
+            (i, j) = next(iter(cap))
+            x = t1[i - 1][j - i]
+            y = b1[i - 1][2]
+            t1 = Tableau.shifted_from_rows(t1)
 
-        try:
+            # a0
+            #    b1 b2 ... bk bk+1 bk+2 ... bk+l
+            #    a1 a2 ... ak bk   bk+1 ... bk+l-1 c
+            #
+
             if (i, j) in t0:
                 assert weak_row2[i:] == weak_row3[i:]
                 assert strict_row2[i:] == strict_row3[i:]
@@ -680,6 +696,7 @@ def help_test_disjoint_cap(a, u, v):
                     c1, c2, d, _ = b1[i]
                     assert (c1, c2, d, eta) == b2[i]
                     assert len(b1) == len(b2) > i + 1 or i + 1 < c1
+                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 not in [i, i + 1])
                 else:
                     assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i + 1)
                     c1, c2, d, eta = b1[i]
@@ -726,13 +743,11 @@ def help_test_disjoint_cap(a, u, v):
         #
                 # intersect at a0+1
                 else:
-                    assert i > 1
-                    c1, c2, _, _ = b1[i - 2]
-                    assert c1 == c2 == j
-                    assert b1[i - 2][-1] is None and b1[i - 1][-1] is None
-                    assert b1 == b2
+                    assert 1 < i < len(b1) == len(b2)
+                    c1, c2, d, _ = b1[i - 1]
+                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 not in [i, i + 1])
+                    assert c1 == c2 and (c1, c2, d + 1) == b1[i][:-1] == b2[i][:-1]
 
-                assert (i, j) in strict_row3
                 count[2] += 1
             elif (i, j - 1) in weak_col1 and (i, j) in weak_col1:
                 c1, c2, d, eta = b1[i - 1]
@@ -743,23 +758,23 @@ def help_test_disjoint_cap(a, u, v):
                 count[3] += 1
             else:
                 assert False
-        except:
-            print(a, u, v, '\n')
-            print(b1)
-            print(b2)
-            print()
-            print('x =', x, 'y =', y)
-            print()
-            print_tab(t0, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
-            print_tab(t1, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
-            print()
-            print(i, j)
-            print('\ntab =\n', t0)
-            print('a =', a)
-            print('u =', u)
-            print('v =', v)
-            print(strict_col1, strict_row2, strict_row3)
-            assert False
+    except:
+        print(a, u, v, '\n')
+        print(b1)
+        print(b2)
+        print()
+        print('x =', x, 'y =', y)
+        print()
+        print_tab(t0, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
+        print_tab(t1, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
+        print()
+        print(i, j)
+        print('\ntab =\n', t0)
+        print('a =', a)
+        print('u =', u)
+        print('v =', v)
+        print(strict_col1, strict_row2, strict_row3)
+        assert False
     return count
 
 
