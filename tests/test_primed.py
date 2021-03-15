@@ -507,15 +507,103 @@ def partial_insert(word, x):
     weak_row = weak_path[:j]
     weak_col = weak_path[j:]
 
-    j = [j for j in range(len(strict_path)) if strict_path[j][0] == strict_path[j][1]]
-    if j:
-        j = j[0] + 1
-    else:
-        j = len(strict_path)
+    # j = [j for j in range(len(strict_path)) if strict_path[j][0] == strict_path[j][1]]
+    # if j:
+    #     j = j[0] + 1
+    # else:
+    #     j = len(strict_path)
     strict_row = strict_path[:j]
     strict_col = strict_path[j:]
 
     return rows, weak_row, weak_col, strict_row, strict_col
+
+
+def bump_differential(word, i):
+    tab = insert(word[:i])[0]
+    rows, weak_row, weak_col, strict_row, strict_col = partial_insert(word[:i], word[i])
+    gamma = gamma_map(tab, word[i:])
+    ans = []
+    for j in range(len(weak_row)):
+        if j == 0:
+            d = word[i]
+            eta = commutations(word).get(i, None)
+        else:
+            x = j
+            y = ans[-1][0]
+            z = ans[-1][1]
+            d = tab[x - 1][z - x]
+            if y == z and (x != y or ans[-1][-1] is not None):
+                eta = gamma[(x, y)]
+            else:
+                eta = ans[-1][-1]
+        ans += [(weak_row[j][1], strict_row[j][1], d, eta)]
+    return ans
+
+
+def help_test_bump_differential(word, seen):
+    for i in range(len(word)):
+        if (word[:i], word[i]) not in seen:
+            seen.add((word[:i], word[i]))
+            diff = bump_differential(word, i)
+            cseq_0 = full_cseq(word, i)
+            cseq_1 = full_cseq(word, i + 1)
+
+            try:
+                y, z, d, eta = diff[-1]
+                p = len(diff)
+                q = len(cseq_0[0])
+
+                if p < y:
+                    assert cseq_0 == cseq_1
+
+                elif q < p:
+                    assert p == y == z == q + 1
+                    assert cseq_1 == [cseq_0[0] + [eta], cseq_0[1] + [d]]
+
+                elif p == y == z <= q:
+                    c = cseq_0[1][p - 1]
+                    theta = cseq_0[0][p - 1] if d + 1 == c else eta
+                    cseq = [cseq_0[0][:], cseq_0[1][:]]
+                    cseq[0][p - 1] = theta
+                    cseq[1][p - 1] = d
+                    assert cseq == cseq_1
+
+                elif p == y < z:
+                    assert p + 1 == z <= q
+                    cseq = [cseq_0[0][:], cseq_0[1][:]]
+                    cseq[0][p - 1], cseq[0][p] = cseq[0][p], cseq[0][p - 1]
+                    assert cseq == cseq_1
+
+                else:
+                    assert False
+            except:
+                print(word[:i], word[i], word[i + 1:])
+                print(diff)
+                print()
+                print('cseq_%s(a)' % str(i + 1))
+                print(cseq_0[0])
+                print(cseq_0[1])
+                print()
+                print('cseq_%s(a)' % str(i + 2))
+                print(cseq_1[0])
+                print(cseq_1[1])
+                print()
+                assert False
+
+
+def test_random_bump_differential(bound=30):
+    seen = set()
+    for n in range(bound):
+        w = Permutation.random_involution_word(n)
+        help_test_bump_differential(w, seen)
+
+
+def test_bump_differential(bound=7):
+    seen = set()
+    for n in range(bound):
+        pi = Permutation.longest_element(n)
+        for w in pi.get_involution_words():
+            help_test_bump_differential(w, seen)
 
 
 def help_test_disjoint_cap(a, u, v):
@@ -526,55 +614,145 @@ def help_test_disjoint_cap(a, u, v):
     if set(weak_row1) & set(weak_row2):
         return
 
+    n = len(a)
+    auv = a + (u, v)
+    avu = a + (v, u)
+    assert bump_differential(auv, n) == bump_differential(avu, n + 1)
+
     t3, weak_row3, weak_col3, strict_row3, strict_col3 = partial_insert(a + (u,), v)
 
     def print_tab(tab, weak, strict):
-        tab = Tableau.shifted_from_rows(tab)
+        tab = Tableau.shifted_from_rows(tab) if type(tab) != Tableau else tab
         tab = Tableau({b: v for b, v in tab.mapping.items() if b in strict or b in weak})
         print(tab)
 
     cap = set(strict_row2) & set(strict_col1)
 
-    # print_tab(t0.get_rows(), weak_col1, strict_col1)
-    # print_tab(t1, weak_col1, strict_col1)
-    # print()
-    # print_tab(t2, weak_row2, strict_row2)
-    # print_tab(t3, weak_row3, strict_row3)
-    # print()
+    b2 = bump_differential(auv, n + 1)
+    b1 = bump_differential(avu, n)
+
+    # try:
+    #     if len(b1) == len(b2) and b1 != b2:
+    #         assert sorted([i for i, _ in cap]) == sorted([i + 1 for i in range(len(b1)) if b1[i] != b2[i]])
+    # except:
+    #     print(a, u, v, '\n')
+    #     print(b1)
+    #     print(b2)
+    #     print('col =', strict_col1)
+
+    #     print(t0)
+    #     print(Tableau.shifted_from_rows(t1))
+    #     print()
+
+    #     input('')
 
     assert len(cap) <= 1
 
     count = [0, 0, 0, 0]
+    if len(cap) == 0:
+        assert b1 == b2
     if len(cap) == 1:
         (i, j) = next(iter(cap))
+        x = t1[i - 1][j - i]
+        y = b1[i - 1][2]
         t1 = Tableau.shifted_from_rows(t1)
+
+        # a0
+        #    b1 b2 ... bk bk+1 bk+2 ... bk+l
+        #    a1 a2 ... ak bk   bk+1 ... bk+l-1 c
+        #
 
         try:
             if (i, j) in t0:
                 assert weak_row2[i:] == weak_row3[i:]
                 assert strict_row2[i:] == strict_row3[i:]
+                assert len(b1) == len(b2) > i
 
+            # intersect at b1
             if (i, j - 1) not in strict_col1 and (i, j) in weak_col1 and (i, j) in t0:
+                if x < y:
+                    c1, c2, d, eta = b1[i - 1]
+                    assert (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
+                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+                elif x == y:
+                    c1, c2, d, eta = b1[i - 1]
+                    assert (c1, c2 + 1, d, eta) == b2[i - 1]
+                    c1, c2, d, _ = b1[i]
+                    assert (c1, c2, d, eta) == b2[i]
+                    assert len(b1) == len(b2) > i + 1 or i + 1 < c1
+                else:
+                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i + 1)
+                    c1, c2, d, eta = b1[i]
+                    assert b2[i][:2] == (c1, c2)
+                    assert len(b1) == len(b2) > i + 1 or i + 1 < c1
+
                 assert (i, j) in strict_row3 or (i, j + 1) in strict_row3
                 assert (i + 1, j) in strict_row3
                 assert (i + 1, j) in strict_row2
                 assert (i + 1, j) in weak_row2
                 count[0] += 1
             elif (i, j) not in t0:
+                assert x != y
+                if x < y:
+                    c1, c2, d, eta = b1[i - 1]
+                    assert c1 == c2 and (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
+                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+                else:
+                    assert b1 == b2[:-1] and i == len(b1) == len(b2) - 1
+                    c1, c2, d, eta = b2[-1]
+                    assert d == x and i + 1 < c1 == c2
+
                 assert len(strict_col2) == len(strict_col3) == 0
                 assert weak_row3[-1] in [(i, j + 1), (i + 1, j)]
                 assert len(set(weak_row3[-1])) != 1
                 assert weak_row2[-1] == (i, j)
                 count[1] += 1
+
+            # intersect at bk+?
             elif (i, j) not in weak_col1:
+                if (i - 1, j - 1) in weak_col1:
+                    assert b1 == b2
+                elif (i, j - 1) in strict_col1:
+                    assert i > 1
+                    c1, c2, _, _ = b1[i - 2]
+                    assert c1 == c2 == j
+                    c1, c2, d, _ = b1[i - 1]
+                    assert c1 + 1 == c2 and b2[i - 1][:-1] == (c1 + 1, c2, d)
+                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+
+        #  a0    [a0+2]
+        # [a0-1]  a0+1  a0+2 ... a0+l
+        # [a0-2]  a0    a0+1 ... a0+l-1 c
+        #
+                # intersect at a0+1
+                else:
+                    assert i > 1
+                    c1, c2, _, _ = b1[i - 2]
+                    assert c1 == c2 == j
+                    assert b1[i - 2][-1] is None and b1[i - 1][-1] is None
+                    assert b1 == b2
+
                 assert (i, j) in strict_row3
                 count[2] += 1
-            elif (i, j - 1) in strict_col1 and (i, j) in weak_col1:
+            elif (i, j - 1) in weak_col1 and (i, j) in weak_col1:
+                c1, c2, d, eta = b1[i - 1]
+                assert (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
+                assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+
                 assert (i, j + 1) in strict_row3
                 count[3] += 1
             else:
                 assert False
         except:
+            print(a, u, v, '\n')
+            print(b1)
+            print(b2)
+            print()
+            print('x =', x, 'y =', y)
+            print()
+            print_tab(t0, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
+            print_tab(t1, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
+            print()
             print(i, j)
             print('\ntab =\n', t0)
             print('a =', a)
@@ -691,6 +869,8 @@ def help_test_disjoint(a, u, v):
         diag2 = {q2[box].number for box in q2 if box[0] == box[1]}
 
         try:
+            assert len(strict) == 0
+            assert len(set(s1) & set(w2)) == 0
             assert cseq(tt1) == cseq(tt2)
 
             if -n - 1 in e1:
@@ -823,6 +1003,16 @@ def gamma_map(tab, b=()):
             index = j + sum([len(r) for r in rows[i + 1:]])
             ans[(i + 1, i + j + 1)] = comm.get(index, None)
     return ans
+
+
+def full_cseq(word, j):
+    rows = insert(word[:j])[0]
+    b = word[j:]
+    gamma = gamma_map(rows, b)
+    return [
+        [gamma[(i, i)] for i in range(1, 1 + len(rows))],
+        [rows[i - 1][0] for i in range(1, 1 + len(rows))],
+    ]
 
 
 def cseq(tab, b=()):
