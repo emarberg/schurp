@@ -608,6 +608,9 @@ def test_bump_differential(bound=7):
 
 def help_test_disjoint_cap(a, u, v):
     t0 = Tableau.shifted_from_rows(insert(a)[0])
+    gamma = gamma_map(t0, (u, v))
+    assert gamma == gamma_map(t0, (v, u))
+
     t1, weak_row1, weak_col1, strict_row1, strict_col1 = partial_insert(a, u)
     t2, weak_row2, weak_col2, strict_row2, strict_col2 = partial_insert(a, v)
 
@@ -619,6 +622,9 @@ def help_test_disjoint_cap(a, u, v):
     avu = a + (v, u)
     assert bump_differential(auv, n) == bump_differential(avu, n + 1)
 
+    uu = [u] + [t0.get(x, y).number for (x, y) in (strict_row1 + strict_col1)[:-1]]
+    vv = [v] + [t0.get(x, y).number for (x, y) in (strict_row2 + strict_col2)[:-1]]
+
     t3, weak_row3, weak_col3, strict_row3, strict_col3 = partial_insert(a + (u,), v)
 
     def print_tab(tab, weak, strict):
@@ -627,27 +633,36 @@ def help_test_disjoint_cap(a, u, v):
         print(tab)
 
     cap = set(strict_row2) & set(strict_col1)
+    wcap = set(strict_row2) & (set(weak_col1) - set(strict_col1))
 
-    b2 = bump_differential(auv, n + 1)
     b1 = bump_differential(avu, n)
-
-    # try:
-    #     if len(b1) == len(b2) and b1 != b2:
-    #         assert sorted([i for i, _ in cap]) == sorted([i + 1 for i in range(len(b1)) if b1[i] != b2[i]])
-    # except:
-    #     print(a, u, v, '\n')
-    #     print(b1)
-    #     print(b2)
-    #     print('col =', strict_col1)
-
-    #     print(t0)
-    #     print(Tableau.shifted_from_rows(t1))
-    #     print()
-
-    #     input('')
+    b2 = bump_differential(auv, n + 1)
 
     try:
         assert len(cap) <= 1
+        assert len(wcap) <= 1
+        if len(wcap) == 1:
+            assert len(cap) == 1
+            assert list(cap)[0][0] == list(wcap)[0][0] + 1
+            assert list(cap)[0][1] == list(wcap)[0][1]
+
+        for i in range(min(len(weak_row1), len(weak_row2))):
+            x1, y1 = weak_row1[i]
+            x2, y2 = strict_row1[i]
+            x3, y3 = weak_row2[i]
+            x4, y4 = strict_row2[i]
+            assert i + 1 == x1 == x2 == x3 == x4
+            assert y1 <= y2 < y3 <= y4
+
+        diag1 = [(x, y) for (x, y) in weak_row1 if x == y]
+        diag2 = [(x, y) for (x, y) in weak_row2 if x == y]
+        if diag1 and diag2:
+            x1, y1 = diag1[0]
+            x2, y2 = diag2[0]
+            if (x1, y1) not in strict_row1:
+                assert x1 + 1 < x2
+            else:
+                assert x1 < x2
 
         alt = set(weak_row2) & set(strict_col1)
         if alt:
@@ -665,135 +680,348 @@ def help_test_disjoint_cap(a, u, v):
             (i, j) = next(iter(alt))
             assert (i + 1, j + 1) in cap
 
-        count = [0, 0, 0, 0]
+        count = 10 * [0]
         if len(cap) == 0:
             assert b1 == b2
+            count[0] += 1
         if len(cap) == 1:
             (i, j) = next(iter(cap))
-            x = t1[i - 1][j - i]
-            y = b1[i - 1][2]
+            _j = j
+            _x = t1[i - 1][j - i]
+            _y = b1[i - 1][2]
             t1 = Tableau.shifted_from_rows(t1)
+
+            j = min([y for (x, y) in strict_col1 if x == i]) - 1
+            l = len([(x, y) for (x, y) in weak_col1 if x == i - 1 and (x + 1, y) in strict_col1])
+            k = len([(x, y) for (x, y) in strict_col1 if x == i]) - l
+            delta = _j - j
+
+            if (i, j + k + l) in t0:
+                assert i > 1
+
+                assert all(t0.get(i, j + t).number == uu[j + t] for t in range(1, k + l + 1))
+                assert all(t0.get(i, j + k + t).number == uu[j + k] + t for t in range(1, l + 1))
+                assert all(t0.get(i - 1, j + k + t).number == uu[j + k] + t - 1 for t in range(1, l + 1))
+
+                assert all(t1.get(i, j + t).number == uu[j + t - 1] for t in range(1, k + 1))
+                assert all(t1.get(i, j + k + t).number == uu[j + k] + t for t in range(1, l + 1))
+                assert all(t1.get(i - 1, j + k + t).number == uu[j + k] + t - 1 for t in range(1, l + 1))
+
+                if (i - 1, j + k + l + 1) in t0:
+                    assert t0.get(i - 1, j + k + l + 1).number > uu[j + k] + l
+                if (i, j + k + l + 1) in t0:
+                    assert t0.get(i, j + k + l + 1).number > uu[j + k] + l + 1
+
+                assert (i - 1, j + k + l) not in set(weak_row2) - set(strict_row2)
+                assert (i, j + k + l) not in set(weak_row2) - set(strict_row2)
+
+                assert i <= j + 1
+                assert i < j + 1 or (k == 0 and t0.get(i - 1, i - 1).number + 1 == t0.get(i - 1, i).number == t0.get(i, i).number - 1 == uu[j])
+                assert i != j or t0.get(j, j).number == uu[j]
+                if i < j:
+                    col = []
+                    x = i + 1
+                    while (x, j) in t0:
+                        col.append(t0.get(x, j).number)
+                        x += 1
+                    assert uu[j] in col
+
+                if k < delta <= l:
+                    count[1] += 1
+                    assert (i - 1, j + delta) in strict_row2
+                if k + 1 < delta <= l:
+                    count[2] += 1
+                    assert b1 == b2
+                if k > 0 and delta == k + 1:
+                    count[3] += 1
+                    assert l > 0
+                    assert (i - 1, j + k + 1) in strict_row2
+                    assert (i, j + k + 1) in strict_row2
+                    assert t0.get(i - 1, j + k).number != uu[j + k] - 1
+                    assert (i - 1, j + k + 1) in weak_row2
+
+                    tup1, tup2 = b1[i - 1], b1[i]
+                    theta = gamma[(i - 1, j + k + 1)]
+                    eta = gamma[(i, j + k + 1)]
+                    y, yy = tup2[:2]
+
+                    assert tup1 == (j + k, j + k + 1, uu[j + k], theta)
+                    assert tup2 == (y, yy, uu[j + k] + 1, theta)
+
+                    tup1, tup2 = b2[i - 1], b2[i]
+                    assert tup1 == (j + k + 1, j + k + 1, uu[j + k], eta)
+                    assert tup2 == (y, yy, uu[j + k] + 1, theta)
+
+                    assert len(b1) == len(b2) and all(b1[t] == b2[t] for t in range(len(b1)) if t not in [i - 1, i])
+                if k == 0 and delta == 1:
+                    count[4] += 1
+                    assert l > 0
+                    assert t0.get(i, j).number <= uu[j] - 1
+                    assert t0.get(i + 1, j).number <= uu[j]
+
+                    theta = gamma[(i - 1, j + 1)]
+                    eta = gamma[(i, j + 1)]
+                    tup1, tup2 = b1[i - 1], b1[i]
+                    assert tup1 == (j + 1, j + 1, uu[j], theta)
+                    assert tup2 == (j + 1, j + 1, uu[j] + 1, eta)
+
+                    tup1, tup2 = b2[i - 1], b2[i]
+                    assert tup1 == (j + 1, j + 1, uu[j], eta)
+                    assert tup2 == (j + 1, j + 1, uu[j] + 1, theta)
+
+                    assert len(b1) == len(b2) and all(b1[t] == b2[t] for t in range(len(b1)) if t not in [i - 1, i])
+                    assert len(b1) > i + 1 or i < j
+
+                assert not (k > 1 and delta == k)
+
+                if (k > 0 and 1 < delta < k) or (k > 0 and delta == 1 and uu[j] < vv[i - 1]):
+                    count[5] += 1
+                    assert len(b1) == len(b2) and all(b1[t] == b2[t] for t in range(len(b1)) if t not in [i - 1])
+                    y, yy, d, eta = b1[i - 1]
+                    assert b2[i - 1] == (1 + y, 1 + yy, d, eta)
+                    assert len(b1) > i
+
+                if k > 0 and delta == 1 and vv[i - 1] <= uu[j]:
+                    count[6] += 1
+                    assert t0.get(i, j).number < vv[i - 1]
+
+                    assert t0.get(i + 1, j).number <= uu[j]
+                    col = []
+                    x = i + 1
+                    while (x, j) in t0:
+                        col.append(t0.get(x, j).number)
+                        x += 1
+                    assert uu[j] in col
+
+                    assert len(b1) == len(b2) and all(b1[t] == b2[t] for t in range(len(b1)) if t not in [i - 1, i])
+                    assert len(b1) > i + 1 or i < j
+
+                    tup1, tup2 = b1[i - 1], b1[i]
+                    theta, eta = tup1[-1], tup2[-1]
+                    assert tup1 == (j + 1, j + 1, vv[i - 1], theta)
+                    assert tup2 == (j + 1, j + 1, uu[j + 1], eta)
+
+                    tup1, tup2 = b2[i - 1], b2[i]
+                    phi = tup2[-1]
+                    if vv[i - 1] == uu[j]:
+                        assert tup1 == (j + 1, j + 2, vv[i - 1], theta)
+                        assert tup2 == (j + 1, j + 1, uu[j + 1], theta)
+                    else:
+                        assert tup1 == (j + 1, j + 1, vv[i - 1], theta)
+                        assert tup2 == (j + 1, j + 1, uu[j], phi)
+
+            else:
+                assert l == 0
+                assert all(t0.get(i, j + t).number == uu[j + t] for t in range(1, k))
+                assert all(t1.get(i, j + t).number == uu[j + t - 1] for t in range(1, k + 1))
+                if uu[j] < vv[i - 1]:
+                    count[7] += 1
+                    y, yy, d, eta = b1[i - 1]
+                    assert b2[i - 1] == (1 + y, 1 + yy, d, eta)
+                    assert len(b1) > i or y == yy == j + k
+                    assert k > 0
+                    assert len(b1) == len(b2) and all(b1[t] == b2[t] for t in range(len(b1)) if t not in [i - 1])
+                else:
+                    assert t0.get(i, j).number < vv[i - 1]
+
+                    assert t0.get(i + 1, j).number <= uu[j]
+                    col = []
+                    x = i + 1
+                    while (x, j) in t0:
+                        col.append(t0.get(x, j).number)
+                        x += 1
+                    assert uu[j] in col
+
+                    if delta < k:
+                        count[8] += 1
+                        assert len(b1) == len(b2) and all(b1[t] == b2[t] for t in range(len(b1)) if t not in [i - 1, i])
+                        assert len(b1) > i + 1 or i < j
+
+                        tup1, tup2 = b1[i - 1], b1[i]
+                        theta, eta = tup1[-1], tup2[-1]
+                        assert tup1 == (j + 1, j + 1, vv[i - 1], theta)
+                        assert tup2 == (j + 1, j + 1, uu[j + 1], eta)
+
+                        tup1, tup2 = b2[i - 1], b2[i]
+                        phi = tup2[-1]
+                        if vv[i - 1] == uu[j]:
+                            assert tup1 == (j + 1, j + 2, vv[i - 1], theta)
+                            assert tup2 == (j + 1, j + 1, uu[j + 1], theta)
+                        else:
+                            assert tup1 == (j + 1, j + 1, vv[i - 1], theta)
+                            assert tup2 == (j + 1, j + 1, uu[j], phi)
+                    else:
+                        count[9] += 1
+                        assert k == 1
+                        assert all(b1[t] == b2[t] for t in range(len(b1) - 1))
+                        assert len(b1) == i
+                        assert len(b2) == i + 1
+
+                        tup1 = b1[i - 1]
+                        theta = tup1[-1]
+                        assert tup1 == (j + 1, j + 1, vv[i - 1], theta)
+
+                        tup1, tup2 = b2[i - 1], b2[i]
+                        phi = tup2[-1]
+                        assert vv[i - 1] < uu[j]
+                        assert tup1 == (j + 1, j + 1, vv[i - 1], theta)
+                        assert tup2 == (j + 1, j + 1, uu[j], phi)
 
             # a0
             #    b1 b2 ... bk bk+1 bk+2 ... bk+l
             #    a1 a2 ... ak bk   bk+1 ... bk+l-1 c
             #
+        #     j = _j
+        #     x = _x
+        #     y = _y
+        #     if (i, j) in t0:
+        #         assert weak_row2[i:] == weak_row3[i:]
+        #         assert strict_row2[i:] == strict_row3[i:]
+        #         assert len(b1) == len(b2) > i
 
-            if (i, j) in t0:
-                assert weak_row2[i:] == weak_row3[i:]
-                assert strict_row2[i:] == strict_row3[i:]
-                assert len(b1) == len(b2) > i
+        #     # intersect at b1
+        #     if (i, j - 1) not in strict_col1 and (i, j) in weak_col1 and (i, j) in t0:
+        #         if x < y:
+        #             c1, c2, d, eta = b1[i - 1]
+        #             assert (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
+        #             assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+        #         elif x == y:
+        #             c1, c2, d, eta = b1[i - 1]
+        #             assert (c1, c2 + 1, d, eta) == b2[i - 1]
+        #             c1, c2, d, _ = b1[i]
+        #             assert (c1, c2, d, eta) == b2[i]
+        #             assert len(b1) == len(b2) > i + 1 or i + 1 < c1
+        #             assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 not in [i, i + 1])
+        #         else:
+        #             assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i + 1)
+        #             c1, c2, d, eta = b1[i]
+        #             assert b2[i][:2] == (c1, c2)
+        #             assert len(b1) == len(b2) > i + 1 or i + 1 < c1
 
-            # intersect at b1
-            if (i, j - 1) not in strict_col1 and (i, j) in weak_col1 and (i, j) in t0:
-                if x < y:
-                    c1, c2, d, eta = b1[i - 1]
-                    assert (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
-                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
-                elif x == y:
-                    c1, c2, d, eta = b1[i - 1]
-                    assert (c1, c2 + 1, d, eta) == b2[i - 1]
-                    c1, c2, d, _ = b1[i]
-                    assert (c1, c2, d, eta) == b2[i]
-                    assert len(b1) == len(b2) > i + 1 or i + 1 < c1
-                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 not in [i, i + 1])
-                else:
-                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i + 1)
-                    c1, c2, d, eta = b1[i]
-                    assert b2[i][:2] == (c1, c2)
-                    assert len(b1) == len(b2) > i + 1 or i + 1 < c1
+        #         assert (i, j) in strict_row3 or (i, j + 1) in strict_row3
+        #         assert (i + 1, j) in strict_row3
+        #         assert (i + 1, j) in strict_row2
+        #         assert (i + 1, j) in weak_row2
+        #         count[0] += 1
+        #     elif (i, j) not in t0:
+        #         assert x != y
+        #         if x < y:
+        #             c1, c2, d, eta = b1[i - 1]
+        #             assert c1 == c2 and (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
+        #             assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+        #         else:
+        #             assert b1 == b2[:-1] and i == len(b1) == len(b2) - 1
+        #             c1, c2, d, eta = b2[-1]
+        #             assert d == x and i + 1 < c1 == c2
 
-                assert (i, j) in strict_row3 or (i, j + 1) in strict_row3
-                assert (i + 1, j) in strict_row3
-                assert (i + 1, j) in strict_row2
-                assert (i + 1, j) in weak_row2
-                count[0] += 1
-            elif (i, j) not in t0:
-                assert x != y
-                if x < y:
-                    c1, c2, d, eta = b1[i - 1]
-                    assert c1 == c2 and (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
-                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
-                else:
-                    assert b1 == b2[:-1] and i == len(b1) == len(b2) - 1
-                    c1, c2, d, eta = b2[-1]
-                    assert d == x and i + 1 < c1 == c2
+        #         assert len(strict_col2) == len(strict_col3) == 0
+        #         assert weak_row3[-1] in [(i, j + 1), (i + 1, j)]
+        #         assert len(set(weak_row3[-1])) != 1
+        #         assert weak_row2[-1] == (i, j)
+        #         count[1] += 1
 
-                assert len(strict_col2) == len(strict_col3) == 0
-                assert weak_row3[-1] in [(i, j + 1), (i + 1, j)]
-                assert len(set(weak_row3[-1])) != 1
-                assert weak_row2[-1] == (i, j)
-                count[1] += 1
+        #     # intersect at bk+?
+        #     elif (i, j) not in weak_col1:
+        #         if (i - 1, j - 1) in weak_col1:
+        #             assert b1 == b2
+        #         elif (i, j - 1) in strict_col1:
+        #             assert i > 1
+        #             c1, c2, _, _ = b1[i - 2]
+        #             assert c1 == c2 == j
+        #             c1, c2, d, _ = b1[i - 1]
+        #             assert c1 + 1 == c2 and b2[i - 1][:-1] == (c1 + 1, c2, d)
+        #             assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
 
-            # intersect at bk+?
-            elif (i, j) not in weak_col1:
-                if (i - 1, j - 1) in weak_col1:
-                    assert b1 == b2
-                elif (i, j - 1) in strict_col1:
-                    assert i > 1
-                    c1, c2, _, _ = b1[i - 2]
-                    assert c1 == c2 == j
-                    c1, c2, d, _ = b1[i - 1]
-                    assert c1 + 1 == c2 and b2[i - 1][:-1] == (c1 + 1, c2, d)
-                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+        # #  a0    [a0+2]
+        # # [a0-1]  a0+1  a0+2 ... a0+l
+        # # [a0-2]  a0    a0+1 ... a0+l-1 c
+        # #
+        #         # intersect at a0+1
+        #         else:
+        #             assert 1 < i < len(b1) == len(b2)
+        #             c1, c2, d, _ = b1[i - 1]
+        #             assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 not in [i, i + 1])
+        #             assert c1 == c2 and (c1, c2, d + 1) == b1[i][:-1] == b2[i][:-1]
 
-        #  a0    [a0+2]
-        # [a0-1]  a0+1  a0+2 ... a0+l
-        # [a0-2]  a0    a0+1 ... a0+l-1 c
-        #
-                # intersect at a0+1
-                else:
-                    assert 1 < i < len(b1) == len(b2)
-                    c1, c2, d, _ = b1[i - 1]
-                    assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 not in [i, i + 1])
-                    assert c1 == c2 and (c1, c2, d + 1) == b1[i][:-1] == b2[i][:-1]
+        #         count[2] += 1
+        #     elif (i, j - 1) in weak_col1 and (i, j) in weak_col1:
+        #         c1, c2, d, eta = b1[i - 1]
+        #         assert (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
+        #         assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
 
-                count[2] += 1
-            elif (i, j - 1) in weak_col1 and (i, j) in weak_col1:
-                c1, c2, d, eta = b1[i - 1]
-                assert (c1 + 1, c2 + 1, d, eta) == b2[i - 1]
-                assert all(b1[k] == b2[k] for k in range(len(b1)) if k + 1 != i)
+        #         assert (i, j + 1) in strict_row3
+        #         count[3] += 1
+        #     else:
+        #         assert False
 
-                assert (i, j + 1) in strict_row3
-                count[3] += 1
-            else:
-                assert False
     except:
         print(a, u, v, '\n')
         print(b1)
         print(b2)
         print()
-        print('x =', x, 'y =', y)
+        print('x =', _x, 'y =', _y)
         print()
         print_tab(t0, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
         print_tab(t1, [(p, q) for (p, q) in strict_col1 if p == i], [(p, q) for (p, q) in weak_col1 if p == i - 1 and (p + 1, q) in strict_col1])
         print()
-        print(i, j)
+        print('i =', i, 'j =', j, 'k =', k, 'l =', l, 'delta =', delta)
         print('\ntab =\n', t0)
         print('a =', a)
-        print('u =', u)
-        print('v =', v)
+        print('u =', u, uu)
+        print('v =', v, vv)
         print(strict_col1, strict_row2, strict_row3)
         assert False
     return count
 
 
+def test_disjoint_cap_simple():
+    a = (8, 10, 9, 5, 4, 13, 14, 6, 2, 10, 7, 6, 12, 11, 3, 4, 5, 8, 12)
+    u = 4
+    v = 6
+    help_test_disjoint_cap(a, u, v)
+
+    a = (5, 8, 7, 14, 11, 10, 3, 9, 4, 1, 12, 13, 16, 8, 6, 14, 2, 11, 15, 5, 3, 7, 6, 16, 10, 8, 12, 5, 14, 9, 2, 13, 8, 7) 
+    u = 6
+    v = 8
+    help_test_disjoint_cap(a, u, v)
+
+    a = (1, 14, 12, 11, 13, 8, 10, 4, 7, 2, 14, 11, 6, 3, 9, 12, 7, 8, 5)
+    u = 2
+    v = 4
+    help_test_disjoint_cap(a, u, v)
+
+    a = (5, 1, 4, 10, 3, 12, 7, 11, 9, 6, 10, 2)
+    u = 5
+    v = 7
+    help_test_disjoint_cap(a, u, v)
+
+    a = (3, 9, 7)
+    u = 4
+    v = 8
+    help_test_disjoint_cap(a, u, v)
+
+    a = (3, 5, 6, 1, 4, 5, 6, 2, 3)
+    u = 1
+    v = 4
+    help_test_disjoint_cap(a, u, v)
+
+
 def test_random_disjoint_cap(bound=30):
-    count = [0, 0, 0, 0]
+    count = None
     for n in range(bound):
         w = Permutation.random_involution_word(n)
         for i in range(len(w) - 1):
             a, u, v = w[:i], w[i], w[i + 1]
             if u + 1 < v:
                 incr = help_test_disjoint_cap(a, u, v)
-                count = [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
                 print(count)
 
 
 def test_disjoint_cap(bound=7):
     wseen = set()
     seen = set()
-    count = [0, 0, 0, 0]
+    count = None
     for n in range(bound):
         pi = Permutation.longest_element(n)
         for w in pi.get_involution_words():
@@ -809,13 +1037,13 @@ def test_disjoint_cap(bound=7):
                 if u + 1 < v and (tab, u, v) not in seen:
                     seen.add((tab, u, v))
                     incr = help_test_disjoint_cap(a, u, v)
-                    count = [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                    count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
                     print(count)
 
 
 def help_test_disjoint(a, u, v):
-    t1, w1, _, s1, _ = partial_insert(a, u)
-    t2, w2, _, s2, _ = partial_insert(a, v)
+    t1, w1, cw1, s1, cs1 = partial_insert(a, u)
+    t2, w2, cw2, s2, cs2 = partial_insert(a, v)
 
     intersect = set(w1) & set(w2)
     strict = set(s1) & set(s2)
@@ -857,6 +1085,8 @@ def help_test_disjoint(a, u, v):
         diag1 = {q1[box].number for box in q1 if box[0] == box[1]}
         diag2 = {q2[box].number for box in q2 if box[0] == box[1]}
 
+        (x, y) = sorted(strict)[0]
+
         try:
             assert cseq(t1, (v,)) == cseq(t2, (u,))
 
@@ -865,6 +1095,12 @@ def help_test_disjoint(a, u, v):
 
             if n + 1 in diag1:
                 assert n + 1 in diag2
+
+            assert cs1 == cs2
+            assert cw1 == cw2
+            assert s1[x - 1:] == s2[x - 1:]
+            assert w1[x - 1:] == w1[x - 1:]
+            assert (x, y) in intersect
         except:
             printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
             print('(1) cseq:', cseq(t1, (v,)), '==', cseq(t2, (u,)))
