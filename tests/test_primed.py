@@ -1042,9 +1042,12 @@ def test_disjoint_cap(bound=7):
 
 
 def help_test_disjoint(a, u, v):
-    t1, w1, cw1, s1, cs1 = partial_insert(a, u)
-    t2, w2, cw2, s2, cs2 = partial_insert(a, v)
-
+    try:
+        t1, w1, cw1, s1, cs1 = partial_insert(a, u)
+        t2, w2, cw2, s2, cs2 = partial_insert(a, v)
+    except:
+        print(a, u, v)
+        assert False
     intersect = set(w1) & set(w2)
     strict = set(s1) & set(s2)
 
@@ -1088,7 +1091,10 @@ def help_test_disjoint(a, u, v):
         (x, y) = sorted(strict)[0]
 
         try:
-            assert cseq(t1, (v,)) == cseq(t2, (u,))
+            if u + 1 == v:
+                assert cseq(t1, (v, u)) == cseq(t2, (u, v))
+            else:
+                assert cseq(t1, (v,)) == cseq(t2, (u,))
 
             if -n - 1 in e1:
                 assert -n - 1 in e2
@@ -1103,8 +1109,11 @@ def help_test_disjoint(a, u, v):
             assert (x, y) in intersect
         except:
             printout(a, u, v, t1, t2, w1, s1, w2, s2, intersect, strict)
-            print('(1) cseq:', cseq(t1, (v,)), '==', cseq(t2, (u,)))
+            # print('(1) cseq:', cseq(t1, (v,)), '==', cseq(t2, (u,)))
             assert False
+
+    if u + 1 == v:
+        return count
 
     if len(intersect) == 0:
         count[1] += 1
@@ -1206,7 +1215,7 @@ def test_random_disjoint(bound=30):
             a = w[:i]
             u = w[i]
             v = w[i + 1]
-            if u + 1 < v:
+            if u + 1 < v or (i + 2 < len(w) and u + 1 == v == w[i + 2] + 1):
                 count = help_test_disjoint(a, u, v)
                 c1 += count[0]
                 c2 += count[1]
@@ -1225,14 +1234,19 @@ def test_disjoint(bound=7):
                 a = w[:i]
                 u = w[i]
                 v = w[i + 1]
-                if u + 1 >= v:
+
+                check = u + 1 < v or (i + 2 < len(w) and u + 1 == v == w[i + 2] + 1)
+
+                if not check:
                     continue
                 if (a, u, v) in wseen:
                     continue
                 else:
                     wseen.add((a, u, v))
                 t = Tableau.from_rows(insert(a)[0])
-                if u + 1 < v and (t, u, v) not in seen:
+                if (t, u, v) in seen:
+                    continue
+                if check:
                     seen.add((t, u, v))
                     count = help_test_disjoint(a, u, v)
                     c1 += count[0]
@@ -1369,11 +1383,13 @@ def test_bac(bound=7):
 
 
 def help_test_acb(w):
+    ans = [0, 0]
     for i in range(len(w) - 2):
         a, c, b = w[i: i + 3]
-        if a < b < c:
+        if a <= b < c:
+            ans[int(a == b)] += 1
             u = w[:i + 3]
-            v = w[:i] + (c, a, b)
+            v = w[:i] + ((c, a, b) if a < b else (c, a, c))
             trows, _, ttau, _, _, _ = insert(w[:i])
             urows, _, utau, _, _, _ = insert(u)
             vrows, _, vtau, _, _, _ = insert(v)
@@ -1414,16 +1430,23 @@ def help_test_acb(w):
                 assert urows == vrows
                 assert utau == vtau
                 # input('?')
+    return ans
 
 
 def test_random_acb(bound=30):
+    count = None
     for n in range(bound):
         w = Permutation.random_involution_word(n)
-        help_test_acb(w)
+        incr = help_test_acb(w)
+        count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+        print(count)
 
 
 def test_acb(bound=7):
+    count = None
     for n in range(bound):
         pi = Permutation.longest_element(n)
         for w in pi.get_involution_words():
-            help_test_acb(w)
+            incr = help_test_acb(w)
+            count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+            print(count)
