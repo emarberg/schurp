@@ -9,19 +9,28 @@ from words import (
 )
 
 
+commutations_cache = {}
+insert_cache = {}
+full_cseq_cache = {}
+tau_cache = {}
+
+
 def commutations(iword):
-    ans = {}
-    w = Permutation()
-    for index, i in enumerate(iword):
-        i = abs(i)
-        s = Permutation.s_i(i)
-        if w(i) == i and w(i + 1) == i + 1:
-            ans[index] = (i, i + 1)
-            w = w * s
-        else:
-            ans = {k: (s(v[0]), s(v[1])) for (k, v) in ans.items()}
-            w = s * w * s
-    return ans
+    iword = tuple(iword)
+    if iword not in commutations_cache:
+        ans = {}
+        w = Permutation()
+        for index, i in enumerate(iword):
+            i = abs(i)
+            s = Permutation.s_i(i)
+            if w(i) == i and w(i + 1) == i + 1:
+                ans[index] = (i, i + 1)
+                w = w * s
+            else:
+                ans = {k: (s(v[0]), s(v[1])) for (k, v) in ans.items()}
+                w = s * w * s
+        commutations_cache[iword] = ans
+    return commutations_cache[iword]
 
 
 def marked_cycles(iword):
@@ -274,81 +283,84 @@ def extract_all_cycles(rows, rest):
 
 
 def insert(iword):
-    rows = []
-    cycle_sequence = [[]]
-    tabs = []
-    paths = []
-    for n, a in enumerate(iword):
-        rest = iword[n + 1:]
-        transposed = False
-        a = abs(a)
-        i = 0
-        path = []
-        while i < len(rows):
-            j = [t for t in range(len(rows[i])) if a <= rows[i][t]]
-            if j:
-                j = j[0]
-                b = rows[i][j] + int(rows[i][j] == a)
+    iword = tuple(iword)
+    if iword not in insert_cache:
+        rows = []
+        cycle_sequence = [[]]
+        tabs = []
+        paths = []
+        for n, a in enumerate(iword):
+            rest = iword[n + 1:]
+            transposed = False
+            a = abs(a)
+            i = 0
+            path = []
+            while i < len(rows):
+                j = [t for t in range(len(rows[i])) if a <= rows[i][t]]
+                if j:
+                    j = j[0]
+                    b = rows[i][j] + int(rows[i][j] == a)
+                    ###
+                    if transposed:
+                        x, y = j + 1, i + 1
+                        x2, y2 = (x, y) if rows[i][j] != a else (x + 1, y)
+                        path += [(x, y, x2, y2, a, b)]
+                    else:
+                        x, y = i + 1, i + j + 1
+                        x2, y2 = (x, y) if rows[i][j] != a else (x, y + 1)
+                        path += [(x, y, x2, y2, a, b)]
+                    ###
+                    if rows[i][j] == a:
+                        a = a + 1
+                    else:
+                        a, rows[i][j] = rows[i][j], a
+                    if j == 0 and not transposed:
+                        rows = shifted_rows_to_columns(rows)
+                        transposed = True
+                else:
+                    rows[i] += [a]
+                    ###
+                    if transposed:
+                        x, y = len(rows[i]), i + 1
+                        path += [(x, y, x, y, a, None)]
+                    else:
+                        x, y = i + 1, i + len(rows[i])
+                        path += [(x, y, x, y, a, None)]
+                    ###
+                    a = None
+                    break
+                i += 1
+            if a is not None:
+                rows += [[a]]
                 ###
                 if transposed:
-                    x, y = j + 1, i + 1
-                    x2, y2 = (x, y) if rows[i][j] != a else (x + 1, y)
-                    path += [(x, y, x2, y2, a, b)]
-                else:
-                    x, y = i + 1, i + j + 1
-                    x2, y2 = (x, y) if rows[i][j] != a else (x, y + 1)
-                    path += [(x, y, x2, y2, a, b)]
-                ###
-                if rows[i][j] == a:
-                    a = a + 1
-                else:
-                    a, rows[i][j] = rows[i][j], a
-                if j == 0 and not transposed:
-                    rows = shifted_rows_to_columns(rows)
-                    transposed = True
-            else:
-                rows[i] += [a]
-                ###
-                if transposed:
-                    x, y = len(rows[i]), i + 1
+                    x, y = 1, len(rows)
                     path += [(x, y, x, y, a, None)]
                 else:
-                    x, y = i + 1, i + len(rows[i])
+                    x, y = len(rows), len(rows)
                     path += [(x, y, x, y, a, None)]
                 ###
-                a = None
-                break
-            i += 1
-        if a is not None:
-            rows += [[a]]
-            ###
             if transposed:
-                x, y = 1, len(rows)
-                path += [(x, y, x, y, a, None)]
-            else:
-                x, y = len(rows), len(rows)
-                path += [(x, y, x, y, a, None)]
-            ###
-        if transposed:
-            rows = columns_to_shifted_rows(rows)
-        if a is not None or transposed:
-            cycle_sequence.append(extract_all_cycles(rows, rest))
-        paths.append(path)
-        tabs.append(Tableau.shifted_from_rows(rows))
+                rows = columns_to_shifted_rows(rows)
+            if a is not None or transposed:
+                cycle_sequence.append(extract_all_cycles(rows, rest))
+            paths.append(path)
+            tabs.append(Tableau.shifted_from_rows(rows))
 
-    permuted_cycles = {p: p for p in marked_cycles(iword)}
-    for i in range(1, len(cycle_sequence)):
-        a, b = cycle_sequence[i - 1], cycle_sequence[i]
-        rng = [t for t in range(len(a)) if a[t] != b[t]]
-        pq = {a[j] for j in rng} | {b[j] for j in rng}
-        if pq:
-            assert len(pq) == 2
-            p, q = tuple(pq)
-            permuted_cycles[p], permuted_cycles[q] = permuted_cycles[q], permuted_cycles[p]
+        permuted_cycles = {p: p for p in marked_cycles(iword)}
+        for i in range(1, len(cycle_sequence)):
+            a, b = cycle_sequence[i - 1], cycle_sequence[i]
+            rng = [t for t in range(len(a)) if a[t] != b[t]]
+            pq = {a[j] for j in rng} | {b[j] for j in rng}
+            if pq:
+                assert len(pq) == 2
+                p, q = tuple(pq)
+                permuted_cycles[p], permuted_cycles[q] = permuted_cycles[q], permuted_cycles[p]
 
-    diagonal_cycles = {extract_cycle(rows[i][0], rows[:i + 1], []) for i in range(len(rows))}
-    cycle_map = extract_commutation_positions(rows)
-    return rows, diagonal_cycles, permuted_cycles, cycle_map, tabs, paths
+        diagonal_cycles = {extract_cycle(rows[i][0], rows[:i + 1], []) for i in range(len(rows))}
+        cycle_map = extract_commutation_positions(rows)
+        insert_cache[iword] = rows, diagonal_cycles, permuted_cycles, cycle_map, tabs, paths
+    return insert_cache[iword]
 
 
 def _test_bumping_path(w):
@@ -606,7 +618,242 @@ def test_bump_differential(bound=7):
             help_test_bump_differential(w, seen)
 
 
-def help_test_disjoint_cap(a, u, v):
+def compose(map1, map2):
+    return {key: map1[map2[key]] for key in map2}
+
+
+def simplify_map(m):
+    return {k: v for (k, v) in m.items() if k != v}
+
+
+def help_test_complete_acb(a, i):
+    def reindexed_cseq(b, j):
+        return full_cseq(b, j + 1)
+
+    def find_in_row(path, row):
+        return [(x, y) for (x, y) in path if x == row][0]
+
+    count = 10 * [0]
+    j = None
+    k = None
+    try:
+        a1, a2, a3 = a[i:i + 3]
+        b = (a2, a1, a2) if a1 == a3 else (a2, a1, a3)
+        b = a[:i] + b + a[i + 3:]
+
+        t0 = insert(a[:i])[0]
+        t3 = insert(a[:i + 3])[0]
+        if len(t3) == len(t0) + 2:
+            return
+        tab = t0
+        t0 = Tableau.shifted_from_rows(t0)
+        t3 = Tableau.shifted_from_rows(t3)
+
+        t1, weak_row1, weak_col1, strict_row1, strict_col1 = partial_insert(a[:i], a1)
+        t2, weak_row2, weak_col2, strict_row2, strict_col2 = partial_insert(b[:i], a2)
+
+        ta1 = Tableau.shifted_from_rows(t1)
+        tb1 = Tableau.shifted_from_rows(t2)
+
+        ta2, wweak_row1, wweak_col1, sstrict_row1, sstrict_col1 = partial_insert(a[:i + 1], a2)
+        tb2, wweak_row2, wweak_col2, sstrict_row2, sstrict_col2 = partial_insert(b[:i + 1], a1)
+
+        ta3, wwweak_row1, wwweak_col1, ssstrict_row1, ssstrict_col1 = partial_insert(a[:i + 2], a3)
+        tb3, wwweak_row2, wwweak_col2, ssstrict_row2, ssstrict_col2 = partial_insert(b[:i + 2], a3 if a1 < a3 else a2)
+
+        ta2 = Tableau.shifted_from_rows(ta2)
+        tb2 = Tableau.shifted_from_rows(tb2)
+
+        ta3 = Tableau.shifted_from_rows(ta3)
+        tb3 = Tableau.shifted_from_rows(tb3)
+
+        if any(x != y for (x, y) in set(strict_row1) & set(strict_row2)):
+            assert reindexed_cseq(a, i) == reindexed_cseq(b, i)
+            assert tau_permutation(a, i) == tau_permutation(b, i)
+            assert compose(tau_permutation(a, i + 1), tau_permutation(a, i + 2)) == compose(tau_permutation(b, i + 1), tau_permutation(b, i + 2))
+            count[0] += 1
+            return count
+        if a1 < a3 < a2 and len(set(weak_row1) & set(weak_row2)) == 0:
+            assert reindexed_cseq(a, i + 1) == reindexed_cseq(b, i + 1)
+            assert tau_permutation(a, i + 2) == tau_permutation(b, i + 2)
+            assert compose(tau_permutation(a, i), tau_permutation(a, i + 1)) == compose(tau_permutation(b, i), tau_permutation(b, i + 1))
+            count[1] += 1
+            return count
+
+        if a1 == a3:
+            j = 0
+            u = a1
+        else:
+            j, jcol = sorted(set(weak_row1) & set(weak_row2))[0]
+            assert (j, jcol) in t0
+            u = t0.get(j, jcol).number
+
+        if (j, j) not in weak_row1:
+            k = weak_row1[-1][0]
+            assert j < k
+            exceptions = set()
+            # (A1)
+            for t in range(0 if j > 0 else 1, k - j):
+                row = tab[j + t - 1]
+                assert u + t in row and u + t + 1 in row
+
+                (x, y) = find_in_row(strict_row1, j + t)
+                assert t0.get(x, y).number == u + t
+
+                (x, y) = find_in_row(weak_row2, j + t)
+                assert t0.get(x, y).number == u + t
+
+                (x, y) = find_in_row(strict_row2, j + t)
+                assert t0.get(x, y).number == u + t + 1
+
+                (x, y) = find_in_row(weak_row1, j + t)
+                if u + t - 1 in row:
+                    assert t0.get(x, y).number == u + t - 1
+                else:
+                    exceptions.add(j + t - 1)
+                    assert t0.get(x, y).number == u + t
+                    assert t0.get(x, y + 1).number == u + t + 1
+                    assert (x, y + 1) in wweak_row1[:k - 1]
+
+                if j > 0 == t:
+                    assert u - 1 not in row
+            # (A2)
+            assert (k, k) in weak_row1
+            # (A3)
+            assert strict_row1[:k - 1] == sstrict_row2[:k - 1]
+            assert strict_row2[:k - 1] == sstrict_row1[:k - 1]
+            assert weak_row1[:k - 1] == wweak_row2[:k - 1]
+            # (A4)
+            assert all(strict_row2[t] == sstrict_row1[t] for t in range(k - 1) if t not in exceptions)
+            # (A5)
+            assert ssstrict_row1[:j] == ssstrict_row2[:j]
+            assert wwweak_row1[:j] == wwweak_row2[:j]
+            if j > 0:
+                (x, y) = find_in_row(ssstrict_row1, j)
+                assert t0.get(x, y).number == u + 1
+                assert (x, y) in ssstrict_row2
+                assert (x, y) in wwweak_row1
+                assert (x, y) in wwweak_row2
+            # (A6)
+            for t in range(1, k - j):
+                row = tab[j + t - 1]
+                if u + t - 1 in row:
+                    (x, y) = find_in_row(wwweak_row1, j + t)
+                    assert t0.get(x, y).number == u + t - 1
+
+                    (x, y) = find_in_row(ssstrict_row1, j + t)
+                    assert t0.get(x, y).number == u + t
+
+                    (x, y) = find_in_row(wwweak_row2, j + t)
+                    assert t0.get(x, y).number == u + t
+
+                    (x, y) = find_in_row(ssstrict_row2, j + t)
+                    assert t0.get(x, y).number == u + t + 1
+                else:
+                    (x, y) = find_in_row(wwweak_row1, j + t)
+                    assert t0.get(x, y).number == u + t
+
+                    (x, y) = find_in_row(ssstrict_row1, j + t)
+                    assert t0.get(x, y).number == u + t + 1
+
+                    (x, y) = find_in_row(wwweak_row2, j + t)
+                    assert t0.get(x, y).number == u + t + 1
+
+                    (x, y) = find_in_row(ssstrict_row2, j + t)
+                    assert t0.get(x, y).number == u + t + 1
+            # (A7)
+            v = u + k - j - 1
+            if k > 1:
+                (x, y) = find_in_row(strict_row1, k - 1)
+                assert t0.get(x, y).number == v
+                (x, y) = find_in_row(sstrict_row1, k - 1)
+                assert ta1.get(x, y).number == v + 1
+                (x, y) = find_in_row(ssstrict_row1, k - 1)
+                assert ta2.get(x, y).number == v
+
+                (x, y) = find_in_row(strict_row2, k - 1)
+                assert t0.get(x, y).number == v + 1
+                (x, y) = find_in_row(sstrict_row2, k - 1)
+                assert tb1.get(x, y).number == v
+                (x, y) = find_in_row(ssstrict_row2, k - 1)
+                assert tb2.get(x, y).number == v + 1
+            # (A8)
+            assert t0.get(k, k).number in [v, v + 1, v + 2]
+            count[2] += 1
+
+        return count
+    except:
+        print('a =', a)
+        print('i =', i)
+        print()
+        print('b =', b)
+        print()
+        print(a1, a2, a3)
+        print()
+        print(t0)
+        print(t3)
+        print(reindexed_cseq(a, i))
+        print(reindexed_cseq(a, i + 1))
+        print(reindexed_cseq(a, i + 2))
+        print()
+        print(reindexed_cseq(b, i))
+        print(reindexed_cseq(b, i + 1))
+        print(reindexed_cseq(b, i + 2))
+        print()
+        print(tau_permutation(a, i))
+        print(tau_permutation(a, i + 1))
+        print(tau_permutation(a, i + 2))
+        print()
+        print(tau_permutation(b, i))
+        print(tau_permutation(b, i + 1))
+        print(tau_permutation(b, i + 2))
+        print()
+        print(weak_row1, strict_row1)
+        print(wweak_row1, sstrict_row1)
+        print()
+        print(weak_row2, strict_row2)
+        print(wweak_row2, sstrict_row2)
+        print()
+        print('j =', j, 'k =', k)
+        assert False
+
+
+def test_simple_complete_acb():
+    a = (4, 13, 16, 15, 17, 6, 10, 8, 12, 5, 18, 20, 17, 3, 9, 4, 7, 14, 15, 1, 11, 16, 8, 13, 3, 2, 7, 12, 10, 11, 6, 9, 1, 3, 8, 19, 10, 13, 5, 18, 14, 11, 7, 8, 4, 12, 17, 20, 18, 15, 11, 16, 6, 19, 14, 13, 3, 2, 12, 5, 11, 14, 17, 9, 13, 6, 10, 7, 18, 15, 11, 4, 8, 6, 20, 17, 16, 9, 14, 19, 12, 13, 12, 10, 17, 18, 14, 15, 11, 20, 3, 12, 10, 13, 19, 14, 15, 13, 11, 16, 7, 15, 17, 8, 14, 9, 10, 16, 15, 1) 
+    i = 5
+    help_test_complete_acb(a, i)
+
+    a = (1, 5, 2, 3, 4, 2, 3, 2, 5)
+    i = 5
+    help_test_complete_acb(a, i)
+
+
+def test_random_complete_acb(bound=30):
+    count = None
+    for n in range(bound):
+        a = Permutation.random_involution_word(n)
+        for i in range(len(a) - 2):
+            a1, a2, a3 = a[i:i + 3]
+            if a1 <= a3 < a2:
+                incr = help_test_complete_acb(a, i)
+                count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                print(count)
+
+
+def test_complete_acb(bound=7):
+    count = None
+    for n in range(bound):
+        pi = Permutation.longest_element(n)
+        for a in pi.get_involution_words():
+            for i in range(len(a) - 2):
+                a1, a2, a3 = a[i:i + 3]
+                if a1 <= a3 < a2:
+                    incr = help_test_complete_acb(a, i)
+                    count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                    print(count)
+
+
+def help_test_complete_disjoint(a, u, v):
     t0 = Tableau.shifted_from_rows(insert(a)[0])
     gamma = gamma_map(t0, (u, v))
     assert gamma == gamma_map(t0, (v, u))
@@ -974,51 +1221,51 @@ def help_test_disjoint_cap(a, u, v):
     return count
 
 
-def test_disjoint_cap_simple():
+def test_complete_disjoint_simple():
     a = (8, 10, 9, 5, 4, 13, 14, 6, 2, 10, 7, 6, 12, 11, 3, 4, 5, 8, 12)
     u = 4
     v = 6
-    help_test_disjoint_cap(a, u, v)
+    help_test_complete_disjoint(a, u, v)
 
     a = (5, 8, 7, 14, 11, 10, 3, 9, 4, 1, 12, 13, 16, 8, 6, 14, 2, 11, 15, 5, 3, 7, 6, 16, 10, 8, 12, 5, 14, 9, 2, 13, 8, 7) 
     u = 6
     v = 8
-    help_test_disjoint_cap(a, u, v)
+    help_test_complete_disjoint(a, u, v)
 
     a = (1, 14, 12, 11, 13, 8, 10, 4, 7, 2, 14, 11, 6, 3, 9, 12, 7, 8, 5)
     u = 2
     v = 4
-    help_test_disjoint_cap(a, u, v)
+    help_test_complete_disjoint(a, u, v)
 
     a = (5, 1, 4, 10, 3, 12, 7, 11, 9, 6, 10, 2)
     u = 5
     v = 7
-    help_test_disjoint_cap(a, u, v)
+    help_test_complete_disjoint(a, u, v)
 
     a = (3, 9, 7)
     u = 4
     v = 8
-    help_test_disjoint_cap(a, u, v)
+    help_test_complete_disjoint(a, u, v)
 
     a = (3, 5, 6, 1, 4, 5, 6, 2, 3)
     u = 1
     v = 4
-    help_test_disjoint_cap(a, u, v)
+    help_test_complete_disjoint(a, u, v)
 
 
-def test_random_disjoint_cap(bound=30):
+def test_random_complete_disjoint(bound=30):
     count = None
     for n in range(bound):
         w = Permutation.random_involution_word(n)
         for i in range(len(w) - 1):
             a, u, v = w[:i], w[i], w[i + 1]
             if u + 1 < v:
-                incr = help_test_disjoint_cap(a, u, v)
+                incr = help_test_complete_disjoint(a, u, v)
                 count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
                 print(count)
 
 
-def test_disjoint_cap(bound=7):
+def test_complete_disjoint(bound=7):
     wseen = set()
     seen = set()
     count = None
@@ -1036,7 +1283,7 @@ def test_disjoint_cap(bound=7):
                 tab = Tableau.from_rows(insert(a)[0])
                 if u + 1 < v and (tab, u, v) not in seen:
                     seen.add((tab, u, v))
-                    incr = help_test_disjoint_cap(a, u, v)
+                    incr = help_test_complete_disjoint(a, u, v)
                     count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
                     print(count)
 
@@ -1271,13 +1518,31 @@ def gamma_map(tab, b=()):
 
 
 def full_cseq(word, j):
-    rows = insert(word[:j])[0]
-    b = word[j:]
-    gamma = gamma_map(rows, b)
-    return [
-        [gamma[(i, i)] for i in range(1, 1 + len(rows))],
-        [rows[i - 1][0] for i in range(1, 1 + len(rows))],
-    ]
+    if (word, j) not in full_cseq_cache:
+        rows = insert(word[:j])[0]
+        b = word[j:]
+        gamma = gamma_map(rows, b)
+        full_cseq_cache[(word, j)] = [
+            [gamma[(i, i)] for i in range(1, 1 + len(rows))],
+            [rows[i - 1][0] for i in range(1, 1 + len(rows))],
+        ]
+    return full_cseq_cache[(word, j)]
+
+
+def tau_permutation(word, j):
+    if (word, j) not in tau_cache:
+        comm = commutations(word)
+        ans = {p: p for p in comm.values()}
+        a = full_cseq(word, j)[0]
+        b = full_cseq(word, j + 1)[0]
+        rng = [t for t in range(len(a)) if a[t] != b[t]]
+        pq = {a[j] for j in rng} | {b[j] for j in rng}
+        if pq:
+            assert len(pq) == 2
+            p, q = tuple(pq)
+            ans[p], ans[q] = ans[q], ans[p]
+        tau_cache[(word, j)] = ans
+    return tau_cache[(word, j)]
 
 
 def cseq(tab, b=()):
