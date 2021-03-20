@@ -7,6 +7,7 @@ from words import (
     Tableau,
     involution_insert
 )
+import pytest
 
 
 commutations_cache = {}
@@ -261,18 +262,18 @@ def batch_insert_parallel(tab, a):
     return batch_combine(top, bot)
 
 
-def test_batch_insert(n=5):
-    for w in Permutation.involutions(n):
-        for word in w.get_primed_involution_words():
-            print(w, word)
-            p, _, _ = primed_insert(word)
-            for k in range(len(word)):
-                tab, _, _ = primed_insert(word[:k])
-                a = word[k:]
-                q = batch_insert_sequential(tab, a)
-                assert p == q
-                r = batch_insert_parallel(tab, a)
-                assert q == r
+# def _test_batch_insert(n=5):
+#     for w in Permutation.involutions(n):
+#         for word in w.get_primed_involution_words():
+#             print(w, word)
+#             p, _, _ = primed_insert(word)
+#             for k in range(len(word)):
+#                 tab, _, _ = primed_insert(word[:k])
+#                 a = word[k:]
+#                 q = batch_insert_sequential(tab, a)
+#                 assert p == q
+#                 r = batch_insert_parallel(tab, a)
+#                 assert q == r
 
 
 def extract_all_cycles(rows, rest):
@@ -603,7 +604,7 @@ def help_test_bump_differential(word, seen):
                 assert False
 
 
-def test_random_bump_differential(bound=30):
+def test_random_bump_differential(bound=15):
     seen = set()
     for n in range(bound):
         w = Permutation.random_involution_word(n)
@@ -633,7 +634,10 @@ def help_test_complete_acb(a, i):
     def find_in_row(path, row):
         return [(x, y) for (x, y) in path if x == row][0]
 
-    count = 10 * [0]
+    def gam(b, j):
+        return gamma_map(insert(b[:j + 1])[0], b[j + 1:])
+
+    count = 13 * [0]
     j = None
     k = None
     try:
@@ -664,8 +668,9 @@ def help_test_complete_acb(a, i):
         ta2 = Tableau.shifted_from_rows(ta2)
         tb2 = Tableau.shifted_from_rows(tb2)
 
+        assert ta3 == tb3
         ta3 = Tableau.shifted_from_rows(ta3)
-        tb3 = Tableau.shifted_from_rows(tb3)
+        tb3 = ta3
 
         if any(x != y for (x, y) in set(strict_row1) & set(strict_row2)):
             assert reindexed_cseq(a, i) == reindexed_cseq(b, i)
@@ -687,6 +692,11 @@ def help_test_complete_acb(a, i):
             j, jcol = sorted(set(weak_row1) & set(weak_row2))[0]
             assert (j, jcol) in t0
             u = t0.get(j, jcol).number
+
+        cseq_start = reindexed_cseq(a, i - 1)
+        cseq_final = reindexed_cseq(a, i + 2)
+        g = lambda t: cseq_start[0][t - 1] # noqa
+        e = lambda t: cseq_final[0][t - 1] # noqa
 
         if (j, j) not in weak_row1:
             k = weak_row1[-1][0]
@@ -781,6 +791,475 @@ def help_test_complete_acb(a, i):
             assert t0.get(k, k).number in [v, v + 1, v + 2]
             count[2] += 1
 
+            if t0.get(k, k).number == v:
+                for t in [t0, ta1, ta2, ta3, tb1, tb2]:
+                    assert t.get(k, k).number == v
+                    assert t.get(k, k + 1).number == v + 1
+                    assert t.get(k, k + 2).number == v + 2
+                    assert t.get(k + 1, k + 1).number == v + 2
+                    assert t.get(k + 1, k + 2).number == v + 3
+                    assert t.get(k + 2, k + 2).number == v + 4
+
+                assert simplify_map(tau_permutation(a, i)) == simplify_map(tau_permutation(b, i + 2)) == {g(k): g(k + 1), g(k + 1): g(k)}
+                assert simplify_map(tau_permutation(a, i + 1)) == simplify_map(tau_permutation(b, i + 1)) == {g(k): g(k + 2), g(k + 2): g(k)}
+                assert simplify_map(tau_permutation(a, i + 2)) == simplify_map(tau_permutation(b, i)) == {g(k + 1): g(k + 2), g(k + 2): g(k + 1)}
+                count[3] += 1
+            elif t0.get(k, k).number == v + 1:
+                assert t0.get(k, k + 1).number == v + 2
+                assert t0.get(k + 1, k + 1).number == v + 3
+                if k > 1:
+                    assert t0.get(k - 1, k + 1).number <= v + 1
+                if k > 1 and t0.get(k - 1, k + 1).number == v + 1:
+                    assert t0.get(k - 1, k).number == v
+
+                    # assert ta1.get(k - 1, k).number == v - 1 #
+                    assert ta1.get(k - 1, k + 1).number == v + 1
+                    assert ta1.get(k, k).number == v
+                    assert ta1.get(k, k + 1).number == v + 2
+                    assert ta1.get(k + 1, k + 1).number == v + 3
+
+                    # assert ta2.get(k - 1, k).number == v - 1 #
+                    assert ta2.get(k - 1, k + 1).number == v
+                    assert ta2.get(k, k).number == v
+                    assert ta2.get(k, k + 1).number == v + 1
+                    assert ta2.get(k + 1, k + 1).number == v + 2
+
+                    # assert ta3.get(k - 1, k).number == v - 1 #
+                    # assert ta3.get(k - 1, k + 1).number == v #
+                    assert ta3.get(k, k).number == v
+                    assert ta3.get(k, k + 1).number == v + 1
+                    assert ta3.get(k + 1, k + 1).number == v + 2
+
+                    assert tb1.get(k - 1, k).number == v
+                    assert tb1.get(k - 1, k + 1).number == v + 1
+                    assert tb1.get(k, k).number == v + 1
+                    assert tb1.get(k, k + 1).number == v + 2
+                    assert tb1.get(k + 1, k + 1).number == v + 3
+
+                    # assert tb2.get(k - 1, k).number == v - 1 #
+                    assert tb2.get(k - 1, k + 1).number == v + 1
+                    assert tb2.get(k, k).number == v
+                    assert tb2.get(k, k + 1).number == v + 2
+                    assert tb2.get(k + 1, k + 1).number == v + 3
+                    count[4] += 1
+                else:
+                    assert t0.get(k, k).number == v + 1
+                    assert t0.get(k, k + 1).number == v + 2
+                    assert t0.get(k + 1, k + 1).number == v + 3
+
+                    assert ta1.get(k, k).number == v
+                    assert ta1.get(k, k + 1).number == v + 1
+                    assert ta1.get(k, k + 2).number == v + 2
+                    assert ta1.get(k + 1, k + 1).number == v + 3
+
+                    assert ta2.get(k, k).number == v
+                    assert ta2.get(k, k + 1).number == v + 1
+                    assert ta2.get(k, k + 2).number == v + 2
+                    assert ta2.get(k + 1, k + 1).number == v + 2
+                    assert ta2.get(k + 1, k + 2).number == v + 3
+
+                    assert ta3.get(k, k).number == v
+                    assert ta3.get(k, k + 1).number == v + 1
+                    assert ta3.get(k, k + 2).number == v + 2
+                    assert ta3.get(k + 1, k + 1).number == v + 2
+                    assert ta3.get(k + 1, k + 2).number == v + 3
+
+                    assert tb1.get(k, k).number == v + 1
+                    assert tb1.get(k, k + 1).number == v + 2
+                    assert tb1.get(k + 1, k + 1).number == v + 3
+
+                    assert tb2.get(k, k).number == v
+                    assert tb2.get(k, k + 1).number == v + 1
+                    assert tb2.get(k, k + 2).number == v + 2
+                    assert tb2.get(k + 1, k + 1).number == v + 3
+                    count[5] += 1
+
+                gg = gam(a, i - 1)
+                assert gg[(k, k)] == g(k)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i)
+                assert gg[(k, k)] == g(k)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i + 1)
+                assert gg[(k, k)] == g(k)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i + 2)
+                assert gg[(k, k)] == g(k + 1)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k)
+
+                gg = gam(b, i)
+                assert gg[(k, k)] == g(k + 1)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k)
+
+                gg = gam(b, i + 1)
+                assert gg[(k, k)] == g(k + 1)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k)
+
+            elif t0.get(k, k).number == v + 2:
+                if k > 1:
+                    assert t0.get(k - 1, k + 1).number < v + 2
+                if k > 1 and ((k - 1, k + 2) not in t0 or t0.get(k - 1, k + 2).number >= v + 2):
+                    assert t0.get(k - 1, k).number == v
+                    assert t0.get(k - 1, k + 1).number == v + 1
+
+                    # assert ta1.get(k - 1, k).number == v - 1 #
+                    assert ta1.get(k - 1, k + 1).number == v + 1
+                    assert ta1.get(k, k).number == v
+                    assert ta1.get(k, k + 1).number == v + 2
+
+                    # assert ta2.get(k - 1, k).number == v - 1 #
+                    assert ta2.get(k - 1, k + 1).number == v
+                    assert ta2.get(k, k).number == v
+                    assert ta2.get(k, k + 1).number == v + 1
+                    assert ta2.get(k + 1, k + 1).number == v + 2
+
+                    # assert ta3.get(k - 1, k).number == v - 1 #
+                    # assert ta3.get(k - 1, k + 1).number == v #
+                    assert ta3.get(k, k).number == v
+                    assert ta3.get(k, k + 1).number == v + 1
+                    assert ta3.get(k + 1, k + 1).number == v + 2
+
+                    assert tb1.get(k - 1, k).number == v
+                    assert tb1.get(k - 1, k + 1).number == v + 1
+                    assert tb1.get(k, k).number == v + 1
+                    assert tb1.get(k, k + 1).number == v + 2
+
+                    # assert tb2.get(k - 1, k).number == v - 1 #
+                    assert tb2.get(k - 1, k + 1).number == v + 1
+                    assert tb2.get(k, k).number == v
+                    assert tb2.get(k, k + 1).number == v + 2
+                    count[6] += 1
+                else:
+                    assert t0.get(k, k).number == v + 2
+
+                    assert ta1.get(k, k).number == v
+                    assert ta1.get(k, k + 1).number == v + 2
+
+                    assert ta2.get(k, k).number == v
+                    assert ta2.get(k, k + 1).number == v + 1
+                    assert ta2.get(k + 1, k + 1).number == v + 2
+
+                    assert ta3.get(k, k).number == v
+                    assert ta3.get(k, k + 1).number == v + 1
+                    assert ta3.get(k, k + 2).number == v + 2
+                    assert ta3.get(k + 1, k + 1).number == v + 2
+
+                    assert tb1.get(k, k).number == v + 1
+                    assert tb1.get(k, k + 1).number == v + 2
+
+                    assert tb2.get(k, k).number == v
+                    assert tb2.get(k, k + 1).number == v + 1
+                    assert tb2.get(k, k + 2).number == v + 2
+                    count[7] += 1
+
+                assert e(k) == g(k)
+
+                gg = gam(a, i - 1)
+                assert gg[(k, k)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i)
+                assert gg[(k, k)] == e(k + 1)
+                assert gg[(k, k + 1)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i + 1)
+                assert gg[(k, k)] == e(k + 1)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k)
+
+                gg = gam(a, i + 2)
+                assert gg[(k, k)] == g(k)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == e(k + 1)
+
+                gg = gam(b, i)
+                assert gg[(k, k)] == g(k)
+                assert gg[(k, k + 1)] is None
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(b, i + 1)
+                assert gg[(k, k)] == g(k)
+                if k > 1 and ((k - 1, k + 2) not in t0 or t0.get(k - 1, k + 2).number >= v + 2):
+                    assert gg[(k, k + 1)] == e(k + 1)
+                else:
+                    assert gg[(k, k + 1)] is None
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+            else:
+                raise Exception
+        else:
+            assert a1 < a3 < a2
+            k = j
+            # (B1)
+            assert all(strict_row1[t] == sstrict_row2[t] for t in range(k - 1))
+            assert all(strict_row2[t] == sstrict_row1[t] for t in range(k - 1))
+            assert all(strict_row1[t][0] != strict_row1[t][1] and strict_row1[t][1] < strict_row2[t][1] for t in range(k - 1))
+            assert all(weak_row1[t] == wweak_row2[t] for t in range(k - 1))
+            assert all(weak_row2[t] == wweak_row1[t] for t in range(k - 1))
+            assert all(weak_row1[t][0] != weak_row1[t][1] and weak_row1[t][1] < weak_row2[t][1] for t in range(k - 1))
+            # (B2)
+            assert all(ssstrict_row1[t] == ssstrict_row2[t] for t in range(k - 1))
+            assert all(ssstrict_row1[t][1] > strict_row1[t][1] and ssstrict_row1[t][1] <= strict_row2[t][1] for t in range(k - 1))
+            assert all(wwweak_row1[t] == wwweak_row2[t] for t in range(k - 1))
+            assert all(wwweak_row1[t][1] > weak_row1[t][1] and wwweak_row1[t][1] <= weak_row2[t][1] for t in range(k - 1))
+
+            if k == 1:
+                u = a1
+                v = a3
+                w = a2
+            else:
+                (x, y) = find_in_row(strict_row1, k - 1)
+                u = t0.get(x, y).number
+
+                (x, y) = find_in_row(ssstrict_row1, k - 1)
+                v = ta2.get(x, y).number
+
+                (x, y) = find_in_row(sstrict_row1, k - 1)
+                w = ta1.get(x, y).number
+
+            # (B3)
+            assert u < v < w
+            if k > 1:
+                (x, y) = find_in_row(sstrict_row2, k - 1)
+                assert u == tb1.get(x, y).number
+
+                (x, y) = find_in_row(ssstrict_row2, k - 1)
+                assert v == tb2.get(x, y).number
+
+                (x, y) = find_in_row(strict_row2, k - 1)
+                assert w == t0.get(x, y).number
+
+            # (B4)
+            assert (k, k) in t0
+            assert t0.get(k, k).number >= w
+            count[8] += 1
+
+            if t0.get(k, k).number == w:
+                if k > 1:
+                    assert t0.get(k - 1, k + 1).number <= w
+                if k > 1 and t0.get(k - 1, k + 1).number == w:
+                    assert t0.get(k - 1, k).number == u
+                    assert t0.get(k - 1, k + 1).number == w
+                    assert t0.get(k, k).number == w
+                    assert t0.get(k, k + 1).number == w + 1
+                    assert t0.get(k + 1, k + 1).number == w + 2
+
+                    # assert ta1.get(k - 1, k).number == ?
+                    assert ta1.get(k - 1, k + 1).number == w
+                    assert ta1.get(k, k).number == u
+                    assert ta1.get(k, k + 1).number == w + 1
+                    assert ta1.get(k + 1, k + 1).number == w + 2
+
+                    # assert ta2.get(k - 1, k).number == ?
+                    assert ta2.get(k - 1, k + 1).number == v
+                    assert ta2.get(k, k).number == u
+                    assert ta2.get(k, k + 1).number == w
+                    assert ta2.get(k + 1, k + 1).number == w + 1
+
+                    # assert ta3.get(k - 1, k).number == ?
+                    # assert ta3.get(k - 1, k + 1).number == ?
+                    assert ta3.get(k, k).number == u
+                    assert ta3.get(k, k + 1).number == v
+                    assert ta3.get(k + 1, k + 1).number == w
+
+                    assert tb1.get(k - 1, k).number == u
+                    assert tb1.get(k - 1, k + 1).number == w
+                    assert tb1.get(k, k).number == w
+                    assert tb1.get(k, k + 1).number == w + 1
+                    assert tb1.get(k + 1, k + 1).number == w + 2
+
+                    # assert tb2.get(k - 1, k).number == ?
+                    assert tb2.get(k - 1, k + 1).number == v
+                    assert tb2.get(k, k).number == u
+                    assert tb2.get(k, k + 1).number == w
+                    assert tb2.get(k + 1, k + 1).number == w + 2
+                    count[9] += 1
+                else:
+                    assert t0.get(k, k).number == w
+                    assert t0.get(k, k + 1).number == w + 1
+                    assert t0.get(k + 1, k + 1).number == w + 2
+
+                    assert ta1.get(k, k).number == u
+                    assert ta1.get(k, k + 1).number == w
+                    assert ta1.get(k, k + 2).number == w + 1
+                    assert ta1.get(k + 1, k + 1).number == w + 2
+
+                    assert ta2.get(k, k).number == u
+                    assert ta2.get(k, k + 1).number == w
+                    assert ta2.get(k, k + 2).number == w + 1
+                    assert ta2.get(k + 1, k + 1).number == w + 1
+                    assert ta2.get(k + 1, k + 2).number == w + 2
+
+                    assert ta3.get(k, k).number == u
+                    assert ta3.get(k, k + 1).number == v
+                    assert ta3.get(k, k + 2).number == w + 1
+                    assert ta3.get(k + 1, k + 1).number == w
+                    assert ta3.get(k + 1, k + 2).number == w + 2
+
+                    assert tb1.get(k, k).number == w
+                    assert tb1.get(k, k + 1).number == w + 1
+                    assert tb1.get(k, k + 2).number == w + 2
+                    assert tb1.get(k + 1, k + 1).number == w + 2
+
+                    assert tb2.get(k, k).number == u
+                    assert tb2.get(k, k + 1).number == w
+                    assert tb2.get(k, k + 2).number == w + 1
+                    assert tb2.get(k + 1, k + 1).number == w + 2
+                    count[10] += 1
+
+                gg = gam(a, i - 1)
+                assert gg[(k, k)] == g(k)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i + 1)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i + 2)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(b, i)
+                assert gg[(k, k)] == g(k + 1)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k)
+
+                gg = gam(b, i + 1)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k, k + 1)] == g(k + 1)
+                assert gg[(k + 1, k + 1)] == g(k)
+
+            elif t0.get(k, k).number == w + 1:
+                if k > 1:
+                    assert t0.get(k - 1, k + 1).number <= w
+                assert t0.get(k, k).number == w + 1
+
+                assert ta1.get(k, k).number == u
+                assert ta1.get(k, k + 1).number == w + 1
+
+                assert ta2.get(k, k).number == u
+                assert ta2.get(k, k + 1).number == w
+                assert ta2.get(k + 1, k + 1).number == w + 1
+
+                assert ta3.get(k, k).number == u
+                assert ta3.get(k, k + 1).number == v
+                assert ta3.get(k + 1, k + 1).number == w
+
+                assert tb1.get(k, k).number == w
+                assert tb1.get(k, k + 1).number == w + 1
+
+                assert tb2.get(k, k).number == u
+                assert tb2.get(k, k + 1).number == w
+
+                gg = gam(a, i - 1)
+                assert gg[(k, k)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k, k + 1)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i + 1)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k, k + 1)] is None
+                assert gg[(k + 1, k + 1)] == g(k)
+
+                gg = gam(a, i + 2)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k + 1, k + 1)] == g(k)
+
+                gg = gam(b, i)
+                assert gg[(k, k)] == g(k)
+                assert gg[(k, k + 1)] is None
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(b, i + 1)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k, k + 1)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                count[11] += 1
+            elif t0.get(k, k).number > w + 1:
+                x = t0.get(k, k).number
+                if k > 1:
+                    assert t0.get(k - 1, k + 1).number <= w
+                assert t0.get(k, k).number == x
+
+                assert ta1.get(k, k).number == u
+                assert ta1.get(k, k + 1).number == x
+
+                assert ta2.get(k, k).number == u
+                assert ta2.get(k, k + 1).number == w
+                assert ta2.get(k + 1, k + 1).number == x
+
+                assert ta3.get(k, k).number == u
+                assert ta3.get(k, k + 1).number == v
+                assert ta3.get(k + 1, k + 1).number == w
+
+                assert tb1.get(k, k).number == w
+                assert tb1.get(k, k + 1).number == x
+
+                assert tb2.get(k, k).number == u
+                assert tb2.get(k, k + 1).number == w
+
+                gg = gam(a, i - 1)
+                assert gg[(k, k)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k, k + 1)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(a, i + 1)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k, k + 1)] == e(k + 1)
+                assert gg[(k + 1, k + 1)] == g(k)
+
+                gg = gam(a, i + 2)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k + 1, k + 1)] == e(k + 1)
+
+                gg = gam(b, i)
+                assert gg[(k, k)] == e(k + 1)
+                assert gg[(k, k + 1)] == g(k)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                gg = gam(b, i + 1)
+                assert gg[(k, k)] == e(k)
+                assert gg[(k, k + 1)] == e(k + 1)
+                if len(cseq_start[0]) > k:
+                    assert gg[(k + 1, k + 1)] == g(k + 1)
+
+                count[12] += 1
+            else:
+                raise Exception
         return count
     except:
         print('a =', a)
@@ -792,6 +1271,8 @@ def help_test_complete_acb(a, i):
         print()
         print(t0)
         print(t3)
+        print(reindexed_cseq(a, i - 1))
+        print()
         print(reindexed_cseq(a, i))
         print(reindexed_cseq(a, i + 1))
         print(reindexed_cseq(a, i + 2))
@@ -815,6 +1296,7 @@ def help_test_complete_acb(a, i):
         print(wweak_row2, sstrict_row2)
         print()
         print('j =', j, 'k =', k)
+        print('u =', u, 'v =', v)
         assert False
 
 
@@ -827,8 +1309,52 @@ def test_simple_complete_acb():
     i = 5
     help_test_complete_acb(a, i)
 
+    a = (5, 1, 3, 2, 4, 3, 1, 2, 1)
+    i = 6
+    help_test_complete_acb(a, i)
 
-def test_random_complete_acb(bound=30):
+    a = (2, 4, 3, 1, 2, 1)
+    i = 3
+    help_test_complete_acb(a, i)
+
+    a = (3, 1, 2, 1)
+    i = 1
+    help_test_complete_acb(a, i)
+
+    a = (1, 3, 5, 4, 2, 3, 2, 4, 5)
+    i = 4
+    help_test_complete_acb(a, i)
+
+    a = (5, 3, 6, 4, 5, 1, 2, 3, 2, 4, 5, 6)
+    i = 6
+    help_test_complete_acb(a, i)
+
+    a = (6, 4, 1, 5, 2, 4, 3, 4, 2, 3, 5, 6)
+    i = 4
+    help_test_complete_acb(a, i)
+
+    a = (6, 1, 2, 3, 4, 5, 2, 4, 3, 6, 4, 5)
+    i = 6
+    help_test_complete_acb(a, i)
+
+    a = (5, 3, 4, 1, 3, 2, 3, 4, 5)
+    i = 3
+    help_test_complete_acb(a, i)
+
+    a = (4, 1, 3, 2, 3, 4)
+    i = 1
+    help_test_complete_acb(a, i)
+
+    a = (6, 1, 5, 3, 2, 3, 4, 5, 3, 4, 6, 5)
+    i = 1
+    help_test_complete_acb(a, i)
+
+    a = (5, 1, 3, 2, 4, 5, 3, 4, 5)
+    i = 1
+    help_test_complete_acb(a, i)
+
+
+def test_random_complete_acb(bound=15):
     count = None
     for n in range(bound):
         a = Permutation.random_involution_word(n)
@@ -837,10 +1363,12 @@ def test_random_complete_acb(bound=30):
             if a1 <= a3 < a2:
                 incr = help_test_complete_acb(a, i)
                 count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
-                print(count)
+                if count and count[0] % 10 == 0:
+                    print(count)
 
 
-def test_complete_acb(bound=7):
+@pytest.mark.slow
+def test_complete_acb(bound=8):
     count = None
     for n in range(bound):
         pi = Permutation.longest_element(n)
@@ -850,7 +1378,9 @@ def test_complete_acb(bound=7):
                 if a1 <= a3 < a2:
                     incr = help_test_complete_acb(a, i)
                     count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
-                    print(count)
+                    if count and count[0] % 10 == 0:
+                        print(count)
+    assert all(c > 0 for c in count)
 
 
 def help_test_complete_disjoint(a, u, v):
@@ -1253,7 +1783,7 @@ def test_complete_disjoint_simple():
     help_test_complete_disjoint(a, u, v)
 
 
-def test_random_complete_disjoint(bound=30):
+def test_random_complete_disjoint(bound=15):
     count = None
     for n in range(bound):
         w = Permutation.random_involution_word(n)
@@ -1262,10 +1792,11 @@ def test_random_complete_disjoint(bound=30):
             if u + 1 < v:
                 incr = help_test_complete_disjoint(a, u, v)
                 count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
-                print(count)
+                # print(count)
 
 
-def test_complete_disjoint(bound=7):
+@pytest.mark.slow
+def test_complete_disjoint(bound=8):
     wseen = set()
     seen = set()
     count = None
@@ -1285,7 +1816,8 @@ def test_complete_disjoint(bound=7):
                     seen.add((tab, u, v))
                     incr = help_test_complete_disjoint(a, u, v)
                     count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
-                    print(count)
+                    # print(count)
+    assert all(c > 0 for c in count)
 
 
 def help_test_disjoint(a, u, v):
@@ -1454,7 +1986,7 @@ def test_disjoint_simple():
     help_test_disjoint(a, u, v)
 
 
-def test_random_disjoint(bound=30):
+def test_random_disjoint(bound=15):
     c1, c2, c3 = 0, 0, 0
     for n in range(bound):
         w = Permutation.random_involution_word(n)
@@ -1470,7 +2002,8 @@ def test_random_disjoint(bound=30):
                 print(c1, c2, c3)
 
 
-def test_disjoint(bound=7):
+@pytest.mark.slow
+def test_disjoint(bound=8):
     wseen = set()
     seen = set()
     c1, c2, c3 = 0, 0, 0
@@ -1609,13 +2142,14 @@ def help_test_gamma(w):
                 assert g2[box] == g1[box]
 
 
-def test_random_gamma(bound=30):
+def test_random_gamma(bound=15):
     for n in range(bound):
         w = Permutation.random_involution_word(n)
         help_test_gamma(w)
 
 
-def test_gamma(bound=7):
+@pytest.mark.slow
+def test_gamma(bound=8):
     for n in range(bound):
         pi = Permutation.longest_element(n)
         for w in pi.get_involution_words():
@@ -1634,13 +2168,14 @@ def help_test_bac(w):
             assert utau == vtau
 
 
-def test_random_bac(bound=30):
+def test_random_bac(bound=15):
     for n in range(bound):
         w = Permutation.random_involution_word(n)
         help_test_bac(w)
 
 
-def test_bac(bound=7):
+@pytest.mark.slow
+def test_bac(bound=8):
     for n in range(bound):
         pi = Permutation.longest_element(n)
         for w in pi.get_involution_words():
@@ -1698,7 +2233,7 @@ def help_test_acb(w):
     return ans
 
 
-def test_random_acb(bound=30):
+def test_random_acb(bound=15):
     count = None
     for n in range(bound):
         w = Permutation.random_involution_word(n)
@@ -1707,7 +2242,8 @@ def test_random_acb(bound=30):
         print(count)
 
 
-def test_acb(bound=7):
+@pytest.mark.slow
+def test_acb(bound=8):
     count = None
     for n in range(bound):
         pi = Permutation.longest_element(n)
