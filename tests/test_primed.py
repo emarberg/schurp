@@ -1076,7 +1076,7 @@ def help_test_complete_acb(a, i):
                     assert ta3.get(k + 1, k + 1).number == w
 
                     assert tb1.get(k - 1, k).number == u
-                    assert tb1.get(k - 1, k + 1).number == w
+                    assert tb1.get(k - 1, k + 1).number == v
                     assert tb1.get(k, k).number == w
                     assert tb1.get(k, k + 1).number == w + 1
                     assert tb1.get(k + 1, k + 1).number == w + 2
@@ -1301,57 +1301,79 @@ def help_test_complete_acb(a, i):
 
 
 def test_simple_complete_acb():
+    count = None
+
+    def process(count, incr):
+        return incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+
     a = (4, 13, 16, 15, 17, 6, 10, 8, 12, 5, 18, 20, 17, 3, 9, 4, 7, 14, 15, 1, 11, 16, 8, 13, 3, 2, 7, 12, 10, 11, 6, 9, 1, 3, 8, 19, 10, 13, 5, 18, 14, 11, 7, 8, 4, 12, 17, 20, 18, 15, 11, 16, 6, 19, 14, 13, 3, 2, 12, 5, 11, 14, 17, 9, 13, 6, 10, 7, 18, 15, 11, 4, 8, 6, 20, 17, 16, 9, 14, 19, 12, 13, 12, 10, 17, 18, 14, 15, 11, 20, 3, 12, 10, 13, 19, 14, 15, 13, 11, 16, 7, 15, 17, 8, 14, 9, 10, 16, 15, 1) 
     i = 5
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (1, 5, 2, 3, 4, 2, 3, 2, 5)
     i = 5
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (5, 1, 3, 2, 4, 3, 1, 2, 1)
     i = 6
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (2, 4, 3, 1, 2, 1)
     i = 3
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (3, 1, 2, 1)
     i = 1
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (1, 3, 5, 4, 2, 3, 2, 4, 5)
     i = 4
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (5, 3, 6, 4, 5, 1, 2, 3, 2, 4, 5, 6)
     i = 6
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (6, 4, 1, 5, 2, 4, 3, 4, 2, 3, 5, 6)
     i = 4
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (6, 1, 2, 3, 4, 5, 2, 4, 3, 6, 4, 5)
     i = 6
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (5, 3, 4, 1, 3, 2, 3, 4, 5)
     i = 3
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (4, 1, 3, 2, 3, 4)
     i = 1
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (6, 1, 5, 3, 2, 3, 4, 5, 3, 4, 6, 5)
     i = 1
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
 
     a = (5, 1, 3, 2, 4, 5, 3, 4, 5)
     i = 1
-    help_test_complete_acb(a, i)
+    count = process(count, help_test_complete_acb(a, i))
+
+    a = (7, 5, 6, 1, 3, 5, 2, 4, 3)
+    i = 6
+    count = process(count, help_test_complete_acb(a, i))
+
+    a = (6, 5, 7, 6)
+    i = 1
+    count = process(count, help_test_complete_acb(a, i))
+
+    a = (2, 5, 7, 4, 6, 5, 3, 4, 3)
+    i = 6
+    count = process(count, help_test_complete_acb(a, i))
+
+    print()
+    print(count)
+    print()
+    assert all(c > 0 for c in count)
 
 
 def test_random_complete_acb(bound=15):
@@ -1370,8 +1392,7 @@ def test_random_complete_acb(bound=15):
 @pytest.mark.slow
 def test_complete_acb(bound=8):
     count = None
-    for n in range(bound):
-        pi = Permutation.longest_element(n)
+    for pi in Permutation.involutions(bound):
         for a in pi.get_involution_words():
             for i in range(len(a) - 2):
                 a1, a2, a3 = a[i:i + 3]
@@ -1380,7 +1401,6 @@ def test_complete_acb(bound=8):
                     count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
                     if count and count[0] % 10 == 0:
                         print(count)
-    assert all(c > 0 for c in count)
 
 
 def help_test_complete_disjoint(a, u, v):
@@ -1792,7 +1812,7 @@ def test_random_complete_disjoint(bound=15):
             if u + 1 < v:
                 incr = help_test_complete_disjoint(a, u, v)
                 count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
-                # print(count)
+                print(count)
 
 
 @pytest.mark.slow
@@ -1800,23 +1820,22 @@ def test_complete_disjoint(bound=8):
     wseen = set()
     seen = set()
     count = None
-    for n in range(bound):
-        pi = Permutation.longest_element(n)
-        for w in pi.get_involution_words():
-            for i in range(len(w) - 1):
-                a, u, v = w[:i], w[i], w[i + 1]
-                if u + 1 >= v:
-                    continue
-                if (a, u, v) in wseen:
-                    continue
-                else:
-                    wseen.add((a, u, v))
-                tab = Tableau.from_rows(insert(a)[0])
-                if u + 1 < v and (tab, u, v) not in seen:
-                    seen.add((tab, u, v))
-                    incr = help_test_complete_disjoint(a, u, v)
-                    count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
-                    # print(count)
+    pi = Permutation.longest_element(bound)
+    for w in pi.get_involution_words():
+        for i in range(len(w) - 1):
+            a, u, v = w[:i], w[i], w[i + 1]
+            if u + 1 >= v:
+                continue
+            if (a, u, v) in wseen:
+                continue
+            else:
+                wseen.add((a, u, v))
+            tab = Tableau.from_rows(insert(a)[0])
+            if u + 1 < v and (tab, u, v) not in seen:
+                seen.add((tab, u, v))
+                incr = help_test_complete_disjoint(a, u, v)
+                count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                print(count)
     assert all(c > 0 for c in count)
 
 
