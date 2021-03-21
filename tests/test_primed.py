@@ -9,11 +9,28 @@ from words import (
 )
 import pytest
 
-
+pq_cache = {}
 commutations_cache = {}
 insert_cache = {}
 full_cseq_cache = {}
 tau_cache = {}
+
+
+def cached_insert(a):
+    assert all(i > 0 for i in a)
+    if a not in pq_cache:
+        pq_cache[a] = Word(*a).involution_insert()
+    return pq_cache[a]
+
+
+def entries(tab):
+    assert type(tab) == Tableau
+    return {_.number for _ in tab.entries()}
+
+
+def entries_diagonal(tab):
+    assert type(tab) == Tableau
+    return {tab.get(x, y).number for (x, y) in tab if x == y}
 
 
 def commutations(iword):
@@ -625,6 +642,55 @@ def compose(map1, map2):
 
 def simplify_map(m):
     return {k: v for (k, v) in m.items() if k != v}
+
+
+def test_conservation_lemma(bound=7):
+    reference = {}
+    seen = {}
+    for pi in Permutation.involutions(bound):
+        for a in pi.get_involution_words():
+            p, q = cached_insert(a)
+            for i in range(len(a) - 2):
+                key = (
+                    full_cseq(a, i),
+                    full_cseq(a, i + 2),
+                    len({i + 1, i + 2} & entries_diagonal(q)),
+                    len({i + 1, i + 2} & entries(q)),
+                )
+                val = simplify_map(compose(tau_permutation(a, i), tau_permutation(a, i + 1)))
+                if a[i] < a[i + 1]:
+                    if key in reference:
+                        assert val == reference[key]
+                    reference[key] = val
+                    seen[key] = [(a, i)]
+    print('*', len(reference), ' references')
+    count = 0
+    for pi in Permutation.involutions(bound):
+        for a in pi.get_involution_words():
+            p, q = cached_insert(a)
+            for i in range(len(a) - 2):
+                key = (
+                    full_cseq(a, i),
+                    full_cseq(a, i + 2),
+                    len({i + 1, i + 2} & entries_diagonal(q)),
+                    len({i + 1, i + 2} & entries(q)),
+                )
+                val = simplify_map(compose(tau_permutation(a, i), tau_permutation(a, i + 1)))
+                try:
+                    if key in reference:
+                        assert val == reference[key]
+                        count += 1
+                except:
+                    print('\na =', a)
+                    print('i =', i)
+                    print(p)
+                    print(q)
+                    print(key)
+                    print(val)
+                    print(reference[key])
+                    print(seen[key])
+                    assert False
+    print('*', count, 'cross-referenced')
 
 
 def test_tau_works(bound=7):
@@ -1399,7 +1465,7 @@ def test_simple_complete_acb():
     def process(count, incr):
         return incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
 
-    a = (4, 13, 16, 15, 17, 6, 10, 8, 12, 5, 18, 20, 17, 3, 9, 4, 7, 14, 15, 1, 11, 16, 8, 13, 3, 2, 7, 12, 10, 11, 6, 9, 1, 3, 8, 19, 10, 13, 5, 18, 14, 11, 7, 8, 4, 12, 17, 20, 18, 15, 11, 16, 6, 19, 14, 13, 3, 2, 12, 5, 11, 14, 17, 9, 13, 6, 10, 7, 18, 15, 11, 4, 8, 6, 20, 17, 16, 9, 14, 19, 12, 13, 12, 10, 17, 18, 14, 15, 11, 20, 3, 12, 10, 13, 19, 14, 15, 13, 11, 16, 7, 15, 17, 8, 14, 9, 10, 16, 15, 1) 
+    a = (4, 13, 16, 15, 17, 6, 10, 8, 12, 5, 18, 20, 17, 3, 9, 4, 7, 14, 15, 1, 11, 16, 8, 13, 3, 2, 7, 12, 10, 11, 6, 9, 1, 3, 8, 19, 10, 13, 5, 18, 14, 11, 7, 8, 4, 12, 17, 20, 18, 15, 11, 16, 6, 19, 14, 13, 3, 2, 12, 5, 11, 14, 17, 9, 13, 6, 10, 7, 18, 15, 11, 4, 8, 6, 20, 17, 16, 9, 14, 19, 12, 13, 12, 10, 17, 18, 14, 15, 11, 20, 3, 12, 10, 13, 19, 14, 15, 13, 11, 16, 7, 15, 17, 8, 14, 9, 10, 16, 15, 1)
     i = 5
     count = process(count, help_test_complete_acb(a, i))
 
@@ -1870,7 +1936,7 @@ def test_complete_disjoint_simple():
     v = 6
     help_test_complete_disjoint(a, u, v)
 
-    a = (5, 8, 7, 14, 11, 10, 3, 9, 4, 1, 12, 13, 16, 8, 6, 14, 2, 11, 15, 5, 3, 7, 6, 16, 10, 8, 12, 5, 14, 9, 2, 13, 8, 7) 
+    a = (5, 8, 7, 14, 11, 10, 3, 9, 4, 1, 12, 13, 16, 8, 6, 14, 2, 11, 15, 5, 3, 7, 6, 16, 10, 8, 12, 5, 14, 9, 2, 13, 8, 7)
     u = 6
     v = 8
     help_test_complete_disjoint(a, u, v)
@@ -1974,8 +2040,8 @@ def help_test_disjoint(a, u, v):
         q1 = involution_insert(*tuple(Word(_) for _ in a + (u,)))[1]
         q2 = involution_insert(*tuple(Word(_) for _ in a + (v,)))[1]
         n = len(a)
-        e1 = {_.number for _ in q1.entries()}
-        e2 = {_.number for _ in q2.entries()}
+        e1 = entries(q1)
+        e2 = entries(q2)
         diag1 = {q1[box].number for box in q1 if box[0] == box[1]}
         diag2 = {q2[box].number for box in q2 if box[0] == box[1]}
 
@@ -2167,10 +2233,10 @@ def full_cseq(word, j):
         rows = insert(word[:j])[0]
         b = word[j:]
         gamma = gamma_map(rows, b)
-        full_cseq_cache[(word, j)] = [
-            [gamma[(i, i)] for i in range(1, 1 + len(rows))],
-            [rows[i - 1][0] for i in range(1, 1 + len(rows))],
-        ]
+        full_cseq_cache[(word, j)] = (
+            tuple(gamma[(i, i)] for i in range(1, 1 + len(rows))),
+            tuple(rows[i - 1][0] for i in range(1, 1 + len(rows))),
+        )
     return full_cseq_cache[(word, j)]
 
 
