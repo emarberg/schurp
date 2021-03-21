@@ -627,6 +627,99 @@ def simplify_map(m):
     return {k: v for (k, v) in m.items() if k != v}
 
 
+def test_tau_works(bound=7):
+    for pi in Permutation.involutions(bound):
+        for a in pi.get_primed_involution_words():
+            tab = Word(*a).involution_insert()[0]
+            gamma = gamma_map(tab)
+            tau = tau_permutation(a)
+            marked = {k for (k, v) in marked_cycles(a).items() if v != 1}
+            # print('\na =', a)
+            # print(tab)
+            # print(gamma)
+            # print(tau)
+            # print(marked)
+            for (i, j) in tab:
+                entry = tab.get(i, j).number
+                if entry < 0:
+                    assert gamma[(i, j)] is not None
+                    assert tau[gamma[(i, j)]] in marked
+                if gamma[(i, j)] is not None and tau[gamma[(i, j)]] in marked:
+                    assert entry < 0
+
+
+def help_test_bumping_prop_two(a, i, j):
+    try:
+        assert i < j
+        if a[i] < a[j] and all(a[t] < a[i] < a[j] for t in range(i + 1, j)):
+            t1, weak_row1, weak_col1, strict_row1, strict_col1 = partial_insert(a[:i], a[i])
+            t2, weak_row2, weak_col2, strict_row2, strict_col2 = partial_insert(a[:j], a[j])
+
+            t1 = Tableau.shifted_from_rows(t1)
+            t2 = Tableau.shifted_from_rows(t2)
+
+            m = min(len(weak_row1), len(weak_row2))
+            assert all(weak_row1[t] < weak_row2[t] for t in range(m))
+
+            if j == i + 1 and weak_row2[-1][0] == weak_row2[-1][1]:
+                assert len(weak_col1) > 0
+                return [0, 1, 0, 0]
+
+            return [1, 0, 0, 0]
+        elif a[j] < a[i] and all(a[t] < a[i] < a[j] for t in range(i + 1, j)):
+            t1, weak_row1, weak_col1, strict_row1, strict_col1 = partial_insert(a[:i], a[i])
+            t2, weak_row2, weak_col2, strict_row2, strict_col2 = partial_insert(a[:j], a[j])
+
+            t1 = Tableau.shifted_from_rows(t1)
+            t2 = Tableau.shifted_from_rows(t2)
+
+            m = min(len(weak_row1), len(weak_row2))
+            assert all(weak_row1[t] >= weak_row2[t] for t in range(m))
+
+            if weak_row1[-1][0] == weak_row1[-1][1]:
+                assert len(weak_col2) > 0
+                return [0, 0, 0, 1]
+
+            return [0, 0, 1, 0]
+    except:
+        print('a =', a)
+        print('i =', i)
+        print('j =', j)
+        print()
+        for x in [t1, weak_row1, weak_col1, strict_row1, strict_col1]:
+            print(x)
+        print()
+        for x in [t2, weak_row2, weak_col2, strict_row2, strict_col2]:
+            print(x)
+        print()
+        assert False
+
+
+def test_random_bumping_prop_two(bound=15):
+    count = None
+    for n in range(bound):
+        a = Permutation.random_involution_word(n)
+        for i in range(len(a) - 1):
+            for j in range(i + 1, len(a)):
+                incr = help_test_bumping_prop_two(a, i, j)
+                count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                if count and count[0] % 10 == 0:
+                    print(count)
+
+
+@pytest.mark.slow
+def test_bumping_prop_two(bound=7):
+    count = None
+    pi = Permutation.longest_element(bound)
+    for a in pi.get_involution_words():
+        for i in range(len(a) - 1):
+            for j in range(i + 1, len(a)):
+                incr = help_test_bumping_prop_two(a, i, j)
+                count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                if count and count[0] % 10 == 0:
+                    print(count)
+
+
 def help_test_complete_acb(a, i):
     def reindexed_cseq(b, j):
         return full_cseq(b, j + 1)
@@ -2081,18 +2174,25 @@ def full_cseq(word, j):
     return full_cseq_cache[(word, j)]
 
 
-def tau_permutation(word, j):
+def tau_permutation(word, j=None):
     if (word, j) not in tau_cache:
-        comm = commutations(word)
-        ans = {p: p for p in comm.values()}
-        a = full_cseq(word, j)[0]
-        b = full_cseq(word, j + 1)[0]
-        rng = [t for t in range(len(a)) if a[t] != b[t]]
-        pq = {a[j] for j in rng} | {b[j] for j in rng}
-        if pq:
-            assert len(pq) == 2
-            p, q = tuple(pq)
-            ans[p], ans[q] = ans[q], ans[p]
+        if j is None and len(word) == 0:
+            ans = {}
+        elif j is None and len(word) > 0:
+            ans = tau_permutation(word, 0)
+            for k in range(1, len(word)):
+                ans = compose(ans, tau_permutation(word, k))
+        else:
+            comm = commutations(word)
+            ans = {p: p for p in comm.values()}
+            a = full_cseq(word, j)[0]
+            b = full_cseq(word, j + 1)[0]
+            rng = [t for t in range(len(a)) if a[t] != b[t]]
+            pq = {a[j] for j in rng} | {b[j] for j in rng}
+            if pq:
+                assert len(pq) == 2
+                p, q = tuple(pq)
+                ans[p], ans[q] = ans[q], ans[p]
         tau_cache[(word, j)] = ans
     return tau_cache[(word, j)]
 
