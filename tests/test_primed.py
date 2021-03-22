@@ -16,8 +16,16 @@ full_cseq_cache = {}
 tau_cache = {}
 
 
+def primed_cached_insert(a):
+    p, q = cached_insert(a)
+    for i in range(1, 1 + p.max_row):
+        if p.entry(i, i).is_primed():
+            p = p.set(i, i, -p.entry(i, i))
+            q = q.set(i, i, -q.entry(i, i))
+    return p, q
+
+
 def cached_insert(a):
-    assert all(i > 0 for i in a)
     if a not in pq_cache:
         pq_cache[a] = Word(*a).involution_insert()
     return pq_cache[a]
@@ -546,6 +554,79 @@ def partial_insert(word, x):
     strict_col = strict_path[j:]
 
     return rows, weak_row, weak_col, strict_row, strict_col
+
+
+def help_test_complete_ddiag(a, ptab, qtab, q):
+    try:
+        assert abs(qtab.get(q - 1, q - 1)) + 1 == abs(qtab.get(q - 1, q)) == abs(qtab.get(q, q)) - 1
+        if not qtab.get(q - 1, q).is_primed():
+            i = qtab.get(q - 1, q).number - 1
+            assert simplify_map(tau_permutation(a, i - 1)) == {}
+            assert simplify_map(tau_permutation(a, i)) == {}
+            assert simplify_map(tau_permutation(a, i + 1)) == {}
+
+            x, y, z = a[i - 1:i + 2]
+            if y < x < z or z < x < y:
+                mid = (x, z, y)
+            elif x == z:
+                mid = (y, x, y)
+            elif x < z < y or y < z < x:
+                mid = (y, x, z)
+            b = a[:i - 1] + mid + a[i + 2:]
+
+            assert simplify_map(tau_permutation(b, i - 1)) == {}
+            assert simplify_map(tau_permutation(b, i + 1)) == {}
+
+            t1, weak_row1, weak_col1, strict_row1, strict_col1 = partial_insert(b[:i - 1], b[i - 1])
+            t2, weak_row2, weak_col2, strict_row2, strict_col2 = partial_insert(b[:i], b[i])
+            t3, weak_row3, weak_col3, strict_row3, strict_col3 = partial_insert(b[:i + 1], b[i + 1])
+
+            assert weak_row1[-1] == (q - 1, q - 1) and len(weak_col1) == 0
+            assert weak_row2[-1] == (q - 1, q - 1) and weak_col2[0] == (q - 1, q) and len(weak_col2) == 1
+            assert weak_row3[-2] == (q - 1, q) and weak_row3[-1] == (q, q) and len(weak_col3) == 0
+
+            g = full_cseq(a, i + 2)[0]
+            assert full_cseq(b, i - 1)[0] == g[:-2]
+            assert full_cseq(b, i)[0] == g[:-2] + (g[-1],)
+            assert full_cseq(b, i + 1)[0] == g[:-1]
+            assert full_cseq(b, i + 2)[0] == g
+
+            assert simplify_map(tau_permutation(b, i)) == {g[-2]: g[-1], g[-1]: g[-2]}
+            return [1]
+    except:
+        print(ptab)
+        print(qtab)
+        print('q =', q)
+        print('a =', a)
+        print('b =', b)
+        assert False
+
+
+def test_random_complete_ddiag(bound=15):
+    count = None
+    for n in range(bound):
+        a = Permutation.random_involution_word(n)
+        p, q = primed_cached_insert(a)
+        for i in range(2, p.max_row + 1):
+            if q.get(i - 1, i - 1).number + 2 == q.get(i, i).number:
+                incr = help_test_complete_ddiag(a, p, q, i)
+                count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                if count and count[0] % 100 == 0:
+                    print(count)
+
+
+@pytest.mark.slow
+def test_complete_ddiag(bound=7):
+    count = None
+    for pi in Permutation.involutions(bound):
+        for a in pi.get_involution_words():
+            p, q = primed_cached_insert(a)
+            for i in range(2, p.max_row + 1):
+                if q.get(i - 1, i - 1).number + 2 == q.get(i, i).number:
+                    incr = help_test_complete_ddiag(a, p, q, i)
+                    count = incr if count is None else [incr[s] + t for (s, t) in enumerate(count)] if incr else count
+                    if count and count[0] % 100 == 0:
+                        print(count)
 
 
 def bump_differential(word, i):
