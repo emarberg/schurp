@@ -1,7 +1,7 @@
 from vectors import Vector
 from signed import SignedPermutation
 from even import EvenSignedPermutation
-from words import Word, get_reduced_words
+from words import Word, get_reduced_words, flatten, merge
 import itertools
 
 

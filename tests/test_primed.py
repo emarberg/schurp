@@ -669,20 +669,22 @@ def help_test_bump_differential(word, seen):
 
                 elif q < p:
                     assert p == y == z == q + 1
-                    assert cseq_1 == [cseq_0[0] + [eta], cseq_0[1] + [d]]
+                    assert cseq_1 == (cseq_0[0] + (eta,), cseq_0[1] + (d,))
 
                 elif p == y == z <= q:
                     c = cseq_0[1][p - 1]
                     theta = cseq_0[0][p - 1] if d + 1 == c else eta
-                    cseq = [cseq_0[0][:], cseq_0[1][:]]
+                    cseq = [list(cseq_0[0][:]), list(cseq_0[1][:])]
                     cseq[0][p - 1] = theta
                     cseq[1][p - 1] = d
+                    cseq = tuple(tuple(_) for _ in cseq)
                     assert cseq == cseq_1
 
                 elif p == y < z:
                     assert p + 1 == z <= q
-                    cseq = [cseq_0[0][:], cseq_0[1][:]]
+                    cseq = [list(cseq_0[0][:]), list(cseq_0[1][:])]
                     cseq[0][p - 1], cseq[0][p] = cseq[0][p], cseq[0][p - 1]
+                    cseq = tuple(tuple(_) for _ in cseq)
                     assert cseq == cseq_1
 
                 else:
@@ -725,7 +727,7 @@ def simplify_map(m):
     return {k: v for (k, v) in m.items() if k != v}
 
 
-def test_conservation_lemma(bound=7):
+def test_conservation_lemma(bound=6):
     reference = {}
     seen = {}
     for pi in Permutation.involutions(bound):
@@ -774,7 +776,7 @@ def test_conservation_lemma(bound=7):
     print('*', count, 'cross-referenced')
 
 
-def test_tau_works(bound=7):
+def test_tau_works(bound=6):
     for pi in Permutation.involutions(bound):
         for a in pi.get_primed_involution_words():
             tab = Word(*a).involution_insert()[0]
