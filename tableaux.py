@@ -1122,28 +1122,26 @@ class Tableau:
         if p is None:
             return (j, column_dir, self)
 
+        def swap_primes(a, b):
+            if a.is_primed() and b.is_primed():
+                return (a, b)
+            if not a.is_primed() and not b.is_primed():
+                return (a, b)
+            return (-a, -b)
+
         def involution_bump(j, a, cdir, tup):
             for i, b in enumerate(tup):
                 if abs(a) > abs(b):
                     continue
                 # print('j =', j, 'a =', a, 'cdir =', cdir, 'tup =', tup, 'i =', i + 1, 'b =', b)
-                if a == b:
-                    assert not a.is_primed()
-                    b = MarkedNumber(abs(tup[i + 1]))
-                    new = tup
-                    cdir = cdir or (i == 0)
-                elif a.is_primed() and a == -b:
-                    b = -tup[i + 1]
-                    assert b.is_primed()
-                    new = tup
-                elif b.is_primed() and a == -b:
-                    b = tup[i + 1]
-                    assert not b.is_primed()
-                    new = tup[:i] + (-tup[i], -tup[i + 1]) + tup[i + 2:]
+                if abs(a) == abs(b):
+                    assert not a.is_primed() or not b.is_primed()
+                    b = a.increment()
+                    new = tup[:i] + swap_primes(tup[i], tup[i + 1]) + tup[i + 2:]
                     cdir = cdir or (i == 0)
                 elif not cdir and i == 0:
-                    new = (-a if a.is_primed() else a,) + tup[1:]
-                    b = -b if a.is_primed() else b
+                    a, b = swap_primes(a, b)
+                    new = (a,) + tup[1:]
                     cdir = True
                 else:
                     new = tup[:i] + (a,) + tup[i + 1:]
