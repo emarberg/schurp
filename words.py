@@ -641,7 +641,11 @@ class Word:
             v = MarkedNumber(-i if column_dir else i)
             for k, l in p.shape():
                 if (k, l) not in q.shape():
-                    q = q.set(k, l, v)
+                    if k == l and p.get(k, l).is_primed():
+                        p = p.set(k, l, -p.get(k, l))
+                        q = q.set(k, l, -v)
+                    else:
+                        q = q.set(k, l, v)
             assert p.shape() == q.shape()
         return p, q
 

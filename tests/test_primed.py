@@ -776,7 +776,7 @@ def test_conservation_lemma(bound=6):
     print('*', count, 'cross-referenced')
 
 
-def test_tau_works(bound=6):
+def test_tau_works(bound=5):
     for pi in Permutation.involutions(bound):
         for a in pi.get_primed_involution_words():
             tab = Word(*a).involution_insert()[0]
@@ -791,9 +791,10 @@ def test_tau_works(bound=6):
             for (i, j) in tab:
                 entry = tab.get(i, j).number
                 if entry < 0:
+                    assert i != j
                     assert gamma[(i, j)] is not None
                     assert tau[gamma[(i, j)]] in marked
-                if gamma[(i, j)] is not None and tau[gamma[(i, j)]] in marked:
+                if i != j and gamma[(i, j)] is not None and tau[gamma[(i, j)]] in marked:
                     assert entry < 0
 
 
@@ -1632,7 +1633,7 @@ def test_random_complete_acb(bound=15):
 
 
 @pytest.mark.slow
-def test_complete_acb(bound=8):
+def test_complete_acb(bound=7):
     count = None
     for pi in Permutation.involutions(bound):
         for a in pi.get_involution_words():
@@ -2058,7 +2059,7 @@ def test_random_complete_disjoint(bound=15):
 
 
 @pytest.mark.slow
-def test_complete_disjoint(bound=8):
+def test_complete_disjoint(bound=7):
     wseen = set()
     seen = set()
     count = None
@@ -2264,7 +2265,7 @@ def test_random_disjoint(bound=15):
 
 
 @pytest.mark.slow
-def test_disjoint(bound=8):
+def test_disjoint(bound=7):
     wseen = set()
     seen = set()
     c1, c2, c3 = 0, 0, 0
@@ -2417,7 +2418,7 @@ def test_random_gamma(bound=15):
 
 
 @pytest.mark.slow
-def test_gamma(bound=8):
+def test_gamma(bound=7):
     for n in range(bound):
         pi = Permutation.longest_element(n)
         for w in pi.get_involution_words():
@@ -2443,7 +2444,7 @@ def test_random_bac(bound=15):
 
 
 @pytest.mark.slow
-def test_bac(bound=8):
+def test_bac(bound=7):
     for n in range(bound):
         pi = Permutation.longest_element(n)
         for w in pi.get_involution_words():
@@ -2511,7 +2512,7 @@ def test_random_acb(bound=15):
 
 
 @pytest.mark.slow
-def test_acb(bound=8):
+def test_acb(bound=7):
     count = None
     for n in range(bound):
         pi = Permutation.longest_element(n)

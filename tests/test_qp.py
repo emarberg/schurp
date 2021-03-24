@@ -68,7 +68,7 @@ def test_gelfand_recurrences():
                             assert p(u, t) == 0
 
 
-def test_a_descents(n):
+def test_a_descents(n=6):
     def elems(n):
         ans = set()
         for k in range(0, n, 2):
@@ -147,7 +147,7 @@ def test_a_descents(n):
         assert vasc_strict == wasc_strict
 
 
-def test_bc_descents(n):
+def test_bc_descents(n=5):
     def elems(n):
         ans = set()
         for k in range(0, n + 1, 2):
@@ -230,7 +230,7 @@ def test_bc_descents(n):
         assert vasc_strict == wasc_strict
 
 
-def test_d_descents(n):
+def test_d_descents(n=5):
     def elems(n):
         ans = set()
         for k in range(0, n + 1, 2):

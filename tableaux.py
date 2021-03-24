@@ -1132,34 +1132,18 @@ class Tableau:
                     b = MarkedNumber(abs(tup[i + 1]))
                     new = tup
                     cdir = cdir or (i == 0)
-
                 elif a.is_primed() and a == -b:
                     b = -tup[i + 1]
                     assert b.is_primed()
                     new = tup
-                elif b.is_primed() and a == -b and not (i == 0 and not cdir):
+                elif b.is_primed() and a == -b:
                     b = tup[i + 1]
                     assert not b.is_primed()
                     new = tup[:i] + (-tup[i], -tup[i + 1]) + tup[i + 2:]
-                elif b.is_primed() and a == -b and i == 0 and not cdir:
-                    b = tup[i + 1]
-                    assert not b.is_primed()
-                    new = tup
-                    cdir = True
-
-                elif not cdir and i == 0 and not b.is_primed() and not a.is_primed():
-                    new = (a,) + tup[1:]
-                    cdir = True
-                elif not cdir and i == 0 and not b.is_primed() and a.is_primed():
-                    b = -b
-                    new = (-a,) + tup[1:]
-                    cdir = True
-                elif not cdir and i == 0 and b.is_primed() and not a.is_primed():
-                    new = (-a,) + tup[1:]
-                    cdir = True
-                    b = -b
-                elif not cdir and i == 0 and b.is_primed() and a.is_primed():
-                    new = (a,) + tup[1:]
+                    cdir = cdir or (i == 0)
+                elif not cdir and i == 0:
+                    new = (-a if a.is_primed() else a,) + tup[1:]
+                    b = -b if a.is_primed() else b
                     cdir = True
                 else:
                     new = tup[:i] + (a,) + tup[i + 1:]
