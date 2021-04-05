@@ -3,7 +3,8 @@ from words import (
     get_involution_words,
     get_fpf_involution_words,
     Tableau,
-    involution_insert
+    involution_insert,
+    primed_sw_insert
 )
 from marked import MarkedNumber
 from hopf import HopfPermutation
@@ -75,26 +76,44 @@ def test_mixed_insert():
     testset = {
         Permutation.from_involution_word(*w) for w in Permutation.all(5)
     }
+    count = 0
     for pi in list(testset):
         for k in [2, 3, 4]:
             fac = [
                 tuple([Word(*i) for i in tup])
-                for x in pi.get_primed_involution_words()
-                for tup in OrthogonalCrystalGenerator.get_increasing_primed_factorizations(x, k)
+                for x in pi.get_involution_words()
+                for tup in OrthogonalCrystalGenerator.get_increasing_factorizations(x, k)
             ]
 
             for f in fac:
-                w = invert_fac(f)
-                p, q = involution_insert(*f)
-                pp, qq = w.mixed_insert()
-                print('pi =', pi)
-                print('f =', f)
-                print(p, q)
-                print('w =', w)
-                print(pp, qq)
-                print()
-                assert p == qq
-                assert q == pp
+                length = sum(map(len, f))
+                for e in range(2**length):
+                    new_f = []
+                    for w in f:
+                        new_w = []
+                        for a in w:
+                            new_w.append(a if e % 2 == 0 else -a)
+                            e = e // 2
+                        new_f.append(Word(*new_w))
+                    f = new_f
+
+                    w = invert_fac(f)
+                    p, q = primed_sw_insert(*f)
+                    pp, qq = w.mixed_insert()
+                    try:
+                        assert p == qq
+                        assert q == pp
+                        count += 1
+                        if count % 1000 == 0:
+                            print(count)
+                    except:
+                        print('pi =', pi)
+                        print('f =', f)
+                        print(p, q)
+                        print('w =', w)
+                        print(pp, qq)
+                        print()
+                        assert False
 
     # print(len(testset))
 

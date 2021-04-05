@@ -633,6 +633,22 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def primed_sw_insert(self, verbose=False, phi=None):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = (i_zerobased + 1) if phi is None else phi[i_zerobased]
+            j, column_dir, p = p.primed_sw_insert(MarkedNumber(a), verbose=verbose)
+            v = MarkedNumber(-i if column_dir else i)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    if k == l and p.get(k, l).is_primed():
+                        p = p.set(k, l, -p.get(k, l))
+                        q = q.set(k, l, -v)
+                    else:
+                        q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
     def involution_insert(self, verbose=False, phi=None):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
@@ -757,14 +773,17 @@ def shifted_hecke_insert(*words):
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
 
 
+def primed_sw_insert(*words):
+    w, mapping = get_insertion_mapping(words)
+    p, q = w.primed_sw_insert(verbose=False)
+    q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+    return p, q
+
+
 def involution_insert(*words):
     w, mapping = get_insertion_mapping(words)
     p, q = w.involution_insert(verbose=False)
     q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
-    for i in range(1, 1 + p.max_row):
-        if p.entry(i, i).is_primed():
-            p = p.set(i, i, -p.entry(i, i))
-            q = q.set(i, i, -q.entry(i, i))
     return p, q
 
 

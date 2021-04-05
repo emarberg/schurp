@@ -16,6 +16,14 @@ class MarkedNumber:
     def is_zero(self):
         return self.number == 0
 
+    @classmethod
+    def swap_primes(cls, a, b):
+        if a.is_primed() and b.is_primed():
+            return (a, b)
+        if not a.is_primed() and not b.is_primed():
+            return (a, b)
+        return (-a, -b)
+
     def __abs__(self):
         return abs(self.number)
 

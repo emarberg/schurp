@@ -5,10 +5,13 @@ from words import (
     get_involution_words,
     get_fpf_involution_words,
     Tableau,
-    involution_insert
+    involution_insert,
+    primed_sw_insert
 )
 import pytest
+import random
 
+sw_cache = {}
 pq_cache = {}
 commutations_cache = {}
 insert_cache = {}
@@ -29,6 +32,161 @@ def cached_insert(a):
     if a not in pq_cache:
         pq_cache[a] = Word(*a).involution_insert()
     return pq_cache[a]
+
+
+def cached_sw_insert(a):
+    if a not in sw_cache:
+        sw_cache[a] = Word(*a).primed_sw_insert()
+    return sw_cache[a]
+
+
+def matrix_to_biword(mat):
+    ans = []
+    for i in range(len(mat)):
+        word = []
+        for j in range(len(mat[i])):
+            if mat[i][j] < 0:
+                word += [-(j + 1)] + (-1 - mat[i][j]) * [j + 1]
+            elif mat[i][j] > 0:
+                word += mat[i][j] * [j + 1]
+        ans += [Word(*word)]
+    return ans
+
+
+def integer_matrices(m, n, p):
+    r = 2 * p + 1
+    for v in range(r ** (m * n)):
+        ans = [n * [0] for _ in range(m)]
+        for i in range(m):
+            for j in range(n):
+                ans[i][j] = (v % r) - p
+                v = v // r
+        yield ans
+
+
+def random_integer_matrix(m, n, p):
+    ans = [n * [0] for _ in range(m)]
+    for i in range(m):
+        for j in range(n):
+            ans[i][j] = random.randint(-p, p)
+    return ans
+
+
+def test_random_primed_sw_insertion(m=5, n=5, bound=2):
+    total = 1000
+    mapping = {}
+    iteration = 0
+    for _ in range(total):
+        mat = random_integer_matrix(m, n, bound)
+        print(iteration, 'of', total)
+        try:
+            biword = matrix_to_biword(mat)
+            p, q = primed_sw_insert(*biword)
+            assert p.is_shifted_semistandard()
+            assert q.is_shifted_semistandard(False)
+            assert (p, q) not in mapping
+            mapping[(p, q)] = mat
+
+            print()
+            print('\n'.join([str(row) for row in mat]))
+            print()
+            print(biword)
+            print()
+            print(p)
+            print(q)
+        except:
+            print('\n'.join([str(row) for row in mat]))
+            print()
+            print(biword)
+            print()
+            print(p)
+            print(q)
+            print(mapping.get((p, q), None))
+            assert False
+        iteration += 1
+
+
+def test_primed_sw_insertion(m=3, n=3, bound=2):
+    total = (2 * bound + 1) ** (m * n)
+    mapping = {}
+    iteration = 0
+    for mat in integer_matrices(m, n, bound):
+        if iteration % 100 == 0:
+            print(iteration, 'of', total)
+        try:
+            biword = matrix_to_biword(mat)
+            p, q = primed_sw_insert(*biword)
+            assert p.is_shifted_semistandard()
+            assert q.is_shifted_semistandard(False)
+            assert (p, q) not in mapping
+            mapping[(p, q)] = mat
+
+            if iteration % 123 == 0:
+                print()
+                print('\n'.join([str(row) for row in mat]))
+                print()
+                print(biword)
+                print()
+                print(p)
+                print(q)
+        except:
+            print('\n'.join([str(row) for row in mat]))
+            print()
+            print(biword)
+            print()
+            print(p)
+            print(q)
+            print(mapping.get((p, q), None))
+            assert False
+        iteration += 1
+
+
+def test_standard_primed_sw_insertion(n=3, bound=2):
+    total = (2 * bound) ** n
+    mapping = {}
+    iteration = 0
+    for v in range(total):
+        if iteration % 100 == 0:
+            print(iteration, 'of', total)
+        try:
+            word = []
+            for _ in range(n):
+                x = v % (2 * bound)
+                word += [x + 1 if x < bound else -(x + 1 - bound)]
+                v = v // (2 * bound)
+
+            p, q = Word(*word).primed_sw_insert()
+            assert p.is_shifted_semistandard()
+            assert q.is_shifted_standard(False)
+            assert (p, q) not in mapping
+            mapping[(p, q)] = word
+
+            # for i in range(len(word) - 2):
+            #     a, c, b = word[i:i + 3]
+            #     if abs(a) == abs(b) < abs(c):
+            #         if a > 0 > b:
+            #             continue
+            #         # if abs(a) == abs(b) and a * c < 0:
+            #         #     vord = word[:i] + [-c, -a, b] + word[i + 3:]
+            #         # else:
+            #         vord = word[:i] + [c, a, b] + word[i + 3:]
+            #         print('* ', i, ':', a, c, b)
+            #         assert Word(*vord).primed_sw_insert()[0] == p
+
+            if iteration % 1234 == 0:
+                print()
+                print(word)
+                print()
+                print(p)
+                print(q)
+        except:
+            print(word)
+            print()
+            print(p)
+            print(q)
+            print(mapping.get((p, q), None))
+            assert False
+        iteration += 1
 
 
 def entries(tab):

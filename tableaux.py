@@ -661,16 +661,24 @@ class Tableau:
         return True
 
     def is_semistandard(self):
-        return self.is_unmarked() and self.is_weakly_increasing() and self.is_contiguous()
+        return self.is_unmarked() and self.is_weakly_increasing()
 
     def is_standard(self):
         return self.is_unmarked() and self.is_increasing() and self.is_contiguous()
 
-    def is_shifted_semistandard(self):
-        return self.is_diagonally_unmarked() and self.is_weakly_increasing() and self.is_contiguous()
+    def is_shifted_semistandard(self, require_unmarked_diagonal=True):
+        if require_unmarked_diagonal and not self.is_diagonally_unmarked():
+            return False
+        if not self.is_weakly_increasing():
+            return False
+        if any((i + 1, j) in self.mapping and self.entry(i, j) == self.entry(i + 1, j) and not self.entry(i, j).is_primed() for (i, j) in self.mapping):
+            return False
+        if any((i, j + 1) in self.mapping and self.entry(i, j) == self.entry(i, j + 1) and self.entry(i, j).is_primed() for (i, j) in self.mapping):
+            return False
+        return True
 
-    def is_shifted_standard(self):
-        return self.is_diagonally_unmarked() and self.is_increasing() and self.is_contiguous()
+    def is_shifted_standard(self, require_unmarked_diagonal=True):
+        return (not require_unmarked_diagonal or self.is_diagonally_unmarked()) and self.is_increasing() and self.is_contiguous()
 
     @classmethod
     def get_standard(cls, shape):
@@ -875,6 +883,9 @@ class Tableau:
     def remove(self, i, j):
         assert (i, j) in self
         return Tableau({a: b for a, b in self.mapping.items() if a != (i, j)})
+
+    def num_rows(self):
+        return len(self.get_rows())
 
     def get_rows(self):
         ans = []
@@ -1118,16 +1129,79 @@ class Tableau:
             tab = self.replace_row(j, row, shifted=True)
         return tab.sagan_worley_insert(p, j, column_dir, verbose=verbose)
 
-    def involution_insert(self, p, j=0, column_dir=False, verbose=True):
+    def count_primes(self):
+        ans = 0
+        for (i, j) in self.mapping:
+            if self.entry(i, j).is_primed():
+                ans += 1
+        return ans
+
+    def count_diagonal_primes(self):
+        ans = 0
+        for (i, j) in self.mapping:
+            if i == j and self.entry(i, j).is_primed():
+                ans += 1
+        return ans
+
+    def primed_sw_insert(self, p, j=0, column_dir=False, verbose=True):
         if p is None:
             return (j, column_dir, self)
 
-        def swap_primes(a, b):
-            if a.is_primed() and b.is_primed():
-                return (a, b)
-            if not a.is_primed() and not b.is_primed():
-                return (a, b)
-            return (-a, -b)
+        def primed_sw_bump(j, a, cdir, tup):
+            for i, b in enumerate(tup):
+                eq = (cdir and not a.is_primed()) or (not cdir and a.is_primed())
+                if (eq and a > b) or (not eq and a >= b):
+                    continue
+                if a == b:
+                    if not cdir and i == 0:
+                        assert a.is_primed()
+                        b = -a
+                        cdir = True
+                    new = tup
+                elif not cdir and i == 0:
+                    if -a != b:
+                        a, b = MarkedNumber.swap_primes(a, b)
+                    else:
+                        a = -a
+                    new = (a,) + tup[1:]
+                    cdir = True
+                else:
+                    new = tup[:i] + (a,) + tup[i + 1:]
+                return (b, cdir, new)
+            return (None, cdir, tup + (a,))
+
+        j += 1
+        row, col = self.get_row(j), self.get_column(j)
+
+        if verbose:
+            if column_dir:
+                print('Inserting %s into column %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+            else:
+                print('Inserting %s into row %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+
+        if column_dir:
+            p, column_dir, col = primed_sw_bump(j, p, column_dir, col)
+            tab = self.replace_column(j, col)
+        else:
+            p, column_dir, row = primed_sw_bump(j, p, column_dir, row)
+            tab = self.replace_row(j, row, shifted=True)
+
+        if verbose:
+            print(tab, '\n')
+        assert tab.is_shifted_semistandard(False)
+        return tab.primed_sw_insert(p, j, column_dir, verbose=verbose)
+
+    def involution_insert(self, p, j=0, column_dir=False, verbose=True):
+        if p is None:
+            return (j, column_dir, self)
 
         def involution_bump(j, a, cdir, tup):
             for i, b in enumerate(tup):
@@ -1137,10 +1211,10 @@ class Tableau:
                 if abs(a) == abs(b):
                     assert not a.is_primed() or not b.is_primed()
                     b = a.increment()
-                    new = tup[:i] + swap_primes(tup[i], tup[i + 1]) + tup[i + 2:]
+                    new = tup[:i] + MarkedNumber.swap_primes(tup[i], tup[i + 1]) + tup[i + 2:]
                     cdir = cdir or (i == 0)
                 elif not cdir and i == 0:
-                    a, b = swap_primes(a, b)
+                    a, b = MarkedNumber.swap_primes(a, b)
                     new = (a,) + tup[1:]
                     cdir = True
                 else:
