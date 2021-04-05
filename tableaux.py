@@ -1071,6 +1071,7 @@ class Tableau:
                     continue
                 if not cdir and i == 0:
                     new = (a,) + tup[1:]
+                    assert abs(b) % 2 == 0
                     b = MarkedNumber((abs(b) - 1) * sgn(b))
                     cdir = True
                 else:

@@ -85,11 +85,11 @@ def test_mixed_insert():
                 for tup in OrthogonalCrystalGenerator.get_increasing_factorizations(x, k)
             ]
 
-            for f in fac:
-                length = sum(map(len, f))
+            for old_f in fac:
+                length = sum(map(len, old_f))
                 for e in range(2**length):
                     new_f = []
-                    for w in f:
+                    for w in old_f:
                         new_w = []
                         for a in w:
                             new_w.append(a if e % 2 == 0 else -a)
