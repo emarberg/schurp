@@ -1,12 +1,14 @@
 from permutations import Permutation
 from tableaux import Tableau
+from marked import MarkedNumber
 from words import (
     Word,
     get_involution_words,
     get_fpf_involution_words,
     Tableau,
     involution_insert,
-    primed_sw_insert
+    primed_sw_insert,
+    sagan_worley_insert
 )
 import pytest
 import random
@@ -72,37 +74,55 @@ def random_integer_matrix(m, n, p):
     return ans
 
 
+def help_test_primed_sw_insertion(biword, mapping={}):
+    try:
+        p, q = primed_sw_insert(*biword)
+        pp, qq = sagan_worley_insert(*biword)
+        assert p.is_shifted_semistandard()
+        assert q.is_shifted_semistandard(False)
+        assert (p, q) not in mapping or mapping[(p, q)] == biword
+        assert q.unprime_diagonal() == qq
+        assert p.unprime() == pp.unprime()
+        mapping[(p, q)] = biword
+
+        # print()
+        # print('\n'.join([str(row) for row in mat]))
+        # print()
+        # print(biword)
+        # print()
+        # print(p)
+        # print(q)
+        # print()
+        # print(pp)
+        # print(qq)
+    except:
+        # print('\n'.join([str(row) for row in mat]))
+        # print()
+        print(biword)
+        print()
+        print(p)
+        print(q)
+        print(mapping.get((p, q), None))
+        print()
+        print(pp)
+        print(qq)
+        assert False
+
+
+def test_primed_sw_insertion_simple():
+    biword = [Word(1, 3), Word(2, 6), Word(-5), Word(4), Word(3)]
+    help_test_primed_sw_insertion(biword)
+
+
 def test_random_primed_sw_insertion(m=5, n=5, bound=2):
     total = 1000
     mapping = {}
     iteration = 0
     for _ in range(total):
         mat = random_integer_matrix(m, n, bound)
+        biword = matrix_to_biword(mat)
         print(iteration, 'of', total)
-        try:
-            biword = matrix_to_biword(mat)
-            p, q = primed_sw_insert(*biword)
-            assert p.is_shifted_semistandard()
-            assert q.is_shifted_semistandard(False)
-            assert (p, q) not in mapping
-            mapping[(p, q)] = mat
-
-            print()
-            print('\n'.join([str(row) for row in mat]))
-            print()
-            print(biword)
-            print()
-            print(p)
-            print(q)
-        except:
-            print('\n'.join([str(row) for row in mat]))
-            print()
-            print(biword)
-            print()
-            print(p)
-            print(q)
-            print(mapping.get((p, q), None))
-            assert False
+        help_test_primed_sw_insertion(biword, mapping)
         iteration += 1
 
 
@@ -113,31 +133,8 @@ def test_primed_sw_insertion(m=3, n=3, bound=2):
     for mat in integer_matrices(m, n, bound):
         if iteration % 100 == 0:
             print(iteration, 'of', total)
-        try:
-            biword = matrix_to_biword(mat)
-            p, q = primed_sw_insert(*biword)
-            assert p.is_shifted_semistandard()
-            assert q.is_shifted_semistandard(False)
-            assert (p, q) not in mapping
-            mapping[(p, q)] = mat
-
-            if iteration % 123 == 0:
-                print()
-                print('\n'.join([str(row) for row in mat]))
-                print()
-                print(biword)
-                print()
-                print(p)
-                print(q)
-        except:
-            print('\n'.join([str(row) for row in mat]))
-            print()
-            print(biword)
-            print()
-            print(p)
-            print(q)
-            print(mapping.get((p, q), None))
-            assert False
+        biword = matrix_to_biword(mat)
+        help_test_primed_sw_insertion(biword, mapping)
         iteration += 1
 
 
@@ -161,30 +158,44 @@ def test_standard_primed_sw_insertion(n=3, bound=2):
             assert (p, q) not in mapping
             mapping[(p, q)] = word
 
-            # for i in range(len(word) - 2):
-            #     a, c, b = word[i:i + 3]
-            #     if abs(a) == abs(b) < abs(c):
-            #         if a > 0 > b:
-            #             continue
-            #         # if abs(a) == abs(b) and a * c < 0:
-            #         #     vord = word[:i] + [-c, -a, b] + word[i + 3:]
-            #         # else:
-            #         vord = word[:i] + [c, a, b] + word[i + 3:]
-            #         print('* ', i, ':', a, c, b)
-            #         assert Word(*vord).primed_sw_insert()[0] == p
+            for i in range(len(word) - 2):
+                a, c, b = word[i:i + 3]
+                ma, mc, mb = MarkedNumber(a), MarkedNumber(c), MarkedNumber(b)
+                if ma.ceil() <= mb <= mc.floor():
+                    vord = word[:i] + [c, a, b] + word[i + 3:]
+                    pp = Word(*vord).primed_sw_insert()[0]
+                    # print('* ', i, ':', a, c, b)
+                    assert pp == p
+                b, c, a = word[i:i + 3]
+                ma, mc, mb = MarkedNumber(a), MarkedNumber(c), MarkedNumber(b)
+                if ma <= mb.floor() and mb.ceil() <= mc:
+                    vord = word[:i] + [b, a, c] + word[i + 3:]
+                    pp = Word(*vord).primed_sw_insert()[0]
+                    # print('* ', i, ':', a, c, b)
+                    assert pp == p
+            if len(word) >= 2:
+                a, b = word[:2]
+                if a * b > 0:
+                    vord = [b, a] + word[2:]
+                else:
+                    vord = [-b, -a] + word[2:]
+                pp = Word(*vord).primed_sw_insert()[0]
+                assert pp == p
 
-            if iteration % 1234 == 0:
-                print()
-                print(word)
-                print()
-                print(p)
-                print(q)
+            # if iteration % 1234 == 0:
+            #     print()
+            #     print(word)
+            #     print()
+            #     print(p)
+            #     print(q)
         except:
             print(word)
             print()
             print(p)
             print(q)
             print(mapping.get((p, q), None))
+            print(pp)
+            print(vord)
             assert False
         iteration += 1
 

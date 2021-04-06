@@ -780,6 +780,13 @@ def primed_sw_insert(*words):
     return p, q
 
 
+def sagan_worley_insert(*words):
+    w, mapping = get_insertion_mapping(words)
+    p, q = w.sagan_worley_insert(verbose=False)
+    q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+    return p, q
+
+
 def involution_insert(*words):
     w, mapping = get_insertion_mapping(words)
     p, q = w.involution_insert(verbose=False)

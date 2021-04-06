@@ -30,6 +30,15 @@ class Tableau:
     def __getitem__(self, item):
         return self.mapping.get(item, None)
 
+    def unprime_diagonal(self):
+        return Tableau({box: -val if box[0] == box[1] and val.is_primed() else val for (box, val) in self.mapping.items()})
+
+    def unprime_two_diagonals(self):
+        return Tableau({box: -val if box[1] <= box[0] + 1 and val.is_primed() else val for (box, val) in self.mapping.items()})
+
+    def unprime(self):
+        return Tableau({box: -val if val.is_primed() else val for (box, val) in self.mapping.items()})
+
     @classmethod
     def shifted_from_rows(cls, rows):
         return cls.from_rows(rows, True)
@@ -666,7 +675,7 @@ class Tableau:
     def is_standard(self):
         return self.is_unmarked() and self.is_increasing() and self.is_contiguous()
 
-    def is_shifted_semistandard(self, require_unmarked_diagonal=True):
+    def is_shifted_semistandard(self, require_unmarked_diagonal=False):
         if require_unmarked_diagonal and not self.is_diagonally_unmarked():
             return False
         if not self.is_weakly_increasing():
@@ -1107,17 +1116,36 @@ class Tableau:
 
         def bump(a, cdir, tup):
             for i, b in enumerate(tup):
-                if a > b:
+                eq = (cdir and not a.is_primed()) or (not cdir and a.is_primed())
+                if (eq and a > b) or (not eq and a >= b):
                     continue
-                if not cdir and a == b:
-                    continue
-                if not cdir and i == 0:
+                if a == b:
+                    if not cdir and i == 0:
+                        if a.is_primed():
+                            b = -a
+                        cdir = True
+                    new = tup
+                elif not cdir and i == 0:
+                    if -a == b:
+                        a = -a
                     new = (a,) + tup[1:]
                     cdir = True
                 else:
                     new = tup[:i] + (a,) + tup[i + 1:]
                 return (b, cdir, new)
             return (None, cdir, tup + (a,))
+            # for i, b in enumerate(tup):
+            #     if a > b:
+            #         continue
+            #     if not cdir and a == b:
+            #         continue
+            #     if not cdir and i == 0:
+            #         new = (a,) + tup[1:]
+            #         cdir = True
+            #     else:
+            #         new = tup[:i] + (a,) + tup[i + 1:]
+            #     return (b, cdir, new)
+            # return (None, cdir, tup + (a,))
 
         j += 1
         row, col = self.get_row(j), self.get_column(j)

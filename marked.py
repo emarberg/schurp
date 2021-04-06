@@ -40,6 +40,12 @@ class MarkedNumber:
             other = MarkedNumber(other)
         return MarkedNumber(self.number - other.number)
 
+    def ceil(self):
+        return MarkedNumber(abs(self))
+
+    def floor(self):
+        return MarkedNumber(-abs(self))
+
     def increment(self):
         if self.number > 0:
             return MarkedNumber(self.number + 1)
