@@ -82,7 +82,7 @@ def help_test_primed_sw_insertion(biword, mapping={}):
         assert q.is_shifted_semistandard(False)
         assert (p, q) not in mapping or mapping[(p, q)] == biword
         assert q.unprime_diagonal() == qq
-        assert p.unprime() == pp.unprime()
+        assert p.unprime_togglable() == pp.unprime_togglable()
         mapping[(p, q)] = biword
 
         # print()
@@ -126,7 +126,7 @@ def test_random_primed_sw_insertion(m=5, n=5, bound=2):
         iteration += 1
 
 
-def test_primed_sw_insertion(m=3, n=3, bound=2):
+def test_primed_sw_insertion(m=2, n=3, bound=2):
     total = (2 * bound + 1) ** (m * n)
     mapping = {}
     iteration = 0

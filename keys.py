@@ -2,6 +2,7 @@ from schubert import X
 from partitions import Partition
 from tableaux import Tableau
 from words import Word
+from marked import MarkedNumber
 import itertools
 
 
@@ -625,7 +626,7 @@ def weak_compatible_sequences(seq, i_min=1):
         yield (), X(0)**0
     else:
         a, seq = seq[0], seq[1:]
-        for i in range(i_min, a + 1):
+        for i in range(i_min, abs(a) + 1):
             j_min = (i + 1) if (seq and a <= seq[0]) else i
             for p, q in weak_compatible_sequences(seq, j_min):
                 yield (a,) + p, X(i) * q
@@ -643,7 +644,7 @@ def compatible_sequences(seq, i_min=1, flag=None):
         yield (), X(0)**0
     else:
         a, seq = seq[0], seq[1:]
-        for i in range(i_min, phi(a) + 1):
+        for i in range(i_min, phi(abs(a)) + 1):
             j_min = (i + 1) if (seq and a < seq[0]) else i
             for p, q in compatible_sequences(seq, j_min, flag):
                 yield (a,) + p, X(i) * q
@@ -688,12 +689,36 @@ def _equivalence_class(p, cache, toggle_fn):
 def shifted_knuth_class(p):
     def toggle(w):
         for i in range(len(w) - 2):
-            if w[i] <= w[i + 2] < w[i + 1] or w[i + 1] <= w[i + 2] < w[i]:
-                yield w[:i] + (w[i + 1], w[i], w[i + 2]) + w[i + 3:]
-            if w[i + 1] < w[i] <= w[i + 2] or w[i + 2] < w[i] <= w[i + 1]:
-                yield w[:i] + (w[i], w[i + 2], w[i + 1]) + w[i + 3:]
+            a, c, b = w[i:i + 3]
+            ma, mc, mb = MarkedNumber(a), MarkedNumber(c), MarkedNumber(b)
+            if ma.ceil() <= mb <= mc.floor() or mc.ceil() <= mb <= ma.floor():
+                yield w[:i] + (c, a, b) + w[i + 3:]
+
+            b, c, a = w[i:i + 3]
+            ma, mc, mb = MarkedNumber(a), MarkedNumber(c), MarkedNumber(b)
+            if (ma <= mb.floor() and mb.ceil() <= mc) or (mc <= mb.floor() and mb.ceil() <= ma):
+                yield w[:i] + (b, a, c) + w[i + 3:]
+
         if len(w) >= 2:
-            yield (w[1], w[0]) + w[2:]
+            a, b = w[:2]
+            if abs(a) == abs(b):
+                yield (a, -b) + w[2:]
+            elif (a < 0 and b > 0) or (a > 0 and b < 0):
+                yield (-b, -a) + w[2:]  # primed SW
+                # yield (b, a) + w[2:]  # unprimed SW
+            else:
+                yield (b, a) + w[2:]
+
+        if len(w) >= 1:
+            yield (-w[0],) + w[1:]
+
+        # for i in range(len(w) - 2):
+        #     if w[i] <= w[i + 2] < w[i + 1] or w[i + 1] <= w[i + 2] < w[i]:
+        #         yield w[:i] + (w[i + 1], w[i], w[i + 2]) + w[i + 3:]
+        #     if w[i + 1] < w[i] <= w[i + 2] or w[i + 2] < w[i] <= w[i + 1]:
+        #         yield w[:i] + (w[i], w[i + 2], w[i + 1]) + w[i + 3:]
+        # if len(w) >= 2:
+        #     yield (w[1], w[0]) + w[2:]
 
     p = p.row_reading_word() if type(p) == Tableau else p
     return _equivalence_class(p, SHIFTED_REDUCED_TABLEAU_CACHE, toggle)

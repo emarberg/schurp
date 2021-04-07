@@ -34,6 +34,7 @@ from permutations import Permutation
 from partitions import Partition, StrictPartition
 from collections import defaultdict
 from words import Word
+from marked import MarkedNumber
 from vectors import Vector
 from tableaux import Tableau
 import pyperclip
@@ -834,8 +835,10 @@ def test_nil_key_compatible_sequences(m=3):
 def test_shifted_key_compatible_sequences(m=4, l=4):
     def test_shifted_key(p):
         ans = 0
-        for seq in shifted_knuth_class(p):
-            assert sagan_worley_insert(seq)[0] == p
+        cl = list(shifted_knuth_class(p))
+        for seq in cl:
+            assert primed_sw_insert(seq)[0] == p
+            seq = tuple(MarkedNumber(v) for v in seq)
             # seq = tuple(reversed(seq))
             for a, x in weak_compatible_sequences(seq):
                 ans += x
@@ -848,7 +851,7 @@ def test_shifted_key_compatible_sequences(m=4, l=4):
     for n in range(m + 1):
         for k in range(l + 1):
             for w in words(n, k):
-                p = sagan_worley_insert(w)[0]
+                p = primed_sw_insert(w)[0]
                 #
                 # try:
                 #     if o_eg_insert(w)[0] == p:
@@ -859,8 +862,7 @@ def test_shifted_key_compatible_sequences(m=4, l=4):
                 if p in seen:
                     continue
                 seen.add(p)
-                e = len(p.partition())
-                kappa = test_shifted_key(p) * 2**e
+                kappa = test_shifted_key(p) # * 2**len(p.partition())
                 if kappa in functions:
                     continue
                 functions.add(kappa)
@@ -952,6 +954,10 @@ def test_q_key_compatible_sequences(m=4):
 
 def sagan_worley_insert(sequence):
     return Word(*sequence).sagan_worley_insert()
+
+
+def primed_sw_insert(sequence):
+    return Word(*sequence).primed_sw_insert()
 
 
 def inverse_sagan_worley(p, q):

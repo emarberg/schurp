@@ -36,6 +36,15 @@ class Tableau:
     def unprime_two_diagonals(self):
         return Tableau({box: -val if box[1] <= box[0] + 1 and val.is_primed() else val for (box, val) in self.mapping.items()})
 
+    def unprime_togglable(self):
+        return Tableau({
+            box: -val
+            if val.is_primed() and
+            ((box[0] + 1, box[1]) not in self or abs(self.entry(box[0] + 1, box[1])) != abs(val)) and
+            ((box[0], box[1] - 1) not in self or abs(self.entry(box[0], box[1] - 1)) != abs(val)) and
+            all(abs(u) < abs(val) for (b, u) in self.mapping.items() if b[1] < box[1])
+            else val for (box, val) in self.mapping.items()})
+
     def unprime(self):
         return Tableau({box: -val if val.is_primed() else val for (box, val) in self.mapping.items()})
 

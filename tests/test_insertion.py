@@ -4,7 +4,8 @@ from words import (
     get_fpf_involution_words,
     Tableau,
     involution_insert,
-    primed_sw_insert
+    primed_sw_insert,
+    sagan_worley_insert
 )
 from marked import MarkedNumber
 from hopf import HopfPermutation
@@ -13,6 +14,7 @@ from crystals import (
     # SymplecticCrystalGenerator
 )
 from permutations import Permutation
+import random
 
 
 def test_primed_crystals(n=4, k=2):
@@ -213,6 +215,98 @@ def doperator(tab, index):
         tab = tab.set(i2, j2, x2 + 1 if x2.number < 0 else x2 - 1)
 
     return tab
+
+
+def _test_primed_sw_ck(w):
+    def check(v, w, i):
+        v = tuple(Word(a) for a in v)
+        w = tuple(Word(a) for a in w)
+        p, q = primed_sw_insert(*v)
+        pp, r = primed_sw_insert(*w)
+        if doperator(q, i) != r:
+            print('i =', i)
+            print('v =', v)
+            print(q)
+            print(doperator(q, i))
+            print('w =', w)
+            print(r)
+            assert False
+        if p != pp:
+            print('i =', i)
+            print('v =', v)
+            print(p)
+            print('w =', w)
+            print(pp)
+        return p == pp
+
+    if len(w) < 2:
+        return
+    a, b = w[:2]
+    if abs(a) == abs(b):
+        v = (a, -b) + w[2:]
+    elif (a < 0 and b > 0) or (a > 0 and b < 0):
+        v = (-b, -a) + w[2:]  # primed SW
+        # v = (b, a) + w[2:]  # unprimed SW
+    else:
+        v = (b, a) + w[2:]
+
+    assert check(v, w, 0)
+
+    for i in range(len(w) - 2):
+        v = w
+
+        a, c, b = w[i:i + 3]
+        ma, mc, mb = MarkedNumber(a), MarkedNumber(c), MarkedNumber(b)
+        if ma.ceil() <= mb <= mc.floor() or mc.ceil() <= mb <= ma.floor():
+            v = w[:i] + (c, a, b) + w[i + 3:]
+
+        b, c, a = w[i:i + 3]
+        ma, mc, mb = MarkedNumber(a), MarkedNumber(c), MarkedNumber(b)
+        if (ma <= mb.floor() and mb.ceil() <= mc) or (mc <= mb.floor() and mb.ceil() <= ma):
+            v = w[:i] + (b, a, c) + w[i + 3:]
+
+        if v == w:
+            continue
+
+        if not check(v, w, i + 1):
+            print(v)
+            print(primed_sw_insert(Word(*v))[0])
+            print(w)
+            print(primed_sw_insert(Word(*w))[0])
+            raise Exception
+
+
+def test_random_primed_sw_ck(n=10, bound=5):
+    its = 10000
+    total = (2 * bound) ** n
+    iteration = 0
+    for _ in range(its):
+        if iteration % 100 == 0:
+            print(iteration, 'of', its)
+        v = random.randint(0, total - 1)
+        w = _get_primed_word(v, n, bound)
+        _test_primed_sw_ck(w)
+        iteration += 1
+
+
+def _get_primed_word(v, n, bound):
+    word = []
+    for _ in range(n):
+        x = v % (2 * bound)
+        word += [x + 1 if x < bound else -(x + 1 - bound)]
+        v = v // (2 * bound)
+    return tuple(word)
+
+
+def test_primed_sw_ck(n=3, bound=3):
+    total = (2 * bound) ** n
+    iteration = 0
+    for v in range(total):
+        if iteration % 100 == 0:
+            print(iteration, 'of', total)
+        w = _get_primed_word(v, n, bound)
+        _test_primed_sw_ck(w)
+        iteration += 1
 
 
 def _test_primed_ck(w, records):
