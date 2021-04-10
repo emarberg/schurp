@@ -74,7 +74,48 @@ def random_integer_matrix(m, n, p):
     return ans
 
 
+def sw_permutation(biword):
+    ans = Permutation()
+    word = tuple(a for w in biword for a in w)
+    for i in range(len(word)):
+        u = cached_sw_insert(word[:i])[0].get_rows()
+        v = cached_sw_insert(word[:i + 1])[0].get_rows()
+        if len(u) == len(v):
+            q = len(u)
+            t = Permutation()
+            for i in range(q):
+                a, b = u[i][0], v[i][0]
+                if a != b:
+                    a, b = abs(a), abs(b)
+                    assert a != b
+                    assert t == Permutation()
+                    t = Permutation.transposition(a, b)
+            ans = ans * t
+
+    signs = {}
+    for a in word:
+        if abs(a) not in signs:
+            signs[abs(a)] = -1 if a < 0 else 1
+    return ans, signs, word
+
+
 def help_test_primed_sw_insertion(biword, mapping={}):
+    pi, signs, word = sw_permutation(biword)
+
+    def func(i):
+        return -i if signs[abs(i)] != signs[pi(abs(i))] else i
+
+    def transform(tab, rec):
+        tab = Tableau({
+            box: -val if box[0] == box[1] and rec.entry(box[0], box[1]).is_primed() else val
+            for box, val in tab.mapping.items()
+        })
+
+        return Tableau({
+            box: val if not tab.is_togglable(box) else func(val)
+            for box, val in tab.mapping.items()
+        })
+
     try:
         p, q = primed_sw_insert(*biword)
         pp, qq = sagan_worley_insert(*biword)
@@ -83,6 +124,15 @@ def help_test_primed_sw_insertion(biword, mapping={}):
         assert (p, q) not in mapping or mapping[(p, q)] == biword
         assert q.unprime_diagonal() == qq
         assert p.unprime_togglable() == pp.unprime_togglable()
+        if pp != transform(p, q):
+            print(biword)
+            print(word)
+            print(signs)
+            print(pi)
+            print(p)
+            print(pp)
+            print(transform(p, q))
+            input('\n\n\n')
         mapping[(p, q)] = biword
 
         # print()
@@ -110,11 +160,17 @@ def help_test_primed_sw_insertion(biword, mapping={}):
 
 
 def test_primed_sw_insertion_simple():
+    biword = [Word(3,), Word(-2,)]
+    help_test_primed_sw_insertion(biword)
+
     biword = [Word(1, 3), Word(2, 6), Word(-5), Word(4), Word(3)]
     help_test_primed_sw_insertion(biword)
 
+    biword = [Word(2, 3, 4), Word(-1, 4, 4, 5), Word(2, 2, -4, 4, 5, 5), Word(-1, 2, -4, 5, 5), Word(2, 3, -4, 4)]
+    help_test_primed_sw_insertion(biword)
 
-def test_random_primed_sw_insertion(m=5, n=5, bound=2):
+
+def test_random_primed_sw_insertion(m=5, n=5, bound=5):
     total = 1000
     mapping = {}
     iteration = 0
