@@ -124,7 +124,18 @@ def help_test_primed_sw_insertion(biword, mapping={}):
         assert (p, q) not in mapping or mapping[(p, q)] == biword
         assert q.unprime_diagonal() == qq
         assert p.unprime_togglable() == pp.unprime_togglable()
-        if pp != transform(p, q):
+
+        try:
+            for box, val in p.mapping.items():
+                i, j = box
+                u = abs(val)
+                if p.is_togglable(box):
+                    if (q if i == j else p).entry(i, j).is_primed():
+                        assert signs[pi(u)] == -1
+                    else:
+                        assert signs[pi(u)] == 1
+            assert pp == transform(p, q)
+        except:
             print(biword)
             print(word)
             print(signs)
