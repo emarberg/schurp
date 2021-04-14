@@ -38,7 +38,8 @@ class Tableau:
 
     def is_togglable(self, box):
         val = self.mapping[box]
-        return not any(abs(v) == abs(val) and b[0] >= box[0] and b[1] <= box[1] and b != box for (b, v) in self.mapping.items())
+        return not any(abs(v) == abs(val) and (b[0] > box[0] or b[1] < box[1]) for (b, v) in self.mapping.items())
+        # return not any(abs(v) == abs(val) and b[0] >= box[0] and b[1] <= box[1] and b != box for (b, v) in self.mapping.items())
 
     def unprime_togglable(self):
         return Tableau({
