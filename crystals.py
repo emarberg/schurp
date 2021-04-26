@@ -8,9 +8,388 @@ from permutations import Permutation
 from keys import monomial_from_composition, symmetric_halves
 import tests.test_keys as testkeys
 import subprocess
+import time
 
 
 BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
+
+
+class AbstractCrystalMixin:
+
+    def __init__(self, rank, vertices, edges, weights, printer=str):
+        self._rank = rank
+        self._vertices = set(vertices)
+        self.f_operators = {}
+        self.e_operators = {}
+        for (i, v, w) in edges:
+            self.f_operators[(i, v)] = w
+            self.e_operators[(i, w)] = v
+        self.weights = weights.copy()
+        self.printer = printer
+        self.e_strings = {}
+        self.f_strings = {}
+        self.s_operators = {}
+
+    def draw(self, extended=False):
+        s = ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        #
+        for x in self:
+            s += ['    "%s";' % self.printer(x)]
+        #
+        for v in self:
+            for i in self.extended_indices if extended else self.indices:
+                w = self.f_operator(i, v)
+                if w is not None:
+                    s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), i)]
+        s += ['}']
+        s = '\n'.join(s)
+        #
+        filename = self.filename(time.time)
+        dot_filename = BASE_DIRECTORY + 'abstract/' + 'dot/' + '%s.dot' % filename
+        png_filename = BASE_DIRECTORY + 'abstract/' + 'png/' + '%s.png' % filename
+        with open(dot_filename, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["open", png_filename])
+
+    def e_string(self, i, v):
+        assert i in self.indices
+        assert v in self.vertices
+        if (i, v) not in self.e_strings:
+            k = 0
+            w = self.e_operator(i, v)
+            while w is not None:
+                k += 1
+                w = self.e_operator(i, w)
+            self.e_strings[(i, v)] = k
+        return self.e_strings[(i, v)]
+
+    def f_string(self, i, v):
+        assert i in self.indices
+        assert v in self.vertices
+        if (i, v) not in self.f_strings:
+            k = 0
+            w = self.f_operator(i, v)
+            while w is not None:
+                k += 1
+                w = self.f_operator(i, w)
+            self.f_strings[(i, v)] = k
+        return self.f_strings[(i, v)]
+
+    def e_operator(self, i, v):
+        raise NotImplementedError
+
+    def f_operator(self, i, v):
+        raise NotImplementedError
+
+    def s_operator(self, i, b):
+        assert 1 <= i < self.rank
+        assert b in self.vertices
+        if (i, b) not in self.s_operators:
+            k = self.f_string(i, b) - self.e_string(i, b)
+            ans = b
+            if k >= 0:
+                for _ in range(k):
+                    ans = self.f_operator(i, ans)
+            else:
+                for _ in range(-k):
+                    ans = self.e_operator(i, ans)
+            self.s_operators[(i, b)] = ans
+        return self.s_operators[(i, b)]
+
+    def weight(self, v):
+        return self.weights[v]
+
+    def __iter__(self):
+        return iter(self._vertices)
+
+    def __len__(self):
+        return len(self.vertices)
+
+    @property
+    def vertices(self):
+        return self._vertices
+
+    @property
+    def indices(self):
+        raise NotImplementedError
+
+    @property
+    def extended_indices(self):
+        raise NotImplementedError
+
+    @property
+    def rank(self):
+        return self._rank
+
+    def is_highest_weight(self, v):
+        return all(self.e_operator(i, v) is None for i in self.extended_indices)
+
+    def get_highest_weights(self):
+        return {self.printer(v): self.weight(v) for v in self if self.is_highest_weight(v)}
+
+    def get_highest_weight_multiplicities(self):
+        ans = {}
+        for mu in self.get_highest_weights().values():
+            ans[mu] = ans.get(mu, 0) + 1
+        return ans
+
+    @classmethod
+    def tensor_rank(cls, b, c):
+        assert b.rank == c.rank
+        return b.rank
+
+    @classmethod
+    def tensor_vertices(cls, b, c):
+        return [(x, y) for x in b for y in c]
+
+    @classmethod
+    def tensor_printer(cls, b, c):
+        def printer(pair):
+            return b.printer(pair[0]) + ' ' + c.printer(pair[1])
+        return printer
+
+    @classmethod
+    def tensor_weights(cls, b, c):
+        def add_weights(w1, w2):
+            assert len(w1) == len(w2)
+            return tuple(w1[i] + w2[i] for i in range(len(w1)))
+
+        return {(x, y): add_weights(b.weight(x), c.weight(y)) for x in b for y in c}
+
+    @classmethod
+    def tensor_edges(cls, b, c):
+        raise NotImplementedError
+
+    def tensor(self, c):
+        b = self
+        cls = type(b)
+        assert type(b) == type(c)
+        assert b.rank == c.rank
+        rank = cls.tensor_rank(b, c)
+        vertices = cls.tensor_vertices(b, c)
+        edges = cls.tensor_edges(b, c)
+        weights = cls.tensor_weights(b, c)
+        printer = cls.tensor_printer(b, c)
+        return cls(rank, vertices, edges, weights, printer)
+
+
+class AbstractGLCrystal(AbstractCrystalMixin):
+
+    @property
+    def indices(self):
+        return list(range(1, self.rank))
+
+    @property
+    def extended_indices(self):
+        return self.indices
+
+    def e_operator(self, i, v):
+        assert i in self.indices
+        assert v in self.vertices
+        return self.e_operators.get((i, v), None)
+
+    def f_operator(self, i, v):
+        assert i in self.indices
+        assert v in self.vertices
+        return self.f_operators.get((i, v), None)
+
+    @classmethod
+    def tensor_edges(cls, b, c):
+        assert b.rank == c.rank
+        edges = []
+        for x in b:
+            for y in c:
+                for i in range(1, b.rank):
+                    if b.e_string(i, x) < c.f_string(i, y):
+                        yy = c.f_operator(i, y)
+                        if yy is not None:
+                            edges.append((i, (x, y), (x, yy)))
+                    else:
+                        xx = b.f_operator(i, x)
+                        if xx is not None:
+                            edges.append((i, (x, y), (xx, y)))
+        return edges
+
+    def filename(self, ts=None):
+        return "gl(%s)_crystal.%s" % (self.rank, len(self))
+
+    @classmethod
+    def standard_object(cls, rank):
+        vertices = list(range(1, rank + 1))
+        edges = [(i, i, i + 1) for i in range(1, rank)]
+        weights = {}
+        for v in vertices:
+            wt = rank * [0]
+            wt[v - 1] = 1
+            weights[v] = tuple(wt)
+        return cls(rank, vertices, edges, weights)
+
+
+class AbstractQCrystal(AbstractCrystalMixin):
+
+    @property
+    def indices(self):
+        return [-1] + list(range(1, self.rank))
+
+    @property
+    def extended_indices(self):
+        return [i for i in range(-self.rank + 1, self.rank) if i != 0]
+
+    def e_operator(self, i, v):
+        assert i in self.extended_indices
+        assert v in self.vertices
+        if i < -1:
+            x = self.e_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
+            x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
+            self.e_operators[(i, v)] = x
+        return self.e_operators.get((i, v), None)
+
+    def f_operator(self, i, v):
+        assert i in self.extended_indices
+        assert v in self.vertices
+        if i < -1:
+            x = self.f_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
+            x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
+            self.f_operators[(i, v)] = x
+        return self.f_operators.get((i, v), None)
+
+    @classmethod
+    def tensor_edges(cls, b, c):
+        edges = AbstractGLCrystal.tensor_edges(b, c)
+        for x in b:
+            xweight = b.weight(x)
+            for y in c:
+                if xweight[0] == xweight[1] == 0:
+                    yy = c.f_operator(-1, y)
+                    if yy is not None:
+                        edges.append((-1, (x, y), (x, yy)))
+                else:
+                    xx = b.f_operator(-1, x)
+                    if xx is not None:
+                        edges.append((-1, (x, y), (xx, y)))
+        return edges
+
+    def filename(self, ts=None):
+        return "q(%s)_crystal.%s" % (self.rank, len(self))
+
+    @classmethod
+    def standard_object(cls, rank):
+        assert rank >= 2
+        vertices = list(range(1, rank + 1))
+        edges = [(i, i, i + 1) for i in range(1, rank)] + [(-1, 1, 2)]
+        weights = {}
+        for v in vertices:
+            wt = rank * [0]
+            wt[v - 1] = 1
+            weights[v] = tuple(wt)
+        return cls(rank, vertices, edges, weights)
+
+
+class AbstractPrimedQCrystal(AbstractCrystalMixin):
+
+    def get_highest_weight_multiplicities(self):
+        ans = {}
+        for v in self.get_highest_weights().values():
+            mu = v[1:]
+            ans[mu] = ans.get(mu, 0) + 1
+        return ans
+
+    @property
+    def indices(self):
+        return list(range(-1, self.rank))
+
+    @property
+    def extended_indices(self):
+        n = self.rank
+        return sorted(set(range(-n + 1, n)) | set(range(0, n * n, n)))
+
+    def e_operator(self, i, v):
+        assert i in self.extended_indices
+        assert v in self.vertices
+        if i < -1:
+            x = self.e_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
+            x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
+            self.e_operators[(i, v)] = x
+        elif i >= self.rank:
+            j = i // self.rank
+            x = self.e_operator(i - self.rank, self.s_operator(j, v))
+            x = x if x is None else self.s_operator(j, x)
+            self.e_operators[(i, v)] = x
+        return self.e_operators.get((i, v), None)
+
+    def f_operator(self, i, v):
+        assert i in self.extended_indices
+        assert v in self.vertices
+        if i < -1:
+            x = self.f_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
+            x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
+            self.f_operators[(i, v)] = x
+        elif i >= self.rank:
+            j = i // self.rank
+            x = self.f_operator(i - self.rank, self.s_operator(j, v))
+            x = x if x is None else self.s_operator(j, x)
+            self.f_operators[(i, v)] = x
+        return self.f_operators.get((i, v), None)
+
+    @classmethod
+    def tensor_edges(cls, b, c):
+        edges = AbstractGLCrystal.tensor_edges(b, c)
+        for x in b:
+            if b.e_string(0, x) + b.f_string(0, x) == 0:
+                for y in c:
+                    yy = c.f_operator(0, y)
+                    if yy is not None:
+                        edges.append((0, (x, y), (x, yy)))
+            else:
+                for y in c:
+                    xx = b.f_operator(0, x)
+                    if xx is not None:
+                        edges.append((0, (x, y), (xx, y)))
+
+            xweight = b.weight(x)
+            fx = b.f_operator(-1, x)
+            for y in c:
+                if xweight[1] == xweight[2] == 0:
+                    xx = x
+                    yy = c.f_operator(-1, y)
+                elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.f_string(0, x) == c.e_string(0, y):
+                    xx = b.f_operator(-1, b.f_operator(0, x))
+                    yy = c.e_operator(0, y)
+                elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.e_string(0, x) == c.f_string(0, y):
+                    xx = b.f_operator(-1, b.e_operator(0, x))
+                    yy = c.f_operator(0, y)
+                else:
+                    xx = b.f_operator(-1, x)
+                    yy = y
+
+                if xx is not None and yy is not None:
+                    edges.append((-1, (x, y), (xx, yy)))
+
+        return edges
+
+    def filename(self, ts=None):
+        return "primed_q(%s)_crystal.%s" % (self.rank, len(self))
+
+    @classmethod
+    def standard_object(cls, rank):
+        assert rank >= 2
+        vertices = [i for i in range(-rank, rank + 1) if i != 0]
+        edges = \
+            [(i, i, i + 1) for i in range(1, rank)] + [(-1, 1, 2)] + \
+            [(i, -i, -i - 1) for i in range(1, rank)] + [(-1, -1, -2)] + \
+            [(0, 1, -1)]
+        weights = {}
+        for v in vertices:
+            wt = (rank + 1) * [0]
+            wt[0] = 2 if v > 0 else 1
+            wt[abs(v)] = 1
+            weights[v] = tuple(wt)
+        printer = lambda x: str(abs(x)) + ("'" if x < 0 else "")
+        return cls(rank, vertices, edges, weights, printer)
 
 
 class OrthogonalCrystalGenerator:
