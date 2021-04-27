@@ -129,13 +129,16 @@ class AbstractCrystalMixin:
         return all(self.e_operator(i, v) is None for i in self.extended_indices)
 
     def get_highest_weights(self):
-        return {self.printer(v): self.weight(v) for v in self if self.is_highest_weight(v)}
+        return [(v, self.weight(v)) for v in self if self.is_highest_weight(v)]
+
+    def group_highest_weights(self):
+        ans = {}
+        for v, mu in self.get_highest_weights():
+            ans[mu] = ans.get(mu, []) + [v]
+        return ans
 
     def get_highest_weight_multiplicities(self):
-        ans = {}
-        for mu in self.get_highest_weights().values():
-            ans[mu] = ans.get(mu, 0) + 1
-        return ans
+        return {k: len(v) for k, v in self.group_highest_weights().items()}
 
     @classmethod
     def tensor_rank(cls, b, c):
@@ -175,6 +178,44 @@ class AbstractCrystalMixin:
         weights = cls.tensor_weights(b, c)
         printer = cls.tensor_printer(b, c)
         return cls(rank, vertices, edges, weights, printer)
+
+    def isomorphic_subcrystals(self, a, b):
+        if a is None and b is None:
+            return True
+        if a is None or b is None:
+            return False
+        assert a in self.vertices
+        assert b in self.vertices
+        children_a = {}
+        none_a = []
+        children_b = {}
+        none_b = []
+        for i in self.extended_indices:
+            x = self.f_operator(i, a)
+            if x is None:
+                none_a.append(i)
+            else:
+                children_a[x] = children_a.get(x, []) + [i]
+            x = self.f_operator(i, b)
+            if x is None:
+                none_b.append(i)
+            else:
+                children_b[x] = children_b.get(x, []) + [i]
+        if none_a != none_b:
+            return False
+        children_a_values = {tuple(v) for v in children_a.values()}
+        children_b_values = {tuple(v) for v in children_b.values()}
+        if children_a_values != children_b_values:
+            return False
+        seen = set()
+        for i in self.extended_indices:
+            x = self.f_operator(i, a)
+            y = self.f_operator(i, b)
+            if (x, y) not in seen:
+                if not self.isomorphic_subcrystals(x, y):
+                    return False
+                seen.add((x, y))
+        return True
 
 
 class AbstractGLCrystal(AbstractCrystalMixin):
@@ -291,11 +332,11 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
-    def get_highest_weight_multiplicities(self):
+    def group_highest_weights(self):
         ans = {}
-        for v in self.get_highest_weights().values():
-            mu = v[1:]
-            ans[mu] = ans.get(mu, 0) + 1
+        for v, mu in self.get_highest_weights():
+            mu = mu[1:]
+            ans[mu] = ans.get(mu, []) + [v]
         return ans
 
     @property
