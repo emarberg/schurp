@@ -833,6 +833,7 @@ def test_nil_key_compatible_sequences(m=3):
 
 
 def test_shifted_key_compatible_sequences(m=4, l=4):
+    # FAILS
     def test_shifted_key(p):
         ans = 0
         cl = list(shifted_knuth_class(p))
@@ -972,6 +973,7 @@ def test_inverse_sagan_worley(n=5):
 
 
 def test_shifted_knuth_class(n=4):
+    # FAILS
     for w in words(n):
         p, q = sagan_worley_insert(w)
         for v in shifted_knuth_class(w):

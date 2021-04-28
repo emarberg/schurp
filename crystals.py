@@ -392,7 +392,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
         if i > 0:
             u = AbstractGLCrystal.f_operator_on_words(i, [abs(x) for x in word])
             if u:
-                u = cl(u[j] if word[j] >= 0 else -u[j] for j in range(len(u)))
+                u = cl([u[j] if word[j] >= 0 else -u[j] for j in range(len(u))])
             return u
         elif i == 0:
             ones = [j for j in range(len(word)) if word[j] in [-1, 1]]
@@ -419,7 +419,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
         if i > 0:
             u = AbstractGLCrystal.e_operator_on_words(i, [abs(x) for x in word])
             if u:
-                u = cl(u[j] if word[j] >= 0 else -u[j] for j in range(len(u)))
+                u = cl([u[j] if word[j] >= 0 else -u[j] for j in range(len(u))])
             return u
         elif i == 0:
             ones = [j for j in range(len(word)) if word[j] in [-1, 1]]

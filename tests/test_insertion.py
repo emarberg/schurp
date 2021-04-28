@@ -17,46 +17,71 @@ from permutations import Permutation
 import random
 
 
+def random_increasing_factorization(n):
+    w = Permutation.random_primed_involution_word(n)
+    f = []
+    for a in w:
+        if not f or abs(f[-1][-1]) > abs(a) or random.randint(0, 10) == 0:
+            f.append([a])
+        else:
+            f[-1].append(a)
+    return tuple(tuple(_) for _ in f)
+
+
+def help_test_primed_crystals(f, verbose=False):
+    if verbose:
+        print()
+        print(f)
+    p1, q1 = involution_insert(*f)
+    for i in range(-1, len(f)):
+        g = Word.incr_crystal_f(f, i)
+        if verbose:
+            print('  --[', i, ']-->', g)
+        assert g is None or Word.incr_crystal_e(g, i) == f
+        try:
+            if g is not None:
+                p2, q2 = involution_insert(*g)
+                assert p1 == p2
+                assert q1.shifted_crystal_f(i) == q2
+            else:
+                assert q1.shifted_crystal_f(i) is None
+        except AssertionError:
+            print(f, '-- %s -->' % i, g)
+            print('insertion tableaux:')
+            print(p1)
+            print(p2)
+            print('recording tableaux:')
+            print(q1)
+            print()
+            print(q2)
+            print()
+            print(q1.shifted_crystal_f(i, True))
+            print()
+            input('')
+            assert p1 == p2
+        # g = Word.incr_crystal_e(f, i)
+
+        # if g is not None:
+        #     p2, q2 = involution_insert(*g)
+        #     assert p1 == p2
+        #     assert q1.shifted_crystal_e(i) == q2
+        # else:
+        #     assert q1.shifted_crystal_e(i) is None
+
+
 def test_primed_crystals(n=4, k=2):
     for pi in Permutation.involutions(n):
         for w in pi.get_primed_involution_words():
             for f in Word.increasing_factorizations(w, k):
                 f = tuple(tuple(_) for _ in f)
-                p1, q1 = involution_insert(*f)
+                help_test_primed_crystals(f)
 
-                for i in range(-1, k):
-                    g = Word.incr_crystal_f(f, i)
-                    assert g is None or Word.incr_crystal_e(g, i) == f
 
-                    try:
-                        if g is not None:
-                            p2, q2 = involution_insert(*g)
-                            assert p1 == p2
-                            assert q1.shifted_crystal_f(i) == q2
-                        else:
-                            assert q1.shifted_crystal_f(i) is None
-                    except AssertionError:
-                        print(f, '-- %s -->' % i, g)
-                        print('insertion tableaux:')
-                        print(p1)
-                        print(p2)
-                        print('recording tableaux:')
-                        print(q1)
-                        print()
-                        print(q2)
-                        print()
-                        print(q1.shifted_crystal_f(i, True))
-                        print()
-                        input('')
-                        assert p1 == p2
-                    # g = Word.incr_crystal_e(f, i)
-
-                    # if g is not None:
-                    #     p2, q2 = involution_insert(*g)
-                    #     assert p1 == p2
-                    #     assert q1.shifted_crystal_e(i) == q2
-                    # else:
-                    #     assert q1.shifted_crystal_e(i) is None
+def test_random_primed_crystals(n=10):
+    count = 100
+    for _ in range(count):
+        f = random_increasing_factorization(n)
+        help_test_primed_crystals(f, verbose=True)
 
 
 def invert_fac(f):
@@ -76,7 +101,7 @@ def test_mixed_insert():
     assert w.mixed_insert() == (p, q)
 
     testset = {
-        Permutation.from_involution_word(*w) for w in Permutation.all(5)
+        Permutation.from_involution_word(*w) for w in Permutation.all(4)
     }
     count = 0
     for pi in list(testset):
@@ -277,7 +302,7 @@ def _test_primed_sw_ck(w):
 
 
 def test_random_primed_sw_ck(n=10, bound=5):
-    its = 10000
+    its = 1000
     total = (2 * bound) ** n
     iteration = 0
     for _ in range(its):

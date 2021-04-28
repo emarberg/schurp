@@ -181,8 +181,8 @@ def test_primed_sw_insertion_simple():
     help_test_primed_sw_insertion(biword)
 
 
-def test_random_primed_sw_insertion(m=5, n=5, bound=5):
-    total = 1000
+def test_random_primed_sw_insertion(m=4, n=4, bound=4):
+    total = 10
     mapping = {}
     iteration = 0
     for _ in range(total):
@@ -193,7 +193,7 @@ def test_random_primed_sw_insertion(m=5, n=5, bound=5):
         iteration += 1
 
 
-def test_primed_sw_insertion(m=2, n=3, bound=2):
+def test_primed_sw_insertion(m=2, n=2, bound=2):
     total = (2 * bound + 1) ** (m * n)
     mapping = {}
     iteration = 0

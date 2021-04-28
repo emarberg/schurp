@@ -10,7 +10,7 @@ import random
 class Word:
 
     def __init__(self, *args, **kwargs):
-        args = args[0] if len(args) == 1 and type(args) != int else args
+        args = args[0] if len(args) == 1 and type(args[0]) != int else args
         self.subset = kwargs.get('subset', None) or set(args)
         self.elements = tuple(args)
         self._permutations = None
@@ -90,7 +90,7 @@ class Word:
             return (x, y) + tuple(tup[2:])
 
         elif index > 0:
-            ans = [list(tup[i]) for i in [abs(index) - 1, abs(index)]]
+            ans = [list(tup[i]) for i in [index - 1, index]]
             pairing = cls._incr_pairing(ans[0], ans[1])
             left = [a for a in ans[0] if a not in pairing[0]]
             if left:
