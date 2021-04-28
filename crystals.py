@@ -220,6 +220,32 @@ class AbstractCrystalMixin:
 
 class AbstractGLCrystal(AbstractCrystalMixin):
 
+    @classmethod
+    def f_operator_on_words(cls, i, word):
+        cl, word = type(word), list(word)
+        stack = []
+        for index, a in reversed(list(enumerate(word))):
+            if a == i:
+                stack.append(index)
+            elif a == i + 1 and stack:
+                stack.pop()
+        if stack:
+            word[stack[0]] += 1
+            return cl(word)
+
+    @classmethod
+    def e_operator_on_words(cls, i, word):
+        cl, word = type(word), list(word)
+        stack = []
+        for index, a in enumerate(word):
+            if a == i + 1:
+                stack.append(index)
+            elif a == i and stack:
+                stack.pop()
+        if stack:
+            word[stack[0]] -= 1
+            return cl(word)
+
     @property
     def indices(self):
         return list(range(1, self.rank))
@@ -271,6 +297,34 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 
 
 class AbstractQCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def f_operator_on_words(cls, i, word):
+        if i > 0:
+            return AbstractGLCrystal.f_operator_on_words(i, word)
+        elif i == -1:
+            cl, word = type(word), list(word)
+            ones = [j for j in range(len(word)) if word[j] == 1]
+            twos = [j for j in range(len(word)) if word[j] == 2]
+            if not ones or (ones and twos and twos[0] < ones[0]):
+                return None
+            else:
+                word[ones[0]] = 2
+                return cl(word)
+
+    @classmethod
+    def e_operator_on_words(cls, i, word):
+        if i > 0:
+            return AbstractGLCrystal.e_operator_on_words(i, word)
+        elif i == -1:
+            cl, word = type(word), list(word)
+            ones = [j for j in range(len(word)) if word[j] == 1]
+            twos = [j for j in range(len(word)) if word[j] == 2]
+            if not twos or (ones and twos and ones[0] < twos[0]):
+                return None
+            else:
+                word[twos[0]] = 1
+                return cl(word)
 
     @property
     def indices(self):
@@ -331,6 +385,60 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def f_operator_on_words(cls, i, word):
+        cl, word = type(word), list(word)
+        if i > 0:
+            u = AbstractGLCrystal.f_operator_on_words(i, [abs(x) for x in word])
+            if u:
+                u = cl(u[j] if word[j] >= 0 else -u[j] for j in range(len(u)))
+            return u
+        elif i == 0:
+            ones = [j for j in range(len(word)) if word[j] in [-1, 1]]
+            if not ones or (ones and word[ones[0]] == -1):
+                return None
+            word[ones[0]] = -1
+            return cl(word)
+        elif i == -1:
+            ones = [j for j in range(len(word)) if word[j] in [-1, 1]]
+            twos = [j for j in range(len(word)) if word[j] in [-2, 2]]
+            if not ones or (ones and twos and twos[0] < ones[0]):
+                return None
+            a = word[ones[0]]
+            if len(ones) == 1 or word[ones[0]] == word[ones[1]]:
+                word[ones[0]] = 2 if a > 0 else -2
+            else:
+                word[ones[0]] = -2 if a > 0 else 2
+                word[ones[1]] = 1 if a > 0 else -1
+            return cl(word)
+
+    @classmethod
+    def e_operator_on_words(cls, i, word):
+        cl, word = type(word), list(word)
+        if i > 0:
+            u = AbstractGLCrystal.e_operator_on_words(i, [abs(x) for x in word])
+            if u:
+                u = cl(u[j] if word[j] >= 0 else -u[j] for j in range(len(u)))
+            return u
+        elif i == 0:
+            ones = [j for j in range(len(word)) if word[j] in [-1, 1]]
+            if not ones or (ones and word[ones[0]] == 1):
+                return None
+            word[ones[0]] = 1
+            return cl(word)
+        elif i == -1:
+            ones = [j for j in range(len(word)) if word[j] in [-1, 1]]
+            twos = [j for j in range(len(word)) if word[j] in [-2, 2]]
+            if not twos or (ones and twos and ones[0] < twos[0]):
+                return None
+            a = word[twos[0]]
+            if len(ones) == 0 or word[ones[0]] * word[twos[0]] > 0:
+                word[twos[0]] = 1 if a > 0 else -1
+            else:
+                word[twos[0]] = 1 if a < 0 else -1
+                word[ones[0]] = -1 if a < 0 else 1
+            return cl(word)
 
     def group_highest_weights(self):
         ans = {}

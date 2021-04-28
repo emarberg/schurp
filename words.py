@@ -10,6 +10,7 @@ import random
 class Word:
 
     def __init__(self, *args, **kwargs):
+        args = args[0] if len(args) == 1 and type(args) != int else args
         self.subset = kwargs.get('subset', None) or set(args)
         self.elements = tuple(args)
         self._permutations = None
