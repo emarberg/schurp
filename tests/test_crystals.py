@@ -23,6 +23,22 @@ def _test_components(crystal, rank, factors, x):
         u = b if u is None else u.tensor(b)
 
         groups = u.group_highest_weights()
+        lowgroups = u.group_lowest_weights()
+        try:
+            for mu in groups:
+                rmu = tuple(reversed(mu))
+                assert rmu in lowgroups
+                assert len(groups[mu]) == len(lowgroups[rmu])
+            for mu in lowgroups:
+                rmu = tuple(reversed(mu))
+                assert rmu in groups
+                assert len(groups[rmu]) == len(lowgroups[mu])
+        except:
+            print('* highest:', groups)
+            print('*  lowest:', lowgroups)
+            print()
+            assert False
+
         for g in groups.values():
             for i in range(len(g) - 1):
                 assert u.isomorphic_subcrystals(g[i], g[i + 1])
@@ -40,6 +56,7 @@ def _test_components(crystal, rank, factors, x):
             print('expected =', expected)
             print('  actual =', actual)
             print()
+            assert False
 
 
 def test_gl_components(rank=3, factors=3):

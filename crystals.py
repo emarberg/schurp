@@ -30,6 +30,9 @@ class AbstractCrystalMixin:
         self.f_strings = {}
         self.s_operators = {}
 
+    def index_printer(self, i, primed=False):
+        return str(i)
+
     def draw(self, extended=False):
         s = ['digraph G {']
         s += ['    overlap=false;']
@@ -43,7 +46,16 @@ class AbstractCrystalMixin:
             for i in self.extended_indices if extended else self.indices:
                 w = self.f_operator(i, v)
                 if w is not None:
+                    i = self.index_printer(i)
                     s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), i)]
+        #
+        for v in self:
+            for i in self.extended_indices if extended else self.indices:
+                if i < 0:
+                    w = self.fprime_operator(i, v)
+                    if w is not None:
+                        i = self.index_printer(i, primed=True)
+                        s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), i)]
         s += ['}']
         s = '\n'.join(s)
         #
@@ -85,6 +97,16 @@ class AbstractCrystalMixin:
     def f_operator(self, i, v):
         raise NotImplementedError
 
+    def eprime_operator(self, i, v):
+        if i >= 0:
+            return self.e_operator(i, v)
+        return self.star_operator(self.f_operator(i, self.star_operator(v)))
+
+    def fprime_operator(self, i, v):
+        if i >= 0:
+            return self.f_operator(i, v)
+        return self.star_operator(self.e_operator(i, self.star_operator(v)))
+
     def s_operator(self, i, b):
         assert 1 <= i < self.rank
         assert b in self.vertices
@@ -99,6 +121,16 @@ class AbstractCrystalMixin:
                     ans = self.e_operator(i, ans)
             self.s_operators[(i, b)] = ans
         return self.s_operators[(i, b)]
+
+    def star_operator(self, b):
+        if b is None:
+            return None
+        n = self.rank
+        a = b
+        for j in range(n):
+            for i in range(1, n - j):
+                a = self.s_operator(i, a)
+        return a
 
     def weight(self, v):
         return self.weights[v]
@@ -124,6 +156,21 @@ class AbstractCrystalMixin:
     @property
     def rank(self):
         return self._rank
+
+    def is_lowest_weight(self, v):
+        return all(self.fprime_operator(i, v) is None for i in self.extended_indices)
+
+    def get_lowest_weights(self):
+        return [(v, self.weight(v)) for v in self if self.is_lowest_weight(v)]
+
+    def group_lowest_weights(self):
+        ans = {}
+        for v, mu in self.get_lowest_weights():
+            ans[mu] = ans.get(mu, []) + [v]
+        return ans
+
+    def get_lowest_weight_multiplicities(self):
+        return {k: len(v) for k, v in self.group_lowest_weights().items()}
 
     def is_highest_weight(self, v):
         return all(self.e_operator(i, v) is None for i in self.extended_indices)
@@ -298,6 +345,13 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 
 class AbstractQCrystal(AbstractCrystalMixin):
 
+    def index_printer(self, i, primed=False):
+        if not primed:
+            return str(i)
+        else:
+            assert -(self.rank) < i < 0
+            return str(self.rank + i) + "\'"
+
     @classmethod
     def f_operator_on_words(cls, i, word):
         if i > 0:
@@ -386,6 +440,13 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
+    def index_printer(self, i, primed=False):
+        if not primed:
+            return str(i) if i < self.rank else ('0[' + str(i // self.rank) + ']')
+        else:
+            assert -(self.rank) < i < 0
+            return str(self.rank + i) + "\'"
+
     @classmethod
     def f_operator_on_words(cls, i, word):
         cl, word = type(word), list(word)
@@ -443,6 +504,13 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
     def group_highest_weights(self):
         ans = {}
         for v, mu in self.get_highest_weights():
+            mu = mu[1:]
+            ans[mu] = ans.get(mu, []) + [v]
+        return ans
+
+    def group_lowest_weights(self):
+        ans = {}
+        for v, mu in self.get_lowest_weights():
             mu = mu[1:]
             ans[mu] = ans.get(mu, []) + [v]
         return ans
