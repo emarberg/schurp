@@ -22,6 +22,30 @@ class Permutation:
     def star(self, n):
         return Permutation(*[n + 1 - self(i) for i in range(n, 0, -1)])
 
+    def rank_table(self, p, q):
+        ans = 0
+        for i in range(1, p + 1):
+            if self(i) <= q:
+                ans += 1
+        return ans
+
+    @classmethod
+    def northeast_chains(cls, p, q, size):
+        ans = set()
+        for rows in itertools.combinations(range(1, p + 1), size):
+            for cols in itertools.combinations(range(1, q + 1), size):
+                rows = tuple(reversed(rows))
+                ans.add(tuple(zip(rows, reversed(cols))))
+        return ans
+
+    @classmethod
+    def reflected_northeast_chains(cls, p, q, size):
+        ans = set()
+        for chain in cls.northeast_chains(p, q, size):
+            if not any(a == b for (a, b) in chain):
+                ans.add(tuple(sorted({(a, b) if a > b else (b, a) for (a, b) in chain})))
+        return ans
+
     @property
     def rank(self):
         return len(self.oneline)
