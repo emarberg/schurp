@@ -29,12 +29,16 @@ class Permutation:
                 ans += 1
         return ans
 
+    def print_rank_table(self):
+        n = self.rank
+        for p in range(1, n + 1):
+            print(' '.join([str(self.rank_table(p, q)) for q in range(1, n + 1)]))
+
     @classmethod
     def northeast_chains(cls, p, q, size):
         ans = set()
         for rows in itertools.combinations(range(1, p + 1), size):
             for cols in itertools.combinations(range(1, q + 1), size):
-                rows = tuple(reversed(rows))
                 ans.add(tuple(zip(rows, reversed(cols))))
         return ans
 
@@ -44,6 +48,38 @@ class Permutation:
         for chain in cls.northeast_chains(p, q, size):
             if not any(a == b for (a, b) in chain):
                 ans.add(tuple(sorted({(a, b) if a > b else (b, a) for (a, b) in chain})))
+        return ans
+
+    def all_northeast_chains(self):
+        n = self.rank
+        ans = set()
+        for p in range(1, n + 1):
+            for q in range(1, n + 1):
+                ans |= self.northeast_chains(p, q, 1 + self.rank_table(p, q))
+        return ans
+
+    def essential_northeast_chains(self):
+        diagram = self.rothe_diagram()
+        ans = set()
+        for (p, q) in diagram:
+            if (p + 1, q) not in diagram and (p, q + 1) not in diagram:
+                ans |= self.northeast_chains(p, q, 1 + self.rank_table(p, q))
+        return ans
+
+    def all_reflected_northeast_chains(self):
+        n = self.rank
+        ans = set()
+        for p in range(1, n + 1):
+            for q in range(1, p + 1):
+                ans |= self.reflected_northeast_chains(p, q, 1 + self.rank_table(p, q))
+        return ans
+
+    def essential_reflected_northeast_chains(self):
+        diagram = self.fpf_rothe_diagram()
+        ans = set()
+        for (p, q) in diagram:
+            if (p + 1, q) not in diagram and (p, q + 1) not in diagram:
+                ans |= self.reflected_northeast_chains(p, q, 1 + self.rank_table(p, q))
         return ans
 
     @property
