@@ -508,6 +508,19 @@ class Word:
         """Returns true if no adjancent letters are equal."""
         return not any(self[i] == self[i + 1] for i in range(len(self) - 1))
 
+    @classmethod
+    def coxeter_knuth_move(cls, word, i):
+        if 0 <= i < len(word) - 2:
+            a, c, b = word[i:i + 3]
+            if a < b < c or c < b < a:
+                return word[:i] + (c, a, b) + word[i + 3:]
+            b, a, c = word[i:i + 3]
+            if a < b < c or c < b < a:
+                return word[:i] + (b, c, a) + word[i + 3:]
+            if b == c:
+                return word[:i] + (a, b, a) + word[i + 3:]
+        return word
+
     def strict_coxeter_knuth_class(self):
         seen = set()
         add = {self}

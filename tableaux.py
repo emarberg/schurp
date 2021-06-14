@@ -143,21 +143,48 @@ class Tableau:
             return
 
         x, (a, b) = word[p], positions[p]
-        y = self[(a + 1, b)]
-        z = self[(a, b + 1)]
+        y = self[(a + 1, b)]  # could be None
+        z = self[(a, b + 1)]  # could be None
 
         if verbose:
             print('x:', x, '(a, b):', (a, b), '\n')
 
         if not x.is_marked():
             if z is not None and z.number == -index - 1:
+                # ? ??     ->  ?      ??
+                # i (i+1)' ->  (i+1)' i+1
+                #
+                # ? must be empty or (i+1)' or i+1
+                # ?? must be empty because:
+                #
+                # (1) if ? is empty then ?? must also be empty
+                #
+                # (2) if ? is not empty then each i to the
+                # left of x is below (i+1)' or i+1 and
+                # so ?? must be empty as otherwise ?? would
+                # have to be i+1 so i in x would be matched
                 if verbose:
                     print('\n* case L1(a)\n')
                 return self.set(a, b, z).set(a, b + 1, -z)
             if y is None or abs(y) > index + 1:
+                # empty empty   ->  empty empty
+                # i     ?       ->  i+1   ?
+                #
+                # ? cannot be i' or i or, by previous case, (i+1)'
                 if verbose:
                     print('\n* case L1(b)\n')
                 return self.set(a, b, index + 1)
+
+            # H empty   ->  H~     empty
+            # i ?       ->  (i+1)' ?
+            #
+            # ? is i+1 or empty
+            # H is a nonempty (i+1)-rim hook
+            # the empty position must be empty by (1)-(2) above
+            #
+            # If H ends in (i+1)' off the diagonal, then H~ is formed
+            # by removing the prime from this entry. Otherwise H = H~
+            # except under certain circumstances if H ends on diagonal
 
             rx, ry = a + 1, b
             while True:
@@ -186,16 +213,41 @@ class Tableau:
 
         else:
             if y is not None and y.number == index:
+                # i  ?   ->  (i+1)' ?
+                # i' ??  ->  i      ??
+                #
+                # ? cannot be (i+1)' by unpairedness
                 if verbose:
                     print('\n* case L2(a)\n')
                 return self.set(a, b, index).set(a + 1, b, -index - 1)
             if z is None or z.number == index + 1 or abs(z) >= index + 2:
+                # ?  empty  ->  ?      empty
+                # i' ??     ->  (i+1)' ??
+                #
+                # ? cannot be i' by lastness or i by previous case
+                # ?? must be empty or i+1 by assumption
                 if verbose:
                     print('\n* case L2(b)\n')
                 return self.set(a, b, -index - 1)
 
-            ans = self
+            # ?  ??  ->  ? ??  -> ?  ??
+            # i' ??? ->  H ??? -> H~ ???
+            #
+            # ? cannot be i' or i by lastness+previous cases
+            # ?? cannot be (i+1)' by unpairedness
+            # ??? must be i or (i+1)' by previous case
+            #
+            # if ??? is (i+1)' then the row i' (i+1)'
+            # in positions x z must be repeated below
+            # until there is a row i' i, by unpairedness
+            #
+            # change the i' in x to i then let H the lower right i-rim hook
+            # starting at x, then change the first i in H that can be
+            # changed to (i+1)' to form H~
+            #
+            # some such i in H must exist by unpairedness
 
+            ans = self
             rx, ry = a, b
             while True:
                 if not self[(rx, ry)].is_marked() and ((rx, ry + 1) not in self or self[(rx, ry + 1)] not in [MarkedNumber(index), MarkedNumber(-index - 1)]):
