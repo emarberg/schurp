@@ -151,11 +151,13 @@ class Tableau:
 
         if not x.is_marked():
             if z is not None and z.number == -index - 1:
-                # ? ??     ->  ?      ??
-                # i (i+1)' ->  (i+1)' i+1
+                # ? empty     ->  ?      empty
+                # i (i+1)'    ->  (i+1)' i+1
+                #
+                # i cannot be on main diagonal ny unpairedness
                 #
                 # ? must be empty or (i+1)' or i+1
-                # ?? must be empty because:
+                # ??:=empty must be empty because:
                 #
                 # (1) if ? is empty then ?? must also be empty
                 #
@@ -179,12 +181,14 @@ class Tableau:
             # i ?       ->  (i+1)' ?
             #
             # ? is i+1 or empty
-            # H is a nonempty (i+1)-rim hook
+            # H is a nonempty (i+1)-ribbon
             # the empty position must be empty by (1)-(2) above
             #
-            # If H ends in (i+1)' off the diagonal, then H~ is formed
-            # by removing the prime from this entry. Otherwise H = H~
-            # except under certain circumstances if H ends on diagonal
+            # If H ends on diagonal then H~ = H, unless previous diagonal
+            # box has opposite prime and contains i or i'.
+            #
+            # Otherwise H ends in (i+1)' off the diagonal by unpairedness,
+            # and H~ is formed by removing the prime from this entry.
 
             rx, ry = a + 1, b
             while True:
@@ -982,9 +986,10 @@ class Tableau:
         )
 
     def shifted_reading_word(self):
-        a = tuple(i for i in reversed(self.column_reading_word()) if i < 0)
-        b = tuple(i for i in self.row_reading_word() if i > 0)
-        return a + b
+        return self.shifted_crystal_word()[0]
+        # a = tuple(i for i in reversed(self.column_reading_word()) if i < 0)
+        # b = tuple(i for i in self.row_reading_word() if i > 0)
+        # return a + b
 
     @classmethod
     def inverse_sagan_worley(cls, p, q):
