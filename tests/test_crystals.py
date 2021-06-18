@@ -159,20 +159,47 @@ def _test_operators_on_shifted_tableaux(generator, rank, length, verbose=False):
         for i in range(-1, rank):
             target_word = AbstractPrimedQCrystal.f_operator_on_words(i, word)
             target_tab = tab.shifted_crystal_f(i)
+            backtrack_tab = target_tab.shifted_crystal_e(i) if target_tab else None
             try:
                 if target_word is None:
                     assert target_tab is None
                 else:
                     assert target_tab == target_word.mixed_insert()[0]
+                    assert backtrack_tab == tab
                 if verbose:
                     print(word, '--', i, '-->', target_word)
                     print(tab)
                     print(target_tab)
+                    print(backtrack_tab)
                     print()
             except:
                 print(word, '--', i, '-->', target_word)
                 print(tab)
                 print(target_tab)
+                print(backtrack_tab)
+                print()
+                assert False
+
+            target_word = AbstractPrimedQCrystal.e_operator_on_words(i, word)
+            target_tab = tab.shifted_crystal_e(i)
+            backtrack_tab = target_tab.shifted_crystal_f(i) if target_tab else None
+            try:
+                if target_word is None:
+                    assert target_tab is None
+                else:
+                    assert target_tab == target_word.mixed_insert()[0]
+                    assert backtrack_tab == tab
+                if verbose:
+                    print(word, '<--', i, '--', target_word)
+                    print(tab)
+                    print(target_tab)
+                    print(backtrack_tab)
+                    print()
+            except:
+                print(word, '<--', i, '--', target_word)
+                print(tab)
+                print(target_tab)
+                print(backtrack_tab)
                 print()
                 assert False
 
@@ -183,4 +210,3 @@ def test_primed_q_operators_on_tableaux(rank=4, length=4):
 
 def test_random_primed_q_operators_on_tableaux(rank=10, length=10):
     _test_operators_on_shifted_tableaux(random_primed_words(100), rank, length, True)
-

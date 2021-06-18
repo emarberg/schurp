@@ -105,8 +105,140 @@ class Tableau:
         assert len(word) == len(positions) == len(self)
         return word, positions
 
-    def shifted_crystal_e(self, index):
-        pass
+    def shifted_crystal_e(self, index, verbose=False):
+        if index == 0:
+            if (1, 1) not in self or self[(1, 1)] != MarkedNumber(-1):
+                return None
+            return self.set(1, 1, 1)
+
+        if index == -1:
+            twos = [cell for cell in self if abs(self[cell]) == 2 and cell[0] == 1]
+            if len(twos) == 0:
+                return None
+            a, b = min(twos)
+            if b > 1 and self[(a, b)] == MarkedNumber(2):
+                return None
+            v = MarkedNumber(-1) if (b == 1 and self[(a, b)] == MarkedNumber(-2)) else MarkedNumber(1)
+            return self.set(a, b, v)
+
+        word, positions = self.shifted_crystal_word()
+
+        p, queue = None, []
+        for i in reversed(range(len(word))):
+            v = abs(word[i])
+            if v == index:
+                queue.append(i)
+            elif v == index + 1 and queue:
+                queue.pop()
+            elif v == index + 1:
+                p = i
+
+        # print('p:', word, p, 'index:', index)
+
+        if p is None:
+            return
+
+        x, (a, b) = word[p], positions[p]
+        y = self[(a - 1, b)]  # could be None
+        z = self[(a, b - 1)]  # could be None
+
+        # z x
+        #   y
+        if verbose:
+            print('x:', x, '(a, b):', (a, b), '\n')
+
+        if not x.is_marked():
+            if z is not None and z.number == -index - 1:
+                # (i+1)' i+1 ->  i (i+1)'
+                # ?      ?   ->  ? ?
+                #
+                # ...
+                if verbose:
+                    print('\n* case R1(a)\n')
+                return self.set(a, b, z).set(a, b - 1, index)
+            if y is None or abs(y) < index:
+                # ?  i+1 -> ?  i
+                # ?? ??? -> ?? ???
+                #
+                # ? cannot be (i+1)' as not in previous case
+                # ?? is ...
+                # ??? we assume empty or < i
+                if verbose:
+                    print('\n* case R1(b)\n')
+                return self.set(a, b, index)
+
+            ans = self.set(a, b, -index - 1)
+            rx, ry = a, b
+            while True:
+                if ans[(rx, ry)].is_marked() and ((rx - 1, ry) not in ans or ans[(rx - 1, ry)] not in [MarkedNumber(index), MarkedNumber(-index - 1)]):
+                    ans = ans.set(rx, ry, index)
+                    break
+                if (rx - 1, ry) in ans and abs(ans[(rx - 1, ry)]) == index + 1:
+                    rx -= 1
+                elif (rx, ry + 1) in ans and abs(ans[(rx, ry + 1)]) == index + 1:
+                    ry += 1
+                else:
+                    break
+
+            if verbose:
+                print('\n* case R1(c)\n  (rx, ry) =', rx, ry, '\n  (a, b) =', a, b, '\n')
+                # Assaf-Oguz error: "southwest" -> "southeast"
+                # Assaf-Oguz ambiguity:
+                #   the (i+1)-ribbon southeast of x should be considered
+                #   after changing x to i+1' since if x is not above an i or i+1'
+                #   then x changess again from i+1' to i.
+            return ans
+
+        else:
+            if y is not None and y.number == index:
+                # ? (i+1)' ->  ? i
+                # ? i      ->  ? i'
+                #
+                # ...
+                if verbose:
+                    print('\n* case R2(a)\n')
+                return self.set(a, b, index).set(a - 1, b, -index)
+            if z is None or abs(z) < index:
+                # ? (i+1)' ->  ? i'
+                # ? ?      ->  ? ?
+                #
+                # ...
+                if verbose:
+                    print('\n* case R2(b)\n')
+                return self.set(a, b, -index)
+
+            rx, ry = a, b - 1
+            while True:
+                if self[(rx, ry)].is_marked():
+                    if (rx + 1, ry) not in self or abs(self[(rx + 1, ry)]) != index:
+                        break
+                    rx += 1
+                else:
+                    if (rx, ry - 1) not in self or abs(self[(rx, ry - 1)]) != index:
+                        break
+                    ry -= 1
+
+            if verbose:
+                print('\n* case R2(c)\n  (rx, ry) =', rx, ry, '\n  (a, b) =', a, b, '\n')
+                # Assaf-Oguz error:
+                #   the right side of the picture in Figure 18 is wrong, has an extra cell
+                # Assaf-Oguz error:
+                #   "northeastern" -> "northwestern"
+                # Assaf-Oguz error:
+                #   x should change to i (as shown in Figure 18) not i' (as stated)
+
+            ans = self
+            if rx != ry:
+                assert not self[(rx, ry)].is_marked()
+                ans = ans.set(rx, ry, -index)
+            elif rx == ry and self[(rx, ry)].is_marked() and self[(rx + 1, ry + 1)] == MarkedNumber(index + 1):
+                ans = ans.set(rx, ry, index)
+                ans = ans.set(rx + 1, ry + 1, -index - 1)
+            elif rx == ry and not self[(rx, ry)].is_marked() and self[(rx + 1, ry + 1)] == MarkedNumber(-index - 1):
+                ans = ans.set(rx, ry, -index)
+                ans = ans.set(rx + 1, ry + 1, index + 1)
+
+            return ans.set(a, b, index)
 
     def shifted_crystal_f(self, index, verbose=False):
         if index == 0:
@@ -202,7 +334,8 @@ class Tableau:
                     ry -= 1
 
             ans = self
-            if self[(rx, ry)].is_marked() and rx != ry:
+            if rx != ry:
+                assert self[(rx, ry)].is_marked()
                 ans = ans.set(rx, ry, index + 1)
             elif rx == ry and self[(rx, ry)].is_marked() and self[(rx - 1, ry - 1)] == MarkedNumber(index):
                 ans = ans.set(rx, ry, index + 1)
@@ -213,6 +346,8 @@ class Tableau:
 
             if verbose:
                 print('\n* case L1(c)\n')
+                # Assaf-Oguz error:
+                #   "northeastern" -> "northwestern"
             return ans.set(a, b, -index - 1)
 
         else:
@@ -266,6 +401,8 @@ class Tableau:
 
             if verbose:
                 print('\n* case L2(c)\n')
+                # Assaf-Oguz error:
+                #   "southwest" -> "southeast"
             return ans.set(a, b, index)
 
     def restrict(self, n):
