@@ -144,28 +144,57 @@ class Tableau:
 
         # z x
         #   y
+
         if verbose:
             print('x:', x, '(a, b):', (a, b), '\n')
 
         if not x.is_marked():
+            # z cannot be i+1 since x is first unpaired
+            assert z is None or z != MarkedNumber(index + 1)
+
             if z is not None and z.number == -index - 1:
                 # (i+1)' i+1 ->  i (i+1)'
-                # ?      ?   ->  ? ?
+                # ?      y   ->  ? y
                 #
-                # ...
+                # ? cannot be i by unpairedness
+                assert (a - 1, b - 1) not in self or self[(a - 1, b - 1)] != MarkedNumber(index)
+                # y if nonempty is at most (i+1)'
+                assert (a - 1, b) not in self or self[(a - 1, b)] <= MarkedNumber(-index - 1)
+                # z=(i+1)' cannot be on main diagonal by firstness
+                assert a != b - 1
                 if verbose:
                     print('\n* case R1(a)\n')
                 return self.set(a, b, z).set(a, b - 1, index)
             if y is None or abs(y) < index:
-                # ?  i+1 -> ?  i
-                # ?? ??? -> ?? ???
+                # z i+1 -> z i
+                # ? y   -> ? y
                 #
-                # ? cannot be (i+1)' as not in previous case
-                # ?? is ...
-                # ??? we assume empty or < i
+                # z cannot be (i+1)' as not in previous case or i+1 since x is first unpaired
+                # so z <= i
+                assert z is None or z <= MarkedNumber(index)
+                #
+                # y is assumed to be empty in T|_{[i,i+1]}
                 if verbose:
                     print('\n* case R1(b)\n')
                 return self.set(a, b, index)
+
+            # z x = z i+1 -> z i+1' = z H -> z H~
+            # ? y = ? y   -> ? y    = ? y -> ? y
+            #
+            # z <= i as z cannot be i+1' or i+1 by firstness+previous cases
+            assert z is None or z <= MarkedNumber(index)
+            # y must be i' or i or (i+1)' by previous case
+            assert y in [MarkedNumber(index), MarkedNumber(-index), MarkedNumber(-index - 1)]
+            #
+            # if y=i then the column [ i+1 i ]^T
+            # in positions [ x y ]^T must be repeated rightwards
+            # until there is a column [ i+1 i+1' ]^T by unpairedness
+            #
+            # change x from i+1 to i+1' then let H the lower right (i+1)-ribbon
+            # starting at x. Change to i the first i+1' in H that can be
+            # changed to i to form H~. This i+1' might occur in the position of x.
+            #
+            # some such i+1' in H must exist by unpairedness
 
             ans = self.set(a, b, -index - 1)
             rx, ry = a, b
@@ -178,7 +207,7 @@ class Tableau:
                 elif (rx, ry + 1) in ans and abs(ans[(rx, ry + 1)]) == index + 1:
                     ry += 1
                 else:
-                    break
+                    assert False
 
             if verbose:
                 print('\n* case R1(c)\n  (rx, ry) =', rx, ry, '\n  (a, b) =', a, b, '\n')
@@ -186,26 +215,53 @@ class Tableau:
                 # Assaf-Oguz ambiguity:
                 #   the (i+1)-ribbon southeast of x should be considered
                 #   after changing x to i+1' since if x is not above an i or i+1'
-                #   then x changess again from i+1' to i.
+                #   then x changes first to i+1' and then to i.
             return ans
 
         else:
+            # y cannot be (i+1)' since x is first unpaired
+            assert y is None or y != MarkedNumber(-index - 1)
+
             if y is not None and y.number == index:
-                # ? (i+1)' ->  ? i
+                # z (i+1)' ->  z i
                 # ? i      ->  ? i'
                 #
-                # ...
+                # z <= i by semistandardness
+                # ? cannot be i' by unpairedness
+                assert (a - 1, b - 1) not in self or self[(a - 1, b - 1)] != MarkedNumber(-index)
+                # x cannot be on the diagonal by firstness+unpairedness (?)
+                assert a != b
+                #
                 if verbose:
                     print('\n* case R2(a)\n')
                 return self.set(a, b, index).set(a - 1, b, -index)
             if z is None or abs(z) < index:
-                # ? (i+1)' ->  ? i'
-                # ? ?      ->  ? ?
+                # z (i+1)' ->  z i'
+                # ? y      ->  ? y
                 #
-                # ...
+                # y cannot be (i+1)'
+                # y cannot be i as not in previous case
+                # so y <= i'
+                assert y is None or y <= MarkedNumber(-index)
+                #
                 if verbose:
                     print('\n* case R2(b)\n')
                 return self.set(a, b, -index)
+
+            # H (i+1)' -> H~ i
+            # ? y      -> ?  y
+            #
+            # y <= i' since y cannot be (i+1)' or i by previous cases
+            assert y is None or y <= MarkedNumber(-index)
+            # z must be i or i' by semistandardness and not in previous case
+            assert abs(z) == index
+            # thus H is a nonempty i-ribbon
+            #
+            # If H ends on diagonal then H~ = H, unless next diagonal
+            # box has opposite prime and contains i+1 or i+1'.
+            #
+            # Otherwise H ends in i off the diagonal by unpairedness,
+            # and H~ is formed by add a prime to this entry.
 
             rx, ry = a, b - 1
             while True:
@@ -281,15 +337,24 @@ class Tableau:
         if verbose:
             print('x:', x, '(a, b):', (a, b), '\n')
 
+        # y
+        # x z
+
         if not x.is_marked():
+            # z cannot be i since x is last unpaired
+            assert z is None or z != MarkedNumber(index)
+
             if z is not None and z.number == -index - 1:
                 # ? empty     ->  ?      empty
                 # i (i+1)'    ->  (i+1)' i+1
                 #
                 # i cannot be on main diagonal ny unpairedness
+                assert a != b
                 #
                 # ? must be empty or (i+1)' or i+1
+                assert (a + 1, b) not in self or abs(self[(a + 1, b)]) >= index + 1
                 # ??:=empty must be empty because:
+                assert (a + 1, b + 1) not in self or abs(self[(a + 1, b + 1)]) > index + 1
                 #
                 # (1) if ? is empty then ?? must also be empty
                 #
@@ -300,11 +365,13 @@ class Tableau:
                 if verbose:
                     print('\n* case L1(a)\n')
                 return self.set(a, b, z).set(a, b + 1, -z)
+
             if y is None or abs(y) > index + 1:
                 # empty empty   ->  empty empty
                 # i     ?       ->  i+1   ?
                 #
                 # ? cannot be i' or i or, by previous case, (i+1)'
+                assert y is None or y not in [MarkedNumber(-index), MarkedNumber(index), MarkedNumber(-index - 1)]
                 if verbose:
                     print('\n* case L1(b)\n')
                 return self.set(a, b, index + 1)
@@ -313,8 +380,10 @@ class Tableau:
             # i ?       ->  (i+1)' ?
             #
             # ? is i+1 or empty
+            assert z is None or z == MarkedNumber(index + 1) or abs(z) > index + 1
             # H is a nonempty (i+1)-ribbon
             # the empty position must be empty by (1)-(2) above
+            assert (a + 1, b + 1) not in self or abs(self[(a + 1, b + 1)]) > index + 1
             #
             # If H ends on diagonal then H~ = H, unless previous diagonal
             # box has opposite prime and contains i or i'.
@@ -351,11 +420,15 @@ class Tableau:
             return ans.set(a, b, -index - 1)
 
         else:
+            # y cannot be i' since x is last unpaired
+            assert y is None or y != MarkedNumber(-index)
+
             if y is not None and y.number == index:
                 # i  ?   ->  (i+1)' ?
                 # i' ??  ->  i      ??
                 #
                 # ? cannot be (i+1)' by unpairedness
+                assert (a + 1, b + 1) not in self or self[(a + 1, b + 1)] != MarkedNumber(-index - 1)
                 if verbose:
                     print('\n* case L2(a)\n')
                 return self.set(a, b, index).set(a + 1, b, -index - 1)
@@ -364,6 +437,7 @@ class Tableau:
                 # i' ??     ->  (i+1)' ??
                 #
                 # ? cannot be i' by lastness or i by previous case
+                assert y is None or y not in [MarkedNumber(index), MarkedNumber(-index)]
                 # ?? must be empty or i+1 by assumption
                 if verbose:
                     print('\n* case L2(b)\n')
@@ -373,8 +447,11 @@ class Tableau:
             # i' ??? ->  H ??? -> H~ ???
             #
             # ? cannot be i' or i by lastness+previous cases
+            assert y is None or abs(y) != index
             # ?? cannot be (i+1)' by unpairedness
+            assert (a + 1, b + 1) not in self or self[(a + 1, b + 1)] != MarkedNumber(-index - 1)
             # ??? must be i or (i+1)' by previous case
+            assert z in [MarkedNumber(index), MarkedNumber(-index - 1)]
             #
             # if ??? is (i+1)' then the row i' (i+1)'
             # in positions x z must be repeated below
@@ -397,7 +474,7 @@ class Tableau:
                 elif (rx, ry + 1) in self and abs(self[(rx, ry + 1)]) == index:
                     ry += 1
                 else:
-                    break
+                    assert False
 
             if verbose:
                 print('\n* case L2(c)\n')
