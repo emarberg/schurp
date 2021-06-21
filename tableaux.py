@@ -215,9 +215,14 @@ class Tableau:
                 # Assaf-Oguz error: "southwest" -> "southeast"
             return ans
 
+        # z x
+        # ? y
+
         else:
             # y cannot be (i+1)' since x is first unpaired
             assert y is None or y != MarkedNumber(-index - 1)
+            # ? cannot be i' or i
+            assert (a - 1, b - 1) not in self or abs(self[(a - 1, b - 1)]) < index
 
             if y is not None and y.number == index:
                 # z (i+1)' ->  z i
