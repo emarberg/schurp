@@ -143,7 +143,7 @@ class Tableau:
         z = self[(a, b - 1)]  # could be None
 
         # z x
-        #   y
+        # ? y
 
         if verbose:
             print('x:', x, '(a, b):', (a, b), '\n')
@@ -151,6 +151,8 @@ class Tableau:
         if not x.is_marked():
             # z cannot be i+1 since x is first unpaired
             assert z is None or z != MarkedNumber(index + 1)
+            # ? cannot be i since x unpaired
+            assert (a - 1, b - 1) not in self or self[(a - 1, b - 1)] < MarkedNumber(index)
 
             if z is not None and z.number == -index - 1:
                 # (i+1)' i+1 ->  i (i+1)'
@@ -165,7 +167,7 @@ class Tableau:
                 if verbose:
                     print('\n* case R1(a)\n')
                 return self.set(a, b, z).set(a, b - 1, index)
-            if y is None or abs(y) < index:
+            if y is None or y <= MarkedNumber(-index):
                 # z i+1 -> z i
                 # ? y   -> ? y
                 #
@@ -173,7 +175,6 @@ class Tableau:
                 # so z <= i
                 assert z is None or z <= MarkedNumber(index)
                 #
-                # y is assumed to be empty in T|_{[i,i+1]}
                 if verbose:
                     print('\n* case R1(b)\n')
                 return self.set(a, b, index)
@@ -184,7 +185,7 @@ class Tableau:
             # z <= i as z cannot be i+1' or i+1 by firstness+previous cases
             assert z is None or z <= MarkedNumber(index)
             # y must be i' or i or (i+1)' by previous case
-            assert y in [MarkedNumber(index), MarkedNumber(-index), MarkedNumber(-index - 1)]
+            assert y in [MarkedNumber(index), MarkedNumber(-index - 1)]
             #
             # if y=i then the column [ i+1 i ]^T
             # in positions [ x y ]^T must be repeated rightwards
@@ -212,10 +213,6 @@ class Tableau:
             if verbose:
                 print('\n* case R1(c)\n  (rx, ry) =', rx, ry, '\n  (a, b) =', a, b, '\n')
                 # Assaf-Oguz error: "southwest" -> "southeast"
-                # Assaf-Oguz ambiguity:
-                #   the (i+1)-ribbon southeast of x should be considered
-                #   after changing x to i+1' since if x is not above an i or i+1'
-                #   then x changes first to i+1' and then to i.
             return ans
 
         else:
@@ -343,6 +340,7 @@ class Tableau:
         if not x.is_marked():
             # z cannot be i since x is last unpaired
             assert z is None or z != MarkedNumber(index)
+            assert (a + 1, b + 1) not in self or self[(a + 1, b + 1)] > MarkedNumber(index + 1)
 
             if z is not None and z.number == -index - 1:
                 # ? empty     ->  ?      empty
@@ -422,6 +420,7 @@ class Tableau:
         else:
             # y cannot be i' since x is last unpaired
             assert y is None or y != MarkedNumber(-index)
+            assert (a + 1, b + 1) not in self or self[(a + 1, b + 1)] >= MarkedNumber(index + 1)
 
             if y is not None and y.number == index:
                 # i  ?   ->  (i+1)' ?
@@ -446,6 +445,7 @@ class Tableau:
             # ?  ??  ->  ? ??  -> ?  ??
             # i' ??? ->  H ??? -> H~ ???
             #
+            assert a != b
             # ? cannot be i' or i by lastness+previous cases
             assert y is None or abs(y) != index
             # ?? cannot be (i+1)' by unpairedness
