@@ -382,6 +382,7 @@ def read_or_compute_wgraph(w, check=False):
 @pytest.mark.slow
 def test_gelfand_a_positivity(n=8):
     # fails for n >= 8
+    success = True
     for sgn in [False, True]:
         print('type A, n =', n, 'sgn =', sgn)
         values = set()
@@ -395,14 +396,15 @@ def test_gelfand_a_positivity(n=8):
                         print('k =', k, (i, j), values)
                         print(w.get_cbasis_polynomial(j, i))
                         print(list(w.get_wgraph_edges(i, True)))
-                        return
+                        success = False
         print('* success:', values)
         print()
-    assert False
+    assert success
 
 
 def test_gelfand_bc_positivity(n=4):
     # fails n >= 4
+    success = True
     for sgn in [False, True]:
         print('type BC, n =', n, 'sgn =', sgn)
         values = set()
@@ -416,15 +418,16 @@ def test_gelfand_bc_positivity(n=4):
                         print('k =', k, (i, j), values)
                         print(w.get_cbasis_polynomial(j, i))
                         print(list(w.get_wgraph_edges(i, True)))
-                        return
+                        success = False
         print('* success:', values)
         print()
-    assert False
+    assert success
 
 
 @pytest.mark.slow
 def test_gelfand_d_positivity(n=7):
     # fails n >= 7
+    success = True
     for sgn in [False, True]:
         print('type D, n =', n, 'sgn =', sgn)
         values = set()
@@ -438,10 +441,10 @@ def test_gelfand_d_positivity(n=7):
                         print('k =', k, (i, j), values)
                         print(w.get_cbasis_polynomial(j, i))
                         print(list(w.get_wgraph_edges(i, True)))
-                        return
+                        success = False
         print('* success:', values)
         print()
-    assert False
+    assert success
 
 
 def b_toggle(n):
