@@ -53,6 +53,8 @@ class MarkedNumber:
             return MarkedNumber(self.number - 1)
 
     def __eq__(self, other):
+        if other is None:
+            return False
         assert type(other) == MarkedNumber
         return self.number == other.number
 

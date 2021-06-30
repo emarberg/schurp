@@ -1103,7 +1103,7 @@ class Permutation:
             return '1'
         EXCLUDE_SINGLE_CYCLES = True
         SPACE = ' '
-        DELIM = ''  # ','
+        DELIM = ','
 
         s = ''
         for c in self.cycles:

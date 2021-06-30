@@ -65,6 +65,57 @@ class Tableau:
                 mapping[(i + 1, j + 1 + (i if shifted else 0))] = rows[i][j]
         return Tableau(mapping)
 
+    def dual_equivalence_operator(self, index):
+        tab = self
+
+        def find(t, a):
+            for i, j in t:
+                if abs(t.get(i, j)) == a:
+                    return i, j
+
+        def locations(t, x):
+            a, b, c = None, None, None
+            w = t.shifted_reading_word()
+            for i in range(len(w)):
+                a = i if abs(w[i]) == x else a
+                b = i if abs(w[i]) == (x + 1) else b
+                c = i if abs(w[i]) == (x + 2) else c
+            return a, b, c
+
+        if index == 0:
+            i, j = find(tab, 2)
+            return tab.set(i, j, -tab.get(i, j))
+
+        a, b, c = locations(tab, index)
+
+        if a is None or b is None or c is None or a < b < c or c < b < a:
+            return tab
+
+        i1, j1 = find(tab, index)
+        i2, j2 = find(tab, index + 1)
+        i3, j3 = find(tab, index + 2)
+
+        x1 = tab.get(i1, j1)
+        x2 = tab.get(i2, j2)
+        x3 = tab.get(i3, j3)
+
+        if i1 == j1 and i3 == j3 and x1.number * x3.number < 0:
+            return tab.set(i1, j1, -x1).set(i2, j2, -x2).set(i3, j3, -x3)
+
+        if b < a < c or c < a < b:
+            i1, j1, i2, j2 = i2, j2, i3, j3
+
+        x1, x2 = tab.get(i1, j1), tab.get(i2, j2)
+
+        if i1 == i2 or j1 == j2:
+            tab = tab.set(i1, j1, -x1 if i1 != j1 else x1)
+            tab = tab.set(i2, j2, -x2 if i2 != j2 else x2)
+        else:
+            tab = tab.set(i1, j1, x1 - 1 if x1.number < 0 else x1 + 1)
+            tab = tab.set(i2, j2, x2 + 1 if x2.number < 0 else x2 - 1)
+
+        return tab
+
     def shifted_crystal_word(self):
         rows = [
             (i, j, self.mapping[(i, j)])
@@ -1209,6 +1260,13 @@ class Tableau:
         # a = tuple(i for i in reversed(self.column_reading_word()) if i < 0)
         # b = tuple(i for i in self.row_reading_word() if i > 0)
         # return a + b
+
+    def shifted_descents(self):
+        w = [abs(a) for a in self.shifted_reading_word()]
+        n = len(w)
+        assert all(i in w for i in range(1, n + 1))
+        d = {i: pos for pos, i in enumerate(w)}
+        return {i for i in range(1, n) if d[i + 1] < d[i]}
 
     @classmethod
     def inverse_sagan_worley(cls, p, q):
