@@ -65,7 +65,41 @@ class Tableau:
                 mapping[(i + 1, j + 1 + (i if shifted else 0))] = rows[i][j]
         return Tableau(mapping)
 
-    def dual_equivalence_operator(self, index):
+    def standardize(self):
+        values = sorted([(i, j, self[(i, j)]) for (i, j) in self], key=lambda x: (x[2], -x[0], x[1]) if not x[2].is_marked() else (x[2], -x[1], x[0]))
+        mapping = {}
+        for e, triple in enumerate(values):
+            i, j, v = triple
+            mapping[(i, j)] = e + 1 if not v.is_marked() else -e - 1
+        return Tableau(mapping)
+
+    def destandardize(self, alpha=None):
+        if alpha is None:
+            des = [0] + sorted(self.descent_set()) + [len(self)]
+            alpha = [des[i] - des[i - 1] for i in range(1, len(des))]
+        while alpha and alpha[-1] == 0:
+            alpha = alpha[:-1]
+        partialsums = [0]
+        for a in alpha:
+            partialsums.append(partialsums[-1] + a)
+        des = self.descent_set()
+        assert all(a in partialsums for a in des)
+        assert sum(alpha) == len(self)
+        conversion = {}
+        for i in range(1, len(partialsums)):
+            for a in range(partialsums[i - 1] + 1, partialsums[i] + 1):
+                conversion[MarkedNumber(a)] = i
+                conversion[MarkedNumber(-a)] = -i
+        return Tableau({ij: conversion[self[ij]] for ij in self})
+
+    def dual_equivalence_operator(self, index, jndex=None):
+        jndex = index if jndex is None else jndex
+        ans = self
+        for i in range(index, jndex + 1) if index <= jndex else range(index, jndex - 1, -1):
+            ans = ans._dual_equivalence_operator(i)
+        return ans
+
+    def _dual_equivalence_operator(self, index):
         tab = self
 
         def find(t, a):
@@ -1261,8 +1295,13 @@ class Tableau:
         # b = tuple(i for i in self.row_reading_word() if i > 0)
         # return a + b
 
+    def descent_set(self):
+        w = [abs(a) for a in reversed(self.column_reading_word()) if a < 0]
+        w += [abs(a) for a in self.row_reading_word() if a > 0]
+        d = {i: pos for pos, i in enumerate(w)}
+        return {i for i in d if i + 1 in d and d[i + 1] < d[i]}
+
     def shifted_descents(self):
-        w = [abs(a) for a in self.shifted_reading_word()]
         n = len(w)
         assert all(i in w for i in range(1, n + 1))
         d = {i: pos for pos, i in enumerate(w)}

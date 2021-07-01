@@ -4,6 +4,18 @@ from partitions import Partition, StrictPartition
 from words import Word
 
 
+def test_standardize(n=6):
+    success = 0
+    for mu in StrictPartition.all(n):
+        mu = tuple(mu)
+        for nu in StrictPartition.subpartitions(mu, strict=True):
+            for t in Tableau.standard_shifted_marked(mu, nu, True):
+                s = t.destandardize()
+                assert s.standardize() == t
+                success += 1
+    assert success > 0
+
+
 def test_shifted_crystal_word():
     tab = Tableau.from_string("1,1,4',4;,2,4',5';,,4,5")
     word, positions = tab.shifted_crystal_word()

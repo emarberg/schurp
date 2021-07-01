@@ -10,6 +10,87 @@ ck = Word.coxeter_knuth_move
 pairing = Word._incr_pairing
 
 
+def all_primed_words(max_letter, length):
+    for sgn in range(2**length):
+        for v in range(max_letter**length):
+            a = []
+            for _ in range(length):
+                a.append((-1)**(sgn % 2) * ((v % max_letter) + 1))
+                sgn = sgn >> 1
+                v = v >> 1
+            yield Word(a)
+
+
+def random_primed_words(count):
+    def generator(max_letter, length):
+        for _ in range(count):
+            a = []
+            for _ in range(length):
+                a.append((-1)**(random.randint(0, 1)) * random.randint(1, max_letter))
+            yield Word(a)
+    return generator
+
+
+def _test_composite_operators(generator, rank, length, verbose=False):
+    for word in generator(rank, length):
+        x = word.mixed_insert()[0]
+        for i in range(1, rank):
+            y = x.shifted_crystal_f(i)
+            if y is not None:
+                w = x.weight() + (0,)
+
+                w1 = w[:i - 1] + (1, w[i - 1], w[i] - 1) + w[i + 1:]
+                w2 = w[:i - 1] + (1, w[i - 1] - 1, w[i]) + w[i + 1:]
+
+                a = sum(w[:i - 1]) + 1
+                b = sum(w[:i])
+
+                xtab = x.standardize()
+                ytab = y.standardize()
+
+                if w[i] == 0:
+                    continue
+
+                # print('\n\n\n\n')
+                # print(x)
+                # print(y)
+                # print('index =', i)
+                # print('weight =', w)
+                # print('new x weight =', w1)
+                # print('new y weight =', w2)
+                # print('a =', a, 'b =', b)
+
+                # print(xtab)
+                # print(ytab)
+                # print('\n***\n')
+
+                if b - 1 >= a:
+                    xtab = xtab.dual_equivalence_operator(b - 1, a)
+                if b - 2 >= a:
+                    ytab = ytab.dual_equivalence_operator(b - 2, a)
+
+                # print(xtab)
+                # print(ytab)
+                # print('\n***\n')
+
+                xtab = xtab.destandardize(w1)
+                ytab = ytab.destandardize(w2)
+
+                # print(xtab)
+                # print(xtab.shifted_crystal_f(i + 1))
+                # print(ytab)
+
+                assert xtab.shifted_crystal_f(i + 1) == ytab
+
+
+def test_composite_operators(rank=4, length=4):
+    _test_composite_operators(all_primed_words, rank, length)
+
+
+def test_random_composite_operators(rank=10, length=10):
+    _test_composite_operators(random_primed_words(100), rank, length, True)
+
+
 def shifted_diagram(mu):
     return {(i + 1, i + j + 1) for i in range(len(mu)) for j in range(mu[i])}
 
@@ -120,10 +201,7 @@ def _test_iterated_tableau_operators(n):
         print('no descent')
         return
 
-    ans = tab
-    for i in range(e - 2, 0, -1):
-        # print(ans)
-        ans = ans.dual_equivalence_operator(i)
+    ans = tab.dual_equivalence_operator(e - 2, 1)
 
     w, p = tab.shifted_crystal_word()
     ii = [i for i in range(len(w)) if abs(w[i]) == e][0]
@@ -144,28 +222,26 @@ def _test_iterated_tableau_operators(n):
     guess = sab
     i, j = list(guess.find(3, -3))[0]
     v = guess[(i, j)]
+
     if v.is_marked():
         if guess[(i - 1, j)] == MarkedNumber(2):
             guess = guess.set(i, j, 2).set(i - 1, j, -2)
-        elif guess[(i, j - 1)] == MarkedNumber(2):
+        elif guess[(i, j - 1)] in [MarkedNumber(2), MarkedNumber(-2)]:
             k = 1
-            while guess[(i, j - k - 1)] == MarkedNumber(2):
+            while guess[(i, j - k - 1)] in [MarkedNumber(2), MarkedNumber(-2)]:
                 k += 1
-            if guess[(i, j - k - 1)] == MarkedNumber(-2):
-                guess = guess.set(i, j, 2)
-            else:
-                guess = guess.set(i, j, 2).set(i, j - k, -2)
+            guess = guess.set(i, j, 2).set(i, j - k, -2)
         else:
             guess = guess.set(i, j, -2)
     else:
         guess = guess.set(i, j, 2)
-    i, j = list(guess.find(1, -1))[0]
 
-    if guess[(i, j - 1)] in [MarkedNumber(2), MarkedNumber(-2)]:
+    i, j = list(guess.find(1, -1))[0]
+    if guess[(i, j - 1)] == MarkedNumber(-2):
         guess = guess.set(i, j, -2).set(i, j - 1, 1)
-    elif guess[(i - 1, j)] in [MarkedNumber(2), MarkedNumber(-2)]:
+    elif guess[(i - 1, j)] == MarkedNumber(-2):
         k = 1
-        while guess[(i - k - 1, j)] in [MarkedNumber(2), MarkedNumber(-2)]:
+        while guess[(i - k - 1, j)] == MarkedNumber(-2):
             k += 1
         guess = guess.set(i, j, -2).set(i - k, j, 1)
 
@@ -189,6 +265,7 @@ def _test_iterated_tableau_operators(n):
         assert False
     else:
         print('success')
+        print(tab, ans, sab, guess, bns)
 
 
 def descents(w):
