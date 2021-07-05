@@ -383,6 +383,25 @@ class Tableau:
 
             return ans.set(a, b, index)
 
+    def shifted_crystal_last_unpaired_box(self, index):
+        word, positions = self.shifted_crystal_word()
+
+        p, queue = None, []
+        for i in range(len(word)):
+            v = abs(word[i])
+            if v == index + 1:
+                queue.append(i)
+            elif v == index and queue:
+                queue.pop()
+            elif v == index:
+                p = i
+
+        if p is None:
+            return None
+
+        x, (a, b) = word[p], positions[p]
+        return x, (a, b)
+
     def shifted_crystal_f(self, index, verbose=False):
         if index == 0:
             if (1, 1) not in self or self[(1, 1)] != MarkedNumber(1):
@@ -400,24 +419,11 @@ class Tableau:
             v = MarkedNumber(2) if (b == 1 and self[(a, b)] == MarkedNumber(1)) else MarkedNumber(-2)
             return self.set(a, b, v)
 
-        word, positions = self.shifted_crystal_word()
-
-        p, queue = None, []
-        for i in range(len(word)):
-            v = abs(word[i])
-            if v == index + 1:
-                queue.append(i)
-            elif v == index and queue:
-                queue.pop()
-            elif v == index:
-                p = i
-
-        # print('p:', word, p, 'index:', index)
-
-        if p is None:
+        unpaired = self.shifted_crystal_last_unpaired_box(index)
+        if unpaired is None:
             return
-
-        x, (a, b) = word[p], positions[p]
+        else:
+            x, (a, b) = unpaired
         y = self[(a + 1, b)]  # could be None
         z = self[(a, b + 1)]  # could be None
 

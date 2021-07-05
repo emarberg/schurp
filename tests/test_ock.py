@@ -82,6 +82,13 @@ def _test_composite_operators(generator, rank, length, verbose=False):
 
                 assert xtab.shifted_crystal_f(i + 1) == ytab
 
+                # v1, (a1, b1) = x.shifted_crystal_last_unpaired_box(i)
+                # v2, (a2, b2) = xtab.shifted_crystal_last_unpaired_box(i + 1)
+                # print(v1, (a1, b1))
+                # print(v2, (a2, b2))
+                # assert v1 == v2 # not true
+                # assert (a1, b1) == (a2, b2) # not true
+
 
 def test_composite_operators(rank=4, length=4):
     _test_composite_operators(all_primed_words, rank, length)
