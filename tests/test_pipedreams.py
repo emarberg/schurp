@@ -1,7 +1,81 @@
 from permutations import Permutation
 from pipedreams import Pipedream
 from schubert import InvSchubert, FPFSchubert
+from partitions import Partition, StrictPartition
+from words import fpf_insert, eg_insert
 import pytest
+
+
+def sigma_k(mu, k):
+    d = {(i + 1, j + 1) for i in range(len(mu)) for j in range(mu[i])}
+    d = {(i, j) for (i, j) in d if i > k and j > k}
+    code = []
+    for (i, j) in d:
+        while i - 1 >= len(code):
+            code += [0]
+        code[i - 1] += 1
+    return Permutation.from_code(code)
+
+
+def test_sigma(n=8):
+    for mu in Partition.all(n):
+        mu = tuple(mu)
+        for k in [[n - i for i in range(0, n)]]:  # range(1, n + 1):
+            sigma = sigma_k(mu, k)
+            if sigma.is_identity():
+                continue
+            n = sigma.rank
+            c = 0
+            for p in sigma.get_pipe_dreams():
+                c += 1
+                print(p)
+                w = p.words()
+                # print(w)
+                # print(fpf_insert(*w)[1])
+                w = [[n - i for i in a] for a in w]
+                print(w)
+                print(eg_insert(*w)[1])
+            sigma.print_rothe_diagram()
+            print()
+            print('k =', k, 'sigma =', sigma)
+            print('pipe dreams:', c)
+            input('\n')
+
+
+def sigma_fpf(mu, k):
+    d = {(i + 1, i + j + 1) for i in range(len(mu)) for j in range(mu[i])}
+    d = {(j + 1, i) for (i, j) in d if i > k}
+    code = []
+    for (i, j) in d:
+        while i - 1 >= len(code):
+            code += [0]
+        code[i - 1] += 1
+    return Permutation.from_fpf_involution_code(code)
+
+
+def test_sigma_fpf(n=8):
+    for mu in [[n - i for i in range(0, n, 2)]]:  # StrictPartition.all(n):
+        mu = tuple(mu)
+        for k in range(2, n + 1, 2):
+            sigma = sigma_fpf(mu, k)
+            if sigma.is_identity():
+                continue
+            n = sigma.rank
+            c = 0
+            for p in sigma.get_fpf_involution_pipe_dreams():
+                c += 1
+                print(p)
+                w = p.words()
+                # print(w)
+                # print(fpf_insert(*w)[1])
+                v = [[n - i for i in a] for a in w[1 + k // 2:]]
+                print(v)
+                print(fpf_insert(*v)[1])
+            sigma.print_fpf_rothe_diagram()
+            print()
+            print('k =', k, 'sigma =', sigma.cycle_repr())
+            print('fpf pipe dreams:', c)
+            input('\n')
 
 
 def count_pipe_dreams(shift, w):

@@ -823,6 +823,12 @@ def alt_fpf_insert(*words):
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
 
 
+def eg_insert(*words):
+    w, mapping = get_insertion_mapping(words)
+    p, q = w.eg_insert()
+    return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+
+
 REDUCED_WORDS = {(): {()}}
 INVOLUTION_WORDS = {(): {()}}
 FPF_INVOLUTION_WORDS = {(): {()}}

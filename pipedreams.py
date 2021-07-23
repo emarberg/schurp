@@ -347,6 +347,16 @@ class Pipedream:
                     word += [j + i - 1]
         return tuple(word)
 
+    def words(self):
+        words = []
+        for i in range(1, self.n + 1):
+            word = []
+            for j in range(self.n + 1 - i, 0, -1):
+                if (i, j) in self.crossings:
+                    word += [j + i - 1]
+            words += [tuple(word)]
+        return tuple(words)
+
     def filename_prefix(self):
         word = []
         for i in range(1, self.n + 1):
