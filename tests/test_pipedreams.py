@@ -3,6 +3,7 @@ from pipedreams import Pipedream
 from schubert import InvSchubert, FPFSchubert
 from partitions import Partition, StrictPartition
 from words import fpf_insert, eg_insert
+from tableaux import Tableau
 import pytest
 
 
@@ -17,29 +18,31 @@ def sigma_k(mu, k):
     return Permutation.from_code(code)
 
 
-def test_sigma(n=8):
-    for mu in Partition.all(n):
+def test_sigma(n=8, k=0):
+    lam = tuple([n - i for i in range(0, n)])
+    for mu in [[2 * k + n - i for i in range(0, 2 *k + n)]]: #Partition.all(n):
         mu = tuple(mu)
-        for k in [[n - i for i in range(0, n)]]:  # range(1, n + 1):
-            sigma = sigma_k(mu, k)
-            if sigma.is_identity():
-                continue
-            n = sigma.rank
-            c = 0
-            for p in sigma.get_pipe_dreams():
-                c += 1
-                print(p)
-                w = p.words()
-                # print(w)
-                # print(fpf_insert(*w)[1])
-                w = [[n - i for i in a] for a in w]
-                print(w)
-                print(eg_insert(*w)[1])
-            sigma.print_rothe_diagram()
-            print()
-            print('k =', k, 'sigma =', sigma)
-            print('pipe dreams:', c)
-            input('\n')
+#        for k in range(0, n + 1):
+        sigma = sigma_k(mu, k)
+        if sigma.is_identity():
+            continue
+        n = sigma.rank
+        c = 0
+        for p in sigma.get_pipe_dreams():
+            c += 1
+            print(p)
+            w = p.words()
+            w = [[n - i for i in a] for a in w]
+            print(w)
+            Q = eg_insert(*w)[1]
+            print(Q)
+            assert Q.is_k_flagged(k)
+        sigma.print_rothe_diagram()
+        print()
+        print('k =', k, 'mu =', mu, 'sigma =', sigma)
+        print('pipe dreams:', c)
+        print('  k flagged:', len(Tableau.k_flagged(k, lam)))
+        input('\n')
 
 
 def sigma_fpf(mu, k):
@@ -53,29 +56,37 @@ def sigma_fpf(mu, k):
     return Permutation.from_fpf_involution_code(code)
 
 
-def test_sigma_fpf(n=8):
-    for mu in [[n - i for i in range(0, n, 2)]]:  # StrictPartition.all(n):
-        mu = tuple(mu)
-        for k in range(2, n + 1, 2):
-            sigma = sigma_fpf(mu, k)
-            if sigma.is_identity():
-                continue
-            n = sigma.rank
-            c = 0
-            for p in sigma.get_fpf_involution_pipe_dreams():
-                c += 1
-                print(p)
-                w = p.words()
-                # print(w)
-                # print(fpf_insert(*w)[1])
-                v = [[n - i for i in a] for a in w[1 + k // 2:]]
-                print(v)
-                print(fpf_insert(*v)[1])
-            sigma.print_fpf_rothe_diagram()
-            print()
-            print('k =', k, 'sigma =', sigma.cycle_repr())
-            print('fpf pipe dreams:', c)
-            input('\n')
+def test_sigma_fpf(n=8, k=0):
+    lam = tuple([n - i for i in range(0, n, 2)])
+#    for mu in [[2 * k + n - i for i in range(0, n + 2 * k, 2)]]:  # StrictPartition.all(n):
+#        mu = tuple(mu)
+#        for k in range(2, n + 1, 2):
+#        sigma = sigma_fpf(mu, k)
+    oneline = [i - 1 if i % 2 == 0 else i + 1 for i in range(1, 2 * k + 1)] + [2 * n + 2 * k - i for i in range(2 * n)]
+    sigma = Permutation(*oneline)
+    # if sigma.is_identity():
+    #    continue
+    n = sigma.rank
+    c = 0
+    for p in sigma.get_fpf_involution_pipe_dreams():
+        c += 1
+        print(p)
+        w = p.words()
+        # print(w)
+        # print(fpf_insert(*w)[1])
+        v = [[n - i for i in a] for a in w[1 + k // 2:]]
+        print(v)
+        Q = fpf_insert(*v)[1]
+        print(Q)
+        assert Q.is_shifted_k_flagged(2 * k)
+    sigma.print_fpf_rothe_diagram()
+    print()
+    print('k =', k, 'sigma =', sigma.cycle_repr())
+    print('  fpf pipe dreams:', c)
+    print('shifted k flagged:', len(Tableau.shifted_k_flagged(2 * k, lam)))
+    print('mu =', lam)
+    print(Tableau.shifted_k_flagged(2 * k, lam))
+    input('\n')
 
 
 def count_pipe_dreams(shift, w):

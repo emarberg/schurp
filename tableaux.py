@@ -30,6 +30,23 @@ class Tableau:
     def __getitem__(self, item):
         return self.mapping.get(item, None)
 
+    def is_shifted_k_flagged(self, k):
+        for (i, j) in self:
+            entry = self.entry(i, j)
+            if entry.is_primed() and abs(entry) > j + k:
+                return False
+            if not entry.is_primed() and abs(entry) > i + k:
+                return False
+        return True
+
+    def is_k_flagged(self, k):
+        for (i, j) in self:
+            entry = self.entry(i, j)
+            assert not entry.is_primed()
+            if abs(entry) > i + k:
+                return False
+        return True
+
     def unprime_diagonal(self):
         return Tableau({box: -val if box[0] == box[1] and val.is_primed() else val for (box, val) in self.mapping.items()})
 
@@ -1128,6 +1145,8 @@ class Tableau:
 
     @classmethod
     def get_semistandard_shifted(cls, shape, n=None):
+        if type(shape) == tuple:
+            shape = StrictPartition(*shape)
         if type(shape) == Partition:
             shape = StrictPartition(shape)
         if type(shape) == StrictPartition:
@@ -1762,6 +1781,16 @@ class Tableau:
                 yield thisdiff
         else:
             yield diff
+
+    @classmethod
+    def shifted_k_flagged(cls, k, mu):  # noqa
+        max_entry = max(len(mu), mu[0] if mu else 0) + k
+        return {t for t in cls.get_semistandard_shifted(mu, max_entry) if t.is_shifted_k_flagged(k)}
+
+    @classmethod
+    def k_flagged(cls, k, mu):  # noqa
+        max_entry = len(mu) + k
+        return {t for t in cls.semistandard(max_entry, mu) if t.is_k_flagged(k)}
 
     @classmethod
     def semistandard(cls, max_entry, mu, nu=(), setvalued=False):  # noqa
