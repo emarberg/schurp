@@ -8,7 +8,11 @@ from collections import defaultdict
 STANDARD_CACHE = {}
 SEMISTANDARD_CACHE = {}
 STANDARD_SHIFTED_MARKED_CACHE = {}
+SEMISTANDARD_MARKED_RPP_CACHE = {}
+
 HORIZONTAL_STRIPS_CACHE = {}
+SHIFTED_RPP_HORIZONTAL_STRIPS_CACHE = {}
+SHIFTED_RPP_VERTICAL_STRIPS_CACHE = {}
 
 
 class Tableau:
@@ -1854,3 +1858,131 @@ class Tableau:
                         if diagonal_primes or row != col:
                             ans.add(tab.add(row, col, -n))
         return ans
+
+    @classmethod
+    def semistandard_marked_rpp(cls, max_entry, mu, nu=(), diagonal_nonprimes=False):  # noqa
+        return cls._semistandard_marked_rpp(max_entry, mu, nu, diagonal_nonprimes)
+
+    @cached_value(SEMISTANDARD_MARKED_RPP_CACHE)
+    def _semistandard_marked_rpp(cls, max_entry, mu, lam, diagonal_nonprimes):  # noqa
+        assert Partition.is_strict_partition(mu)
+        ans = set()
+        if mu == lam:
+            ans = {Tableau()}
+        elif Partition._contains(mu, lam) and max_entry > 0:
+            for nu1, diff1 in cls._shifted_rpp_horizontal_strips(mu):
+                for nu2, diff2 in cls._shifted_rpp_vertical_strips(nu1):
+                    if diagonal_nonprimes or not any(i == j for i, j in diff1):
+                        for tab in cls._semistandard_marked_rpp(max_entry - 1, nu2, lam, diagonal_nonprimes):
+                            for (i, j) in diff1:
+                                tab = tab.add(i, j, max_entry)
+                            for (i, j) in diff2:
+                                tab = tab.add(i, j, -max_entry)
+                            ans.add(tab)
+        return ans
+
+    @cached_value(SHIFTED_RPP_HORIZONTAL_STRIPS_CACHE)
+    def _shifted_rpp_horizontal_strips(cls, mu):  # noqa
+        assert Partition.is_strict_partition(mu)
+        if mu == ():
+            return [(mu, set())]
+
+        def remove_box(nu, i):
+            if i < len(nu) and nu[i] > 0:
+                nu = nu[:i] + (nu[i] - 1,) + nu[i + 1:]
+                while nu and nu[-1] == 0:
+                    nu = nu[:-1]
+                if all(nu[j] > nu[j + 1] for j in range(len(nu) - 1)):
+                    yield nu
+
+        def remove_all_boxes(nu, i):
+            queue = [nu]
+            while queue:
+                nu, queue = queue[0], queue[1:]
+                yield nu
+                for x in remove_box(nu, i):
+                    queue.append(x)
+
+        def skew(mu, nu):
+            ans = set()
+            for i, part in enumerate(mu):
+                subpart = nu[i] if i < len(nu) else 0
+                for j in range(subpart, part):
+                    ans.add((i + 1, j + 1 + i))
+            return ans
+
+        ans = set()
+        queue = [(mu, len(mu) - 1)]
+        while queue:
+            nu, i = queue[0]
+            queue = queue[1:]
+            if i >= 0:
+                for nu in remove_all_boxes(nu, i):
+                    ans.add(nu)
+                    queue.append((nu, i - 1))
+
+        return [(nu, skew(mu, nu)) for nu in ans]
+
+    @cached_value(SHIFTED_RPP_VERTICAL_STRIPS_CACHE)
+    def _shifted_rpp_vertical_strips(cls, mu):  # noqa
+        assert Partition.is_strict_partition(mu)
+        if mu == ():
+            return [(mu, set())]
+
+        def remove_box(nu, i):
+            for j in range(len(nu) - 1, -1, -1):
+                if j + nu[j] == i + 1:
+                    nu = nu[:j] + (nu[j] - 1,) + nu[j + 1:]
+                    while nu and nu[-1] == 0:
+                        nu = nu[:-1]
+                    yield nu
+                    return
+
+        def remove_all_boxes(nu, i):
+            queue = [nu]
+            while queue:
+                nu, queue = queue[0], queue[1:]
+                yield nu
+                for x in remove_box(nu, i):
+                    queue.append(x)
+
+        def skew(mu, nu):
+            ans = set()
+            for i, part in enumerate(mu):
+                subpart = nu[i] if i < len(nu) else 0
+                for j in range(subpart, part):
+                    ans.add((i + 1, j + 1 + i))
+            return ans
+
+        ans = set()
+        queue = [(mu, (mu[0] if mu else 0) - 1)]
+        while queue:
+            nu, i = queue[0]
+            queue = queue[1:]
+            if i >= 0:
+                for nu in remove_all_boxes(nu, i):
+                    ans.add(nu)
+                    queue.append((nu, i - 1))
+
+        return [(nu, skew(mu, nu)) for nu in ans]
+
+    def rpp_weight(self):
+        ans = []
+        bns = []
+        for i, j in self:
+            x = self[(i, j)].number
+            assert x != 0
+            if x > 0:
+                while x - 1 >= len(ans):
+                    ans.append(set())
+                ans[x - 1].add(j)
+            if x < 0:
+                while -x - 1 >= len(bns):
+                    bns.append(set())
+                bns[-x - 1].add(i)
+        n = max(len(ans), len(bns))
+        while n > len(ans):
+            ans.append(set())
+        while n > len(bns):
+            bns.append(set())
+        return tuple(len(ans[i]) + len(bns[i]) for i in range(n))

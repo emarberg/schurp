@@ -22,11 +22,17 @@ class Pipedream:
         self.crossings = {(i, j) for (i, j) in crossings}
         self.n = max([i + j for (i, j) in self.crossings]) if self.crossings else 1
 
+    def count_diagonal(self):
+        return len([i for (i, j) in self.crossings if i == j])
+
     def __iter__(self):
         return self.crossings.__iter__()
 
     def transpose(self):
         return Pipedream({(j, i) for (i, j) in self.crossings})
+
+    def reflect(self):
+        return Pipedream(self.crossings | {(j, i) for (i, j) in self.crossings})
 
     def __repr__(self):
         s = []
@@ -354,6 +360,30 @@ class Pipedream:
             for j in range(self.n + 1 - i, 0, -1):
                 if (i, j) in self.crossings:
                     word += [j + i - 1]
+            words += [tuple(word)]
+        return tuple(words)
+
+    def unimodal_reading_words(self):
+        words = []
+        for i in range(2, self.n + 1):
+            word = []
+            j = 0
+            while i + j <= self.n:
+                a = i + j
+                b = j + 1
+                if (a, b) in self.crossings:
+                    word += [a + b - 1]
+                j += 1
+            words += [tuple(word)]
+        return tuple(words)
+
+    def column_reading_words(self):
+        words = []
+        for j in range(self.n, 0, -1):
+            word = []
+            for i in range(1, self.n + 1):
+                if (i, j) in self.crossings:
+                    word += [i + j - 1]
             words += [tuple(word)]
         return tuple(words)
 
