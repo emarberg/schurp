@@ -139,7 +139,7 @@ def test_sigma_fpf(n=8, k=0):
             m = min(maxes)
             for p in sigma.get_fpf_involution_pipe_dreams():
                 c += 1
-                # print(p)
+                print(p)
                 w = p.column_reading_words()
                 v = w[m:]
                 Q = fpf_insert(*v)[1]

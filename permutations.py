@@ -433,6 +433,20 @@ class Permutation:
             PRIMED_INVOLUTION_WORDS[oneline] = words
         return PRIMED_INVOLUTION_WORDS[oneline]
 
+    def get_involution_hecke_words(self):
+        ans = set()
+        for v in self.get_involution_hecke_atoms():
+            ans |= v.get_reduced_words()
+        return ans
+
+    def get_involution_hecke_atoms(self):
+        ans = set()
+        n = self.rank
+        for v in self.all(n):
+            if v.inverse() % v == self:
+                ans.add(v)
+        return ans
+
     def dominant_component(self):
         ans = set()
         i = 1
