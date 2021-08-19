@@ -1860,6 +1860,17 @@ class Tableau:
         return ans
 
     @classmethod
+    def even_diagonal_unprimed_shifted_rpp(cls, max_entry, mu, nu=(), even_diagonal=False):  # noqa
+        return cls.unprimed_shifted_rpp(max_entry, mu, nu, True)
+
+    @classmethod
+    def unprimed_shifted_rpp(cls, max_entry, mu, nu=(), even_diagonal=False):  # noqa
+        ans = {t.unprime() for t in cls.semistandard_marked_rpp(max_entry, mu, nu)}
+        if even_diagonal:
+            ans = {t for t in ans if all(t.entry(i, i).number % 2 != 0 for i in range(1, t.max_row + 1))}
+        return ans
+
+    @classmethod
     def semistandard_marked_rpp(cls, max_entry, mu, nu=(), diagonal_nonprimes=False):  # noqa
         return cls._semistandard_marked_rpp(max_entry, mu, nu, diagonal_nonprimes)
 

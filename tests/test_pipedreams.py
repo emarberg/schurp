@@ -7,6 +7,24 @@ from tableaux import Tableau
 import pytest
 
 
+def factor(n):
+    for i in range(2, n + 1):
+        if n % i == 0:
+            return (i,) + factor(n // i)
+    return (n,)
+
+
+def rpptest(mu, nu, nmax=8):
+    for n in range(nmax):
+        a = len(Tableau.even_diagonal_unprimed_shifted_rpp(1 + n, mu))
+        b = len(Tableau.unprimed_shifted_rpp(1 + n, nu))
+        correction = 1
+        for i in range(1, len(nu) + 1):
+            correction *= 2 * i - 1
+        f = factor(correction * b // a) if (correction * b % a) == 0 else None
+        print(n + 1, a, b, correction * b / a, f)
+
+
 def sigma_k(mu, k):
     d = {(i + 1, j + 1) for i in range(len(mu)) for j in range(mu[i])}
     d = {(i, j) for (i, j) in d if i > k and j > k}
@@ -119,6 +137,8 @@ def test_sigma_fpf(n=8, k=0):
         print('mu =', mu)
         mu = tuple(mu)
         for k in range(2, n + 1, 2):
+            if k != 2:
+                continue
             lam = mu[k:]
             if (lam, k) in seenlam:
                 continue
@@ -139,10 +159,11 @@ def test_sigma_fpf(n=8, k=0):
             m = min(maxes)
             for p in sigma.get_fpf_involution_pipe_dreams():
                 c += 1
-                # print(p)
+                print(p)
                 w = p.column_reading_words()
                 v = w[m:]
-                Q = fpf_insert(*v)[1]
+                P, Q = fpf_insert(*v)
+                print(P)
                 # print(Q)
                 # assert Q.is_shifted_k_flagged(2 * k - 2)
                 seen.add(Q)
@@ -161,7 +182,7 @@ def test_sigma_fpf(n=8, k=0):
             print('k =', k, 'mu =', lam, c)
             print()
             # kflagged = Tableau.semistandard_marked_rpp(m, lam)
-            # print(sorted(kflagged, key=lambda x: x.row_reading_word()))
+            print(sorted(kflagged, key=lambda x: x.row_reading_word()))
             input('\n')
 
 
