@@ -10,6 +10,7 @@ PIPE_DREAMS = {(): {((),)}}
 ATOMS_CACHE = {}
 TWISTED_ATOMS_CACHE = {}
 TWISTED_INVOLUTION_WORDS_CACHE = {}
+TWISTED_PRIMED_INVOLUTION_WORDS_CACHE = {}
 FPF_ATOMS_CACHE = {}
 SYMPLECTIC_HECKE_ATOMS_CACHE = {}
 
@@ -270,6 +271,27 @@ class Permutation:
                 newdream = list(dream)
                 newdream[0] = (word[0],) + newdream[0]
                 yield tuple(newdream)
+
+    def get_twisted_primed_involution_words(self, n):
+        assert self.is_twisted_involution(n)
+        if self not in TWISTED_PRIMED_INVOLUTION_WORDS_CACHE:
+            TWISTED_PRIMED_INVOLUTION_WORDS_CACHE[(self, n)] = list(self._get_twisted_primed_involution_words(n))
+        return TWISTED_PRIMED_INVOLUTION_WORDS_CACHE[(self, n)]
+
+    def _get_twisted_primed_involution_words(self, n):
+        if self.is_identity():
+            return [()]
+        words = set()
+        for i in self.right_descent_set:
+            s = Permutation.s_i(i)
+            t = Permutation.s_i(n - i)
+            if t * self == self * s:
+                sub = (self * s).get_twisted_primed_involution_words(n)
+                words |= {e + (i,) for e in sub} | {e + (-i,) for e in sub}
+            else:
+                sub = (t * self * s).get_twisted_primed_involution_words(n)
+                words |= {e + (i,) for e in sub}
+        return words
 
     def get_twisted_involution_words(self, n):
         assert self.is_twisted_involution(n)
@@ -808,6 +830,13 @@ class Permutation:
 
     def get_descentset_L(self):
         return (self.inverse()).get_descentset_R()
+
+    def get_two_cycles(self):
+        ans = []
+        for c in self.cycles:
+            if len(c) == 2:
+                ans += [tuple(c)]
+        return ans
 
     def number_two_cycles(self):
         ans = 0

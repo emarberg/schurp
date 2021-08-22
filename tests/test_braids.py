@@ -1,3 +1,213 @@
+from permutations import Permutation
+import subprocess
+
+
+def write_graph(labeled, edges, dot_filename, png_filename):
+    s = ["graph G {"]
+    if not labeled:
+        s += ["    node [label=\"\", shape=point width=0.2];"]
+    else:
+        s += ["    node [margin=0; shape=plaintext; fontname=courier];"]
+    for a, b in edges:
+        if a < b:
+            s += ["    %s -- %s;" % (a, b)]
+    s += ["}"]
+    s = "\n".join(s)
+
+    with open(dot_filename, "w") as f:
+        f.write(s)
+    if labeled:
+        subprocess.run(["neato", "-Goverlap=scale", "-Tpng", dot_filename, "-o", png_filename])
+    else:
+        subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
+    subprocess.run(["open", png_filename])
+
+
+def primed_atoms_graph(w):
+    w = Permutation.longest_element(w) if type(w) == int else w
+
+    def span(n, cyclemap):
+        a = tuple(n[-1].inverse().oneline)
+        if len(a) == 0:
+            return
+        for i in range(len(a) - 1):
+            if a[i] > a[i + 1]:
+                nn = list(n)
+                nn[cyclemap[(a[i + 1], a[i])]] ^= 1
+                yield tuple(nn)
+        for i in range(len(a) - 2):
+            z, x, y = a[i:i + 3]
+            if x < y < z:
+                b = a[:i] + (y, z, x) + a[i + 3:]
+                nn = list(n)
+                nn[-1] = Permutation(*b).inverse()
+                yield tuple(nn)
+            y, z, x = a[i:i + 3]
+            if x < y < z:
+                b = a[:i] + (z, x, y) + a[i + 3:]
+                nn = list(n)
+                nn[-1] = Permutation(*b).inverse()
+                yield tuple(nn)
+
+    cycles = w.get_two_cycles()
+    cyclemap = {c: i for i, c in enumerate(cycles)}
+    nodes = []
+    for a in w.get_atoms():
+        for v in range(2**len(cycles)):
+            n = []
+            for i in range(len(cycles)):
+                n.append(0 if v % 2 else 1)
+                v = v // 2
+            n.append(a)
+            nodes.append(tuple(n))
+    nodemap = {n: i for i, n in enumerate(nodes)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a, cyclemap)}
+
+    s = ["graph G {"]
+    s += ["    node [label=\"\", shape=point];"]
+    for a, b in edges:
+        if a < b:
+            s += ["    %s -- %s;" % (a, b)]
+    s += ["}"]
+    s = "\n".join(s)
+
+    directory = "/Users/emarberg/examples/reduced-word-graphs/"
+    dot_filename = directory + "atoms%s.dot" % str(w)
+    png_filename = directory + "atoms%s.png" % str(w)
+    with open(dot_filename, "w") as f:
+        f.write(s)
+    subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
+    subprocess.run(["open", png_filename])
+
+
+def primed_involution_word_graph(w, labeled=False):
+    w = Permutation.longest_element(w) if type(w) == int else w
+
+    def span(a):
+        if len(a) > 0:
+            yield (-a[0],) + a[1:]
+        if len(a) >= 2 and (a[0] > 0 and a[1] > 0 and abs(a[0] - a[1]) == 1):
+            yield (a[1], a[0],) + a[2:]
+        for i in range(len(a) - 1):
+            x, y = a[i], a[i + 1]
+            if abs(abs(x) - abs(y)) > 1:
+                yield a[:i] + (y, x) + a[i + 2:]
+        for i in range(len(a) - 2):
+            x, y, z = a[i], a[i + 1], a[i + 2]
+            if abs(x) == abs(z):
+                yield a[:i] + (y * abs(z) // z, abs(x), y * abs(x) // x) + a[i + 3:]
+
+    nodes = list(w.get_primed_involution_words())
+    nodemap = {n: "\"" + "".join(map(lambda x: str(x) if x > 0 else str(-x) + "'", n)) + "\"" for i, n in enumerate(nodes)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
+
+    directory = "/Users/emarberg/examples/reduced-word-graphs/"
+    dot_filename = directory + "primed_invol%s.dot" % str(w)
+    png_filename = directory + "primed_invol%s.png" % str(w)
+    write_graph(labeled, edges, dot_filename, png_filename)
+
+
+def involution_word_graph(w, labeled=False):
+    w = Permutation.longest_element(w) if type(w) == int else w
+
+    def span(a):
+        if len(a) >= 2 and (abs(a[0] - a[1]) == 1):
+            yield (a[1], a[0],) + a[2:]
+        for i in range(len(a) - 1):
+            x, y = a[i], a[i + 1]
+            if abs(x - y) > 1:
+                yield a[:i] + (y, x) + a[i + 2:]
+        for i in range(len(a) - 2):
+            x, y, z = a[i], a[i + 1], a[i + 2]
+            if x == z:
+                yield a[:i] + (y, x, y) + a[i + 3:]
+
+    nodes = list(w.get_involution_words())
+    nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
+    directory = "/Users/emarberg/examples/reduced-word-graphs/"
+    dot_filename = directory + "invol%s.dot" % str(w)
+    png_filename = directory + "invol%s.png" % str(w)
+    write_graph(labeled, edges, dot_filename, png_filename)
+
+
+def twisted_involution_word_graph(w, rank=None, labeled=False):
+    w = Permutation.longest_element(w) if type(w) == int else w
+    rank = w.rank if rank is None else rank
+
+    def span(a):
+        if len(a) >= 1 and abs(a[0] - (rank - a[0])) > 1:
+            yield (rank - a[0],) + a[1:]
+        if len(a) >= 2 and rank - a[0] == a[1]:
+            yield (a[1], a[0],) + a[2:]
+        if len(a) >= 4 and rank % 2 == 0:
+            x, y, z = rank // 2 - 1, rank // 2, rank // 2 + 1
+            if a[:4] == (y, z, x, y):
+                yield (y, z, y, x) + a[4:]
+            if a[:4] == (y, z, y, x):
+                yield (y, z, x, y) + a[4:]
+        for i in range(len(a) - 1):
+            x, y = a[i], a[i + 1]
+            if abs(x - y) > 1:
+                yield a[:i] + (y, x) + a[i + 2:]
+        for i in range(len(a) - 2):
+            x, y, z = a[i], a[i + 1], a[i + 2]
+            if x == z:
+                yield a[:i] + (y, x, y) + a[i + 3:]
+
+    nodes = list(w.get_twisted_involution_words(rank))
+    nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
+    directory = "/Users/emarberg/examples/reduced-word-graphs/"
+    dot_filename = directory + "twisted%s.dot" % str(w)
+    png_filename = directory + "twisted%s.png" % str(w)
+    write_graph(labeled, edges, dot_filename, png_filename)
+
+
+def twisted_primed_involution_word_graph(w, rank=None, labeled=False):
+    w = Permutation.longest_element(w) if type(w) == int else w
+    rank = w.rank if rank is None else rank
+
+    def span(a):
+        if len(a) >= 1 and abs(a[0]) == rank - abs(a[0]):
+            yield (-a[0],) + a[1:]
+        if len(a) >= 1 and abs(abs(a[0]) - (rank - abs(a[0]))) > 1:
+            assert a[0] > 0
+            yield (rank - abs(a[0]),) + a[1:]
+        if len(a) >= 2 and rank - abs(a[0]) == abs(a[1]):
+            if a[0] > 0 and a[1] > 0:
+                yield (a[1], a[0],) + a[2:]
+            yield (a[0], -a[1],) + a[2:]
+
+        if len(a) >= 4 and rank % 2 == 0:
+            x, y, z = rank // 2 - 1, rank // 2, rank // 2 + 1
+            if a[:4] == (y, z, x, y):
+                yield (y, z, y, x) + a[4:]
+                yield (y, z, x, -y) + a[4:]
+            if a[:4] == (y, z, y, x):
+                yield (y, z, x, y) + a[4:]
+                yield (y, z, y, -x) + a[4:]
+            if a[:4] == (y, z, x, -y):
+                yield (y, z, x, y) + a[4:]
+            if a[:4] == (y, z, y, -x):
+                yield (y, z, y, x) + a[4:]
+
+        for i in range(len(a) - 1):
+            x, y = a[i], a[i + 1]
+            if abs(abs(x) - abs(y)) > 1:
+                yield a[:i] + (y, x) + a[i + 2:]
+        for i in range(len(a) - 2):
+            x, y, z = a[i], a[i + 1], a[i + 2]
+            if abs(x) == abs(z):
+                yield a[:i] + (y * abs(z) // z, abs(x), y * abs(x) // x) + a[i + 3:]
+
+    nodes = list(w.get_twisted_primed_involution_words(rank))
+    nodemap = {n: "\"" + "".join(map(lambda x: str(x) if x > 0 else str(-x) + "'", n)) + "\"" for i, n in enumerate(nodes)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
+    directory = "/Users/emarberg/examples/reduced-word-graphs/"
+    dot_filename = directory + "primed_twisted%s.dot" % str(w)
+    png_filename = directory + "primed_twisted%s.png" % str(w)
+    write_graph(labeled, edges, dot_filename, png_filename)
 
 
 class H:
