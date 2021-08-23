@@ -3,14 +3,19 @@ import subprocess
 
 
 def write_graph(labeled, edges, dot_filename, png_filename):
+    directory = "/Users/emarberg/examples/reduced-word-graphs/" + ("labeled/" if labeled else "unlabeled/") 
+    dot_filename = directory + dot_filename
+    png_filename = directory + png_filename
+
     s = ["graph G {"]
     if not labeled:
-        s += ["    node [label=\"\", shape=point width=0.2];"]
+        s += ["    node [label=\"\", shape=point; width=0.1;];"]
+        s += ["    edge [color=gray];"]
     else:
         s += ["    node [margin=0; shape=plaintext; fontname=courier];"]
+        s += ["    edge [color=gray];"]
     for a, b in edges:
-        if a < b:
-            s += ["    %s -- %s;" % (a, b)]
+        s += ["    %s -- %s;" % (a, b)]
     s += ["}"]
     s = "\n".join(s)
 
@@ -18,9 +23,14 @@ def write_graph(labeled, edges, dot_filename, png_filename):
         f.write(s)
     if labeled:
         subprocess.run(["neato", "-Goverlap=scale", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["open", png_filename])
+        ps = subprocess.Popen("neato -Txdot -Gstart=rand -Goverlap=scale " + dot_filename + " | dot2tex -tmath --figonly --figpreamble=\"\\small\" > " + png_filename + ".tex", stdin=subprocess.PIPE, shell=True)
+        ps.communicate()
     else:
-        subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
-    subprocess.run(["open", png_filename])
+        subprocess.run(["neato", "-Gstart=rand", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["open", png_filename])
+        ps = subprocess.Popen("neato -Txdot " + dot_filename + " | dot2tex -tmath --figonly --figpreamble=\"\\small\" > " + png_filename + ".tex", stdin=subprocess.PIPE, shell=True)
+        ps.communicate()
 
 
 def primed_atoms_graph(w):
@@ -99,11 +109,10 @@ def primed_involution_word_graph(w, labeled=False):
 
     nodes = list(w.get_primed_involution_words())
     nodemap = {n: "\"" + "".join(map(lambda x: str(x) if x > 0 else str(-x) + "'", n)) + "\"" for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
 
-    directory = "/Users/emarberg/examples/reduced-word-graphs/"
-    dot_filename = directory + "primed_invol%s.dot" % str(w)
-    png_filename = directory + "primed_invol%s.png" % str(w)
+    dot_filename = "primed_invol%s.dot" % str(w)
+    png_filename = "primed_invol%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
 
 
@@ -124,10 +133,38 @@ def involution_word_graph(w, labeled=False):
 
     nodes = list(w.get_involution_words())
     nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
+    dot_filename = "invol%s.dot" % str(w)
+    png_filename = "invol%s.png" % str(w)
+    write_graph(labeled, edges, dot_filename, png_filename)
+
+
+def hecke_involution_word_graph(w, labeled=False):
+    w = Permutation.longest_element(w) if type(w) == int else w
+
+    def span(a):
+        if len(a) >= 2 and (abs(a[0] - a[1]) == 1):
+            x, y = a[0], a[1]
+            v = Permutation.from_word(a[2:]).inverse()
+            if v(x) < v(x + 1) and v(y) < v(y + 1):
+                yield (x, y, x,) + a[2:]
+                # yield (y, x, y,) + a[2:]
+                # yield (y, x,) + a[2:]
+        for i in range(len(a) - 1):
+            x, y = a[i], a[i + 1]
+            if abs(x - y) > 1:
+                yield a[:i] + (y, x) + a[i + 2:]
+        for i in range(len(a) - 2):
+            x, y, z = a[i], a[i + 1], a[i + 2]
+            if x == z:
+                yield a[:i] + (y, x, y) + a[i + 3:]
+
+    nodes = list(w.get_involution_hecke_words())
+    nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
     edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
-    directory = "/Users/emarberg/examples/reduced-word-graphs/"
-    dot_filename = directory + "invol%s.dot" % str(w)
-    png_filename = directory + "invol%s.png" % str(w)
+    edges = {(x, y) for (x, y) in edges if (y, x) not in edges or x < y}
+    dot_filename = "hecke%s.dot" % str(w)
+    png_filename = "hecke%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
 
 
@@ -157,10 +194,51 @@ def twisted_involution_word_graph(w, rank=None, labeled=False):
 
     nodes = list(w.get_twisted_involution_words(rank))
     nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
+    dot_filename = "twisted%s.dot" % str(w)
+    png_filename = "twisted%s.png" % str(w)
+    write_graph(labeled, edges, dot_filename, png_filename)
+
+
+def twisted_hecke_involution_word_graph(w, rank=None, labeled=False):
+    w = Permutation.longest_element(w) if type(w) == int else w
+    rank = w.rank if rank is None else rank
+
+    def span(a):
+        if len(a) >= 1 and abs(a[0] - (rank - a[0])) > 1:
+            x, y = a[0], rank - a[0]
+            v = Permutation.from_word(a[1:]).inverse()
+            if v(x) < v(x + 1) and v(y) < v(y + 1):
+                yield (x, y,) + a[1:]
+        if len(a) >= 2 and rank - a[0] == a[1]:
+            x, y = a[0], a[1]
+            v = Permutation.from_word(a[2:]).inverse()
+            if abs(x - y) == 1 and v(x) < v(x + 1) and v(y) < v(y + 1):
+                yield (x, y, x,) + a[2:]
+
+        if len(a) >= 4 and rank % 2 == 0:
+            y, z, x = a[:3]
+            if y == rank // 2 and x == y - 1 and z == y + 1 and a[3] == y:
+                v = Permutation.from_word(a[4:]).inverse()
+                if v(x) < v(x + 1) < v(x + 2) < v(x + 3):
+                    yield (y, z, y, x) + a[4:]
+                    yield (y, z, y, x, y) + a[4:]
+
+        for i in range(len(a) - 1):
+            x, y = a[i], a[i + 1]
+            if abs(x - y) > 1:
+                yield a[:i] + (y, x) + a[i + 2:]
+        for i in range(len(a) - 2):
+            x, y, z = a[i], a[i + 1], a[i + 2]
+            if x == z:
+                yield a[:i] + (y, x, y) + a[i + 3:]
+
+    nodes = list(w.get_twisted_involution_hecke_words(rank))
+    nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
     edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
-    directory = "/Users/emarberg/examples/reduced-word-graphs/"
-    dot_filename = directory + "twisted%s.dot" % str(w)
-    png_filename = directory + "twisted%s.png" % str(w)
+    edges = {(x, y) for (x, y) in edges if (y, x) not in edges or x < y}
+    dot_filename = "hecke_twisted%s.dot" % str(w)
+    png_filename = "hecke_twisted%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
 
 
@@ -203,10 +281,9 @@ def twisted_primed_involution_word_graph(w, rank=None, labeled=False):
 
     nodes = list(w.get_twisted_primed_involution_words(rank))
     nodemap = {n: "\"" + "".join(map(lambda x: str(x) if x > 0 else str(-x) + "'", n)) + "\"" for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
-    directory = "/Users/emarberg/examples/reduced-word-graphs/"
-    dot_filename = directory + "primed_twisted%s.dot" % str(w)
-    png_filename = directory + "primed_twisted%s.png" % str(w)
+    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
+    dot_filename = "primed_twisted%s.dot" % str(w)
+    png_filename = "primed_twisted%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
 
 

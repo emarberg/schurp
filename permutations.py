@@ -469,6 +469,20 @@ class Permutation:
                 ans.add(v)
         return ans
 
+    def get_twisted_involution_hecke_words(self, n):
+        ans = set()
+        for v in self.get_twisted_involution_hecke_atoms(n):
+            ans |= v.get_reduced_words()
+        return ans
+
+    def get_twisted_involution_hecke_atoms(self, n):
+        ans = set()
+        n = self.rank
+        for v in self.all(n):
+            if v.inverse().star(n) % v == self:
+                ans.add(v)
+        return ans
+
     def dominant_component(self):
         ans = set()
         i = 1
