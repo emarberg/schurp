@@ -14,8 +14,15 @@ def write_graph(labeled, edges, dot_filename, png_filename):
     else:
         s += ["    node [margin=0; shape=plaintext; fontname=courier];"]
         s += ["    edge [color=gray];"]
-    for a, b in edges:
-        s += ["    %s -- %s;" % (a, b)]
+    for a, b, t in edges:
+        opt = ""
+        if t[0] in ["c"]:
+            opt = "style=solid" + ("; color=orange" if t in ["cp", "cs"] else "")
+        if t[0] in ["b"]:
+            opt = "" + ("color=orange" if t in ["bp", "bs"] else "")
+        # if labeled:
+        #    opt = ""
+        s += ["    %s -- %s [%s];" % (a, b, opt)]
     s += ["}"]
     s = "\n".join(s)
 
@@ -24,10 +31,10 @@ def write_graph(labeled, edges, dot_filename, png_filename):
     if labeled:
         subprocess.run(["neato", "-Goverlap=scale", "-Tpng", dot_filename, "-o", png_filename])
         subprocess.run(["open", png_filename])
-        ps = subprocess.Popen("neato -Txdot -Gstart=rand -Goverlap=scale " + dot_filename + " | dot2tex -tmath --figonly --figpreamble=\"\\small\" > " + png_filename + ".tex", stdin=subprocess.PIPE, shell=True)
+        ps = subprocess.Popen("neato -Gstart=rand -Txdot -Goverlap=scale " + dot_filename + " | dot2tex -tmath --figonly --figpreamble=\"\\small\" > " + png_filename + ".tex", stdin=subprocess.PIPE, shell=True)
         ps.communicate()
     else:
-        subprocess.run(["neato", "-Gstart=rand", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
         subprocess.run(["open", png_filename])
         ps = subprocess.Popen("neato -Txdot " + dot_filename + " | dot2tex -tmath --figonly --figpreamble=\"\\small\" > " + png_filename + ".tex", stdin=subprocess.PIPE, shell=True)
         ps.communicate()
@@ -95,21 +102,21 @@ def primed_involution_word_graph(w, labeled=False):
 
     def span(a):
         if len(a) > 0:
-            yield (-a[0],) + a[1:]
+            yield (-a[0],) + a[1:], "cp"
         if len(a) >= 2 and (a[0] > 0 and a[1] > 0 and abs(a[0] - a[1]) == 1):
-            yield (a[1], a[0],) + a[2:]
+            yield (a[1], a[0],) + a[2:], "bs"
         for i in range(len(a) - 1):
             x, y = a[i], a[i + 1]
             if abs(abs(x) - abs(y)) > 1:
-                yield a[:i] + (y, x) + a[i + 2:]
+                yield a[:i] + (y, x) + a[i + 2:], "c"
         for i in range(len(a) - 2):
             x, y, z = a[i], a[i + 1], a[i + 2]
             if abs(x) == abs(z):
-                yield a[:i] + (y * abs(z) // z, abs(x), y * abs(x) // x) + a[i + 3:]
+                yield a[:i] + (y * abs(z) // z, abs(x), y * abs(x) // x) + a[i + 3:], "b"
 
     nodes = list(w.get_primed_involution_words())
     nodemap = {n: "\"" + "".join(map(lambda x: str(x) if x > 0 else str(-x) + "'", n)) + "\"" for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
+    edges = {(nodemap[a], nodemap[b], t) for a in nodes for b, t in span(a) if a < b}
 
     dot_filename = "primed_invol%s.dot" % str(w)
     png_filename = "primed_invol%s.png" % str(w)
@@ -121,19 +128,19 @@ def involution_word_graph(w, labeled=False):
 
     def span(a):
         if len(a) >= 2 and (abs(a[0] - a[1]) == 1):
-            yield (a[1], a[0],) + a[2:]
+            yield (a[1], a[0],) + a[2:], "bs"
         for i in range(len(a) - 1):
             x, y = a[i], a[i + 1]
             if abs(x - y) > 1:
-                yield a[:i] + (y, x) + a[i + 2:]
+                yield a[:i] + (y, x) + a[i + 2:], "c"
         for i in range(len(a) - 2):
             x, y, z = a[i], a[i + 1], a[i + 2]
             if x == z:
-                yield a[:i] + (y, x, y) + a[i + 3:]
+                yield a[:i] + (y, x, y) + a[i + 3:], "b"
 
     nodes = list(w.get_involution_words())
     nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
+    edges = {(nodemap[a], nodemap[b], t) for a in nodes for b, t in span(a) if a < b}
     dot_filename = "invol%s.dot" % str(w)
     png_filename = "invol%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
@@ -147,22 +154,22 @@ def hecke_involution_word_graph(w, labeled=False):
             x, y = a[0], a[1]
             v = Permutation.from_word(a[2:]).inverse()
             if v(x) < v(x + 1) and v(y) < v(y + 1):
-                yield (x, y, x,) + a[2:]
+                yield (x, y, x,) + a[2:], "bs"
                 # yield (y, x, y,) + a[2:]
                 # yield (y, x,) + a[2:]
         for i in range(len(a) - 1):
             x, y = a[i], a[i + 1]
             if abs(x - y) > 1:
-                yield a[:i] + (y, x) + a[i + 2:]
+                yield a[:i] + (y, x) + a[i + 2:], "c"
         for i in range(len(a) - 2):
             x, y, z = a[i], a[i + 1], a[i + 2]
             if x == z:
-                yield a[:i] + (y, x, y) + a[i + 3:]
+                yield a[:i] + (y, x, y) + a[i + 3:], "b"
 
     nodes = list(w.get_involution_hecke_words())
     nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
-    edges = {(x, y) for (x, y) in edges if (y, x) not in edges or x < y}
+    edges = {(nodemap[a], nodemap[b], t) for a in nodes for b, t in span(a)}
+    edges = {(x, y, t) for (x, y, t) in edges if (y, x, t) not in edges or x < y}
     dot_filename = "hecke%s.dot" % str(w)
     png_filename = "hecke%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
@@ -174,27 +181,27 @@ def twisted_involution_word_graph(w, rank=None, labeled=False):
 
     def span(a):
         if len(a) >= 1 and abs(a[0] - (rank - a[0])) > 1:
-            yield (rank - a[0],) + a[1:]
+            yield (rank - a[0],) + a[1:], "cs"
         if len(a) >= 2 and rank - a[0] == a[1]:
-            yield (a[1], a[0],) + a[2:]
+            yield (a[1], a[0],) + a[2:], "bs"
         if len(a) >= 4 and rank % 2 == 0:
             x, y, z = rank // 2 - 1, rank // 2, rank // 2 + 1
             if a[:4] == (y, z, x, y):
-                yield (y, z, y, x) + a[4:]
+                yield (y, z, y, x) + a[4:], "bs"
             if a[:4] == (y, z, y, x):
-                yield (y, z, x, y) + a[4:]
+                yield (y, z, x, y) + a[4:], "bs"
         for i in range(len(a) - 1):
             x, y = a[i], a[i + 1]
             if abs(x - y) > 1:
-                yield a[:i] + (y, x) + a[i + 2:]
+                yield a[:i] + (y, x) + a[i + 2:], "c"
         for i in range(len(a) - 2):
             x, y, z = a[i], a[i + 1], a[i + 2]
             if x == z:
-                yield a[:i] + (y, x, y) + a[i + 3:]
+                yield a[:i] + (y, x, y) + a[i + 3:], "b"
 
     nodes = list(w.get_twisted_involution_words(rank))
     nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
+    edges = {(nodemap[a], nodemap[b], t) for a in nodes for b, t in span(a) if a < b}
     dot_filename = "twisted%s.dot" % str(w)
     png_filename = "twisted%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
@@ -209,34 +216,34 @@ def twisted_hecke_involution_word_graph(w, rank=None, labeled=False):
             x, y = a[0], rank - a[0]
             v = Permutation.from_word(a[1:]).inverse()
             if v(x) < v(x + 1) and v(y) < v(y + 1):
-                yield (x, y,) + a[1:]
+                yield (x, y,) + a[1:], "cs"
         if len(a) >= 2 and rank - a[0] == a[1]:
             x, y = a[0], a[1]
             v = Permutation.from_word(a[2:]).inverse()
             if abs(x - y) == 1 and v(x) < v(x + 1) and v(y) < v(y + 1):
-                yield (x, y, x,) + a[2:]
+                yield (x, y, x,) + a[2:], "bs"
 
         if len(a) >= 4 and rank % 2 == 0:
             y, z, x = a[:3]
             if y == rank // 2 and x == y - 1 and z == y + 1 and a[3] == y:
                 v = Permutation.from_word(a[4:]).inverse()
                 if v(x) < v(x + 1) < v(x + 2) < v(x + 3):
-                    yield (y, z, y, x) + a[4:]
-                    yield (y, z, y, x, y) + a[4:]
+                    yield (y, z, y, x) + a[4:], "bs"
+                    yield (y, z, y, x, y) + a[4:], "bs"
 
         for i in range(len(a) - 1):
             x, y = a[i], a[i + 1]
             if abs(x - y) > 1:
-                yield a[:i] + (y, x) + a[i + 2:]
+                yield a[:i] + (y, x) + a[i + 2:], "c"
         for i in range(len(a) - 2):
             x, y, z = a[i], a[i + 1], a[i + 2]
             if x == z:
-                yield a[:i] + (y, x, y) + a[i + 3:]
+                yield a[:i] + (y, x, y) + a[i + 3:], "b"
 
     nodes = list(w.get_twisted_involution_hecke_words(rank))
     nodemap = {n: "".join(map(str, n)) for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a)}
-    edges = {(x, y) for (x, y) in edges if (y, x) not in edges or x < y}
+    edges = {(nodemap[a], nodemap[b], t) for a in nodes for b, t in span(a)}
+    edges = {(x, y, t) for (x, y, t) in edges if (y, x, t) not in edges or x < y}
     dot_filename = "hecke_twisted%s.dot" % str(w)
     png_filename = "hecke_twisted%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
@@ -248,40 +255,40 @@ def twisted_primed_involution_word_graph(w, rank=None, labeled=False):
 
     def span(a):
         if len(a) >= 1 and abs(a[0]) == rank - abs(a[0]):
-            yield (-a[0],) + a[1:]
+            yield (-a[0],) + a[1:], "cp"
         if len(a) >= 1 and abs(abs(a[0]) - (rank - abs(a[0]))) > 1:
             assert a[0] > 0
-            yield (rank - abs(a[0]),) + a[1:]
-        if len(a) >= 2 and rank - abs(a[0]) == abs(a[1]):
-            if a[0] > 0 and a[1] > 0:
-                yield (a[1], a[0],) + a[2:]
-            yield (a[0], -a[1],) + a[2:]
+            yield (rank - abs(a[0]),) + a[1:], "cs"
+        if len(a) >= 2 and rank - abs(a[0]) == abs(a[1]) and abs(abs(a[0]) - abs(a[1])) == 1:
+            if a[0] > 0 and a[1] > 0 and abs(a[0] - a[1]) == 1:
+                yield (a[1], a[0],) + a[2:], "bs"
+            yield (a[0], -a[1],) + a[2:], "bp"
 
         if len(a) >= 4 and rank % 2 == 0:
             x, y, z = rank // 2 - 1, rank // 2, rank // 2 + 1
             if a[:4] == (y, z, x, y):
-                yield (y, z, y, x) + a[4:]
-                yield (y, z, x, -y) + a[4:]
+                yield (y, z, y, x) + a[4:], "bs"
+                yield (y, z, x, -y) + a[4:], "bp"
             if a[:4] == (y, z, y, x):
-                yield (y, z, x, y) + a[4:]
-                yield (y, z, y, -x) + a[4:]
+                yield (y, z, x, y) + a[4:], "bs"
+                yield (y, z, y, -x) + a[4:], "bp"
             if a[:4] == (y, z, x, -y):
-                yield (y, z, x, y) + a[4:]
+                yield (y, z, x, y) + a[4:], "bs"
             if a[:4] == (y, z, y, -x):
-                yield (y, z, y, x) + a[4:]
+                yield (y, z, y, x) + a[4:], "bp"
 
         for i in range(len(a) - 1):
             x, y = a[i], a[i + 1]
             if abs(abs(x) - abs(y)) > 1:
-                yield a[:i] + (y, x) + a[i + 2:]
+                yield a[:i] + (y, x) + a[i + 2:], "c"
         for i in range(len(a) - 2):
             x, y, z = a[i], a[i + 1], a[i + 2]
             if abs(x) == abs(z):
-                yield a[:i] + (y * abs(z) // z, abs(x), y * abs(x) // x) + a[i + 3:]
+                yield a[:i] + (y * abs(z) // z, abs(x), y * abs(x) // x) + a[i + 3:], "b"
 
     nodes = list(w.get_twisted_primed_involution_words(rank))
     nodemap = {n: "\"" + "".join(map(lambda x: str(x) if x > 0 else str(-x) + "'", n)) + "\"" for i, n in enumerate(nodes)}
-    edges = {(nodemap[a], nodemap[b]) for a in nodes for b in span(a) if a < b}
+    edges = {(nodemap[a], nodemap[b], t) for a in nodes for b, t in span(a) if a < b}
     dot_filename = "primed_twisted%s.dot" % str(w)
     png_filename = "primed_twisted%s.png" % str(w)
     write_graph(labeled, edges, dot_filename, png_filename)
