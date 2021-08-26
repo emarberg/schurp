@@ -328,7 +328,7 @@ class H:
         self.words = self.expand({tuple(seed)})
 
     def __repr__(self):
-        return str(min(self.words))
+        return ''.join(map(str, min(self.words)))
 
     def right_descent_set(self):
         return {w[-1] for w in self.words if w}
@@ -527,3 +527,84 @@ class A(H):
             a, b, c = w[i], w[i + 1], w[i + 2]
             if (a == c == 1 and b == 2) or (a == c == 2 and b == 1) or (a == c == 2 and b == 3) or (a == c == 3 and b == 2):
                 yield w[:i] + (b, a, b) + w[i + 3:]
+
+
+def test_a_hecke_reduced():
+    a, b, c = 1, 2, 3
+    g = A
+    assert g.m(a, b) == g.m(b, c) == 3
+    assert g.m(a, c) == 2
+    assert g.star(a) == c
+    assert g.star(b) == b
+    assert g.star(c) == a
+    ans, links, components = g.hecke()
+    w = [{i for x in ind for i in ans[x].words} for ind in components]
+    reps = {
+        (b, c, a, b),
+        (b, c, b, a),
+        (b, c, b, a, b),
+    }
+    assert len(reps) == len(w)
+    assert all(len(words & reps) == 1 for words in w)
+
+
+def test_b_hecke_reduced():
+    a, b, c = 1, 2, 3
+    g = B
+    assert g.m(a, b) == 4
+    assert g.m(b, c) == 3
+    assert g.m(a, c) == 2
+    assert g.star(a) == a
+    assert g.star(b) == b
+    assert g.star(c) == c
+    ans, links, components = g.hecke()
+    w = [{i for x in ind for i in ans[x].words} for ind in components]
+    reps = {
+        (a, b, c, a, b, a),
+        (a, b, c, b, a, b),
+        (a, b, c, b, a, b, a),
+    }
+    assert len(reps) == len(w)
+    assert all(len(words & reps) == 1 for words in w)
+
+
+def test_d_hecke_reduced():
+    a, b, c, d = 1, 2, 3, 4
+    g = D
+    assert g.m(a, c) == g.m(b, c) == g.m(c, d) == 3
+    assert g.m(a, b) == g.m(a, d) == g.m(b, d) == 2
+    assert g.star(a) == a
+    assert g.star(b) == b
+    assert g.star(c) == c
+    assert g.star(d) == d
+    ans, links, components = g.hecke()
+    w = [{i for x in ind for i in ans[x].words} for ind in components]
+    reps = {
+        (d, b, a, c, b, a, c, d),
+        (d, b, a, c, b, a, d, c),
+        (d, b, a, c, b, a, d, c, d),
+    }
+    assert len(reps) == len(w)
+    assert all(len(words & reps) == 1 for words in w)
+
+
+def test_h_hecke_reduced():
+    a, b, c = 1, 2, 3
+    g = H
+    assert g.m(a, b) == 5
+    assert g.m(b, c) == 3
+    assert g.m(a, c) == 2
+    assert g.star(a) == a
+    assert g.star(b) == b
+    assert g.star(c) == c
+    ans, links, components = g.hecke()
+    w = [{i for x in ind for i in ans[x].words} for ind in components]
+    reps = {
+        (a, c, b, a, c, b, a, b, c),
+        (a, c, b, a, c, b, a, c, b),
+        (a, c, b, a, c, b, a, c, b, c),
+        (a, c, b, a, c, b, a, c, b, a),
+        (a, c, b, a, c, b, a, c, b, a, b),
+    }
+    assert len(reps) == len(w)
+    assert all(len(words & reps) == 1 for words in w)
