@@ -142,6 +142,23 @@ def test_mixed_insert():
                         print()
                         assert False
 
+                    p, q = sagan_worley_insert(*f)
+                    pp, qq = w.sp_mixed_insert()
+                    try:
+                        assert p == qq
+                        assert q == pp
+                        count += 1
+                        if count % 1000 == 0:
+                            print(count)
+                    except:
+                        print('pi =', pi)
+                        print('f =', f)
+                        print(p, q)
+                        print('w =', w)
+                        print(pp, qq)
+                        print()
+                        assert False
+
     # print(len(testset))
 
 

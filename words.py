@@ -594,6 +594,28 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def sp_mixed_insert(self, verbose=False):
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            a = MarkedNumber(2 * a)
+            j, column_dir, p = p.sp_mixed_insert(a, verbose=verbose)
+
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    v = MarkedNumber(i * (-1 if p.get(k, l).number < 0 else 1))
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        mapping = {}
+        for i, j in p:
+            v = p.mapping[(i, j)]
+            if v.number % 2 == 0:
+                v = MarkedNumber(abs(v) // 2)
+            else:
+                v = MarkedNumber(-(abs(v) + 1) // 2)
+            mapping[(i, j)] = v
+        return Tableau(mapping), q
+
     def mixed_insert(self, verbose=False):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
