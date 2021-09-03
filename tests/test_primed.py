@@ -8,7 +8,9 @@ from words import (
     Tableau,
     involution_insert,
     primed_sw_insert,
-    sagan_worley_insert
+    sagan_worley_insert,
+    mixed_insert,
+    sp_mixed_insert
 )
 import pytest
 import random
@@ -42,6 +44,13 @@ def cached_sw_insert(a):
     return sw_cache[a]
 
 
+def is_index_strict(mat):
+    for row in mat:
+        if len([a for a in row if a != 0]) > 1:
+            return False
+    return True
+
+
 def matrix_to_biword(mat):
     ans = []
     for i in range(len(mat)):
@@ -52,6 +61,48 @@ def matrix_to_biword(mat):
             elif mat[i][j] > 0:
                 word += mat[i][j] * [j + 1]
         ans += [Word(*word)]
+    return ans
+
+
+def transpose_matrix(mat):
+    m = len(mat)
+    n = len(mat[0])
+    ans = [m * [0] for _ in range(n)]
+    for i in range(m):
+        for j in range(n):
+            ans[j][i] = mat[i][j]
+    return ans
+
+
+def index_strict_integer_matrices(m, n):
+    r = 2
+    for uuu in range((n + 1)**m):
+        for vvv in range(r ** m):
+            u, v = uuu, vvv
+            b = True
+            for i in range(m):
+                b = b and not (u % (n + 1) == n and v % r == 0)
+                v = v // r
+                u = u // (n + 1)
+            if not b:
+                continue
+            u, v = uuu, vvv
+            ans = [n * [0] for _ in range(m)]
+            for i in range(m):
+                j = u % (n + 1)
+                if j < n:
+                    ans[i][j] = -1 if v % r == 0 else 1
+                v = v // r
+                u = u // (n + 1)
+            yield tuple(tuple(row) for row in ans), uuu, vvv
+
+
+def random_index_strict_integer_matrix(m, n):
+    ans = [n * [0] for _ in range(m)]
+    for i in range(m):
+        j = random.randint(0, n)
+        if j < n:
+            ans[i][j] = 2 * random.randint(0, 1) - 1
     return ans
 
 
@@ -72,6 +123,53 @@ def random_integer_matrix(m, n, p):
         for j in range(n):
             ans[i][j] = random.randint(-p, p)
     return ans
+
+
+def test_random_sw_transpose(m=4, n=4):
+    total = 100
+    iteration = 0
+    for _ in range(total):
+        mat = random_index_strict_integer_matrix(m, n)
+        tmat = transpose_matrix(mat)
+        biword = matrix_to_biword(mat)
+        tbiword = matrix_to_biword(tmat)
+        print('. . .', iteration)
+
+        p, q = sagan_worley_insert(*tbiword)
+        assert (q, p) == sp_mixed_insert(*biword)
+        print(p, q)
+
+        p, q = primed_sw_insert(*tbiword)
+        assert (q, p) == mixed_insert(*biword)
+        print()
+        print(p, q)
+        print()
+        iteration += 1
+    print('iterations:', iteration)
+
+
+def test_sw_transpose(m=2, n=2):
+    iteration = 0
+    seen = {}
+    for mat, u, v in index_strict_integer_matrices(m, n):
+        assert mat not in seen
+        seen[mat] = (u, v)
+        if iteration % 100 == 0:
+            print('. . .', iteration)
+        tmat = transpose_matrix(mat)
+        biword = matrix_to_biword(mat)
+        tbiword = matrix_to_biword(tmat)
+
+        p, q = sagan_worley_insert(*tbiword)
+        assert (q, p) == sp_mixed_insert(*biword)
+        # print(p, q)
+
+        p, q = primed_sw_insert(*tbiword)
+        assert (q, p) == mixed_insert(*biword)
+        # print(p, q)
+
+        iteration += 1
+    print('iterations:', iteration)
 
 
 def sw_permutation(biword):

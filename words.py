@@ -823,6 +823,20 @@ def sagan_worley_insert(*words):
     return p, q
 
 
+def mixed_insert(*words):
+    w, mapping = get_insertion_mapping(words)
+    p, q = w.mixed_insert(verbose=False)
+    q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+    return p, q
+
+
+def sp_mixed_insert(*words):
+    w, mapping = get_insertion_mapping(words)
+    p, q = w.sp_mixed_insert(verbose=False)
+    q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+    return p, q
+
+
 def involution_insert(*words):
     w, mapping = get_insertion_mapping(words)
     p, q = w.involution_insert(verbose=False)
