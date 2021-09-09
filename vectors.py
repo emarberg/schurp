@@ -166,3 +166,78 @@ class Vector:
             if m is not None:
                 ans.append(i)
         return ans
+
+    @classmethod
+    def is_consistent_linear_system(cls, augmat):
+        m = len(augmat)
+        n = 0 if m == 0 else len(augmat[0])
+        rref = cls.rref(augmat)
+
+        pivots = []
+        for i in range(m):
+            for j in range(n):
+                if rref[i][j] != 0:
+                    pivots.append(j)
+                    break
+        return n - 1 not in pivots
+
+    @classmethod
+    def rref(cls, matrix):
+        assert all(type(e) == int for row in matrix for e in row)
+        m = len(matrix)
+        n = 0 if m == 0 else len(matrix[0])
+        matrix = [[e for e in row] for row in matrix]
+
+        def gcd(*args):
+            if len(args) <= 1:
+                return args[0]
+            if len(args) > 2:
+                return gcd(args[0], gcd(*args[1:]))
+            a, b = args[0], args[1]
+            while b != 0:
+                a, b = b, a % b
+            return a
+
+        def swap(mat, i, j):
+            mat[i], mat[j] = mat[j], mat[i]
+
+        def scale(mat, i, v):
+            for j in range(len(mat[i])):
+                mat[i][j] *= v
+
+        def iscale(mat, i, v=None):
+            v = gcd(*mat[i]) if v is None else v
+            for j in range(len(mat[i])):
+                assert mat[i][j] % v == 0
+                mat[i][j] //= v
+
+        def replace(mat, i, j, v):
+            for t in range(len(mat[j])):
+                mat[j][t] += v * mat[i][t]
+
+        def find_nonzeros_in_column(mat, rowstart, j):
+            return [t for t in range(rowstart, m) if mat[t][j] != 0]
+
+        row = 0
+        for col in range(n):
+            nonzeros = find_nonzeros_in_column(matrix, row, col)
+            if len(nonzeros) == 0:
+                continue
+
+            i = nonzeros[0]
+            iscale(matrix, i)
+            if matrix[i][col] < 0:
+                iscale(matrix, i, -1)
+
+            for j in nonzeros[1:]:
+                a, b = matrix[i][col], matrix[j][col]
+                d = gcd(a, b)
+                scale(matrix, j, a // d)
+                replace(matrix, i, j, -b // d)
+
+            if i != row:
+                swap(matrix, row, i)
+
+            row += 1
+
+        return matrix
