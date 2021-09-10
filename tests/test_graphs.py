@@ -3,6 +3,7 @@ import random
 import itertools
 import subprocess
 import time
+import numpy
 
 
 def write_graph(comp, part):
@@ -137,19 +138,71 @@ def get_system(comp, part):
 
 
 def test(n):
-    for comp in all_comps(n):
-        for part in all_partitions(n):
-            mat = get_system(comp, part)
-            if Vector.is_consistent_linear_system(mat):
-                if write_graph(comp, part):
-                    print(comp, part)
-                    print()
-                    for row in mat:
-                        print('  ', row)
-                    print()
-                    # rref = Vector.rref(mat)
-                    # print()
-                    # for row in rref:
-                    #     print('  ', row)
-                    # print()
-                    input('')
+    i, j, k = 0, 0, 0
+    pairs = [(comp, part) for comp in all_comps(n) for part in all_partitions(n)]
+    q = len(pairs)
+    for index in numpy.random.permutation(q):
+        comp, part = pairs[index]
+        i += 1
+        mat = get_system(comp, part)
+        if Vector.is_consistent_linear_system(mat):
+            j += 1
+            if write_graph(comp, part):
+                k += 1
+                print(comp, part)
+                print()
+                for row in mat:
+                    print('  ', row)
+                print()
+                print('weyl group action:', check_weyl_action(comp, part))
+                # rref = Vector.rref(mat)
+                # print()
+                # for row in rref:
+                #     print('  ', row)
+                # print()
+                # input('')
+        if i % 1000 == 0:
+            print('considered', i, 'of', q, 'consistent', j, 'crystals', k)
+
+
+def istring_reflect(x, strings):
+    for s in strings:
+        if x in s:
+            i = [_ for _ in range(len(s)) if s[_] == x][0]
+            return s[len(s) - 1 - i]
+
+
+def check_weyl_action(onestrings, twostrings):
+    if type(onestrings[0]) == int:
+        onestrings = list(onestrings)
+        for i in range(len(onestrings) - 1, -1, -1):
+            onestrings[i] = tuple(range(sum(onestrings[:i]), sum(onestrings[:i + 1])))
+        twostrings = [tuple(i - 1 for i in e) for e in twostrings]
+
+    elems = {e for _ in onestrings for e in _} | {e for _ in twostrings for e in _}
+    for e in elems:
+        a = istring_reflect(istring_reflect(istring_reflect(e, onestrings), twostrings), onestrings)
+        b = istring_reflect(istring_reflect(istring_reflect(e, twostrings), onestrings), twostrings)
+        if a != b:
+            return False
+    return True
+
+
+def test_abnormal():
+    onestrings = [[1, 18, 21], [2, 22], [4, 10, 19], [6, 0, 11], [9], [12, 20], [17, 16, 24, 5], [25, 8, 13, 3], [26, 15, 14, 7, 23]]
+    twostrings = [[1, 25, 26], [3, 19, 22, 0], [7, 24], [8, 15], [13, 10, 16], [14], [18, 12, 4, 17], [21, 20, 9, 2, 6], [23, 5, 11]]
+    m, i = {}, 1
+    for c in onestrings:
+        for v in c:
+            m[v], i = i, i + 1
+    comp = list(map(len, onestrings))
+    part = [[m[v] for v in p] for p in twostrings]
+    if Vector.is_consistent_linear_system(get_system(comp, part)):
+        if write_graph(comp, part):
+            print('weyl group action (control):', check_weyl_action(onestrings, twostrings))
+
+    altstrings = [[1, 25, 26], [3, 19, 24, 0], [7, 22], [8, 15], [13, 10, 16], [14], [18, 12, 4, 17], [21, 20, 9, 2, 6], [23, 5, 11]]
+    part = [[m[v] for v in p] for p in altstrings]
+    if Vector.is_consistent_linear_system(get_system(comp, part)):
+        if write_graph(comp, part):
+            print('weyl group action (experiment):', check_weyl_action(onestrings, altstrings))
