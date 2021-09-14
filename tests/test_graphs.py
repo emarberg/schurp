@@ -6,15 +6,23 @@ import time
 import numpy
 
 
-def write_graph(comp, part):
-    des = [0]
-    for c in comp:
-        des += [des[-1] + c]
-    edges = [(i, i + 1, 1) for i in range(1, sum(comp)) if i not in des]
+def write_graph(comp, part, write=True):
+    if type(comp[0]) == int:
+        n = sum(comp)
+        des = [0]
+        for c in comp:
+            des += [des[-1] + c]
+        edges = [(i, i + 1, 1) for i in range(1, sum(comp)) if i not in des]
+    else:
+        n = sum(map(len, comp))
+        edges = [(istring[i], istring[i + 1], 1) for istring in comp for i in range(len(istring) - 1)]
     edges += [(istring[i], istring[i + 1], 2) for istring in part for i in range(len(istring) - 1)]
 
-    if len({a for (a, _, _) in edges} | {b for (_, b, _) in edges}) < sum(comp):
+    if len({a for (a, _, _) in edges} | {b for (_, b, _) in edges}) < n:
         return False
+
+    if not write:
+        return True
 
     directory = "/Users/emarberg/examples/crystals/random/" + ("edges_%s_" % len(edges)) + str(time.time_ns())
     dot_filename = directory + ".dot"
@@ -78,10 +86,14 @@ def rpartition(base):
 
 
 def get_system(comp, part):
-    n = sum(comp)
-    comp = list(comp)
-    for i in range(len(comp) - 1, -1, -1):
-        comp[i] = tuple(range(sum(comp[:i]), sum(comp[:i + 1])))
+    if type(comp[0]) == int:
+        n = sum(comp)
+        comp = list(comp)
+        for i in range(len(comp) - 1, -1, -1):
+            comp[i] = tuple(range(sum(comp[:i]), sum(comp[:i + 1])))
+    else:
+        n = sum(map(len, comp))
+        comp = [tuple(i - 1 for i in e) for e in comp]
     part = [tuple(i - 1 for i in e) for e in part]
     mat = []
     for istring in comp:
@@ -137,7 +149,7 @@ def get_system(comp, part):
     return mat
 
 
-def test(n):
+def test(n=4):
     i, j, k = 0, 0, 0
     pairs = [(comp, part) for comp in all_comps(n) for part in all_partitions(n)]
     q = len(pairs)
@@ -198,11 +210,34 @@ def test_abnormal():
     comp = list(map(len, onestrings))
     part = [[m[v] for v in p] for p in twostrings]
     if Vector.is_consistent_linear_system(get_system(comp, part)):
-        if write_graph(comp, part):
+        if write_graph(comp, part, False):
             print('weyl group action (control):', check_weyl_action(onestrings, twostrings))
 
-    altstrings = [[1, 25, 26], [3, 19, 24, 0], [7, 22], [8, 15], [13, 10, 16], [14], [18, 12, 4, 17], [21, 20, 9, 2, 6], [23, 5, 11]]
-    part = [[m[v] for v in p] for p in altstrings]
-    if Vector.is_consistent_linear_system(get_system(comp, part)):
-        if write_graph(comp, part):
+    # altstrings = [[1, 25, 26], [3, 19, 24, 0], [7, 22], [8, 15], [13, 10, 16], [14], [18, 12, 4, 17], [21, 20, 9, 2, 6], [23, 5, 11]]
+    # part = [[m[v] for v in p] for p in altstrings]
+    onestrings = [[1, 2, 4], [17, 22], [8, 14, 18], [21, 25, 27], [13], [6, 9], [12, 19, 23, 26], [3, 7, 10, 15], [5, 11, 16, 20, 24]]
+    altstrings = [[1, 3, 5], [15, 18, 23, 25], [20, 22], [7, 11], [10, 14, 19], [16], [2, 6, 8, 12], [4, 9, 13, 17, 21], [24, 26, 27]]
+    if Vector.is_consistent_linear_system(get_system(onestrings, altstrings)):
+        if write_graph(onestrings, altstrings, False):
             print('weyl group action (experiment):', check_weyl_action(onestrings, altstrings))
+            print(sorted(onestrings, key=lambda x: x[0]))
+            print(sorted(altstrings, key=lambda x: x[0]))
+    # heights = {1: 0}
+    # while len(heights) < 27:
+    #     for s in onestrings:
+    #         for i in range(1, len(s)):
+    #             if s[i] not in heights and s[i - 1] in heights:
+    #                 heights[s[i]] = heights[s[i - 1]] + 1
+    #     for s in altstrings:
+    #         for i in range(1, len(s)):
+    #             if s[i] not in heights and s[i - 1] in heights:
+    #                 heights[s[i]] = heights[s[i - 1]] + 1
+    # sort = sorted(heights, key=lambda x: heights[x])
+    # m, i = {}, 1
+    # for a in sort:
+    #     m[a], i = i, i + 1
+    # onestrings = [[m[a] for a in r] for r in onestrings]
+    # altstrings = [[m[a] for a in r] for r in altstrings]
+    # print(onestrings)
+    # print(altstrings)
+    # print()
