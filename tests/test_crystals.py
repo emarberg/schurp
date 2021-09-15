@@ -13,6 +13,35 @@ from words import Word
 import random
 
 
+def test_star_operator(rank=3, factors=3):
+    # fails
+    for n in range(1, rank + 1):
+        crystal = AbstractGLCrystal
+        b = crystal.standard_object(n)
+        u = None
+        for f in range(1, 1 + factors):
+            print(crystal, 'rank =', n, 'factors =', f)
+            u = b if u is None else u.tensor(b)
+            for i in u.indices:
+                for x in u:
+                    try:
+                        y = u.star_operator(u.e_operator(i, u.star_operator(x)))
+                        z = u.f_operator(n - i, x)
+                        assert y == z
+                    except:
+                        print('x =', x, 'i =', i, 'w_0 e_i w_0(x) =', y, 'f_{n-i}(x) =', z, '\n')
+                        # u.draw()
+                        # assert False
+                    try:
+                        y = u.star_operator(u.f_operator(i, u.star_operator(x)))
+                        z = u.e_operator(n - i, x)
+                        assert y == z
+                    except:
+                        print('x =', x, 'i =', i, 'w_0 f_i w_0(x) =', y, 'e_{n-i}(x) =', z, '\n')
+                        # u.draw()
+                        # assert False
+
+
 def _test_components(crystal, rank, factors, x):
     b = crystal.standard_object(rank)
     u = None
