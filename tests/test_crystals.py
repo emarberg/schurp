@@ -13,6 +13,33 @@ from words import Word
 import random
 
 
+def test_starb_operator(rank=3, factors=3):
+    # fails
+    for n in range(2, rank + 1):
+        crystal = AbstractPrimedQCrystal
+        b = crystal.standard_object(n)
+        u = None
+        for f in range(1, 1 + factors):
+            print(crystal, 'rank =', n, 'factors =', f)
+            u = b if u is None else u.tensor(b)
+            high = [v for v, _ in u.get_highest_weights()]
+            low = [v for v, _ in u.get_lowest_weights()]
+            print(high)
+            print()
+            print(low)
+            print()
+            for v in high:
+                w = u.star_operator(u.starb_operator(v))
+                print('high to low:', v, w)
+                assert w == u.star_plus_operator(v)
+                assert w in low
+            for v in low:
+                w = u.star_operator(u.starb_operator(v))
+                print('low to high:', v, w)
+                assert w == u.star_plus_operator(v)
+                assert w in high
+
+
 def test_star_operator(rank=3, factors=3):
     # fails
     for n in range(1, rank + 1):

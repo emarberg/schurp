@@ -109,7 +109,7 @@ class AbstractCrystalMixin:
         return self.star_operator(self.e_operator(i, self.star_operator(v)))
 
     def s_operator(self, i, b):
-        assert 1 <= i < self.rank
+        assert 0 <= i < self.rank
         assert b in self.vertices
         if (i, b) not in self.s_operators:
             k = self.f_string(i, b) - self.e_string(i, b)
@@ -440,6 +440,29 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
+
+    def starb_operator(self, b):
+        if b is None:
+            return None
+        n = self.rank
+        a = b
+        for j in range(n - 1, -1, -1):
+            for i in range(j, 0, -1):
+                a = self.s_operator(i, a)
+            a = self.s_operator(0, a)
+            for i in range(1, j + 1):
+                a = self.s_operator(i, a)
+        return a
+
+    def star_plus_operator(self, b):
+        if b is None:
+            return None
+        n = self.rank
+        a = b
+        for j in range(n):
+            for i in range(0, n - j):
+                a = self.s_operator(i, a)
+        return a
 
     def index_printer(self, i, primed=False):
         if not primed:
