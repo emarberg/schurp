@@ -17,6 +17,47 @@ from permutations import Permutation
 import random
 
 
+def test_increasing_factorizations(n=4):
+    for pi in Permutation.all(n):
+        k = max((0,) + pi.code())
+        a = 0
+        print(pi, pi.code(), k)
+        # print(list(pi.get_reduced_words()))
+        # print()
+        for w in pi.get_reduced_words():
+            assert len(list(Word.increasing_factorizations(w, k - 1))) == 0
+            a += len(list(Word.increasing_factorizations(w, k)))
+            if a > 0:
+                break
+        assert a > 0
+
+
+def test_o_increasing_factorizations(n=4):
+    for pi in Permutation.involutions(n):
+        k = max((0,) + pi.involution_code())
+        a = 0
+        print(pi, pi.involution_code(), k)
+        for w in pi.get_involution_words():
+            assert len(list(Word.increasing_factorizations(w, k - 1))) == 0
+            a += len(list(Word.increasing_factorizations(w, k)))
+            if a > 0:
+                break
+        assert a > 0
+
+
+def test_sp_increasing_factorizations(n=4):
+    for pi in Permutation.fpf_involutions(n):
+        k = max((0,) + pi.fpf_involution_code())
+        a = 0
+        print(pi, pi.fpf_involution_code(), k)
+        for w in pi.get_fpf_involution_words():
+            assert len(list(Word.increasing_factorizations(w, k - 1))) == 0
+            a += len(list(Word.increasing_factorizations(w, k)))
+            if a > 0:
+                break
+        assert a > 0
+
+
 def random_increasing_factorization(n):
     w = Permutation.random_primed_involution_word(n)
     f = []

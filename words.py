@@ -119,6 +119,9 @@ class Word:
 
     @classmethod
     def increasing_factorizations(cls, w, k):
+        if k < 0:
+            return
+
         w = w.tuple() if type(w) == Word else w
 
         def is_increasing(x):
