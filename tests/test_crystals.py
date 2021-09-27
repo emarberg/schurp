@@ -141,6 +141,46 @@ def flatten(t):
     return (flatten(t[0]) if type(t[0]) == tuple else (t[0],)) + flatten(t[1:])
 
 
+def test_forgetul_functor(rank=3, factors=3):
+    # fails
+    crystal = AbstractQCrystal
+    b = crystal.standard_object(rank)
+    u = None
+    for f in range(1, 1 + factors):
+        print(crystal, 'rank =', rank, 'factors =', f)
+        u = b if u is None else u.tensor(b)
+        for vertex in u:
+            flat = flatten(vertex)
+            for i in [2]:
+                for j in range(1, len(flat)):
+                    target = u.f_operator(-i, vertex)
+                    w1, w2 = flat[:j], flat[j:]
+                    if not any(a in [i, i + 1] for a in w1):
+                        w3 = AbstractQCrystal.f_operator_on_words(-i, w2)
+                        expected = (w1 + w3) if w3 is not None else None
+                    else:
+                        w3 = AbstractQCrystal.f_operator_on_words(-i, w1)
+                        expected = (w3 + w2) if w3 is not None else None
+                    print('f:', 'i =', -i, w1, ':', w2, '-->', expected, 'vs', target)
+                    if target:
+                        assert flatten(target) == expected
+                    else:
+                        assert expected is None
+
+                    target = u.e_operator(-i, vertex)
+                    if not any(a in [i, i + 1] for a in w1):
+                        w3 = AbstractQCrystal.e_operator_on_words(-i, w2)
+                        expected = (w1 + w3) if w3 is not None else None
+                    else:
+                        w3 = AbstractQCrystal.e_operator_on_words(-i, w1)
+                        expected = (w3 + w2) if w3 is not None else None
+                    print('e:', 'i =', -i, w1, ':', w2, '-->', expected, 'vs', target)
+                    if target:
+                        assert flatten(target) == expected
+                    else:
+                        assert expected is None
+
+
 def _test_operators_on_words(crystal, rank, factors):
     b = crystal.standard_object(rank)
     u = None

@@ -215,10 +215,14 @@ def test_abnormal():
 
     # altstrings = [[1, 25, 26], [3, 19, 24, 0], [7, 22], [8, 15], [13, 10, 16], [14], [18, 12, 4, 17], [21, 20, 9, 2, 6], [23, 5, 11]]
     # part = [[m[v] for v in p] for p in altstrings]
-    onestrings = [[1, 2, 4], [17, 22], [8, 14, 18], [21, 25, 27], [13], [6, 9], [12, 19, 23, 26], [3, 7, 10, 15], [5, 11, 16, 20, 24]]
-    altstrings = [[1, 3, 5], [15, 18, 23, 25], [20, 22], [7, 11], [10, 14, 19], [16], [2, 6, 8, 12], [4, 9, 13, 17, 21], [24, 26, 27]]
+    # onestrings = [[1, 2, 4], [17, 22], [8, 14, 18], [21, 25, 27], [13], [6, 9], [12, 19, 23, 26], [3, 7, 10, 15], [5, 11, 16, 20, 24]]
+    # altstrings = [[1, 3, 5], [15, 18, 23, 25], [20, 22], [7, 11], [10, 14, 19], [16], [2, 6, 8, 12], [4, 9, 13, 17, 21], [24, 26, 27]]
+
+    onestrings = [[1, 3], [11, 15], [5, 9, 13], [2, 6], [4, 8, 12], [14, 16], [10], [7]]
+    altstrings = [[1, 5], [3, 7, 11], [13, 16], [2, 4], [6, 10, 14], [12, 15], [9], [8]]
+
     if Vector.is_consistent_linear_system(get_system(onestrings, altstrings)):
-        if write_graph(onestrings, altstrings, False):
+        if write_graph(onestrings, altstrings):
             print('weyl group action (experiment):', check_weyl_action(onestrings, altstrings))
             print(sorted(onestrings, key=lambda x: x[0]))
             print(sorted(altstrings, key=lambda x: x[0]))

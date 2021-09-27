@@ -354,6 +354,16 @@ class AbstractQCrystal(AbstractCrystalMixin):
             return str(self.rank + i) + "\'"
 
     @classmethod
+    def s_operator_on_words(cls, j, w):
+        assert j > 0
+        if w is None:
+            return None
+        k = len([a for a in w if a == j]) - len([a for a in w if a == j + 1])
+        for _ in range(abs(k)):
+            w = cls.f_operator_on_words(j, w) if k >= 0 else cls.e_operator_on_words(j, w)
+        return w
+
+    @classmethod
     def f_operator_on_words(cls, i, word):
         if i > 0:
             return AbstractGLCrystal.f_operator_on_words(i, word)
@@ -366,6 +376,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
             else:
                 word[ones[0]] = 2
                 return cl(word)
+        elif i < -1:
+            return cls.s_operator_on_words(-i - 1, cls.s_operator_on_words(-i, cls.f_operator_on_words(i + 1, cls.s_operator_on_words(-i, cls.s_operator_on_words(-i - 1, word)))))
 
     @classmethod
     def e_operator_on_words(cls, i, word):
@@ -380,6 +392,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
             else:
                 word[twos[0]] = 1
                 return cl(word)
+        elif i < -1:
+            return cls.s_operator_on_words(-i - 1, cls.s_operator_on_words(-i, cls.e_operator_on_words(i + 1, cls.s_operator_on_words(-i, cls.s_operator_on_words(-i - 1, word)))))
 
     @property
     def indices(self):
