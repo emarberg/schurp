@@ -9,8 +9,142 @@ from symmetric import (
     SchurP,
     Schur
 )
+from permutations import Permutation
+from schubert import X
 from words import Word
+from keys import decompose_into_keys
+from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
+
+
+def test_brf(n=5):
+    def bounded_ch(c, z):
+        ans = 0
+        for v in c.vertices:
+            if is_bounded(v):
+                t = X(0)**0
+                for i, a in enumerate(v):
+                    t *= X(i + 1)**len(a)
+                ans += t
+        return ans
+
+    def is_bounded(f, none_bounded=True):
+        if f is None:
+            return none_bounded
+        return all(len(a) == 0 or i < min(a) for i, a in enumerate(f))
+
+    for z in Permutation.all(n):
+        # if not z.is_dominant():
+        #    continue
+        print(z, z.is_dominant())
+        for k in range(1, min(6, z.length()) + 2):
+            c = AbstractGLCrystal.from_permutation(z, k, False)
+            print('  rank =', k, c.extended_indices)
+            for v in c.vertices:
+                if is_bounded(v) and not c.is_highest_weight(v):
+                    if not any(is_bounded(c.e_operator(i, v), False) for i in c.extended_indices):
+                        for i in c.extended_indices:
+                            print(v, '--', i, '-->', c.e_operator(i, v), is_bounded(c.e_operator(i, v), False))
+                        assert False
+                    for i in c.extended_indices:
+                        if not is_bounded(c.e_operator(i, v)):
+                            print('\n?', v, '--', i, '-->', c.e_operator(i, v))
+                            assert False
+            ch = bounded_ch(c, z)
+            print('ch(BRF) =', decompose_into_keys(ch))
+            print()
+
+
+def test_brf_inv(n=5):
+    def bounded_ch(c, z):
+        ans = 0
+        for v in c.vertices:
+            if is_bounded(v):
+                t = X(0)**0
+                for i, a in enumerate(v):
+                    t *= X(i + 1)**len(a)
+                ans += t
+        return ans * 2**z.number_two_cycles()
+
+    def is_bounded(f, none_bounded=True):
+        if f is None:
+            return none_bounded
+        return all(len(a) == 0 or i < min(a) for i, a in enumerate(f))
+
+    for z in Permutation.involutions(n):
+        print(z, z.is_dominant())
+        for k in range(1, min(6, z.involution_length()) + 2):
+            c = AbstractQCrystal.from_involution(z, k, False)
+            print('  rank =', k, c.extended_indices)
+            for v in c.vertices:
+                if is_bounded(v) and not c.is_highest_weight(v):
+                    if not any(is_bounded(c.e_operator(i, v), False) for i in c.extended_indices):
+                        for i in c.extended_indices:
+                            print(v, '--', i, '-->', c.e_operator(i, v), is_bounded(c.e_operator(i, v), False))
+                        # c.draw(True)
+                        assert False
+                    # # if True:
+                    # if all(c.e_operator(i, v) is None for i in c.indices): # fails even with this condition
+                    #     for i in c.extended_indices:
+                    #         if not is_bounded(c.e_operator(i, v)):
+                    #             print('\n?', v, '--', i, '-->', c.e_operator(i, v))
+                    #             # c.draw(True, [f for f in c if is_bounded(f)])
+                    #             assert False
+            if k < min(6, z.involution_length()) + 1:
+                continue
+            ch = bounded_ch(c, z)
+            dec = try_to_decompose_q(ch)
+            if dec == []:
+                print('ch(BRF) =', ch)
+            print('ch(BRF) =', dec)
+            print()
+            assert ch == 0 or dec != []
+
+
+def test_brf_fpf(n=6):
+    def bounded_ch(c, z):
+        ans = 0
+        for v in c.vertices:
+            if is_bounded(v):
+                t = X(0)**0
+                for i, a in enumerate(v):
+                    t *= X(i + 1)**len(a)
+                ans += t
+        return ans
+
+    def is_bounded(f, none_bounded=True):
+        if f is None:
+            return none_bounded
+        return all(len(a) == 0 or i < min(a) for i, a in enumerate(f))
+
+    for z in Permutation.fpf_involutions(n):
+        print(z, z.is_fpf_dominant())
+        for k in range(1, min(6, z.fpf_involution_length()) + 2):
+            c = AbstractQCrystal.from_fpf_involution(z, k, False)
+            print('  rank =', k, c.extended_indices)
+            for v in c.vertices:
+                if is_bounded(v) and not c.is_highest_weight(v):
+                    if not any(is_bounded(c.e_operator(i, v), False) for i in c.extended_indices):
+                        for i in c.extended_indices:
+                            print(v, '--', i, '-->', c.e_operator(i, v), is_bounded(c.e_operator(i, v), False))
+                        # c.draw(True)
+                        assert False
+                    # # if True:
+                    # if all(c.e_operator(i, v) is None for i in c.indices): # fails even with this condition
+                    #     for i in c.extended_indices:
+                    #         if not is_bounded(c.e_operator(i, v)):
+                    #             print('\n?', v, '--', i, '-->', c.e_operator(i, v))
+                    #             # c.draw(True, [f for f in c if is_bounded(f)])
+                    #             assert False
+            if k < min(6, z.fpf_involution_length()) + 1:
+                continue
+            ch = bounded_ch(c, z)
+            dec = try_to_decompose_p(ch)
+            if dec == []:
+                print('ch(BRF) =', ch)
+            print('ch(BRF) =', dec)
+            print()
+            assert ch == 0 or dec != []
 
 
 def test_starb_operator(rank=3, factors=3):

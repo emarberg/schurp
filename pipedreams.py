@@ -363,6 +363,16 @@ class Pipedream:
             words += [tuple(word)]
         return tuple(words)
 
+    def reverse_row_reading_words(self):
+        words = []
+        for i in range(self.n, 0, -1):
+            word = []
+            for j in range(1, self.n + 2 - i):
+                if (i, j) in self.crossings:
+                    word += [j + i - 1]
+            words += [tuple(word)]
+        return tuple(words)
+
     def unimodal_reading_words(self):
         words = []
         for i in range(2, self.n + 1):

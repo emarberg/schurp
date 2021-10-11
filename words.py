@@ -30,6 +30,9 @@ class Word:
 
     @classmethod
     def incr_crystal_e(cls, tup, index):
+        if len(tup) == 0:
+            return None
+
         if index == 0:
             if len(tup[0]) == 0 or tup[0][0] > 0:
                 return None
@@ -75,6 +78,18 @@ class Word:
 
     @classmethod
     def incr_crystal_f(cls, tup, index):
+        if len(tup) == 0:
+            return None
+
+        if index == 'FPF':
+            if len(tup[0]) == 0 or (len(tup[1]) > 0 and tup[1][0] <= tup[0][0]):
+                return None
+            if len(tup[0]) <= 1 or tup[0][0] + 1 not in tup[0]:
+                x, y = tuple(tup[0][1:]), (tup[0][0],) + tuple(tup[1])
+            else:
+                x, y = (tup[0][0],) + tuple(tup[0][2:]), (tup[0][0] - 1,) + tuple(tup[1])
+            return (x, y) + tuple(tup[2:])
+
         if index == 0:
             if len(tup[0]) == 0 or tup[0][0] < 0:
                 return None
