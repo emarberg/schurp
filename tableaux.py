@@ -1904,7 +1904,7 @@ class Tableau:
         return ans
 
     @classmethod
-    def even_diagonal_unprimed_shifted_rpp(cls, max_entry, mu, nu=(), even_diagonal=False):  # noqa
+    def even_diagonal_unprimed_shifted_rpp(cls, max_entry, mu, nu=()):  # noqa
         return cls.unprimed_shifted_rpp(max_entry, mu, nu, True)
 
     @classmethod

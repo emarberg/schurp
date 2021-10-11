@@ -40,7 +40,7 @@ class Pipedream:
             s += [(self.n + 1 - i) * ['.']]
         for (i, j) in self.crossings:
             s[i - 1][j - 1] = '+'
-        return '\n'.join(' '.join(row) for row in s)
+        return '\n' + '\n'.join(' '.join(row) for row in s) + '\n'
 
     def __hash__(self):
         return hash(tuple(sorted(self.crossings)))
