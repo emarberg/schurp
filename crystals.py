@@ -33,14 +33,17 @@ class AbstractCrystalMixin:
     def index_printer(self, i, primed=False):
         return str(i)
 
-    def draw(self, extended=False):
+    def draw(self, extended=False, highlighted_nodes=()):
         s = ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
         s += ['    node [shape=box; fontname="courier"; style=filled];']
         #
         for x in self:
-            s += ['    "%s";' % self.printer(x)]
+            if x in highlighted_nodes:
+                s += ['    "%s" [fillcolor=white];' % self.printer(x)]
+            else:
+                s += ['    "%s";' % self.printer(x)]
         #
         for v in self:
             for i in self.extended_indices if extended else self.indices:
@@ -269,6 +272,34 @@ class AbstractCrystalMixin:
 class AbstractGLCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def from_permutation(cls, z, n, increasing):
+        rank = n
+        vertices = []
+        edges = []
+        weights = {}
+        if increasing:
+            for w in z.get_reduced_words():
+                for f1 in Word.increasing_factorizations(w, n):
+                    f1 = tuple(_.tuple() for _ in f1)
+                    vertices += [f1]
+                    weights[f1] = tuple(len(_) for _ in f1)
+                    for i in list(range(1, n)):
+                        f2 = Word.incr_crystal_f(f1, i)
+                        if f2 is not None:
+                            edges += [(i, f1, f2)]
+        else:
+            m = z.rank
+            c = cls.from_permutation(z.star(m), n, True)
+
+            def unstar(t):
+                return tuple(tuple(m - i for i in _) for _ in t)
+
+            vertices = [unstar(t) for t in c.vertices]
+            edges = [(i, unstar(x), unstar(c.f_operators[(i, x)])) for (i, x,) in c.f_operators]
+            weights = {unstar(t): c.weights[t] for t in c.weights}
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def f_operator_on_words(cls, i, word):
         cl, word = type(word), list(word)
         stack = []
@@ -345,6 +376,62 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 
 
 class AbstractQCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def from_involution(cls, z, n, increasing):
+        rank = n
+        vertices = []
+        edges = []
+        weights = {}
+        if increasing:
+            for w in z.get_involution_words():
+                for f1 in Word.increasing_factorizations(w, n):
+                    f1 = tuple(_.tuple() for _ in f1)
+                    vertices += [f1]
+                    weights[f1] = tuple(len(_) for _ in f1)
+                    for i in ([-1] if n >= 2 else []) + list(range(1, n)):
+                        f2 = Word.incr_crystal_f(f1, i)
+                        if f2 is not None:
+                            edges += [(i, f1, f2)]
+        else:
+            m = z.rank
+            c = cls.from_involution(z.star(m), n, True)
+
+            def unstar(t):
+                return tuple(tuple(m - i for i in _) for _ in t)
+
+            vertices = [unstar(t) for t in c.vertices]
+            edges = [(i, unstar(x), unstar(c.f_operators[(i, x)])) for (i, x,) in c.f_operators]
+            weights = {unstar(t): c.weights[t] for t in c.weights}
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
+    def from_fpf_involution(cls, z, n, increasing):
+        rank = n
+        vertices = []
+        edges = []
+        weights = {}
+        if increasing:
+            for w in z.get_fpf_involution_words():
+                for f1 in Word.increasing_factorizations(w, n):
+                    f1 = tuple(_.tuple() for _ in f1)
+                    vertices += [f1]
+                    weights[f1] = tuple(len(_) for _ in f1)
+                    for i in ([-1] if n >= 2 else []) + list(range(1, n)):
+                        f2 = Word.incr_crystal_f(f1, i if i != -1 else 'FPF')
+                        if f2 is not None:
+                            edges += [(i, f1, f2)]
+        else:
+            m = z.rank
+            c = cls.from_fpf_involution(z.star(m), n, True)
+
+            def unstar(t):
+                return tuple(tuple(m - i for i in _) for _ in t)
+
+            vertices = [unstar(t) for t in c.vertices]
+            edges = [(i, unstar(x), unstar(c.f_operators[(i, x)])) for (i, x,) in c.f_operators]
+            weights = {unstar(t): c.weights[t] for t in c.weights}
+        return cls(rank, vertices, edges, weights)
 
     def index_printer(self, i, primed=False):
         if not primed:

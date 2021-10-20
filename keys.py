@@ -3,6 +3,7 @@ from partitions import Partition
 from tableaux import Tableau
 from words import Word
 from marked import MarkedNumber
+from permutations import Permutation
 import itertools
 
 
@@ -258,22 +259,30 @@ def symmetric_halves(alpha, pad=False):
     return a, b
 
 
-
 def skew_symmetric_double(alpha):
     pass
 
 
-def skew_symmetric_halves(alpha):
+def skew_symmetric_diagram(alpha):
     def s(i):
         def f(x):
             return (x + 1) if x == i else (x - 1) if x == i + 1 else x
         return f
-
+    #
     word = sorting_permutation(alpha)
     mu = sorted(alpha, reverse=True)
     diagram = {(i, j) for i in range(1, 1 + len(mu)) for j in range(1, 1 + mu[i - 1])}
     for i in reversed(word):
         diagram = {(s(i)(a), s(i)(b)) for (a, b) in diagram}
+    return diagram
+
+
+def print_skew_symmetric_diagram(alpha, sep='.'):
+    print(Permutation.print_diagram(skew_symmetric_diagram(alpha), sep=sep))
+
+
+def skew_symmetric_halves(alpha):
+    diagram = skew_symmetric_diagram(alpha)
     n = max([0] + [max(p) for p in diagram])
     rows, cols = n * [0], n * [0]
     for a, b in diagram:

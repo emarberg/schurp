@@ -157,32 +157,52 @@ def test_sigma_fpf(n=8, k=0):
                     i += 1
                 maxes.append(i)
             m = min(maxes)
+            weights = {}
+            for p in sigma.get_fpf_involution_pipe_dreams():
+                v = p.column_reading_words()
+                wt = tuple(len(_) for _ in v[m:])
+                weights[wt] = weights.get(wt, 0) + 1
             for p in sigma.get_fpf_involution_pipe_dreams():
                 c += 1
                 print(p)
-                w = p.column_reading_words()
-                v = w[m:]
+                v = p.column_reading_words()
+                v = v[m:]
                 P, Q = fpf_insert(*v)
-                print(P)
-                # print(Q)
+                # print(P)
+                print(v)
+                print(Q)
+                print()
                 # assert Q.is_shifted_k_flagged(2 * k - 2)
                 seen.add(Q)
 
             # sigma.print_fpf_rothe_diagram()
 
-            print(sorted(seen, key=lambda x: x.row_reading_word()))
-            print()
-            print('k =', k, 'sigma =', sigma.cycle_repr(), 'm =', m)
-            print('  fpf pipe dreams:', c)
-            print()
             kflagged = {t.unprime() for t in Tableau.semistandard_marked_rpp(k + 1, lam)}
             kflagged = {t for t in kflagged if all(t.entry(i, i).number % 2 != 0 for i in range(1, t.max_row + 1))}
+
+            print(sorted(seen, key=lambda x: tuple(reversed(x.row_reading_word()))))
+            print(kflagged)
+            print()
+            print('k =', k, 'mu =', mu, 'sigma =', sigma.cycle_repr(), 'm =', m)
+            print('  fpf pipe dreams:', c)
+            print()
+            for wt in sorted(weights, key=lambda x: (weights[x], x)):
+                print("  ", wt, ':', weights[wt])
+            print()
+            weights = {}
+            for t in kflagged:
+                wt = t.weight()
+                weights[wt] = weights.get(wt, 0) + 1
             print('shifted k flagged:', len(kflagged))
             print()
-            print('k =', k, 'mu =', lam, c)
+            for wt in sorted(weights, key=lambda x: (weights[x], x)):
+                print("  ", wt, ':', weights[wt])
             print()
-            # kflagged = Tableau.semistandard_marked_rpp(m, lam)
-            print(sorted(kflagged, key=lambda x: x.row_reading_word()))
+            # print()
+            # print('k =', k, 'mu =', lam, c)
+            # print()
+            # # kflagged = Tableau.semistandard_marked_rpp(m, lam)
+            # print(sorted(kflagged, key=lambda x: x.row_reading_word()))
             input('\n')
 
 
