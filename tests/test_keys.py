@@ -2230,6 +2230,14 @@ def is_fpf_vexillary(w):
     return True
 
 
+def vexify(w):
+    for i in range(2, len(w.oneline) + 1):
+        j = w(i)
+        if j < i and all(w(k) < j for k in range(j + 1, i)):
+            w *= Permutation.t_ij(j, i)
+    return w
+
+
 def test_fpf_schubert(n=4, positive=True, multiple=True):
     i = list(Permutation.fpf_involutions(n))
     s = {w: FPFSchubert.get(w) for w in i}
@@ -2243,6 +2251,8 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
         print()
         # assert (not positive and multiple) or len(d[w]) == 1
         d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
+        if vexify(w).is_vexillary():
+            assert len(d[w]) == 1 and set(d[w].values()) == {1}
     pvex = {w: list(d[w])[0] for w in d if len(d[w]) == 1 and set(d[w].values()) == {1}}
     fvex = {w: w.code() for w in i if is_fpf_vexillary(w)}
     # assert pvex == fvex
