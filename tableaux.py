@@ -1226,7 +1226,8 @@ class Tableau:
         dictionary = {(j_, k): self.entry(j_, k) for (j_, k) in self.mapping if j != j_}
         for k_zerobased, v in enumerate(newrow):
             k = k_zerobased + 1
-            assert type(v) == MarkedNumber
+            assert type(v) in [int, MarkedNumber]
+            v = v if type(v) == MarkedNumber else MarkedNumber(v)
             if shifted:
                 k += j - 1
             dictionary[(j, k)] = v
@@ -1236,7 +1237,8 @@ class Tableau:
         dictionary = {(i, j_): self.entry(i, j_) for (i, j_) in self.mapping if j != j_}
         for i_zerobased, v in enumerate(newcol):
             i = i_zerobased + 1
-            assert type(v) == MarkedNumber
+            assert type(v) in [int, MarkedNumber]
+            v = v if type(v) == MarkedNumber else MarkedNumber(v)
             dictionary[(i, j)] = v
         return Tableau(dictionary)
 
