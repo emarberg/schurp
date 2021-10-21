@@ -55,7 +55,7 @@ def test_brf(n=5):
             print()
 
 
-def test_brf_inv(n=5):
+def test_brf_inv(n=5, kk=6):
     def bounded_ch(c, z):
         ans = 0
         for v in c.vertices:
@@ -71,18 +71,53 @@ def test_brf_inv(n=5):
             return none_bounded
         return all(len(a) == 0 or i < min(a) for i, a in enumerate(f))
 
+    def e_operator(c, i, v):
+        # print('**', i, v)
+        if i >= -1:
+            return c.e_operator(i, v)
+
+        x = c.s_operator(-i - 1, v)
+        if not is_bounded(x):
+            return None
+        # x = x if is_bounded(x) else v
+
+        y = c.s_operator(-i, x)
+        if not is_bounded(y):
+            return None
+        x = y  # if is_bounded(y) else x
+
+        x = e_operator(c, i + 1, x)
+        if x is None:
+            return x
+
+        y = c.s_operator(-i, x)
+        if not is_bounded(y):
+            return None
+        # print('*', i, x, '->', y, is_bounded(y))
+        x = y  # if is_bounded(y) else x
+
+        y = c.s_operator(-i - 1, x)
+        if not is_bounded(y):
+            return None
+        # print('*', i, x, '->', y, is_bounded(y))
+        x = y  # if is_bounded(y) else x
+
+        return x
+
     for z in Permutation.involutions(n):
         print(z, z.is_dominant())
-        for k in range(1, min(6, z.involution_length()) + 2):
+        for k in range(1, min(kk, z.involution_length()) + 2):
             c = AbstractQCrystal.from_involution(z, k, False)
             print('  rank =', k, c.extended_indices)
             for v in c.vertices:
                 if is_bounded(v) and not c.is_highest_weight(v):
-                    if not any(is_bounded(c.e_operator(i, v), False) for i in c.extended_indices):
+                    if all(e_operator(c, i, v) is None for i in c.extended_indices) or any(not is_bounded(c.e_operator(i, v)) for i in c.extended_indices):
                         for i in c.extended_indices:
-                            print(v, '--', i, '-->', c.e_operator(i, v), is_bounded(c.e_operator(i, v), False))
-                        # c.draw(True)
-                        assert False
+                            vv = e_operator(c, i, v)
+                            print(v, '--', i, '-->', vv, is_bounded(vv), c.e_operator(i, v), is_bounded(c.e_operator(i, v)))
+                        # c.draw(False, [f for f in c if is_bounded(f)])
+                        # assert False
+                        print()
                     # # if True:
                     # if all(c.e_operator(i, v) is None for i in c.indices): # fails even with this condition
                     #     for i in c.extended_indices:
@@ -90,7 +125,7 @@ def test_brf_inv(n=5):
                     #             print('\n?', v, '--', i, '-->', c.e_operator(i, v))
                     #             # c.draw(True, [f for f in c if is_bounded(f)])
                     #             assert False
-            if k < min(6, z.involution_length()) + 1:
+            if k < min(kk, z.involution_length()) + 1:
                 continue
             ch = bounded_ch(c, z)
             dec = try_to_decompose_q(ch)
