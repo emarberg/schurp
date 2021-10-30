@@ -1,3 +1,34 @@
+# def tcode(diag):
+#     ans = []
+#     for (i, j) in diag:
+#         if i != j:
+#             while i - 1 >= len(ans):
+#                 ans += [0]
+#             ans[i - 1] += 1
+#     return tuple(ans)
+
+
+# def vex(w):
+#     for i in range(2, len(w.oneline) + 1):
+#         j = w(i)
+#         if j < i and all(w(k) < j for k in range(j + 1, i)):
+#             w *= Permutation.t_ij(j, i)
+#     return w
+
+
+# for w in pvex:
+#     b = tcode(w.rothe_diagram())==tcode(skew_symmetric_diagram(pvex[w]))
+#     print(w, w.cycle_repr(), pvex[w], pvex[w]==fvex[w], w.is_vexillary(), vex(w).is_vexillary())
+#     if not vex(w).is_vexillary():
+#         w.print_rothe_diagram(sep='.')
+#         print()
+#         print(vex(w))
+#         vex(w).print_rothe_diagram(sep='.')
+#         print()
+#         print_skew_symmetric_diagram(pvex[w])
+#         print()
+
+
 from schubert import X
 from partitions import Partition
 from tableaux import Tableau
