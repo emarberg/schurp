@@ -1148,7 +1148,7 @@ class Tableau:
         return ans
 
     @classmethod
-    def get_semistandard_shifted(cls, shape, n=None):
+    def get_semistandard_shifted(cls, shape, n=None, diagonal_primes=False):
         if type(shape) == tuple:
             shape = StrictPartition(*shape)
         if type(shape) == Partition:
@@ -1164,14 +1164,14 @@ class Tableau:
         borders = {
             (a, b)
             for a in shape.horizontal_border_strips() | {Shape()}
-            for b in (shape - a).vertical_border_strips(exclude_diagonal=True) | {Shape()}
+            for b in (shape - a).vertical_border_strips(exclude_diagonal=not diagonal_primes) | {Shape()}
             if len(a) > 0 or len(b) > 0
         }
 
         ans = set()
         for border_h, border_v in borders:
             for k in range(n):
-                for t in cls.get_semistandard_shifted(shape - border_h - border_v, k):
+                for t in cls.get_semistandard_shifted(shape - border_h - border_v, k, diagonal_primes):
                     mapping = t.mapping if t.mapping else {}
                     for i, j in border_h:
                         mapping[(i, j)] = MarkedNumber(k + 1)
@@ -1205,8 +1205,8 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
-        #return '\n'.join(rows) + '\n'            # English
+        # return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
+        return '\n'.join(rows) + '\n'            # English
 
     @classmethod
     def decreasing_part(cls, row):
@@ -1333,6 +1333,7 @@ class Tableau:
         return {i for i in d if i + 1 in d and d[i + 1] < d[i]}
 
     def shifted_descents(self):
+        w = self.shifted_reading_word()
         n = len(w)
         assert all(i in w for i in range(1, n + 1))
         d = {i: pos for pos, i in enumerate(w)}

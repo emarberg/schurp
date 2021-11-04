@@ -5,6 +5,7 @@ from words import (
     get_fpf_involution_words
 )
 from permutations import Permutation
+from tableaux import Tableau
 from keys import monomial_from_composition, symmetric_halves
 import tests.test_keys as testkeys
 import subprocess
@@ -16,7 +17,7 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
 class AbstractCrystalMixin:
 
-    def __init__(self, rank, vertices, edges, weights, printer=str):
+    def __init__(self, rank, vertices, edges, weights, printer=str, provided_operators=None):
         self._rank = rank
         self._vertices = set(vertices)
         self.f_operators = {}
@@ -29,6 +30,7 @@ class AbstractCrystalMixin:
         self.e_strings = {}
         self.f_strings = {}
         self.s_operators = {}
+        self.provided_operators = self.indices if provided_operators is None else provided_operators
 
     def index_printer(self, i, primed=False):
         return str(i)
@@ -46,7 +48,7 @@ class AbstractCrystalMixin:
                 s += ['    "%s";' % self.printer(x)]
         #
         for v in self:
-            for i in self.extended_indices if extended else self.indices:
+            for i in self.extended_indices if extended else self.provided_operators:
                 w = self.f_operator(i, v)
                 if w is not None:
                     i = self.index_printer(i)
@@ -54,7 +56,7 @@ class AbstractCrystalMixin:
         #
         if extended:
             for v in self:
-                for i in self.extended_indices if extended else self.indices:
+                for i in self.extended_indices:
                     if i < 0:
                         w = self.fprime_operator(i, v)
                         if w is not None:
@@ -113,6 +115,10 @@ class AbstractCrystalMixin:
 
     def s_operator(self, i, b):
         assert 0 <= i < self.rank
+        if b not in self.vertices:
+            print(self.vertices)
+            print(i)
+            print(b)
         assert b in self.vertices
         if (i, b) not in self.s_operators:
             k = self.f_string(i, b) - self.e_string(i, b)
@@ -378,6 +384,50 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 class AbstractQCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.get_semistandard_shifted(mu, n, diagonal_primes=False):
+            vertices += [t]
+            weights[t] = t.weight()
+            for i in ([-1] if n >= 2 else []) + list(range(1, n)):
+                u = t.shifted_crystal_f(i)
+                if u is not None:
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
+    def from_strict_partition_quotient(cls, mu, rank):
+        def unprime(t):
+            mapping = {}
+            seen = set()
+            for (i, j) in sorted(t, key=lambda ij: (-ij[0], ij[1])):
+                a = abs(t[(i, j)])
+                if a not in seen:
+                    mapping[(i, j)] = a
+                    seen.add(a)
+                else:
+                    mapping[(i, j)] = t[(i, j)]
+            return Tableau(mapping)
+
+        n = rank
+        vertices = []
+        edges = set()
+        weights = {}
+        provided_operators = list(range(1, n))
+        c = cls.from_strict_partition(mu, n)
+        for t in c.vertices:
+            vertices += [unprime(t)]
+            weights[t] = t.weight()
+            for i in provided_operators:
+                u = c.f_operator(i, t)
+                if u is not None:
+                    edges.add((i, unprime(t), unprime(u)))
+        return cls(rank, vertices, list(edges), weights, provided_operators=provided_operators)
+
+    @classmethod
     def from_involution(cls, z, n, increasing):
         rank = n
         vertices = []
@@ -493,20 +543,26 @@ class AbstractQCrystal(AbstractCrystalMixin):
     def e_operator(self, i, v):
         assert i in self.extended_indices
         assert v in self.vertices
+        if i in self.provided_operators or (i, v) in self.e_operators:
+            return self.e_operators.get((i, v), None)
         if i < -1:
             x = self.e_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
             x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
             self.e_operators[(i, v)] = x
-        return self.e_operators.get((i, v), None)
+            return x
+        raise Exception
 
     def f_operator(self, i, v):
         assert i in self.extended_indices
         assert v in self.vertices
+        if i in self.provided_operators or (i, v) in self.f_operators:
+            return self.f_operators.get((i, v), None)
         if i < -1:
             x = self.f_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
             x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
             self.f_operators[(i, v)] = x
-        return self.f_operators.get((i, v), None)
+            return x
+        raise Exception
 
     @classmethod
     def tensor_edges(cls, b, c):
@@ -541,6 +597,21 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.get_semistandard_shifted(mu, n, diagonal_primes=True):
+            vertices += [t]
+            weights[t] = t.weight()
+            for i in range(-1 if n >= 2 else 0, n):
+                u = t.shifted_crystal_f(i)
+                if u is not None:
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
 
     def starb_operator(self, b):
         if b is None:
@@ -652,30 +723,38 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
     def e_operator(self, i, v):
         assert i in self.extended_indices
         assert v in self.vertices
+        if i in self.provided_operators or (i, v) in self.e_operators:
+            return self.e_operators.get((i, v), None)
         if i < -1:
             x = self.e_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
             x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
             self.e_operators[(i, v)] = x
+            return x
         elif i >= self.rank:
             j = i // self.rank
             x = self.e_operator(i - self.rank, self.s_operator(j, v))
             x = x if x is None else self.s_operator(j, x)
             self.e_operators[(i, v)] = x
-        return self.e_operators.get((i, v), None)
+            return x
+        raise Exception
 
     def f_operator(self, i, v):
         assert i in self.extended_indices
         assert v in self.vertices
+        if i in self.provided_operators or (i, v) in self.f_operators:
+            return self.f_operators.get((i, v), None)
         if i < -1:
             x = self.f_operator(i + 1, self.s_operator(-i, self.s_operator(-i - 1, v)))
             x = x if x is None else self.s_operator(-i - 1, self.s_operator(-i, x))
             self.f_operators[(i, v)] = x
+            return x
         elif i >= self.rank:
             j = i // self.rank
             x = self.f_operator(i - self.rank, self.s_operator(j, v))
             x = x if x is None else self.s_operator(j, x)
             self.f_operators[(i, v)] = x
-        return self.f_operators.get((i, v), None)
+            return x
+        raise Exception
 
     @classmethod
     def tensor_edges(cls, b, c):
