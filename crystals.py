@@ -51,17 +51,13 @@ class AbstractCrystalMixin:
             for i in self.extended_indices if extended else self.provided_operators:
                 w = self.f_operator(i, v)
                 if w is not None:
-                    i = self.index_printer(i)
-                    s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), i)]
-        #
-        if extended:
-            for v in self:
-                for i in self.extended_indices:
-                    if i < 0:
-                        w = self.fprime_operator(i, v)
-                        if w is not None:
-                            i = self.index_printer(i, primed=True)
-                            s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), i)]
+                    istr = self.index_printer(i)
+                    s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), istr)]
+                if i < 0 and extended:
+                    w = self.fprime_operator(i, v)
+                    if w is not None:
+                        istr = self.index_printer(i, primed=True)
+                        s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), istr)]
         s += ['}']
         s = '\n'.join(s)
         #
