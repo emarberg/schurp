@@ -34,6 +34,16 @@ class Tableau:
     def __getitem__(self, item):
         return self.mapping.get(item, None)
 
+    def tex(self):
+        rows = []
+        for i in range(1, self.max_row + 1):
+            row = []
+            for j in range(1, self.max_column + 1):
+                v = self.entry(i, j)
+                row += [('*(white) ' + str(v)) if v is not None else '\\none']
+            rows += [' & '.join(row)]
+        return '$\\colorbox{lightgray!50}{\\begin{ytableau}' + ' \\\\ '.join(reversed(rows)) + '\\end{ytableau}}$'
+
     def is_shifted_k_flagged(self, k):
         for (i, j) in self:
             entry = self.entry(i, j)
