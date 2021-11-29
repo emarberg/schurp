@@ -221,6 +221,40 @@ class Tableau:
         assert len(word) == len(positions) == len(self)
         return word, positions
 
+    def shifted_crystal_s(self, index):
+        weight = {i + 1: a for i, a in enumerate(self.weight())}
+        k = weight.get(index, 0) - weight.get(index + 1, 0)
+        if k == 0:
+            return self
+        ans = self
+        if k < 0:
+            for _ in range(-k):
+                ans = ans.shifted_crystal_e(index)
+        else:
+            for _ in range(k):
+                ans = ans.shifted_crystal_f(index)
+        return ans
+
+    def extended_shifted_crystal_e0(self, i):
+        ans = self
+        for j in range(i - 1, 0, -1):
+            ans = ans.shifted_crystal_s(j)
+        ans = ans.shifted_crystal_e(0)
+        if ans is not None:
+            for j in range(1, i):
+                ans = ans.shifted_crystal_s(j)
+        return ans
+
+    def extended_shifted_crystal_f0(self, i):
+        ans = self
+        for j in range(i - 1, 0, -1):
+            ans = ans.shifted_crystal_s(j)
+        ans = ans.shifted_crystal_f(0)
+        if ans is not None:
+            for j in range(1, i):
+                ans = ans.shifted_crystal_s(j)
+        return ans
+
     def shifted_crystal_e(self, index, verbose=False):
         if index == 0:
             if (1, 1) not in self or self[(1, 1)] != MarkedNumber(-1):
