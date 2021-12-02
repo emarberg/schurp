@@ -1183,7 +1183,13 @@ class Tableau:
     def __le__(self, other):
         assert type(other) == Tableau
         assert set(other.mapping) == set(self.mapping)
-        return all(a <= other.mapping[x] for x, a in self.mapping.items())
+        # return all(a <= other.mapping[x] for x, a in self.mapping.items())
+        return self.row_reading_word() <= other.row_reading_word()
+
+    def __lt__(self, other):
+        assert type(other) == Tableau
+        assert set(other.mapping) == set(self.mapping)
+        return self.row_reading_word() < other.row_reading_word()
 
     def __len__(self):
         return len(self.mapping)
@@ -1205,8 +1211,8 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        # return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
-        return '\n'.join(rows) + '\n'            # English
+        return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
+        # return '\n' + '\n'.join(rows) + '\n'            # English
 
     @classmethod
     def decreasing_part(cls, row):

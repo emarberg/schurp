@@ -363,6 +363,17 @@ class Pipedream:
             words += [tuple(word)]
         return tuple(words)
 
+    def decreasing_words(self, n=None):
+        n = self.n if n is None else n
+        words = []
+        for i in range(1, self.n + 1):
+            word = []
+            for j in range(self.n + 1 - i, 0, -1):
+                if (i, j) in self.crossings:
+                    word += [n - (j + i - 1)]
+            words += [tuple(word)]
+        return tuple(words)
+
     def reverse_row_reading_words(self):
         words = []
         for i in range(self.n, 0, -1):

@@ -121,6 +121,8 @@ def test_sigma_inv(n=8, k=0):
 
 
 def sigma_fpf(mu, k):
+    m = max([0] + list(mu))
+    mu = tuple(range(m + k, m, - 1)) + tuple(mu)
     d = {(i + 1, i + j + 1) for i in range(len(mu)) for j in range(mu[i])}
     d = {(j + 1, i) for (i, j) in d if i > k}
     code = []
@@ -131,78 +133,39 @@ def sigma_fpf(mu, k):
     return Permutation.from_fpf_involution_code(code)
 
 
-def test_sigma_fpf(n=8, k=0):
-    seenlam = set()
+def test_sigma_fpf(n=8, kk=0):
     for mu in StrictPartition.all(n):
         print('mu =', mu)
         mu = tuple(mu)
-        for k in range(2, n + 1, 2):
-            if k != 2:
-                continue
-            lam = mu[k:]
-            if (lam, k) in seenlam:
-                continue
-            seenlam.add((lam, k))
+        for k in range(0, (kk if kk > 0 else n) + 1, 2):
             sigma = sigma_fpf(mu, k)
-            if sigma.is_identity():
-                continue
             n = sigma.rank
             c = 0
             seen = set()
-            maxes = []
-            for p in sigma.get_fpf_involution_pipe_dreams():
-                w = p.column_reading_words()
-                i = 0
-                while i < len(w) and len(w[i]) == 0:
-                    i += 1
-                maxes.append(i)
-            m = min(maxes)
-            weights = {}
-            for p in sigma.get_fpf_involution_pipe_dreams():
-                v = p.column_reading_words()
-                wt = tuple(len(_) for _ in v[m:])
-                weights[wt] = weights.get(wt, 0) + 1
-            for p in sigma.get_fpf_involution_pipe_dreams():
-                c += 1
-                print(p)
-                v = p.column_reading_words()
-                v = v[m:]
-                P, Q = fpf_insert(*v)
-                # print(P)
-                print(v)
-                print(Q)
-                print()
-                # assert Q.is_shifted_k_flagged(2 * k - 2)
-                seen.add(Q)
+            for atom in sigma.get_fpf_atoms():
+                for p in atom.get_pipe_dreams():
+                    c += 1
+                    print(p)
+                    v = p.decreasing_words(sigma.rank)
+                    print(v)
+                    P, Q = fpf_insert(*v)
+                    print(Q)
+                    print()
+                    seen.add(Q)
 
             # sigma.print_fpf_rothe_diagram()
 
-            kflagged = {t.unprime() for t in Tableau.semistandard_marked_rpp(k + 1, lam)}
+            kflagged = {t.unprime() for t in Tableau.semistandard_marked_rpp(k + 1, mu)}
             kflagged = {t for t in kflagged if all(t.entry(i, i).number % 2 != 0 for i in range(1, t.max_row + 1))}
 
-            print(sorted(seen, key=lambda x: tuple(reversed(x.row_reading_word()))))
+            print(sorted(seen))
             print(kflagged)
             print()
-            print('k =', k, 'mu =', mu, 'sigma =', sigma.cycle_repr(), 'm =', m)
+            print('k =', k, 'mu =', mu, 'sigma =', sigma.cycle_repr())
             print('  fpf pipe dreams:', c)
+            print('shifted k flagged:', len(kflagged) * 2**sigma.fpf_involution_length())
             print()
-            for wt in sorted(weights, key=lambda x: (weights[x], x)):
-                print("  ", wt, ':', weights[wt])
             print()
-            weights = {}
-            for t in kflagged:
-                wt = t.weight()
-                weights[wt] = weights.get(wt, 0) + 1
-            print('shifted k flagged:', len(kflagged))
-            print()
-            for wt in sorted(weights, key=lambda x: (weights[x], x)):
-                print("  ", wt, ':', weights[wt])
-            print()
-            # print()
-            # print('k =', k, 'mu =', lam, c)
-            # print()
-            # # kflagged = Tableau.semistandard_marked_rpp(m, lam)
-            # print(sorted(kflagged, key=lambda x: x.row_reading_word()))
             input('\n')
 
 
