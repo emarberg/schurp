@@ -35,33 +35,57 @@ class AbstractCrystalMixin:
     def index_printer(self, i, primed=False):
         return str(i)
 
-    def draw(self, extended=False, highlighted_nodes=()):
+    def draw(self, extended=False, highlighted_nodes=(), tex=False):
+        def tex_tuple(n):
+            parts = []
+            for tup in n:
+                if len(tup) == 0:
+                    parts += ['\\emptyset']
+                else:
+                    letters = [str(i) if i > 0 else str(-i) + "'" for i in tup]
+                    parts += [''.join(letters)]
+            return '$' + '\\hspace{0.5mm} /\\hspace{0.5mm} '.join(parts) + '$'
+
+        def tex(n):
+            try:
+                return n.tex()
+            except:
+                return tex_tuple(n)
+
+        def printer(n):
+            if tex:
+                return str(hash(self.printer(n)))
+            return self.printer(n)
+
         s = ['digraph G {']
         s += ['    overlap=false;']
-        s += ['    splines=spline;']
-        s += ['    node [shape=box; fontname="courier"; style=filled];']
-        #
-        for x in self:
-            if x in highlighted_nodes:
-                s += ['    "%s" [fillcolor=white];' % self.printer(x)]
-            else:
-                s += ['    "%s";' % self.printer(x)]
+        s += ['    splines=true;']
+        if not tex:
+            s += ['    node [shape=box; fontname="courier"; style=filled];']
+        if tex:
+            s += ['    node [shape=box,style=filled,color=lightgray];']
+            for x in self:
+                s += ['    "%s" [margin="0.0",width="0.0",height="0.0",texlbl="%s"];' % (printer(x), tex(x))]
+        else:
+            for x in self:
+                if x in highlighted_nodes:
+                    s += ['    "%s" [fillcolor=white];' % printer(x)]
+                else:
+                    s += ['    "%s";' % printer(x)]
         #
         for v in self:
             for i in self.extended_indices if extended else self.provided_operators:
                 w = self.f_operator(i, v)
                 if w is not None:
-                    i = self.index_printer(i)
-                    s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), i)]
-        #
-        if extended:
-            for v in self:
-                for i in self.extended_indices:
-                    if i < 0:
-                        w = self.fprime_operator(i, v)
-                        if w is not None:
-                            i = self.index_printer(i, primed=True)
-                            s += ['    "%s" -> "%s" [label="%s"];' % (self.printer(v), self.printer(w), i)]
+                    istr = self.index_printer(i)
+                    cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal"
+                    style = "dotted" if i == 0 else "dashed" if i == -1 else "solid"
+                    s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
+                if i < 0 and extended:
+                    w = self.fprime_operator(i, v)
+                    if w is not None:
+                        istr = self.index_printer(i, primed=True)
+                        s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
         s += ['}']
         s = '\n'.join(s)
         #
@@ -72,6 +96,10 @@ class AbstractCrystalMixin:
             f.write(s)
         subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
         subprocess.run(["open", png_filename])
+
+        if tex:
+            ps = subprocess.Popen("dot -Txdot " + dot_filename + " | dot2tex -tmath --nominsize --figonly --figpreamble=\"\\small\" > ~/Downloads/test.tex", stdin=subprocess.PIPE, shell=True)
+            ps.communicate()
 
     def e_string(self, i, v):
         assert i in self.indices
@@ -367,7 +395,7 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         return edges
 
     def filename(self, ts=None):
-        return "gl(%s)_crystal.%s" % (self.rank, len(self))
+        return "gl%s_crystal.%s" % (self.rank, len(self))
 
     @classmethod
     def standard_object(cls, rank):
@@ -581,7 +609,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
         return edges
 
     def filename(self, ts=None):
-        return "q(%s)_crystal.%s" % (self.rank, len(self))
+        return "q%s_crystal.%s" % (self.rank, len(self))
 
     @classmethod
     def standard_object(cls, rank):
@@ -597,6 +625,34 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def from_involution(cls, z, n, increasing):
+        rank = n
+        vertices = []
+        edges = []
+        weights = {}
+        if increasing:
+            for w in z.get_primed_involution_words():
+                for f1 in Word.increasing_factorizations(w, n):
+                    f1 = tuple(_.tuple() for _ in f1)
+                    vertices += [f1]
+                    weights[f1] = tuple(len(_) for _ in f1)
+                    for i in ([-1] if n >= 2 else []) + list(range(0, n)):
+                        f2 = Word.incr_crystal_f(f1, i)
+                        if f2 is not None:
+                            edges += [(i, f1, f2)]
+        else:
+            m = z.rank
+            c = cls.from_involution(z.star(m), n, True)
+
+            def unstar(t):
+                return tuple(tuple(m - i for i in _) for _ in t)
+
+            vertices = [unstar(t) for t in c.vertices]
+            edges = [(i, unstar(x), unstar(c.f_operators[(i, x)])) for (i, x,) in c.f_operators]
+            weights = {unstar(t): c.weights[t] for t in c.weights}
+        return cls(rank, vertices, edges, weights)
 
     @classmethod
     def from_strict_partition(cls, mu, rank):
@@ -793,7 +849,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
         return edges
 
     def filename(self, ts=None):
-        return "primed_q(%s)_crystal.%s" % (self.rank, len(self))
+        return "primed_q%s_crystal.%s" % (self.rank, len(self))
 
     @classmethod
     def standard_object(cls, rank):
