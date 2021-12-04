@@ -1,7 +1,224 @@
 from schubert import InvSchubert, FPFSchubert
-from polynomials import x as x_var, one as one_var
+from polynomials import x as x_var, one as one_var, y as y_var
 import subprocess
 import os
+
+
+class BumplessPipedream:
+
+    J_TILE = '┘'
+    C_TILE = '┌'
+    P_TILE = '┼'
+    H_TILE = '─'
+    V_TILE = '│'
+    B_TILE = '.'
+    TILES = [J_TILE, C_TILE, P_TILE, H_TILE, V_TILE, B_TILE]
+
+    def __init__(self, tiles, n=None, diagram=None):
+        self.tiles = {p: t for p, t in tiles.items()}
+        self.n = n if n else max([0] + [max(p) for p in tiles])
+        self.diagram = {
+            (i, j): (i, j)
+            for i in range(1, self.n + 1)
+            for j in range(1, self.n + 1)
+            if (i, j) not in self.tiles
+        } if diagram is None else {b: v for b, v in diagram.items()}
+
+    def __repr__(self):
+        ans = []
+        for i in range(1, self.n + 1):
+            row = [self.tiles.get((i, j), self.B_TILE) for j in range(1, self.n + 1)]
+            ans += [''.join(row)]
+        return '\n' + '\n'.join(ans) + '\n'
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        assert type(other) == type(self)
+        return str(self) == str(other)
+
+    def weight(self):
+        ans = x_var(0) ** 0
+        for (i, j) in self.diagram:
+            ans *= (x_var(i) - y_var(j))
+        return ans
+
+    def fpf_weight(self):
+        ans = x_var(0) ** 0
+        for (i, j) in self.diagram:
+            if i > j:
+                ans *= (x_var(i) + x_var(j))
+        return ans
+
+    @classmethod
+    def rothe(cls, w, n=None):
+        n = n if n else w.rank
+        tiles = {}
+        for i in range(1, n + 1):
+            j = w(i)
+            tiles[(i, j)] = cls.C_TILE
+            for k in range(j + 1, n + 1):
+                if (i, k) in tiles:
+                    assert tiles[(i, k)] == cls.V_TILE
+                    tiles[(i, k)] = cls.P_TILE
+                else:
+                    tiles[(i, k)] = cls.H_TILE
+            for k in range(i + 1, n + 1):
+                if (k, j) in tiles:
+                    assert tiles[(k, j)] == cls.H_TILE
+                    tiles[(k, j)] = cls.P_TILE
+                else:
+                    tiles[(k, j)] = cls.V_TILE
+        return cls(tiles, n)
+
+    def droop(self, i, j, a, b):
+        def is_valid(i, j, a, b):
+            if self.tiles[(i, j)] != self.C_TILE:
+                return False
+            if (a, b) not in self.diagram:
+                return False
+            for x in range(i, a + 1):
+                for y in range(j, b + 1):
+                    if (x, y) != (i, j):
+                        t = self.tiles.get((x, y), self.B_TILE)
+                        if t in [self.C_TILE, self.J_TILE]:
+                            return False
+            return True
+
+        if not is_valid(i, j, a, b):
+            return None
+        else:
+            tiles = self.tiles.copy()
+
+            del tiles[(i, j)]
+            tiles[(a, b)] = self.J_TILE
+            tiles[(i, b)] = self.C_TILE
+            tiles[(a, j)] = self.C_TILE
+
+            for x in range(i + 1, a):
+                if tiles[(x, j)] == self.P_TILE:
+                    tiles[(x, j)] = self.H_TILE
+                else:
+                    del tiles[(x, j)]
+                if (x, b) in tiles:
+                    assert tiles[(x, b)] == self.H_TILE
+                    tiles[(x, b)] = self.P_TILE
+                else:
+                    tiles[(x, b)] = self.V_TILE
+
+            for y in range(j + 1, b):
+                if tiles[(i, y)] == self.P_TILE:
+                    tiles[(i, y)] = self.V_TILE
+                else:
+                    del tiles[(i, y)]
+                if (a, y) in tiles:
+                    assert tiles[(a, y)] == self.V_TILE
+                    tiles[(a, y)] = self.P_TILE
+                else:
+                    tiles[(a, y)] = self.H_TILE
+
+            return BumplessPipedream(tiles, self.n)
+
+    def droops(self):
+        for (i, j) in self.tiles:
+            for a in range(i + 1, self.n + 1):
+                for b in range(j + 1, self.n + 1):
+                    bpd = self.droop(i, j, a, b)
+                    if bpd is not None:
+                        yield bpd
+
+    @classmethod
+    def from_permutation(cls, w, n=None):
+        ans = set()
+        seed = {cls.rothe(w, n)}
+        while seed:
+            new_seed = set()
+            for bpd in seed:
+                ans.add(bpd)
+                new_seed |= set(bpd.droops())
+            seed = new_seed - ans
+        return ans
+
+    @classmethod
+    def transpose_tile(cls, t):
+        assert t in cls.TILES
+        if t == cls.V_TILE:
+            return cls.H_TILE
+        if t == cls.H_TILE:
+            return cls.V_TILE
+        return t
+
+    def transpose(self):
+        tiles = {}
+        for (i, j) in self.tiles:
+            t = self.tiles[(i, j)]
+            u = self.transpose_tile(t)
+            tiles[(j, i)] = u
+        return BumplessPipedream(tiles, self.n)
+
+    def is_symmetric(self):
+        return self == self.transpose()
+
+    @classmethod
+    def from_fpf_involution_slow(cls, z, n=None):
+        ans = {SymmetricBumplessPipedream(bpd.tiles, bpd.n) for bpd in cls.from_permutation(z, n) if bpd.is_symmetric()}
+        return ans
+
+    def follow(self, i, j):
+        if i == self.n:
+            return j
+        if (i, j) not in self.tiles:
+            return 0
+        t = self.tiles[(i, j)]
+        if t in [self.C_TILE, self.V_TILE]:
+            return self.follow(i + 1, j)
+        if t in [self.J_TILE, self.H_TILE]:
+            return self.follow(i, j - 1)
+        return 0
+
+
+class SymmetricBumplessPipedream(BumplessPipedream):
+
+    @classmethod
+    def from_fpf_involution(cls, z, n=None):
+        ans = set()
+        seed = {cls.rothe(z, n)}
+        while seed:
+            new_seed = set()
+            for bpd in seed:
+                ans.add(bpd)
+                new_seed |= set(bpd.symmetric_droops())
+            seed = new_seed - ans
+        return ans
+
+    def symmetric_droops(self):
+        for (i, j) in self.tiles:
+            if i <= j:
+                continue
+            for a in range(i + 1, self.n + 1):
+                for b in range(j + 1, self.n + 1):
+                    bpd = self.droop(i, j, a, b)
+                    if bpd is not None:
+                        bpd = bpd.droop(j, i, b, a)
+                        if bpd is not None:
+                            yield SymmetricBumplessPipedream(bpd.tiles, bpd.n)
+
+    def __repr__(self):
+        ans = []
+        for i in range(1, self.n + 1):
+            row = []
+            for j in range(1, self.n + 1):
+                t = self.tiles.get((i, j), self.B_TILE)
+                if i == j:
+                    t = '┐' if t == self.P_TILE else ' '
+                elif i < j:
+                    t = ' '
+                elif t == self.B_TILE:
+                    t = str(len({self.follow(i, a) for a in range(1, j)} - {0}))
+                row += [t]
+            ans += [''.join(row)]
+        return '\n' + '\n'.join(ans) + '\n'
 
 
 class Pipedream:
