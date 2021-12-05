@@ -1255,8 +1255,8 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
-        # return '\n' + '\n'.join(rows) + '\n'            # English
+        # return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
+        return '\n' + '\n'.join(rows) + '\n'            # English
 
     @classmethod
     def decreasing_part(cls, row):
@@ -2073,6 +2073,22 @@ class Tableau:
                     queue.append((nu, i - 1))
 
         return [(nu, skew(mu, nu)) for nu in ans]
+
+    @classmethod
+    def rpp(cls, mu, k):
+        ans = set()
+        for t in cls.k_flagged(k, mu):
+            ans.add(Tableau({b: v.number - b[0] for b, v in t.mapping.items()}))
+        return ans
+
+    @classmethod
+    def shrpp(cls, mu, k, require_even_diag=True):
+        ans = set()
+        for t in {t.unprime() for t in Tableau.semistandard_marked_rpp(k + 1, mu)}:
+            has_all_even_diag = all(t.entry(i, i).number % 2 != 0 for i in range(1, t.max_row + 1))
+            if not require_even_diag or has_all_even_diag:
+                ans.add(Tableau({b: v.number - 1 for b, v in t.mapping.items()}))
+        return ans
 
     def rpp_weight(self):
         ans = []

@@ -11,7 +11,7 @@ class BumplessPipedream:
     P_TILE = '┼'
     H_TILE = '─'
     V_TILE = '│'
-    B_TILE = '.'
+    B_TILE = '•'
     TILES = [J_TILE, C_TILE, P_TILE, H_TILE, V_TILE, B_TILE]
 
     def __init__(self, tiles, n=None, diagram=None):
@@ -27,7 +27,12 @@ class BumplessPipedream:
     def __repr__(self):
         ans = []
         for i in range(1, self.n + 1):
-            row = [self.tiles.get((i, j), self.B_TILE) for j in range(1, self.n + 1)]
+            row = []
+            for j in range(1, self.n + 1):
+                t = self.tiles.get((i, j), self.B_TILE)
+                # if t == self.B_TILE:
+                #    t = str(len({self.follow(i, a) for a in range(1, j)} - {0}))
+                row += [t]
             ans += [''.join(row)]
         return '\n' + '\n'.join(ans) + '\n'
 
@@ -210,12 +215,14 @@ class SymmetricBumplessPipedream(BumplessPipedream):
             row = []
             for j in range(1, self.n + 1):
                 t = self.tiles.get((i, j), self.B_TILE)
-                if i == j:
-                    t = '┐' if t == self.P_TILE else ' '
-                elif i < j:
-                    t = ' '
-                elif t == self.B_TILE:
-                    t = str(len({self.follow(i, a) for a in range(1, j)} - {0}))
+                if i > j:
+                    t = '\033[91m' + t + '\033[0m'
+                # if i == j:
+                #    t = '┐' if t == self.P_TILE else ' '
+                # elif i < j:
+                #    t = ' '
+                # if i > j and t == self.B_TILE:
+                #    t = str(len({self.follow(i, a) for a in range(1, j)} - {0}))
                 row += [t]
             ans += [''.join(row)]
         return '\n' + '\n'.join(ans) + '\n'

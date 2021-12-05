@@ -70,7 +70,7 @@ class MarkedNumber:
 
     def __repr__(self):
         if self.number == 0:
-            return "*"
+            return "0"  # "*"
         if self.number < 0:
             return str(-self.number) + "'"
         else:
