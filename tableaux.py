@@ -34,6 +34,16 @@ class Tableau:
     def __getitem__(self, item):
         return self.mapping.get(item, None)
 
+    def tex(self):
+        rows = []
+        for i in range(1, self.max_row + 1):
+            row = []
+            for j in range(1, self.max_column + 1):
+                v = self.entry(i, j)
+                row += [('*(white) ' + str(v)) if v is not None else '\\none']
+            rows += [' & '.join(row)]
+        return '$\\colorbox{lightgray!50}{\\begin{ytableau}' + ' \\\\ '.join(reversed(rows)) + '\\end{ytableau}}$'
+
     def is_shifted_k_flagged(self, k):
         for (i, j) in self:
             entry = self.entry(i, j)
@@ -210,6 +220,40 @@ class Tableau:
                 b += 1
         assert len(word) == len(positions) == len(self)
         return word, positions
+
+    def shifted_crystal_s(self, index):
+        weight = {i + 1: a for i, a in enumerate(self.weight())}
+        k = weight.get(index, 0) - weight.get(index + 1, 0)
+        if k == 0:
+            return self
+        ans = self
+        if k < 0:
+            for _ in range(-k):
+                ans = ans.shifted_crystal_e(index)
+        else:
+            for _ in range(k):
+                ans = ans.shifted_crystal_f(index)
+        return ans
+
+    def extended_shifted_crystal_e0(self, i):
+        ans = self
+        for j in range(i - 1, 0, -1):
+            ans = ans.shifted_crystal_s(j)
+        ans = ans.shifted_crystal_e(0)
+        if ans is not None:
+            for j in range(1, i):
+                ans = ans.shifted_crystal_s(j)
+        return ans
+
+    def extended_shifted_crystal_f0(self, i):
+        ans = self
+        for j in range(i - 1, 0, -1):
+            ans = ans.shifted_crystal_s(j)
+        ans = ans.shifted_crystal_f(0)
+        if ans is not None:
+            for j in range(1, i):
+                ans = ans.shifted_crystal_s(j)
+        return ans
 
     def shifted_crystal_e(self, index, verbose=False):
         if index == 0:
@@ -1148,7 +1192,7 @@ class Tableau:
         return ans
 
     @classmethod
-    def get_semistandard_shifted(cls, shape, n=None):
+    def get_semistandard_shifted(cls, shape, n=None, diagonal_primes=False):
         if type(shape) == tuple:
             shape = StrictPartition(*shape)
         if type(shape) == Partition:
@@ -1164,14 +1208,14 @@ class Tableau:
         borders = {
             (a, b)
             for a in shape.horizontal_border_strips() | {Shape()}
-            for b in (shape - a).vertical_border_strips(exclude_diagonal=True) | {Shape()}
+            for b in (shape - a).vertical_border_strips(exclude_diagonal=not diagonal_primes) | {Shape()}
             if len(a) > 0 or len(b) > 0
         }
 
         ans = set()
         for border_h, border_v in borders:
             for k in range(n):
-                for t in cls.get_semistandard_shifted(shape - border_h - border_v, k):
+                for t in cls.get_semistandard_shifted(shape - border_h - border_v, k, diagonal_primes):
                     mapping = t.mapping if t.mapping else {}
                     for i, j in border_h:
                         mapping[(i, j)] = MarkedNumber(k + 1)
@@ -1183,7 +1227,13 @@ class Tableau:
     def __le__(self, other):
         assert type(other) == Tableau
         assert set(other.mapping) == set(self.mapping)
-        return all(a <= other.mapping[x] for x, a in self.mapping.items())
+        # return all(a <= other.mapping[x] for x, a in self.mapping.items())
+        return self.row_reading_word() <= other.row_reading_word()
+
+    def __lt__(self, other):
+        assert type(other) == Tableau
+        assert set(other.mapping) == set(self.mapping)
+        return self.row_reading_word() < other.row_reading_word()
 
     def __len__(self):
         return len(self.mapping)
@@ -1205,8 +1255,8 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
-        #return '\n'.join(rows) + '\n'            # English
+        # return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
+        return '\n' + '\n'.join(rows) + '\n'            # English
 
     @classmethod
     def decreasing_part(cls, row):
@@ -1333,6 +1383,7 @@ class Tableau:
         return {i for i in d if i + 1 in d and d[i + 1] < d[i]}
 
     def shifted_descents(self):
+        w = self.shifted_reading_word()
         n = len(w)
         assert all(i in w for i in range(1, n + 1))
         d = {i: pos for pos, i in enumerate(w)}
@@ -2022,6 +2073,22 @@ class Tableau:
                     queue.append((nu, i - 1))
 
         return [(nu, skew(mu, nu)) for nu in ans]
+
+    @classmethod
+    def rpp(cls, mu, k):
+        ans = set()
+        for t in cls.k_flagged(k, mu):
+            ans.add(Tableau({b: v.number - b[0] for b, v in t.mapping.items()}))
+        return ans
+
+    @classmethod
+    def shrpp(cls, mu, k, require_even_diag=True):
+        ans = set()
+        for t in {t.unprime() for t in Tableau.semistandard_marked_rpp(k + 1, mu)}:
+            has_all_even_diag = all(t.entry(i, i).number % 2 != 0 for i in range(1, t.max_row + 1))
+            if not require_even_diag or has_all_even_diag:
+                ans.add(Tableau({b: v.number - 1 for b, v in t.mapping.items()}))
+        return ans
 
     def rpp_weight(self):
         ans = []
