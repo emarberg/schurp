@@ -136,7 +136,7 @@ class BumplessPipedream:
     @classmethod
     def from_permutation(cls, w, n=None):
         ans = set()
-        seed = {cls.rothe(w, n)}
+        seed = {cls.rothe(w.inverse(), n)}
         while seed:
             new_seed = set()
             for bpd in seed:
@@ -170,17 +170,100 @@ class BumplessPipedream:
         ans = {SymmetricBumplessPipedream(bpd.tiles, bpd.n) for bpd in cls.from_permutation(z, n) if bpd.is_symmetric()}
         return ans
 
-    def follow(self, i, j):
-        if i == self.n:
+    # def follow(self, i, j):
+    #     if i == self.n:
+    #         return j
+    #     if (i, j) not in self.tiles:
+    #         return 0
+    #     t = self.tiles[(i, j)]
+    #     if t in [self.C_TILE, self.V_TILE]:
+    #         return self.follow(i + 1, j)
+    #     if t in [self.J_TILE, self.H_TILE]:
+    #         return self.follow(i, j - 1)
+    #     return 0
+
+    def modify_column_move_rectangle(self, x, y, x_prime, p):
+        if p != y + 1:
+            pass # step 2
+        else:
+            pass # step 3
+
+    def delta(self):
+        D = self
+        (x, y) = D.get_minimal_blank_tile()
+        r = x
+        while True:
+            # step 1
+            while D.is_blank(x, y + 1):
+                y = y + 1
+            p = D.get_pipe(x, y + 1)
+
+            # step 2
+            if p == y+1:
+                break
+
+            x_prime = x + 1
+            while D.get_tile(x_prime,y+1) != self.J_TILE:
+                x_prime += 1
+            
+            D = D.modify_column_move_rectangle(x, y, x_prime, p)
+            x, y = x_prime, y + 1
+
+        # step 3
+        x_prime = x + 1
+        while D.get_tile(x_prime, y + 1) != self.C_TILE or D.get_pipe(x_prime, y + 1, 'H') != y:
+            x_prime += 1
+        D = D.modify_column_move_rectangle(x, y, x_prime, p)
+
+        # step 4
+        a = 0 # ???? TODO
+        return D, a, r
+
+    def get_pipe(self, i, j, direction=None):
+        # returns the column index of the position on the bottom side where the pipe enters the n-by-n grid
+        assert direction in [None, 'V', 'H']
+        if i == self.n + 1:
             return j
-        if (i, j) not in self.tiles:
-            return 0
-        t = self.tiles[(i, j)]
-        if t in [self.C_TILE, self.V_TILE]:
-            return self.follow(i + 1, j)
-        if t in [self.J_TILE, self.H_TILE]:
-            return self.follow(i, j - 1)
-        return 0
+        
+        t = self.get_tile(i, j)
+        assert t != self.B_TILE
+
+        if t == self.P_TILE:
+            assert direction is not None
+            if direction == 'V':
+                return self.get_pipe(i+1, j, direction)
+            else:
+                return self.get_pipe(i, j-1, direction)
+
+        if t == self.J_TILE: # ┘
+            return self.get_pipe(i, j-1, 'H')
+        elif t == self.C_TILE: # ┌
+            return self.get_pipe(i+1, j, 'V')
+        elif t == self.H_TILE: # ─
+            return self.get_pipe(i, j-1, 'H')
+        elif t == self.V_TILE: # │
+            return self.get_pipe(i+1, j, 'V')
+
+    def get_tile(self, i, j):
+        assert 1 <= i <= self.n and 1 <= j <= self.n
+        return self.tiles.get((i, j), self.B_TILE)
+
+    def is_blank(self, i, j):
+        return self.get_tile(i,j) == self.B_TILE
+
+    def get_blank_tiles(self):
+        # returns a list with the position of the rightmost tile
+        # the list is order such that [row1: rightmost tiles ... leftmost tiles, row2:rightmost tiles ... leftmost tiles,... row n:rightmost tiles ... leftmost tiles] 
+        x=[]
+        for i in range(1,self.n+1):
+            for j in reversed(range(1,self.n+1)):
+                if self.is_blank(i,j):
+                    x.append((i,j))
+        return x
+
+    def get_minimal_blank_tile(self):
+        # intentially will cause an error if there are no blank tiles
+        return self.get_blank_tiles()[0]
 
 
 class SymmetricBumplessPipedream(BumplessPipedream):
@@ -226,6 +309,77 @@ class SymmetricBumplessPipedream(BumplessPipedream):
                 row += [t]
             ans += [''.join(row)]
         return '\n' + '\n'.join(ans) + '\n'
+
+
+class Moves(BumplessPipedream):
+
+    # @classmethod
+    # def moves(self):
+    #     while(self.blank_tiles != None)
+    #     type_one(self)
+
+    @classmethod
+    def get_ith_pipedream(cls,P,i=1):
+        return sorted(P)[i-1]
+
+    # def get_marked(self):
+    #     blank_tiles=sorted([tuple(y) for y in self.diagram])
+    #     return blank_tiles[0]
+
+    def column_less_than(self,other):
+        # return self[1]<other[1] if self[0]<=other[0]
+        # assert self[0] <= other[0]
+        return self[1] < other[1]
+
+    def type_one(self):
+        blank_tiles=sorted([tuple(y) for y in self.diagram])
+        marked=blank_tiles[0]
+        for x in blank_tiles:
+            if column_less_than(marked,x):
+                marked = x
+        return marked       #marked is a tuple
+
+    def column_moves(self):
+        self.type_one()
+
+        # (x,y) is the coordinate of marked tile
+        x=marked[0]
+        y=marked[1]
+
+        S=[t for t in self.tiles[(i,y+1)] for i in range(x+1,self.n+1) if t==self.J_TILE]
+        x_prime = S[0][0]
+        rectangle = {(i,j):self.tiles[i,j] for i in range(x,x_prime+1) for j in range(y,y+2)}
+
+    def type_two(self):
+        self.type_one()
+        
+
+        def new_droop(i,j,a,b):
+            def is_valid(i, j, a, b):
+                if self.tiles[(i, j)] != self.C_TILE:
+                    return False
+                if (a, b) not in self.diagram:
+                    return False
+                for x in range(i, a + 1):
+                    for y in range(j, b + 1):
+                        if (x, y) != (i, j):
+                            t = self.tiles.get((x, y), self.B_TILE)
+                            if t in [self.C_TILE, self.J_TILE]:
+                                return False
+                return True
+
+            if not is_valid(i, j, a, b):
+                return None
+            else:
+                tiles = self.tiles.copy()
+
+
+        # check_tile=[j+1 for (i,j) in self.tiles]
+        # assert [(i,j) for ???? in self.tiles if x == J_TILE ] != None
+
+
+
+
 
 
 class Pipedream:
