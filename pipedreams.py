@@ -196,7 +196,7 @@ class BumplessPipedream:
             tiles[(x, y + 1)] = self.J_TILE
         elif self.get_tile(x, y + 1) == self.C_TILE:
             tiles[(x, y + 1)] = self.H_TILE
-
+        ######### Bugs in here
         # Modifying last two tiles
         if self.get_tile(x_prime, y) == self.H_TILE:
             tiles[(x_prime, y)] = self.J_TILE
@@ -244,27 +244,33 @@ class BumplessPipedream:
         tiles = self.tiles.copy()
         
         # step 3
-            
+        print('x, x_prime, y+1:')
+        print(x,x_prime, y+1)
         tiles[(x, y)] = self.C_TILE
+        tiles[(x_prime, y)] = self.V_TILE
         tiles[(x_prime, y + 1)] = self.C_TILE   # ┌
         
-        # Modifying first two tiles
+        # Modifying the tile next to the labled tile
         if self.get_tile(x, y + 1) == self.V_TILE:
             tiles[(x, y + 1)] = self.J_TILE    # ┘
         elif self.get_tile(x, y + 1) == self.C_TILE:    # ┌
             tiles[(x, y + 1)] = self.H_TILE
-
-        for i in range(x + 1, x_prime + 1):
-            
-            if tiles[(i, y + 1)] == self.P_TILE:
-                
-                tiles[(i, y + 1)] = self.H_TILE
-                tiles[(i, y)] = self.P_TILE
-                tiles[(i + 1, y + 1)] = self.C_TILE     # ┌
+        
+        ####### fix this loop:
+        for i in range(x + 1, x_prime):
+            print('i: ')
+            print(i)
+            if self.get_tile(i - 1, y + 1) == self.P_TILE:
+                print(self.get_tile(i - 1, y + 1) == self.P_TILE)
+                tiles[(i, y + 1)] = self.J_TILE
+                tiles[(i  , y)] = self.P_TILE 
+                tiles[(i - 1, y + 1)] = self.C_TILE    # ┌
             
             else:
+                print(self.get_tile(i - 1, y + 1) == self.P_TILE)
                 tiles[(i, y)] = self.V_TILE
-
+            
+        
         # Test
         print('Pipe dream after step 3: ')
         print(BumplessPipedream(tiles, self.n))
@@ -314,7 +320,7 @@ class BumplessPipedream:
 
         for i in range(self.n):
             print(D)
-            D = delta(D)
+            D = D.delta()
 
             if i < self.n - 1:
                 print('->')
