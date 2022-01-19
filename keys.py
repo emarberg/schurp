@@ -15,7 +15,6 @@
 #             w *= Permutation.t_ij(j, i)
 #     return w
 
-
 # for w in pvex:
 #     b = tcode(w.rothe_diagram())==tcode(skew_symmetric_diagram(pvex[w]))
 #     print(w, w.cycle_repr(), pvex[w], pvex[w]==fvex[w], w.is_vexillary(), vex(w).is_vexillary())
