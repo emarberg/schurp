@@ -182,90 +182,94 @@ class BumplessPipedream:
     #         return self.follow(i, j - 1)
     #     return 0
 
-    def modify_column_move_rectangle(self, x, y, x_prime, p):
-        
+    def modify_column_move_rectangle(self, x, y, x_prime):
+        # do column move on self and determine the second step from P.4
+
         tiles = self.tiles.copy()
-        
-        if p != y + 1:
-            # pass # step 2
 
-            # Find z
-            z = x + 1
-            while self.get_tile(z, y + 1) != self.P_TILE and self.get_tile(z, y) == self.C_TILE:
-                z += 1
+        # Column moves
+        del tiles[(x_prime, y + 1)]
+        tiles[(x, y)] = self.C_TILE
 
+        # Modifying first two tiles
+        if self.get_tile(x, y + 1) == self.V_TILE:
+            tiles[(x, y + 1)] = self.J_TILE
+        elif self.get_tile(x, y + 1) == self.C_TILE:
+            tiles[(x, y + 1)] = self.H_TILE
+
+        # Modifying last two tiles
+        if self.get_tile(x_prime, y) == self.H_TILE:
+            tiles[(x_prime, y)] = self.J_TILE
+        elif self.get_tile(x_prime, y) == self.C_TILE:
+            tiles[(x_prime, y)] = self.V_TILE
+
+        for i in range(x + 1, x_prime):
+            if self.get_tile(i,y) == self.H_TILE and self.get_tile(i, y + 1) == self.P_TILE:
+                tiles[(i, y)] = self.P_TILE
+                tiles[(i, y + 1)] = self.H_TILE
+
+        # step 2
+        # 2a: find out the J_TILE in column y+1 and the C_TIle in column y
+
+        # Find z 
+        z_values = [
+            z for z in range(x + 1 , x_prime) 
+            if self.get_tile(z, y + 1) == self.P_TILE and self.get_tile(z , y) == self.C_TILE
+        ]
+
+        for z in z_values:
             # Find z_prime
             z_prime = z + 1
             while self.get_tile(z_prime, y) != self.J_TILE:
                 z_prime += 1
 
             assert self.get_pipe(z,y) == self.get_pipe(z_prime,y)
-            
-            # Column moves
-            del tiles[(x_prime, y + 1)]
-            
-            tiles[(x, y)] = self.C_TILE
             tiles[(z, y + 1)] = self.C_TILE
+            tiles[(z, y)] = self.V_TILE
             tiles[(z_prime, y + 1)] = self.J_TILE
+            tiles[(z_prime, y)] = self.P_TILE            
 
-            # Modifying first two tiles
-            if self.get_tile(x, y + 1) == self.V_TILE:
-                tiles[(x, y + 1)] = self.J_TILE
-            elif self.get_tile(x, y + 1) == self.C_TILE:
-                tiles[(x, y + 1)] = self.H_TILE
+        # assign new labled blank tile
+        (x, y) = (x_prime, y + 1)
 
-            # Modifying middle part
-            for i in range(x + 1, x_prime):
-                if (i < z and self.get_tile(i, y + 1) == self.P_TILE) or i == z_prime:
-                    tiles[(i, y)] = self.P_TILE
-                else:    
-                    tiles[(i, y)] = self.V_TILE
+        # Test
+        print('Pipe dream after step 2: ')
+        print(BumplessPipedream(tiles, self.n))
+        return BumplessPipedream(tiles, self.n)
 
-            # Modifying last two tiles
-            if self.get_tile(x_prime, y) == self.H_TILE:
-                tiles[(x_prime, y)] = self.J_TILE
-            elif self.get_tile(x_prime, y) == self.C_TILE:
-                tiles[(x_prime, y)] = self.V_TILE
 
-            # assign new labled blank tile
-            (x, y) = (x_prime, y + 1)
+    def modify_column_move_rectangle_step_three(self, x, y, x_prime):
+        # do column move on self and determine the third step from P.4
 
-            # Test
-            print('Pipe dream after step 2: ')
-            print(BumplessPipedream(tiles, self.n))
-
-        else:
-            # step 3
+        tiles = self.tiles.copy()
+        
+        # step 3
             
-            tiles[(x, y)] = tiles[(x_prime, y + 1)] = self.C_TILE   # ┌
+        tiles[(x, y)] = self.C_TILE
+        tiles[(x_prime, y + 1)] = self.C_TILE   # ┌
+        
+        # Modifying first two tiles
+        if self.get_tile(x, y + 1) == self.V_TILE:
+            tiles[(x, y + 1)] = self.J_TILE    # ┘
+        elif self.get_tile(x, y + 1) == self.C_TILE:    # ┌
+            tiles[(x, y + 1)] = self.H_TILE
+
+        for i in range(x + 1, x_prime + 1):
             
-            # Modifying first two tiles
-            if self.get_tile(x, y + 1) == self.V_TILE:
-                tiles[(x, y + 1)] = self.J_TILE    # ┘
-           
-            elif self.get_tile(x, y + 1) == self.C_TILE:    # ┌
-                tiles[(x, y + 1)] = self.H_TILE
-
-            for i in range(x + 1, x_prime + 1):
+            if tiles[(i, y + 1)] == self.P_TILE:
                 
-                if tiles[(i, y + 1)] == self.P_TILE:
-                    
-                    tiles[(i, y + 1)] = self.H_TILE
-                    tiles[(i, y)] = self.P_TILE
-                    tiles[(i + 1, y + 1)] = self.C_TILE     # ┌
-                
-                else:
-                    tiles[(i, y)] = self.V_TILE
+                tiles[(i, y + 1)] = self.H_TILE
+                tiles[(i, y)] = self.P_TILE
+                tiles[(i + 1, y + 1)] = self.C_TILE     # ┌
+            
+            else:
+                tiles[(i, y)] = self.V_TILE
 
-            global a
-            a = y
-
-            # Test
-            print('Pipe dream after step 3: ')
-            print(BumplessPipedream(tiles, self.n))
+        # Test
+        print('Pipe dream after step 3: ')
+        print(BumplessPipedream(tiles, self.n))
 
         return BumplessPipedream(tiles, self.n)
-      
 
     def delta(self):
         D = self
@@ -286,16 +290,16 @@ class BumplessPipedream:
             while D.get_tile(x_prime, y + 1) != self.J_TILE:
                 x_prime += 1
             
-            D = D.modify_column_move_rectangle(x, y, x_prime, p)
+            D = D.modify_column_move_rectangle(x, y, x_prime)
             x, y = x_prime, y + 1
 
         # step 3
-        print('x:')
-        print(x)
+        a = y
+
         x_prime = x + 1
-        while D.get_tile(x_prime, y + 1) != self.C_TILE or D.get_pipe(x_prime, y + 1, 'H') != y:
+        while D.get_tile(x_prime, y + 1) != self.P_TILE or D.get_pipe(x_prime, y + 1, 'H') != y:
             x_prime += 1
-        D = D.modify_column_move_rectangle(x, y, x_prime, p)
+        D = D.modify_column_move_rectangle_step_three(x, y, x_prime)
 
         # step 4
         return D, a, r
@@ -323,12 +327,6 @@ class BumplessPipedream:
 
         Print(w == Permutation(*oneline))
         assert w == Permutation(*oneline)
-
-
-
-
-
-
 
     def get_pipe(self, i, j, direction=None):
         # returns the column index of the position on the bottom side where the pipe enters the n-by-n grid
