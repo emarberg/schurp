@@ -208,6 +208,9 @@ class BumplessPipedream:
             if self.get_tile(i,y) == self.H_TILE and self.get_tile(i, y + 1) == self.P_TILE:
                 tiles[(i, y)] = self.P_TILE
                 tiles[(i, y + 1)] = self.H_TILE
+            elif self.get_tile(i,y) == self.B_TILE and self.get_tile(i, y + 1) == self.V_TILE:
+                tiles[(i, y)] = self.V_TILE
+                tiles[(i, y + 1)] = self.B_TILE
 
         # step 2
         # 2a: find out the J_TILE in column y+1 and the C_TIle in column y
@@ -234,8 +237,6 @@ class BumplessPipedream:
         (x, y) = (x_prime, y + 1)
 
         # Test
-        # print('Pipe dream after step 2: ')
-        # print(BumplessPipedream(tiles, self.n))
         return BumplessPipedream(tiles, self.n)
 
 
@@ -245,10 +246,11 @@ class BumplessPipedream:
         tiles = self.tiles.copy()
         
         # step 3
+        # print('In step 3, (x,y) = ' + str((x,y)) )
+        # print()
         tiles[(x, y)] = self.C_TILE
         tiles[(x_prime, y)] = self.V_TILE
         tiles[(x_prime, y + 1)] = self.C_TILE   # ┌
-        
         # Modifying the tile next to the labled tile
         if self.get_tile(x, y + 1) == self.V_TILE:
             tiles[(x, y + 1)] = self.J_TILE    # ┘
@@ -258,14 +260,23 @@ class BumplessPipedream:
         # Modifying the tile between row x+1 and x_prime
         for i in range(x + 1, x_prime):
             if self.get_tile(i, y + 1) == self.P_TILE:
-                if self.get_tile(i, y) == self.H_TILE:
-                    tiles[(i, y)] = self.P_TILE
-                    tiles[(i, y + 1)] = self.H_TILE
+                tiles[(i, y)] = self.P_TILE
+                tiles[(i, y + 1)] = self.get_tile(i, y)
+            elif self.get_tile(i, y) == self.B_TILE:
+                tiles[(i, y + 1)] = self.B_TILE
+                tiles[(i, y)] = self.V_TILE
+
+        return BumplessPipedream(tiles, self.n)
+        # for i in range(x + 1, x_prime):
+        #     if self.get_tile(i, y + 1) == self.P_TILE:
+        #         if self.get_tile(i, y) == self.H_TILE:
+        #             tiles[(i, y)] = self.P_TILE
+        #             tiles[(i, y + 1)] = self.H_TILE
                   
-                elif self.get_tile(i, y) == self.C_TILE and self.get_tile(i + 1, y) == self.J_TILE:
-                    tiles[(i, y)] = self.V_TILE
-                    tiles[(i + 1, y)] = self.P_TILE
-                    tiles[(i + 1, y + 1)] = self.J_TILE
+        #         elif self.get_tile(i, y) == self.C_TILE and self.get_tile(i + 1, y) == self.J_TILE:
+        #             tiles[(i, y)] = self.V_TILE
+        #             tiles[(i + 1, y)] = self.P_TILE
+        #             tiles[(i + 1, y + 1)] = self.J_TILE
         
             # if self.get_tile(i - 1, y + 1) == self.P_TILE:
             #     print(self.get_tile(i - 1, y + 1) == self.P_TILE)
@@ -282,7 +293,7 @@ class BumplessPipedream:
         # print('Pipe dream after step 3: ')
         # print(BumplessPipedream(tiles, self.n))
 
-        return BumplessPipedream(tiles, self.n)
+        
 
     def delta(self):
         D = self
@@ -319,23 +330,21 @@ class BumplessPipedream:
 
     def get_sequence(self):
         D = self
-        w = Permutation()
-        oneline = []
+        ans = []
 
         for i in range(self.n):
             print(D)
-            D,a,r = D.delta()
-
             if i < self.n - 1:
-                print('->')
-                w *= Permutation.transposition(r,a)
-            # X.append(a)
-            # Y.append(r)
-
-        for j in range(self.n + 1):
-            oneline.append(self.get_pipe(i, self.n))
-
-        assert w == Permutation(*oneline)
+                D,a,r = D.delta()
+                print('↓' + str((a,r)))
+                ans.append(a)
+        
+        # for m in range(1, self.n + 1):
+        #     oneline.append(self.get_pipe(m, self.n))
+        
+        w = Permutation.from_word(*ans)
+        print('w = ' + str(w))
+        return w
 
     def get_pipe(self, i, j, direction=None):
         # returns the column index of the position on the bottom side where the pipe enters the n-by-n grid
@@ -347,6 +356,9 @@ class BumplessPipedream:
         assert t != self.B_TILE
 
         if t == self.P_TILE:
+            # if j == self.n:
+            #     S=[m for m in reversed(range(1, j)) if self.get_tile(i, m) != self.P_TILE]
+            #     return self.get_pipe(i, S[0], direction)
             assert direction is not None
             if direction == 'V':
                 return self.get_pipe(i+1, j, direction)
