@@ -256,19 +256,33 @@ class BumplessPipedream:
         elif self.get_tile(x, y + 1) == self.C_TILE:    # ┌
             tiles[(x, y + 1)] = self.H_TILE
         
-        ####### fix this loop:
+        # Modifying the tile between row x+1 and x_prime
         for i in range(x + 1, x_prime):
-            print('i: ')
-            print(i)
-            if self.get_tile(i - 1, y + 1) == self.P_TILE:
-                print(self.get_tile(i - 1, y + 1) == self.P_TILE)
-                tiles[(i, y + 1)] = self.J_TILE
-                tiles[(i  , y)] = self.P_TILE 
-                tiles[(i - 1, y + 1)] = self.C_TILE    # ┌
+            print(self.get_tile(i, y + 1) == self.P_TILE)
+            if self.get_tile(i, y + 1) == self.P_TILE:
+                if self.get_tile(i, y) == self.H_TILE:
+                    print('we are in case 1')
+                    tiles[(i, y)] = self.P_TILE
+                    tiles[(i, y + 1)] = self.H_TILE
+                  
+                elif self.get_tile(i, y) == self.C_TILE and self.get_tile(i + 1, y) == self.J_TILE:
+                    tiles[(i, y)] = self.V_TILE
+                    tiles[(i + 1, y)] = self.P_TILE
+                    tiles[(i + 1, y + 1)] = self.J_TILE
+                    
+        
+        # # case when x+1 == x_prime
+        # tiles[(x_prime, y)] = self.V_TILE
+        
+            # if self.get_tile(i - 1, y + 1) == self.P_TILE:
+            #     print(self.get_tile(i - 1, y + 1) == self.P_TILE)
+            #     tiles[(i, y + 1)] = self.J_TILE
+            #     tiles[(i  , y)] = self.P_TILE 
+            #     tiles[(i - 1, y + 1)] = self.C_TILE    # ┌
             
-            else:
-                print(self.get_tile(i - 1, y + 1) == self.P_TILE)
-                tiles[(i, y)] = self.V_TILE
+            # else:
+            #     print(self.get_tile(i - 1, y + 1) == self.P_TILE)
+            #     tiles[(i, y)] = self.V_TILE
             
         
         # Test
@@ -313,7 +327,7 @@ class BumplessPipedream:
     def get_sequence(self):
         D = self
         w = Permutation()
-        oneline=[]
+        oneline = []
         # X = []    #first row of compatible sequence
         # Y = []    #second row of compatible sequence
         
