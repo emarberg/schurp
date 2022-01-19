@@ -2,6 +2,7 @@ from schubert import InvSchubert, FPFSchubert
 from polynomials import x as x_var, one as one_var, y as y_var
 import subprocess
 import os
+from permutations import *
 
 
 class BumplessPipedream:
@@ -233,8 +234,8 @@ class BumplessPipedream:
         (x, y) = (x_prime, y + 1)
 
         # Test
-        print('Pipe dream after step 2: ')
-        print(BumplessPipedream(tiles, self.n))
+        # print('Pipe dream after step 2: ')
+        # print(BumplessPipedream(tiles, self.n))
         return BumplessPipedream(tiles, self.n)
 
 
@@ -244,8 +245,6 @@ class BumplessPipedream:
         tiles = self.tiles.copy()
         
         # step 3
-        print('x, x_prime, y+1:')
-        print(x,x_prime, y+1)
         tiles[(x, y)] = self.C_TILE
         tiles[(x_prime, y)] = self.V_TILE
         tiles[(x_prime, y + 1)] = self.C_TILE   # ┌
@@ -258,10 +257,8 @@ class BumplessPipedream:
         
         # Modifying the tile between row x+1 and x_prime
         for i in range(x + 1, x_prime):
-            print(self.get_tile(i, y + 1) == self.P_TILE)
             if self.get_tile(i, y + 1) == self.P_TILE:
                 if self.get_tile(i, y) == self.H_TILE:
-                    print('we are in case 1')
                     tiles[(i, y)] = self.P_TILE
                     tiles[(i, y + 1)] = self.H_TILE
                   
@@ -269,10 +266,6 @@ class BumplessPipedream:
                     tiles[(i, y)] = self.V_TILE
                     tiles[(i + 1, y)] = self.P_TILE
                     tiles[(i + 1, y + 1)] = self.J_TILE
-                    
-        
-        # # case when x+1 == x_prime
-        # tiles[(x_prime, y)] = self.V_TILE
         
             # if self.get_tile(i - 1, y + 1) == self.P_TILE:
             #     print(self.get_tile(i - 1, y + 1) == self.P_TILE)
@@ -286,8 +279,8 @@ class BumplessPipedream:
             
         
         # Test
-        print('Pipe dream after step 3: ')
-        print(BumplessPipedream(tiles, self.n))
+        # print('Pipe dream after step 3: ')
+        # print(BumplessPipedream(tiles, self.n))
 
         return BumplessPipedream(tiles, self.n)
 
@@ -328,13 +321,10 @@ class BumplessPipedream:
         D = self
         w = Permutation()
         oneline = []
-        # X = []    #first row of compatible sequence
-        # Y = []    #second row of compatible sequence
-        
 
         for i in range(self.n):
             print(D)
-            D = D.delta()
+            D,a,r = D.delta()
 
             if i < self.n - 1:
                 print('->')
@@ -345,7 +335,6 @@ class BumplessPipedream:
         for j in range(self.n + 1):
             oneline.append(self.get_pipe(i, self.n))
 
-        Print(w == Permutation(*oneline))
         assert w == Permutation(*oneline)
 
     def get_pipe(self, i, j, direction=None):
