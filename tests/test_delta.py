@@ -251,32 +251,40 @@ def test_delta():
     # print(D)
 
 
-def test_get_sequence(n=5):
-    pass
+def test_get_sequence_simple(n=5):
+    for z in Permutation.all(n):
+        S = BumplessPipedream.from_permutation(z)
+        for x in S:
+            print("\n\n\nnew case:")
+            x.get_sequence()
+
+
+def test_get_sequence():
+
     # First example on P.6, Gao & Huang 
-    # t = {(1, 3): '┌', (1, 4): '─', (1, 5): '─', (2, 2): '┌', (4, 2): '┌', (5, 2): '│', (2, 3): '┼', (2, 4): '─', (2, 5): '─', (3, 1): '┌', (4, 1): '│', (5, 1): '│', (3, 5): '┌', (4, 5): '┼', (5, 5): '┼', (4, 4): '┌', (5, 4): '┼', (5, 3): '┌', (4, 3): '┘', (3, 3): '│', (3, 2): '┘'}
+    t = {(1, 3): '┌', (1, 4): '─', (1, 5): '─', (2, 2): '┌', (4, 2): '┌', (5, 2): '│', (2, 3): '┼', (2, 4): '─', (2, 5): '─', (3, 1): '┌', (4, 1): '│', (5, 1): '│', (3, 5): '┌', (4, 5): '┼', (5, 5): '┼', (4, 4): '┌', (5, 4): '┼', (5, 3): '┌', (4, 3): '┘', (3, 3): '│', (3, 2): '┘'}
     
 
     # Second example on P.6, Gao & Huang 
     # t={(1, 3): '┌', (1, 4): '─', (1, 5): '─', (2, 2): '┌', (3, 2): '│', (4, 2): '┼', (5, 2): '│', (2, 4): '┌', (2, 5): '─', (4, 1): '┌', (5, 1): '│', (3, 5): '┌', (4, 5): '┼', (5, 5): '┼', (4, 4): '┌', (5, 4): '┼', (5, 3): '┌', (3, 4): '┘', (3, 3): '┌', (2, 3): '┘', (4, 3): '┘'}
-    # D = BumplessPipedream(t)
-    # print('Input:' )
-    # D.get_sequence()
-
-    check = True
-    count = 0
-    for w1 in Permutation.all(n):
-        if w1 == Permutation():
-            continue
-        for b in BumplessPipedream.from_permutation(w1, n):
-            # for i in (1, b.n + 1):
-            #     if (i,i) in b.diagram:
-            #         count += 1
-            # if count == b.n:
-            #     break
-            w = b.get_sequence()
-            print(w)
-            assert w == w1
+    D = BumplessPipedream(t)
+    print('Input:' )
+    D.get_sequence()
+    assert False
+    # check = True
+    # count = 0
+    # for w1 in Permutation.all(n):
+    #     if w1 == Permutation():
+    #         continue
+    #     for b in BumplessPipedream.from_permutation(w1, n):
+    #         # for i in (1, b.n + 1):
+    #         #     if (i,i) in b.diagram:
+    #         #         count += 1
+    #         # if count == b.n:
+    #         #     break
+    #         w = b.get_sequence()
+    #         print(w)
+    #         assert w == w1
     
     
 
