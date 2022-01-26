@@ -137,7 +137,7 @@ class BumplessPipedream:
     @classmethod
     def from_permutation(cls, w, n=None):
         ans = set()
-        seed = {cls.rothe(w.inverse(), n)}
+        seed = {cls.rothe(w, n)}
         while seed:
             new_seed = set()
             for bpd in seed:
@@ -320,7 +320,15 @@ class BumplessPipedream:
 
         w = Permutation.from_word(*ans)
         print('w = ' + str(w))
-        return w
+
+    def get_gao_huang_pipedream(self):
+        D = self
+        crossings = []
+        while D.has_blank_tiles():
+            D, a, r = D.delta()
+            crossings.append((r, a - (r - 1)))
+        return Pipedream(crossings)
+
 
     def get_pipe(self, i, j, direction=None):
         # returns the column index of the position on the bottom side where the pipe enters the n-by-n grid
@@ -422,77 +430,6 @@ class SymmetricBumplessPipedream(BumplessPipedream):
                 row += [t]
             ans += [''.join(row)]
         return '\n' + '\n'.join(ans) + '\n'
-
-
-# class Moves(BumplessPipedream):
-
-#     # @classmethod
-#     # def moves(self):
-#     #     while(self.blank_tiles != None)
-#     #     type_one(self)
-
-#     @classmethod
-#     def get_ith_pipedream(cls,P,i=1):
-#         return sorted(P)[i-1]
-
-#     # def get_marked(self):
-#     #     blank_tiles=sorted([tuple(y) for y in self.diagram])
-#     #     return blank_tiles[0]
-
-#     def column_less_than(self,other):
-#         # return self[1]<other[1] if self[0]<=other[0]
-#         # assert self[0] <= other[0]
-#         return self[1] < other[1]
-
-#     def type_one(self):
-#         blank_tiles=sorted([tuple(y) for y in self.diagram])
-#         marked=blank_tiles[0]
-#         for x in blank_tiles:
-#             if column_less_than(marked,x):
-#                 marked = x
-#         return marked       #marked is a tuple
-
-#     def column_moves(self):
-#         self.type_one()
-
-#         # (x,y) is the coordinate of marked tile
-#         x=marked[0]
-#         y=marked[1]
-
-#         S=[t for t in self.tiles[(i,y+1)] for i in range(x+1,self.n+1) if t==self.J_TILE]
-#         x_prime = S[0][0]
-#         rectangle = {(i,j):self.tiles[i,j] for i in range(x,x_prime+1) for j in range(y,y+2)}
-
-#     def type_two(self):
-#         self.type_one()
-        
-
-#         def new_droop(i,j,a,b):
-#             def is_valid(i, j, a, b):
-#                 if self.tiles[(i, j)] != self.C_TILE:
-#                     return False
-#                 if (a, b) not in self.diagram:
-#                     return False
-#                 for x in range(i, a + 1):
-#                     for y in range(j, b + 1):
-#                         if (x, y) != (i, j):
-#                             t = self.tiles.get((x, y), self.B_TILE)
-#                             if t in [self.C_TILE, self.J_TILE]:
-#                                 return False
-#                 return True
-
-#             if not is_valid(i, j, a, b):
-#                 return None
-#             else:
-#                 tiles = self.tiles.copy()
-
-
-#         # check_tile=[j+1 for (i,j) in self.tiles]
-#         # assert [(i,j) for ???? in self.tiles if x == J_TILE ] != None
-
-
-
-
 
 
 class Pipedream:

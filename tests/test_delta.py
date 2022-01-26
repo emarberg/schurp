@@ -24,7 +24,7 @@ def test_get_pipe(n=5):
         for b in BumplessPipedream.from_permutation(w, n):
             for wi in range(1, n):
                 j = n
-                i = w.inverse()(wi)
+                i = w(wi)
                 print(w)
                 print(b)
                 x = b.get_pipe(wi, j, 'H')
@@ -270,7 +270,7 @@ def test_get_sequence():
     D = BumplessPipedream(t)
     print('Input:' )
     D.get_sequence()
-    assert False
+    
     # check = True
     # count = 0
     # for w1 in Permutation.all(n):
@@ -287,4 +287,13 @@ def test_get_sequence():
     #         assert w == w1
     
     
-
+def test_get_gao_huang_pipedream(n=4):
+    for z in Permutation.all(n):
+        print("\n\n\nnew case:", z)
+        bumpless = BumplessPipedream.from_permutation(z) # this is set
+        pipedreams = z.get_pipe_dreams() # this is an iterator
+        pipedreams = set(pipedreams)
+        image = {x.get_gao_huang_pipedream() for x in bumpless}
+        print("image:", image)
+        print("expected:", pipedreams)
+        assert image == pipedreams
