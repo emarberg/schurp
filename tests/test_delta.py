@@ -190,6 +190,18 @@ def test_get_gao_huang_pipedream(n=4):
         assert image == pipedreams
 
 
+def test_get_symmetric_gao_huang_pipedream(n=4):
+    for z in Permutation.fpf_involutions(n):
+        print("\n\n\nnew case:", z)
+        bumpless = SymmetricBumplessPipedream.from_fpf_involution(z)
+        pipedreams = z.get_fpf_involution_pipe_dreams() # this is an iterator
+        pipedreams = set(pipedreams)
+        image = {x.get_symmetric_gao_huang_pipedream() for x in bumpless}
+        print("image:", image)
+        print("expected:", pipedreams)
+        assert image == pipedreams
+
+
 def test_gao_huang_symmetry(n=6):
     # fails
     succeeds = True
@@ -210,8 +222,9 @@ def test_get_symmetric_pipedream(n=6):
     for z in Permutation.fpf_involutions(n):
         print("\n\n\nnew case:", z)
         
-        bumpless = BumplessPipedream.from_permutation(z) # this is set
-        symmetric = {x for x in bumpless if x.is_symmetric()}
+        bumpless = SymmetricBumplessPipedream.from_fpf_involution(z) # this is set
+        symmetric = set(bumpless)
+        # symmetric = {x for x in bumpless if x.is_symmetric()}
         
         pipedreams = z.get_fpf_involution_pipe_dreams() # this is an iterator
         pipedreams = set(pipedreams)
@@ -220,6 +233,7 @@ def test_get_symmetric_pipedream(n=6):
         print("image:", image)
         print("expected:", pipedreams)
         assert image == pipedreams
+
 
 def test_symmetric_modify_column_move_rectangle():
     t = {(1, 3): '┌', (1, 4): '─', (1, 5): '─', (1, 6): '─', (3, 2): '─', (4, 2): '┌', (5, 2): '│', (6, 2): '│', (2, 4): '┌', (2, 5): '─', (2, 6): '─', (3, 1): '┌', (4, 1): '│', (5, 1): '│', (6, 1): '│', (3, 6): '┌', (4, 6): '┼', (5, 6): '┼', (6, 6): '┼', (4, 5): '┌', (5, 5): '┼', (6, 5): '┼', (5, 4): '┌', (6, 4): '┼', (6, 3): '┌', (3, 4): '┘', (3, 3): '┼', (4, 3): '┘', (2, 3): '│'}
@@ -242,7 +256,7 @@ def test_symmetric_modify_column_move_rectangle():
     # print("One move:" ,X.modify_column_move_rectangle(x, y, x_prime))
     # print("Output: ", X.symmetric_modify_column_move_rectangle(x, y, x_prime))
     # print(X.symmetric_modify_column_move_rectangle(x, y, x_prime).tiles)
-    assert False
+    
 
 def test_symmetric_modify_column_move_rectangle_step_three():
     
@@ -296,9 +310,9 @@ def test_symmetric_modify_column_move_rectangle_step_three():
     print("Latest Marked = ", (x,y), ", x_prime: ", x_prime)
     print("After step 3: ", Y.modify_column_move_rectangle_step_three(x, y, x_prime))
     print("After symmetric step 3: ", Y.symmetric_modify_column_move_rectangle_step_three(x, y, x_prime))
-    assert False
+    
 
-def test_symmetric_delta(n=8):
+def test_symmetric_delta(n=6):
     # t = {(1, 3): '┌', (1, 4): '─', (1, 5): '─', (1, 6): '─', (3, 2): '─', (4, 2): '┌', (5, 2): '│', (6, 2): '│', (2, 4): '┌', (2, 5): '─', (2, 6): '─', (3, 1): '┌', (4, 1): '│', (5, 1): '│', (6, 1): '│', (3, 6): '┌', (4, 6): '┼', (5, 6): '┼', (6, 6): '┼', (4, 5): '┌', (5, 5): '┼', (6, 5): '┼', (5, 4): '┌', (6, 4): '┼', (6, 3): '┌', (3, 4): '┘', (3, 3): '┼', (4, 3): '┘', (2, 3): '│'}
     # t = {(1, 4): '┌', (1, 5): '─', (1, 6): '─', (3, 2): '┌', (5, 2): '┌', (6, 2): '│', (2, 5): '┌', (2, 6): '─', (4, 1): '┌', (5, 1): '│', (6, 1): '│', (3, 6): '┌', (4, 6): '┼', (5, 6): '┼', (6, 6): '┼', (4, 5): '┌', (5, 5): '┼', (6, 5): '┼', (5, 4): '┌', (6, 4): '┼', (6, 3): '┌', (3, 5): '┘', (3, 3): '┼', (3, 4): '─', (5, 3): '┘', (2, 3): '┌', (4, 3): '│', (4, 2): '┘', (2, 4): '┘'}
     # X = SymmetricBumplessPipedream(t)
@@ -306,6 +320,7 @@ def test_symmetric_delta(n=8):
         S = SymmetricBumplessPipedream.from_fpf_involution(z)
         for X in S:
             X.symmetric_get_sequence()
+            # input("\n\n\n(press enter)\n")
     # assert False
 
     

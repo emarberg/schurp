@@ -312,10 +312,10 @@ class BumplessPipedream:
 
     def symmetric_delta(self):
         D = self
-        (x, y) = D.get_minimal_blank_tile()
+        (x, y) = D.get_minimal_nondiagonal_blank_tile()
         r = x
-        if D.diagram == {(i,i):(i,i) for i in range(1, D.n) if i % 2 == 1}:
-            return D, a, r
+        # if D.diagram == {(i,i):(i,i) for i in range(1, D.n) if i % 2 == 1}:
+        #    return D, a, r
         while True:
             # step 1
             while D.is_blank(x, y + 1):
@@ -334,7 +334,10 @@ class BumplessPipedream:
             D = D.modify_column_move_rectangle(x, y, x_prime)
             print("After step 2: ", D)
             D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
-            x, y = x_prime, y + 1
+            if x_prime < y + 1:
+                x, y = x_prime, y + 1
+            else:
+                y, x = x_prime, y + 1
             print("After symmetric step 2: ", D)
             # assert D.is_symmetric()
             print("Symmetric?", D.is_symmetric())
@@ -378,7 +381,7 @@ class BumplessPipedream:
         D = self
         ans = []
 
-        while D.has_blank_tiles() and D.diagram != {(i,i):(i,i) for i in range(D.n) if i % 2 == 1}:
+        while D.has_nondiagonal_blank_tiles(): # and D.diagram != {(i,i):(i,i) for i in range(D.n) if i % 2 == 1}:
             print(D)
             D,a,r = D.symmetric_delta()
             print('↓' + str((a,r)))
@@ -404,70 +407,105 @@ class BumplessPipedream:
     def get_symmetric_pipedream(self):
         assert self.is_symmetric()
         D = self
-        (x, y) = D.get_minimal_blank_tile()
-        r = x
-        raise NotImplementedError
+        crossings = []
+        while D.has_nondiagonal_blank_tiles():
+            print(D)
+            D, a, r = D.symmetric_delta()
+            assert a != r
+            print('↓' + str((a,r)))
+            x, y = a - (r - 1), r
+            crossings.append((x, y) if x > y else (y, x))
+        print(D)
+        print()
+        print()
+        print(crossings)
+        return Pipedream(crossings)
 
 
     def symmetric_modify_column_move_rectangle(self, x, y, x_prime):
         # Symmetric step 2
-        # self = self.modify_column_move_rectangle(x, y, x_prime)
-
         tiles = self.tiles.copy()
 
-        # Column moves
-        del tiles[(y + 1, x_prime)]
-        tiles[(y, x)] = self.C_TILE
+        if x == y and x % 2 == 0:
+            pass
+            # tiles[(x,y)] = self.P_TILE
+            # tiles[(x, y - 1)] = self.C_TILE
+            # tiles[(x, y + 1)] = self.H_TILE
+            # tiles[(x - 1, y)] = self.C_TILE
+            # tiles[(x - 1, y + 1)] = self.H_TILE
+
+            # for i in range(x + 1, x_prime):
+            #     if self.get_tile(i, y) == self.B_TILE and self.get_tile(i, y + 1) == self.V_TILE:
+            #         tiles[(i,y)] = self.V_TILE
+            #         tiles[(i, y + 1)] = self.B_TILE
+            #     elif self.get_tile(i, y) == self.H_TILE and self.get_tile(i, y + 1) == self.P_TILE:
+            #         tiles[(i,y)] = self.P_TILE
+            #         tiles[(i, y + 1)] = self.H_TILE
+
+            #     # elif self.get_tile(y, i) == self.H_TILE and self.get_tile(y + 1, i) == self.P_TILE:
+            #     #     tiles[(i,y)] = self.V_TILE
+            #     #     tiles[(i, y + 1)] = self.get_blank_tiles
+
+            # tiles[(x_prime, y)] = self.V_TILE
+            # del tiles[(y, x_prime)]
+
+        else:
+            # Column moves
+            del tiles[(y + 1, x_prime)]
+            tiles[(y, x)] = self.C_TILE
 
         # Modifying first two tiles
-        if self.get_tile(y + 1, x) == self.H_TILE:
-            tiles[(y + 1, x)] = self.J_TILE
-        elif self.get_tile(y + 1, x) == self.C_TILE:
-            tiles[(y + 1, x)] = self.V_TILE
+            if self.get_tile(y + 1, x) == self.H_TILE:
+                tiles[(y + 1, x)] = self.J_TILE
+            elif self.get_tile(y + 1, x) == self.C_TILE:
+                tiles[(y + 1, x)] = self.V_TILE
         # print(SymmetricBumplessPipedream(tiles, self.n))
         
         ######### Bugs in here
         # Modifying last two tiles
-        if self.get_tile(y, x_prime) == self.V_TILE:
-            tiles[(y, x_prime)] = self.J_TILE
-        elif self.get_tile(y, x_prime) == self.C_TILE:
-            tiles[(y, x_prime)] = self.H_TILE
+            if self.get_tile(y, x_prime) == self.V_TILE:
+                tiles[(y, x_prime)] = self.J_TILE
+            elif self.get_tile(y, x_prime) == self.C_TILE:
+                tiles[(y, x_prime)] = self.H_TILE
         # print(SymmetricBumplessPipedream(tiles, self.n))
         
-        for i in range(x + 1, x_prime):
-            if self.get_tile(y,i) == self.V_TILE and self.get_tile(y + 1, i) == self.P_TILE:
-                tiles[(y, i)] = self.P_TILE
-                tiles[(y + 1, i)] = self.V_TILE
-            elif self.get_tile(y,i) == self.B_TILE and self.get_tile(y + 1, i) == self.H_TILE:
-                tiles[(y, i)] = self.H_TILE
-                tiles[(y + 1, i)] = self.B_TILE
-        if x == y:
-            tiles[(y,x + 1)] = tiles[(x + 1, y)]
-        # print(SymmetricBumplessPipedream(tiles, self.n))
+            for i in range(x + 1, x_prime):
+                if self.get_tile(y,i) == self.V_TILE and self.get_tile(y + 1, i) == self.P_TILE:
+                    tiles[(y, i)] = self.P_TILE
+                    tiles[(y + 1, i)] = self.V_TILE
+                elif self.get_tile(y,i) == self.B_TILE and self.get_tile(y + 1, i) == self.H_TILE:
+                    tiles[(y, i)] = self.H_TILE
+                    tiles[(y + 1, i)] = self.B_TILE
+        
         # step 2
         # 2a: find out the J_TILE in column y+1 and the C_TIle in column y
 
         # Find z 
-        z_values = [
-            z for z in range(x + 1 , x_prime) 
-            if self.get_tile(y + 1, z) == self.P_TILE and self.get_tile(y , z) == self.C_TILE
-        ]
+            z_values = [
+                z for z in range(x + 1 , x_prime) 
+                if self.get_tile(y + 1, z) == self.P_TILE and self.get_tile(y , z) == self.C_TILE
+            ]
 
-        for z in z_values:
-            # Find z_prime
-            z_prime = z + 1
-            while self.get_tile(y, z_prime) != self.J_TILE:
-                z_prime += 1
+            for z in z_values:
+                # Find z_prime
+                z_prime = z + 1
+                while self.get_tile(y, z_prime) != self.J_TILE:
+                    z_prime += 1
 
-            assert self.get_pipe(y,z) == self.get_pipe(y, z_prime)
-            tiles[(y + 1, z)] = self.C_TILE
-            tiles[(y, z)] = self.H_TILE
-            tiles[(y + 1, z_prime)] = self.J_TILE
-            tiles[(y, z_prime)] = self.P_TILE            
+                assert self.get_pipe(y,z) == self.get_pipe(y, z_prime)
+                tiles[(y + 1, z)] = self.C_TILE
+                tiles[(y, z)] = self.H_TILE
+                tiles[(y + 1, z_prime)] = self.J_TILE
+                tiles[(y, z_prime)] = self.P_TILE            
 
         # assign new labled blank tile
         (y, x) = (y + 1, x_prime)
+
         # Tests
+        # if x == y:
+        #     X = SymmetricBumplessPipedream(tiles, self.n)
+        #     X.modify_column_move_rectangle_step_three(y, x - 1 , x_prime)
+        
         return SymmetricBumplessPipedream(tiles, self.n)
 
     def symmetric_modify_column_move_rectangle_step_three(self, x, y, x_prime):
@@ -509,16 +547,6 @@ class BumplessPipedream:
             else:
                 tiles[(y, i)] = self.get_tile(y + 1, i)
                 tiles[(y + 1, i)] = self.get_tile(y, i)
-        # if x == y:
-        #     tiles[(y,x)] = self.P_TILE
-        #     tiles[(y, x - 1)] = self.C_TILE
-        #     tiles[(y - 1, x)] = self.C_TILE
-        #     for j in range(x + 1, self.n + 1):
-        #         tiles[(y - 1, j)] = self.H_TILE
-        #         tiles[(y, j)] = self.H_TILE
-        #     for k in range(y + 1, self.n):
-        #         tiles[(k, x - 1)] = self.V_TILE
-        #         tiles[(k, x)] = self.V_TILE
 
         return SymmetricBumplessPipedream(tiles, self.n)
 
@@ -586,6 +614,9 @@ class BumplessPipedream:
     def has_blank_tiles(self):
         return len(self.get_blank_tiles()) > 0
 
+    def has_nondiagonal_blank_tiles(self):
+        return not all(i == j for (i, j) in self.get_blank_tiles())
+
     def get_tile(self, i, j):
         assert 1 <= i <= self.n and 1 <= j <= self.n
         return self.tiles.get((i, j), self.B_TILE)
@@ -601,6 +632,9 @@ class BumplessPipedream:
 
         # the dictionary has order such that {row i: [rightmost tiles (i, y) ... leftmost tiles (i, y0)]}
         # return {i: [(i,j) for i in range(1, self.n + 1) for j in reversed(range(1, self.n + 1)) if self.is_blank(i, j)]}
+
+    def get_minimal_nondiagonal_blank_tile(self):
+        return [(i, j) for (i, j) in self.get_blank_tiles() if i != j][0]
 
     def get_minimal_blank_tile(self):
         # intentially will cause an error if there are no blank tiles
