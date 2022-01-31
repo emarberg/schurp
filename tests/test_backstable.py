@@ -86,6 +86,16 @@ def type_d_principal_specialization(w, degree_cutoff):
     return ans
 
 
+def comaj_d(a_seq):
+    ans = len([i for i in a_seq if i > 0])
+    n = max([1] + [abs(a) for a in a_seq])
+    seq = [-n - 1 - a if a < 0 else a for a in a_seq]
+    for i in range(1, len(seq)):
+        if seq[i - 1] < seq[i]:
+            ans += 2 * i
+    return ans
+
+
 def type_d_comaj_formula_summand(a_seq, degree_cutoff):
     def generate(expon, i):
         if i == 0:

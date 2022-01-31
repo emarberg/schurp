@@ -2,6 +2,14 @@ from schubert import *
 from collections import defaultdict
 
 
+def test_topdegree(n):
+    for w in Permutation.fpf_involutions(n):
+        gp = FPFGrothendieck.get(w)
+        print(w, gp)
+        print()
+    return gp
+
+
 def up(w, n):
     for i in range(len(w) - 2):
         c, a, b = w[i: i + 3]
