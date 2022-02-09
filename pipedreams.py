@@ -331,13 +331,19 @@ class BumplessPipedream:
             while D.get_tile(x_prime, y + 1) != self.J_TILE:
                 x_prime += 1
             
-            D = D.modify_column_move_rectangle(x, y, x_prime)
-            print("After step 2: ", D)
-            D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
-            if x_prime < y + 1:
-                x, y = x_prime, y + 1
+            if (x_prime - x) >= int(self.n / 2):
+                (x,x_prime) = (x_prime, y + 1)
+                D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
+                print("After NEW step 2: ", D)
             else:
-                y, x = x_prime, y + 1
+                D = D.modify_column_move_rectangle(x, y, x_prime)
+                print("After step 2: ", D)
+                D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
+
+            # if x_prime < y + 1:
+            #     x, y = x_prime, y + 1
+            # else:
+            #     y, x = x_prime, y + 1
             print("After symmetric step 2: ", D)
             # assert D.is_symmetric()
             print("Symmetric?", D.is_symmetric())

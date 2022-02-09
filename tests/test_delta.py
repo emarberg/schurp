@@ -162,20 +162,6 @@ def test_get_sequence():
     print('Input:' )
     D.get_sequence()
     
-    # check = True
-    # count = 0
-    # for w1 in Permutation.all(n):
-    #     if w1 == Permutation():
-    #         continue
-    #     for b in BumplessPipedream.from_permutation(w1, n):
-    #         # for i in (1, b.n + 1):
-    #         #     if (i,i) in b.diagram:
-    #         #         count += 1
-    #         # if count == b.n:
-    #         #     break
-    #         w = b.get_sequence()
-    #         print(w)
-    #         assert w == w1
     
     
 def test_get_gao_huang_pipedream(n=4):
