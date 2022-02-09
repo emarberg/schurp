@@ -320,8 +320,8 @@ def test_symmetric_modify_column_move_rectangle_step_three():
     #     x_prime += 1
 
     print("Latest Marked = ", (x,y), ", x_prime: ", x_prime)
-    print("After step 3: ", Y.modify_column_move_rectangle_step_three(x, y, x_prime))
-    print("After symmetric step 3: ", Y.symmetric_modify_column_move_rectangle_step_three(x, y, x_prime))
+    print("After step 3: ", Y.modify_column_move_rectangle_step_three(x, y))
+    print("After symmetric step 3: ", Y.symmetric_modify_column_move_rectangle_step_three(x, y))
     
 
 def test_symmetric_delta(n=6):
