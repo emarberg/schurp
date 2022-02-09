@@ -195,47 +195,15 @@ def test_gao_huang_symmetry(n=6):
 def test_get_symmetric_pipedream(n=8):
     for z in Permutation.fpf_involutions(n):
         print("\n\n\nnew case:", z)
-        
         bumpless = SymmetricBumplessPipedream.from_fpf_involution(z) # this is set
         symmetric = set(bumpless)
-        # symmetric = {x for x in bumpless if x.is_symmetric()}
-        
         pipedreams = z.get_fpf_involution_pipe_dreams() # this is an iterator
         pipedreams = set(pipedreams)
-        
-        try:
-            mapping = {x: x.get_symmetric_pipedream() for x in symmetric}
-        except:
-            for x in symmetric:
-                print(10 * '\n')
-                print(x)
-                x.get_symmetric_pipedream(True)
-            return 
-        image = set(mapping.values())
+        image = {x.get_symmetric_pipedream() for x in symmetric}
         print("image:", len(image))
         print("expected:", len(pipedreams))
-        try:
-            assert len(image) == len(pipedreams)
-        except:
-            for a in mapping:
-                for b in mapping:
-                    if a != b and mapping[a] == mapping[b]:
-                        print(a)
-                        print("image:", mapping[a])
-                        print(b)
-                        print("image:", mapping[b])
-                        print("failed here")
-                        return
-        if image != pipedreams:
-            for x in mapping:
-                print(x)
-                try:
-                    x.symmetric_delta()
-                except:
-                    pass
-                print(mapping[x])
-                print()
-            input('?')
+        assert len(image) == len(pipedreams)
+        assert image == pipedreams
 
 
 def test_s():
