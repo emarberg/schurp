@@ -67,7 +67,7 @@ def test_modify_column_move_rectangle():
     D = SymmetricBumplessPipedream(t)
     print('Input:' )
     print(D)
-    print('After step 2: ', D.modify_column_move_rectangle(x,y,x_prime))
+    print('After step 2: ', D.modify_column_move_rectangle(x, y))
     # assert False
     # E, a, r = D.delta()
 
@@ -192,7 +192,7 @@ def test_gao_huang_symmetry(n=6):
     assert not succeeds 
 
 
-def test_get_symmetric_pipedream(n=6):
+def test_get_symmetric_pipedream(n=8):
     for z in Permutation.fpf_involutions(n):
         print("\n\n\nnew case:", z)
         
@@ -289,11 +289,11 @@ def test_symmetric_modify_column_move_rectangle_step_three():
     
 
     X = SymmetricBumplessPipedream(t)
-    Y = X.symmetric_modify_column_move_rectangle(x, y, x_prime)
+    Y = X.symmetric_modify_column_move_rectangle(x, y)
 
     print("Input: ", X)
 
-    print("After step 2: ",X.modify_column_move_rectangle(x, y, x_prime))
+    print("After step 2: ",X.modify_column_move_rectangle(x, y))
     (x,y) = (x_prime, y + 1)
     # step 1
     while Y.is_blank(x, y + 1):
@@ -302,7 +302,7 @@ def test_symmetric_modify_column_move_rectangle_step_three():
     print("Latest Marked = ", (x,y))
     print("After symmetric step 2: ", Y)
     print('x,y,x_prime: ', x,y,x_prime)
-    X = Y.modify_column_move_rectangle(x, y, x_prime + 1 )
+    X = Y.modify_column_move_rectangle(x, y)
     print("Latest Marked = ", (x,y))
 
     # print("After step 2: ", X)
