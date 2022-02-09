@@ -310,15 +310,20 @@ class BumplessPipedream:
         return D, a, r
 
 
-    def symmetric_delta(self):
+    def symmetric_delta(self, verbose=True):
         D = self
         (x, y) = D.get_minimal_nondiagonal_blank_tile()
-        r = x
+        assert x % 2 != 0
+        r = 1 + (x - 1) // 2
         # if D.diagram == {(i,i):(i,i) for i in range(1, D.n) if i % 2 == 1}:
         #    return D, a, r
+        if verbose:
+            print(D)
         while True:
             # step 1
             while D.is_blank(x, y + 1):
+                if x == y + 1:
+                    x = x - 1
                 y = y + 1
             p = D.get_pipe(x, y + 1)
 
@@ -331,22 +336,28 @@ class BumplessPipedream:
             while D.get_tile(x_prime, y + 1) != self.J_TILE:
                 x_prime += 1
             
-            if (x_prime - x) >= int(self.n / 2):
-                (x,x_prime) = (x_prime, y + 1)
-                D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
-                print("After NEW step 2: ", D)
-            else:
-                D = D.modify_column_move_rectangle(x, y, x_prime)
+            # if (x_prime - x) >= int(self.n / 2):
+            #     (x,x_prime) = (x_prime, y + 1)
+            #     D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
+            #     if verbose:
+            #         print("After NEW step 2: ", D)
+            # else:
+            D = D.modify_column_move_rectangle(x, y, x_prime)
+            if verbose:
                 print("After step 2: ", D)
-                D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
+            D = D.symmetric_modify_column_move_rectangle(x, y, x_prime)
 
+            x, y = x_prime, y + 1
             # if x_prime < y + 1:
             #     x, y = x_prime, y + 1
             # else:
-            #     y, x = x_prime, y + 1
-            print("After symmetric step 2: ", D)
-            # assert D.is_symmetric()
-            print("Symmetric?", D.is_symmetric())
+            #    y, x = x_prime, y + 1
+            
+            if verbose:
+                print("After symmetric step 2: ", D)
+                # assert D.is_symmetric()
+                print("Symmetric?", D.is_symmetric())
+                print('x =', x, 'y =', y, 'x\' =', x_prime)
 
         # step 3
         a = y
@@ -356,10 +367,12 @@ class BumplessPipedream:
             x_prime += 1
 
         D = D.modify_column_move_rectangle_step_three(x, y, x_prime)
-        print("After step 3: ", D)
+        if verbose:
+            print("After step 3: ", D)
         D = D.symmetric_modify_column_move_rectangle_step_three(x, y, x_prime)
-        print("After symmetric step 3: ", D)
-        print("Symmetric?", D.is_symmetric())
+        if verbose:
+            print("After symmetric step 3: ", D)
+            print("Symmetric?", D.is_symmetric())
         # assert D.is_symmetric()
         
         # step 4
@@ -410,21 +423,23 @@ class BumplessPipedream:
         return Pipedream(crossings)
 
 
-    def get_symmetric_pipedream(self):
+    def get_symmetric_pipedream(self, verbose=False):
         assert self.is_symmetric()
         D = self
         crossings = []
         while D.has_nondiagonal_blank_tiles():
-            print(D)
-            D, a, r = D.symmetric_delta()
+            if verbose:
+                print(D)
+            D, a, r = D.symmetric_delta(verbose)
             assert a != r
-            print('↓' + str((a,r)))
-            x, y = a - (r - 1), r
-            crossings.append((x, y) if x > y else (y, x))
-        print(D)
-        print()
-        print()
-        print(crossings)
+            if verbose:
+                print('↓' + str((a,r)))
+            crossings.append((a - (r - 1), r))
+        if verbose:
+            print(D)
+            print()
+            print()
+            print(crossings)
         return Pipedream(crossings)
 
 

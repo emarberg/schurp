@@ -176,18 +176,6 @@ def test_get_gao_huang_pipedream(n=4):
         assert image == pipedreams
 
 
-def test_get_symmetric_gao_huang_pipedream(n=4):
-    for z in Permutation.fpf_involutions(n):
-        print("\n\n\nnew case:", z)
-        bumpless = SymmetricBumplessPipedream.from_fpf_involution(z)
-        pipedreams = z.get_fpf_involution_pipe_dreams() # this is an iterator
-        pipedreams = set(pipedreams)
-        image = {x.get_symmetric_gao_huang_pipedream() for x in bumpless}
-        print("image:", image)
-        print("expected:", pipedreams)
-        assert image == pipedreams
-
-
 def test_gao_huang_symmetry(n=6):
     # fails
     succeeds = True
@@ -215,10 +203,48 @@ def test_get_symmetric_pipedream(n=6):
         pipedreams = z.get_fpf_involution_pipe_dreams() # this is an iterator
         pipedreams = set(pipedreams)
         
-        image = {x.get_symmetric_pipedream() for x in symmetric}
-        print("image:", image)
-        print("expected:", pipedreams)
-        assert image == pipedreams
+        try:
+            mapping = {x: x.get_symmetric_pipedream() for x in symmetric}
+        except:
+            for x in symmetric:
+                print(10 * '\n')
+                print(x)
+                x.get_symmetric_pipedream(True)
+            return 
+        image = set(mapping.values())
+        print("image:", len(image))
+        print("expected:", len(pipedreams))
+        try:
+            assert len(image) == len(pipedreams)
+        except:
+            for a in mapping:
+                for b in mapping:
+                    if a != b and mapping[a] == mapping[b]:
+                        print(a)
+                        print("image:", mapping[a])
+                        print(b)
+                        print("image:", mapping[b])
+                        print("failed here")
+                        return
+        if image != pipedreams:
+            for x in mapping:
+                print(x)
+                try:
+                    x.symmetric_delta()
+                except:
+                    pass
+                print(mapping[x])
+                print()
+            input('?')
+
+
+def test_s():
+    w = Permutation(2,1,6,5,4,3)
+    b = list(SymmetricBumplessPipedream.from_fpf_involution(w))
+    for xx in b:
+        D, a, r = xx.symmetric_delta()
+        print('(a, r) =', (a, r))
+        print(10 * "\n")
 
 
 def test_symmetric_modify_column_move_rectangle():
