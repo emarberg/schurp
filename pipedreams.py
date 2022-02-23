@@ -300,13 +300,13 @@ class BumplessPipedream:
 
             D, x_prime = D.modify_column_move_rectangle(x, y)
             x, y = x_prime, y + 1
-            print("After step 2: ", D)
+            # print("After step 2: ", D)
 
         # step 3
         a = y
 
         D = D.modify_column_move_rectangle_step_three(x, y)
-        print("After step 3: ", D)
+        # print("After step 3: ", D)
         
         # step 4
         return D, a, r
