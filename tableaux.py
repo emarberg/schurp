@@ -14,6 +14,9 @@ HORIZONTAL_STRIPS_CACHE = {}
 SHIFTED_RPP_HORIZONTAL_STRIPS_CACHE = {}
 SHIFTED_RPP_VERTICAL_STRIPS_CACHE = {}
 
+# for French notation
+FRENCH = True
+
 
 class Tableau:
     def __init__(self, dictionary=None):
@@ -1255,8 +1258,10 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
-        # return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
-        return '\n' + '\n'.join(rows) + '\n'            # English
+        if FRENCH:
+            return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
+        else:
+            return '\n' + '\n'.join(rows) + '\n'            # English
 
     @classmethod
     def decreasing_part(cls, row):
