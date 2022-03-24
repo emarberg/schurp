@@ -13,6 +13,7 @@ from qp_utils import (
     gelfand_d_conjugate,
     gelfand_d_start,
     gelfand_d_printer,
+    gelfand_rsk,
 )
 from heapq import heappush, heappop
 import json
@@ -71,7 +72,16 @@ def process_gelfand_a(rank, layers=None, sgns=None):
             return ''.join([a_letter(i, rank) for i in w.permutation(x)[:rank + 1]])
         return f
 
-    return process_gelfand(read, create, pprint, rank, layers, sgns)
+    def tabprint(w):
+        def f(x):
+            s = pprint(w)(x) + '\\l\\l'
+            tab = gelfand_rsk(w.permutation(x), rank + 1, sgns[0])
+            s += '\\l'.join([" ".join(map(str, row)) for row in tab.get_rows()])
+            return s + '\\l'
+        return f
+
+    # return process_gelfand(read, create, pprint, rank, layers, sgns)
+    return process_gelfand(read, create, tabprint, rank, layers, sgns)
 
 
 def b_letter(i, rank):
@@ -465,9 +475,9 @@ class QPWGraph:
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
-        s += ['    node [shape=point];']
+#        s += ['    node [shape=point];']
         s += ['    nodesep=0.5;']
-#        s += ['    node [fontname="courier"];']
+        s += ['    node [fontname="courier"];']
 
         for x in vertices:
             s += ['    "%s";' % pprint(x)]
@@ -482,8 +492,9 @@ class QPWGraph:
 
         heights = {}
         for n in vertices:
-            h = self.qpmodule.height(n)
-            heights[h] = heights.get(h, []) + [pprint(n) + ';']
+            h = tuple(gelfand_rsk(self.permutation(n), self.rank + 1, self.sgn).partition()) + (self.qpmodule.height(n) % 2,)
+            # h = self.qpmodule.height(n)
+            heights[h] = heights.get(h, []) + ['"' + pprint(n) + '";']
         for h, col in heights.items():
             s += ['    {rank = same; ' + ' '.join(col) + '}']
 
