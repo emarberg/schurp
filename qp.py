@@ -437,8 +437,9 @@ class QPWGraph:
         with open(dotfile, 'w') as f:
             f.write(s)
 
-        pngfile = directory + file + '.png'
-        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+        if not tex:
+            pngfile = directory + file + '.png'
+            subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
         if tex:
             texfile = QPModule.DIRECTORY + 'tex/' + file + '.tex'
