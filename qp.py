@@ -358,29 +358,46 @@ class QPWGraph:
         return w
 
     @classmethod
-    def _print_gelfand_dotfile(cls, wgraphs, preprint, file):
+    def _print_gelfand_dotfile(cls, wgraphs, preprint, file, tex=False):
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
-        s += ['    node [width=0.2 height=0.2 margin=0.05 shape=box fontsize=12];']
+        s += ['    node [width=0.2 height=0.2 margin=0.05 shape=%s fontsize=12];' % ('none' if tex else 'box')]
         s += ['    nodesep=0.25;']
 
         for w in wgraphs:
+            if not w.is_wgraph_computed:
+                w.compute_wgraph(verbose=False)
+
             vertices = w.qpmodule
             edges = w.get_wgraph_edges
 
             def label(mu):
                 return str(mu) if mu != 1 else ""
 
-            def pprint(x):
+            def get_ascents(x):
                 ascents = set(w.qpmodule.weak_descents(x) if w.sgn else w.qpmodule.weak_ascents(x)) | set(w.qpmodule.strict_ascents(x))
                 if w.qpmodule.family == QPModule.GELFAND_A:
                     ascents = {i + 1 for i in ascents}
                 elif w.qpmodule.family == QPModule.GELFAND_D:
                     ascents = {-1 if i == 0 else i for i in ascents}
-                ascents = '{' + ','.join([str(_) for _ in sorted(ascents)]) + '}'
-                return preprint(w, x) + '\\n' + ascents
+                return ','.join([str(_) for _ in sorted(ascents)])
+
+            def pprint(x):
+                pre = preprint(w, x)
+                if tex:
+                    pre = list(pre)
+                    for i, a in enumerate(pre):
+                        if a == '\u0305':
+                            pre[i] = pre[i - 1]
+                            pre[i - 1] = 'backslashbar'
+                        if a == ' ':
+                            pre[i] = ','
+                    pre = ''.join(pre)
+                ascents = '{' + get_ascents(x) + '}'
+                ans = pre + '\\n' + ascents
+                return ans
 
             for x in vertices:
                 s += ['    "%s";' % pprint(x)]
@@ -406,17 +423,30 @@ class QPWGraph:
         directory = QPModule.DIRECTORY + 'pictures/'
         Path(directory).mkdir(parents=True, exist_ok=True)
 
-        file = directory + file
-
-        dotfile = file + '.dot'
+        dotfile = directory + file + '.dot'
         with open(dotfile, 'w') as f:
             f.write(s)
 
-        pngfile = file + '.png'
+        pngfile = directory + file + '.png'
         subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
+        if tex:
+            texfile = QPModule.DIRECTORY + 'tex/' + file + '.tex'
+            ps = subprocess.Popen("dot -Txdot " + dotfile + " | dot2tex -tmath --nominsize --figonly --figpreamble=\"\\small\" > " + texfile, stdin=subprocess.PIPE, shell=True)
+            ps.communicate()
+
+            with open(texfile, 'r') as f:
+                text = f.read()
+            text = text.replace('${', '$\\{')
+            text = text.replace('}$', '\\}$')
+            text = text.replace('backslashbar', '\\bar')
+            # text = text.replace('join=bevel,]', 'join=bevel,xscale=0.15,yscale=0.6]')
+            # text = text.replace('node {', 'node {\\tiny')
+            with open(texfile, 'w') as f:
+                f.write(text)
+
     @classmethod
-    def print_gelfand_a(cls, rank, sgn=None):
+    def print_gelfand_a(cls, rank, sgn=None, tex=False):
         def preprint(w, x):
             tup = list(w.permutation(x))
             while len(tup) < 2 * (rank + 1):
@@ -428,10 +458,10 @@ class QPWGraph:
         for sgn in [True, False] if sgn is None else [sgn]:
             wgraphs = [cls.gelfand_a(rank, k // 2, sgn) for k in range(0, rank + 2, 2)]
             file = 'wgraph_gelfand_a%s_%s' % (rank, "n" if sgn else "m")
-            cls._print_gelfand_dotfile(wgraphs, preprint, file)
+            cls._print_gelfand_dotfile(wgraphs, preprint, file, tex)
 
     @classmethod
-    def print_gelfand_bc(cls, rank, sgn=None):
+    def print_gelfand_bc(cls, rank, sgn=None, tex=False):
         def preprint(w, x):
             tup = list(w.permutation(x))
             while len(tup) < 2 * rank:
@@ -443,10 +473,10 @@ class QPWGraph:
         for sgn in [True, False] if sgn is None else [sgn]:
             wgraphs = [cls.gelfand_bc(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
             file = 'wgraph_gelfand_bc%s_%s' % (rank, "n" if sgn else "m")
-            cls._print_gelfand_dotfile(wgraphs, preprint, file)
+            cls._print_gelfand_dotfile(wgraphs, preprint, file, tex)
 
     @classmethod
-    def print_gelfand_d(cls, rank, sgn=None):
+    def print_gelfand_d(cls, rank, sgn=None, tex=False):
         def preprint(w, x):
             tup = list(w.permutation(x))
             while len(tup) < 2 * rank:
@@ -458,7 +488,7 @@ class QPWGraph:
         for sgn in [True, False] if sgn is None else [sgn]:
             wgraphs = [cls.gelfand_d(rank, k // 2, sgn) for k in range(0, rank + 1, 2)]
             file = 'wgraph_gelfand_d%s_%s' % (rank, "n" if sgn else "m")
-            cls._print_gelfand_dotfile(wgraphs, preprint, file)
+            cls._print_gelfand_dotfile(wgraphs, preprint, file, tex)
 
     def dot(self, vertices, edges, pprint):
         s = []
