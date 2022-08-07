@@ -762,6 +762,9 @@ class Tableau:
     def transpose(self):
         return Tableau({(j, i): self.entry(i, j) for i, j in self.mapping})
 
+    def clean_mapping(self):
+        return {(i, j): self.entry(i, j).number for (i, j) in self.mapping}
+
     def double(self, shift=False):
         assert self.is_shifted()
         mapping = {(i, j + shift): self.entry(i, j) for i, j in self.mapping}
