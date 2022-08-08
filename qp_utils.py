@@ -36,23 +36,32 @@ def beissinger_rsk(w, sgn):
     cycles = sorted([(w[i - 1], i) for i in range(1, len(w) + 1) if i <= w[i - 1]])
     p = {}
     for cyc in cycles:
-
-        if sgn and cyc[0] == cyc[1]:
-            p = Tableau(p).transpose().clean_mapping()
-
         _, a = cyc
         i = 1
+
+        if cyc[0] == cyc[1] and sgn:
+            while (i, 1) in p:
+                i += 1
+            p[i, 1] = a
+            continue
+
+        if cyc[0] == cyc[1] and not sgn:
+            while (1, i) in p:
+                i += 1
+            p[1, i] = a
+            continue
+
         while True:
             j = 1
             while (i, j) in p and p[(i, j)] <= a:
                 j += 1
             if (i, j) not in p:
                 p[(i, j)] = a
-                if cyc[0] != cyc[1] and sgn:
+                if sgn:
                     while i > 1 and (i - 1, j + 1) not in p:
                         i = i - 1
                     p[(i, j + 1)] = cyc[0]
-                elif cyc[0] != cyc[1] and not sgn:
+                else:
                     while j > 1 and (i + 1, j - 1) not in p:
                         j = j - 1
                     p[(i + 1, j)] = cyc[0]
@@ -61,8 +70,6 @@ def beissinger_rsk(w, sgn):
                 a, p[(i, j)] = p[(i, j)], a
             i += 1
 
-        if sgn and cyc[0] == cyc[1]:
-            p = Tableau(p).transpose().clean_mapping()
     ans = Tableau(p)
     assert ans.is_standard()
     return ans
