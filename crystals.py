@@ -35,7 +35,10 @@ class AbstractCrystalMixin:
     def index_printer(self, i, primed=False):
         return str(i)
 
-    def draw(self, extended=False, highlighted_nodes=(), tex=False):
+    def draw(self, extended=(), highlighted_nodes=(), tex=False):
+        if type(extended) == bool and extended:
+            extended = self.extended_indices
+
         def tex_tuple(n):
             parts = []
             for tup in n:
@@ -46,7 +49,7 @@ class AbstractCrystalMixin:
                     parts += [''.join(letters)]
             return '$' + '\\hspace{0.5mm} /\\hspace{0.5mm} '.join(parts) + '$'
 
-        def tex(n):
+        def tex_string(n):
             try:
                 return n.tex()
             except:
@@ -65,7 +68,7 @@ class AbstractCrystalMixin:
         if tex:
             s += ['    node [shape=box,style=filled,color=lightgray];']
             for x in self:
-                s += ['    "%s" [margin="0.0",width="0.0",height="0.0",texlbl="%s"];' % (printer(x), tex(x))]
+                s += ['    "%s" [margin="0.0",width="0.0",height="0.0",texlbl="%s"];' % (printer(x), tex_string(x))]
         else:
             for x in self:
                 if x in highlighted_nodes:
@@ -74,18 +77,22 @@ class AbstractCrystalMixin:
                     s += ['    "%s";' % printer(x)]
         #
         for v in self:
-            for i in self.extended_indices if extended else self.provided_operators:
+            for i in set(self.provided_operators) | set(extended):
                 w = self.f_operator(i, v)
                 if w is not None:
-                    istr = self.index_printer(i)
-                    cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal"
-                    style = "dotted" if i == 0 else "dashed" if i == -1 else "solid"
-                    s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
-                if i < 0 and extended:
-                    w = self.fprime_operator(i, v)
-                    if w is not None:
-                        istr = self.index_printer(i, primed=True)
+                    if tex:
+                        istr = self.index_printer(i)
+                        cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal"
+                        style = "dotted" if i == 0 else "dashed" if i == -1 else "solid"
+                        s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
+                    else:
+                        istr = self.index_printer(i)
                         s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
+                # if i < 0 and extended:
+                #     w = self.fprime_operator(i, v)
+                #     if w is not None:
+                #         istr = self.index_printer(i, primed=True)
+                #         s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
         s += ['}']
         s = '\n'.join(s)
         #
@@ -646,8 +653,11 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
             m = z.rank
             c = cls.from_involution(z.star(m), n, True)
 
+            def invert(i):
+                return m - i if i > 0 else -(m + i)
+
             def unstar(t):
-                return tuple(tuple(m - i for i in _) for _ in t)
+                return tuple(tuple(invert(i) for i in _) for _ in t)
 
             vertices = [unstar(t) for t in c.vertices]
             edges = [(i, unstar(x), unstar(c.f_operators[(i, x)])) for (i, x,) in c.f_operators]

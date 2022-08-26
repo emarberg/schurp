@@ -3,6 +3,13 @@ from crystals import(
     AbstractQCrystal,
     AbstractPrimedQCrystal,
 )
+from keys import (
+    skew_symmetrize_strict_partition,
+    symmetrize_strict_partition,
+    p_key,
+    q_key
+)
+from tests.test_keys import try_to_decompose_p, try_to_decompose_q
 from partitions import Partition
 from symmetric import (
     SchurQ,
@@ -16,6 +23,209 @@ from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
 
+
+def factorization_character(subset):
+    ans = 0
+    for v in subset:
+        t = X(0)**0
+        for i, a in enumerate(v):
+            t *= X(i + 1)**len(a)
+        ans += t
+    return ans
+
+
+def strict_partitions(max_num_parts, max_level=None):
+    level = {max_num_parts * (0,)}
+    while max_level is None or sum(next(iter(level))) <= max_level:
+        nextlevel = set()
+        for mu in level:
+            yield mu
+            mu = list(mu)
+            for i in range(max_num_parts):
+                if i == 0 or mu[i] + 1 < mu[i - 1]:
+                    mu[i] += 1
+                    nextlevel.add(tuple(mu))
+                    mu[i] -= 1
+        level = nextlevel
+
+
+def partition_permutations(mu):
+    n = len(mu)
+    seen = {mu}
+    level = {(mu, None, mu)}
+    while level:
+        nextlevel = set()
+        for mu, i, nu in level:
+            yield (mu, i, nu)
+            for j in range(1, n):
+                ku = nu[:j - 1] + (nu[j], nu[j - 1]) + nu[j + 1:]
+                if ku not in seen:
+                    nextlevel.add((nu, j, ku))
+                    seen.add(ku)
+        level = nextlevel
+
+
+def test_inv_demazure(n=2, permutation_size=None):
+    def emax(crystal, index, vertex):
+        while crystal.e_operator(index, vertex) is not None:
+            vertex = crystal.e_operator(index, vertex)
+        return vertex
+
+    def is_bounded(f):
+        return all(len(a) == 0 or i < min(map(abs, a)) for i, a in enumerate(f))
+
+    def get_character(alpha):
+        ans = q_key(alpha)
+        while any(i > n for i in ans.variables()):
+            ans = ans.set(max(ans.variables()), 0)
+        return ans
+
+    def negative_one_operator_test(crystal, subset):
+        for b in subset:
+            c = crystal.f_operator(-1, b)
+            if c is not None and c != crystal.f_operator(1, b) and c not in subset:
+                return False
+            c = crystal.e_operator(-1, b)
+            if c is not None and c != crystal.e_operator(1, b) and c not in subset:
+                return False
+        return True
+
+    def zero_operator_test(crystal, subset):
+        for b in subset:
+            c = crystal.f_operator(0, b)
+            if c is not None and c not in subset:
+                return False
+            c = crystal.e_operator(0, b)
+            if c is not None and c not in subset:
+                return False
+        return True
+
+    if permutation_size is not None:
+        for w in Permutation.involutions(permutation_size):
+            crystal = AbstractPrimedQCrystal.from_involution(w, n, increasing=False)
+            brf = [f for f in crystal if is_bounded(f)]
+            mu = tuple(range(1, 1 + n))
+            demazure = {mu: brf}
+            for ku, i, nu in partition_permutations(mu):
+                if i is not None:
+                    demazure[nu] = [f for f in crystal if emax(crystal, i, f) in demazure[ku]]     
+                print(nu, w)
+                assert negative_one_operator_test(crystal, demazure[nu])
+                assert zero_operator_test(crystal, demazure[nu])
+        return
+
+    for mu in strict_partitions(n):
+        w_mu = Permutation.from_involution_shape(*mu)
+        crystal = AbstractPrimedQCrystal.from_involution(w_mu, n, increasing=False)
+        extended = tuple(range(n, n * n, n))
+        brf = [f for f in crystal if is_bounded(f)]
+
+        highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
+        assert len(highest) == 1
+
+
+        demazure = {mu: brf}
+        alpha = symmetrize_strict_partition(mu)
+        alpha += (n - len(alpha)) * (0,)
+        characters = {mu: alpha}
+
+        for ku, i, nu in partition_permutations(mu):
+            if i is not None:
+                demazure[nu] = [f for f in crystal if emax(crystal, i, f) in demazure[ku]]
+                c = characters[ku]
+                characters[nu] = c[:i - 1] + (c[i], c[i - 1]) + c[i + 1:]
+            
+            ch = factorization_character(demazure[nu])
+            expected_ch = get_character(characters[nu])
+            
+            # crystal.draw(highlighted_nodes=demazure[nu], extended=extended)
+            print(nu, w_mu)
+            # print('  ch =', ch)
+            # alpha = ''.join(map(str, characters[nu]))
+            # print('  ch =', expected_ch, '= k^o_%s in %s variables' % (alpha, n))
+            # print()
+            
+            # if not negative_one_operator_test(crystal, demazure[nu]):
+            #    crystal.draw(highlighted_nodes=demazure[nu], extended=extended)
+            #    input('\n')
+
+            assert ch == expected_ch
+            assert negative_one_operator_test(crystal, demazure[nu])
+            assert zero_operator_test(crystal, demazure[nu])
+                
+
+
+def test_fpf_demazure(n=2, permutation_size=None):
+    def emax(crystal, index, vertex):
+        while crystal.e_operator(index, vertex) is not None:
+            vertex = crystal.e_operator(index, vertex)
+        return vertex
+
+    def is_bounded(f):
+        return all(len(a) == 0 or i < min(a) for i, a in enumerate(f))
+
+    def get_character(alpha):
+        ans = p_key(alpha)
+        while any(i > n for i in ans.variables()):
+            ans = ans.set(max(ans.variables()), 0)
+        return ans
+
+    def negative_one_operator_test(crystal, subset):
+        for b in subset:
+            c = crystal.f_operator(-1, b)
+            if not (c is None or c in subset):
+                return False
+            c = crystal.e_operator(-1, b)
+            if not (c is None or c in subset):
+                return False
+        return True
+              
+    if permutation_size is not None:
+        for w in Permutation.fpf_involutions(permutation_size):
+            crystal = AbstractQCrystal.from_fpf_involution(w, n, increasing=False)
+            brf = [f for f in crystal if is_bounded(f)]
+            mu = tuple(range(1, 1 + n))
+            demazure = {mu: brf}
+            for ku, i, nu in partition_permutations(mu):
+                if i is not None:
+                    demazure[nu] = [f for f in crystal if emax(crystal, i, f) in demazure[ku]]     
+                print(nu, w)
+                assert negative_one_operator_test(crystal, demazure[nu])
+        return
+
+    for mu in strict_partitions(n):
+        w_mu = Permutation.from_fpf_involution_shape(*mu)
+        crystal = AbstractQCrystal.from_fpf_involution(w_mu, n, increasing=False)
+        brf = [f for f in crystal if is_bounded(f)]
+
+        highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
+        assert len(highest) == 1
+
+        demazure = {mu: brf}
+        alpha = skew_symmetrize_strict_partition(mu)
+        alpha += (n - len(alpha)) * (0,)
+        characters = {mu: alpha}
+
+        for ku, i, nu in partition_permutations(mu):
+            if i is not None:
+                demazure[nu] = [f for f in crystal if emax(crystal, i, f) in demazure[ku]]
+                c = characters[ku]
+                characters[nu] = c[:i - 1] + (c[i], c[i - 1]) + c[i + 1:]
+            
+            ch = factorization_character(demazure[nu])
+            expected_ch = get_character(characters[nu])
+            
+            # crystal.draw(highlighted_nodes=demazure[nu])
+            print(nu, w_mu)
+            # print('  ch =', ch)
+            # alpha = ''.join(map(str, characters[nu]))
+            # print('  ch =', expected_ch, '= k^sp_%s in %s variables' % (alpha, n))
+            # print()
+            # input('')
+
+            assert ch == expected_ch
+            assert negative_one_operator_test(crystal, demazure[nu])
+                
 
 def test_brf(n=5):
     def bounded_ch(c, z):

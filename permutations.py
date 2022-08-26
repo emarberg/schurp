@@ -707,6 +707,10 @@ class Permutation:
         return Partition(*list(reversed(sorted(self.fpf_involution_code())))).transpose()
 
     @classmethod
+    def from_shape(cls, *mu):
+        return cls.from_code(*mu)
+
+    @classmethod
     def from_code(cls, *code):
         if len(code) == 1 and type(code[0]) in [list, tuple]:
             code = code[0]
@@ -722,6 +726,16 @@ class Permutation:
             return cls.from_code(newcode) * Permutation.s_i(i + 1)
         else:
             return Permutation()
+
+    @classmethod
+    def from_involution_shape(cls, *mu):
+        if len(mu) == 0:
+            return Permutation()
+        shape = {(i, i + j - 1) for i in range(1, len(mu) + 1) for j in range(1, mu[i - 1] + 1)}
+        code = mu[0] * [0]
+        for i, j in shape:
+            code[j - 1] += 1
+        return cls.from_involution_code(*code)
 
     @classmethod
     def from_involution_code(cls, *code):
@@ -741,6 +755,17 @@ class Permutation:
             return w * s if s * w == w * s else s * w * s
         else:
             return Permutation()
+
+    @classmethod
+    def from_fpf_involution_shape(cls, *mu):
+        if len(mu) == 0:
+            return Permutation()
+        shape = {(i, i + j - 1) for i in range(1, len(mu) + 1) for j in range(1, mu[i - 1] + 1)}
+        code = (mu[0] + 1) * [0]
+        for i, j in shape:
+            code[j] += 1
+        return cls.from_fpf_involution_code(*code)
+
 
     @classmethod
     def from_fpf_involution_code(cls, *code):

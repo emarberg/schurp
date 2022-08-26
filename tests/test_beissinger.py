@@ -1,5 +1,7 @@
+from partitions import Partition
 from permutations import Permutation
 from qp_utils import beissinger_rsk, rsk
+from collections import defaultdict
 
 
 def config_tikz(config):
@@ -7,7 +9,7 @@ def config_tikz(config):
     sigma = Permutation(*w)
 
     ans = []
-    ans += ["\\arcstart{"]
+    ans += ["\\xy\\xymatrix@R=.1cm@C=.5cm{"]
 
     vertices = []
     letter = 'a'
@@ -16,11 +18,11 @@ def config_tikz(config):
         curr = "*{" + (letter if loc not in [i - 1, i, i + 1] else "\\bullet") + "}"
         letter = chr(ord(letter) + 1) if loc not in [i - 1, i, i + 1] else letter
         if loc < a:
-            dist = (a - loc) / 2
+            dist = (a - loc) * 0.3
             curr += "\\arc{" + str(dist) + "}{" + (a - loc) * "r" + "}"
         vertices += [curr]
     ans += " & ".join(vertices)
-    ans += ["""}\\arcstop"""]
+    ans += ["""}\\endxy"""]
 
     return "".join(ans)
 
@@ -96,63 +98,76 @@ def test_beissinger_ops(n=7, sgn=False):
                 configs[tabconfig] = altconfig
             assert configs[tabconfig] == altconfig
 
+    round_a, round_b, round_c, round_d = {}, {}, {}, {}
     for tabconfig, altconfig in configs.items():
         if tabconfig == altconfig:
+            round_a[tabconfig] = altconfig
             continue
+
         w, i = tabconfig
-        v, j = altconfig
-        if Permutation.s_i(i) * Permutation(*w) * Permutation.s_i(i) == Permutation(*v):
-            continue
-        print("\\[")
-        print(config_tikz(tabconfig))
-        print("\\qquad\\longrightarrow\\qquad")
-        print(config_tikz(altconfig))
-        print("\\]")
-        a, b, c = w[i - 2], w[i - 1], w[i]
-        # print(a, b, c)
+        v, _ = altconfig
+
+        w = Permutation(*w)
+        v = Permutation(*v)
+        s = Permutation.s_i(i - 1)
+        t = Permutation.s_i(i)
+        r = s * t * s
+
+        if v == s * w * s:
+            round_b[tabconfig] = altconfig
+            assert sgn or min(v(i - 1), v(i)) < v(i + 1) < max(v(i), v(i - 1))
+        elif v == t * w * t:
+            round_c[tabconfig] = altconfig
+            assert sgn or min(v(i), v(i + 1)) < v(i - 1) < max(v(i), v(i + 1))
+        elif v == r * w * r:
+            round_d[tabconfig] = altconfig
+            assert {v(i - 1), v(i), v(i + 1)} == {i - 1, i, i + 1}
+        else:
+            raise Exception
+
+    for rnd, tag in [(round_a, "y"), (round_b, "s_{i-1}ys_{i-1}"), (round_c, "s_iys_i"), (round_d, "(i-1,i+1)y(i-1,i+1)")]:
+        seen = set()
+        print("\\[y \\qquad\\sim\\qquad z=%s \\]" % tag)
+        for tabconfig, altconfig in rnd.items():
+            if tabconfig not in seen:
+                seen.add(tabconfig)
+                seen.add(altconfig)
+            else:
+                continue
+            print()
+            print("\\smallskip")
+            print()
+            print("\\[")
+            print(config_tikz(tabconfig))
+            print("\\qquad\\sim\\qquad")
+            print(config_tikz(altconfig))
+            print("\\]")
+
+            w, i = tabconfig
+            w = Permutation(*w)
+            v, _ = altconfig
+            v = Permutation(*v)
+
+            def is_des(u, a):
+                x = -a if u(a) == a else a if u(a) in [i - 1, i, i + 1] else u(a)
+                y = -a - 1 if u(a + 1) == a + 1 else a + 1 if u(a + 1) in [i - 1, i, i + 1] else u(a + 1)
+                return x > y
+
+            print("\\[", "\\text{" + ("des" if is_des(w, i - 1) else "asc") + "}", ",", "\\text{" + ("des" if is_des(w, i) else "asc") + "}")
+            print("\\qquad\\sim\\qquad")
+            print("\\text{" + ("des" if is_des(v, i - 1) else "asc") + "}", ",", "\\text{" + ("des" if is_des(v, i) else "asc") + "}", "\\]")
+
         print()
-        # assert not(a < b < c) and not(a > b > c)
-    print()
-    print("\\newpage\\newpage")
-    print()
-    for tabconfig, altconfig in configs.items():
-        if tabconfig == altconfig:
-            continue
-        w, i = tabconfig
-        v, j = altconfig
-        if Permutation.s_i(i - 1) * Permutation(*w) * Permutation.s_i(i - 1) == Permutation(*v):
-            continue
-        print("\\[")
-        print(config_tikz(tabconfig))
-        print("\\qquad\\longrightarrow\\qquad")
-        print(config_tikz(altconfig))
-        print("\\]")
-        a, b, c = w[i - 2], w[i - 1], w[i]
-        # print(a, b, c)
+        print("\\newpage")
         print()
-        # assert not(a < b < c) and not(a > b > c)
-    print()
-    print("\\newpage\\newpage")
-    print()
-    for tabconfig, altconfig in configs.items():
-        if tabconfig != altconfig:
-            continue
-        w, i = tabconfig
-        print("\\[")
-        print(config_tikz(tabconfig))
-        print("\\qquad\\longrightarrow\\qquad")
-        print(config_tikz(altconfig))
-        print("\\]")
-        a, b, c = w[i - 2], w[i - 1], w[i]
-        # print(a, b, c)
-        print()
-        # assert a < b < c or a > b > c
-    print(len(configs))
-            
+    print(list(map(len, [round_a, round_b, round_c, round_d])))
+
 
 def test_all_row(n=7):
     seen = {}
     for w in Permutation.involutions(n):
+        f = len([i for i in range(n) if i + 1 == w(i + 1)])
+        
         w = [w(i + 1) for i in range(n)]
         btab = beissinger_rsk(w, sgn=False)
         p, q = rsk(w)
@@ -163,6 +178,9 @@ def test_all_row(n=7):
         # print(rsktab)
         assert btab == rsktab 
         seen[btab] = tuple(w)
+
+        oddcols = sum([i % 2 for i in btab.partition().transpose()])
+        assert f == oddcols
 
     for tab in seen:
         print(seen[tab])
@@ -188,6 +206,8 @@ def test_all_row(n=7):
 def test_all_col(n=7):
     seen = {}
     for w in Permutation.involutions(n):
+        f = len([i for i in range(n) if i + 1 == w(i + 1)])
+
         w = [w(i + 1) for i in range(n)]
         btab = beissinger_rsk(w, sgn=True)
         rsktab = rsk(w)[0]
@@ -198,23 +218,72 @@ def test_all_col(n=7):
         assert btab not in seen
         seen[btab] = tuple(w)
 
+        oddrows = sum([i % 2 for i in btab.partition()])
+        assert f == oddrows
+
+    for tab, w in seen.items():
+        v = seen[beissinger_rsk(w, sgn=False).transpose()]
+        if v == w:
+            print('rank', n, 'fixed point:', w)
+
+    print()
+    print()
+
+    orders = defaultdict(int)
+    for tab, w in seen.items():
+        v = w
+        o = 1
+        while True:
+            v = seen[beissinger_rsk(v, sgn=False).transpose()]
+            if v == w:
+                break
+            o += 1
+        orders[o] += 1
+    cycletype = ""
+    mu = []
+    for o, v in sorted(orders.items()):
+        assert v % o == 0
+        for _ in range(v // o):
+            mu += [o]
+        cycletype += str(o) + "^{" + str(v // o) + "} "
+    print(n, ':', cycletype)
+    print(mu)
+    mu = Partition(*reversed(mu))
+    print(mu.shape)
+
     for tab in seen:
-        print(seen[tab])
-        print(tab)
+        # print(seen[tab], '=', Permutation(*seen[tab]).cycle_repr())
+        # print(tab)
+        # print()
         for i in range(2, n):
             alt = tab.dual_equivalence_operator(i - 1)
 
             u = Permutation(*seen[tab])
             v = Permutation(*seen[alt])
-            # look_for_conjugacy(i, u, v)
-            # if alt != tab:
-            #    print(alt)
-            #    print()
 
-            # a, b, c = u(i - 1), u(i), u(i + 1)
+            # print("D_%s" % i)
+            # print()
+            # print(seen[alt], '=', v.cycle_repr())
+            # print(alt)
+            # print()
+            
+            s = Permutation.s_i(i - 1)
+            t = Permutation.s_i(i)
 
-            # if u == v:
-            #     assert a < b < c or a > b > c
-            # else:
-            #     assert not (a < b < c) and not (a > b > c)
-        print()
+            def tilde(u, j):
+                if u(j) == j:
+                    return -j
+                if u(j) in [i - 1, i, i + 1]:
+                    return j
+                return u(j)
+
+            a, b, c = tilde(u, i - 1), tilde(u, i), tilde(u, i + 1)
+
+            if u == v:
+                assert a < b < c or a > b > c
+            elif s * u * s == v:
+                assert a < c < b or b < c < a
+            elif t * u * t == v:
+                assert b < a < c or c < a < b
+            else:
+                assert False
