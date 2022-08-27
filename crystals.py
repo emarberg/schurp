@@ -25,12 +25,21 @@ class AbstractCrystalMixin:
         for (i, v, w) in edges:
             self.f_operators[(i, v)] = w
             self.e_operators[(i, w)] = v
-        self.weights = weights.copy()
+        self.weights = {v: weights[v] for v in self._vertices}
         self.printer = printer
         self.e_strings = {}
         self.f_strings = {}
         self.s_operators = {}
         self.provided_operators = self.indices if provided_operators is None else provided_operators
+
+    def truncate(self, subset):
+        edges = []
+        for i in self.extended_indices:
+            for v in subset:
+                w = self.f_operator(i, v)
+                if w is not None and w in subset:
+                    edges.append((i, v, w))
+        return self.__class__(self.rank, subset, edges, self.weights, printer=self.printer, provided_operators=self.extended_indices)
 
     def index_printer(self, i, primed=False):
         return str(i)
@@ -305,6 +314,52 @@ class AbstractCrystalMixin:
             y = self.f_operator(i, b)
             if (x, y) not in seen:
                 if not self.isomorphic_subcrystals(x, y):
+                    return False
+                seen.add((x, y))
+        return True
+
+    @classmethod
+    def isomorphic_highest_weight_crystals(cls, crystal_a, highest_a, crystal_b, highest_b=None):
+        assert cls == crystal_a.__class__ == crystal_b.__class__ and crystal_a.rank == crystal_b.rank and crystal_a.extended_indices == crystal_b.extended_indices
+
+        if highest_b is None:
+            highest_b = [b for b in crystal_b if crystal_b.is_highest_weight(b)]
+            assert len(highest_b) == 1
+            highest_b = highest_b[0]
+
+        a, b = highest_a, highest_b
+        if crystal_a.weight(a) != crystal_b.weight(b):
+            return False
+
+        children_a, children_b = {}, {}
+        none_a, none_b = [], []
+        
+        for i in crystal_a.extended_indices:
+            x = crystal_a.f_operator(i, a)
+            if x is None:
+                none_a.append(i)
+            else:
+                children_a[x] = children_a.get(x, []) + [i]
+
+            x = crystal_b.f_operator(i, b)
+            if x is None:
+                none_b.append(i)
+            else:
+                children_b[x] = children_b.get(x, []) + [i]
+        
+        if none_a != none_b:
+            return False
+        
+        children_a_values = {tuple(v) for v in children_a.values()}
+        children_b_values = {tuple(v) for v in children_b.values()}
+        if children_a_values != children_b_values:
+            return False
+        seen = {(None, None)}
+        for i in crystal_a.extended_indices:
+            x = crystal_a.f_operator(i, a)
+            y = crystal_b.f_operator(i, b)
+            if (x, y) not in seen:
+                if not cls.isomorphic_highest_weight_crystals(crystal_a, x, crystal_b, y):
                     return False
                 seen.add((x, y))
         return True

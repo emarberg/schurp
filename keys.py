@@ -227,7 +227,7 @@ def _symmetric_composition_from_row_column_counts(row_counts, col_counts):
 #     return answers[0]
 
 
-def symmetrize_strict_partition(mu):
+def symmetrize_strict_partition(mu, n=None):
     shape = {(i, i + j - 1) for i in range(1, len(mu) + 1) for j in range(1, mu[i - 1] + 1)}
     shape |= {(j, i) for (i, j) in shape}
     ans = []
@@ -235,10 +235,13 @@ def symmetrize_strict_partition(mu):
         while i - 1 >= len(ans):
             ans.append(0)
         ans[i - 1] += 1
+
+    if n is not None:
+        ans += (n - len(ans)) * (0,)
     return tuple(ans)
 
 
-def skew_symmetrize_strict_partition(mu):
+def skew_symmetrize_strict_partition(mu, n=None):
     shape = {(i, i + j) for i in range(1, len(mu) + 1) for j in range(1, mu[i - 1] + 1)}
     shape |= {(j, i) for (i, j) in shape}
     k = 1
@@ -260,6 +263,9 @@ def skew_symmetrize_strict_partition(mu):
             ans[k] += 1
         ans = tuple(ans)
     assert is_skew_symmetric_composition(ans)
+
+    if n is not None:
+        ans += (n - len(ans)) * (0,)
     return ans
 
 
