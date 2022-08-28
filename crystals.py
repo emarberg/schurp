@@ -118,7 +118,7 @@ class AbstractCrystalMixin:
             ps.communicate()
 
     def e_string(self, i, v):
-        assert i in self.indices
+        assert i in self.extended_indices
         assert v in self.vertices
         if (i, v) not in self.e_strings:
             k = 0
@@ -130,7 +130,7 @@ class AbstractCrystalMixin:
         return self.e_strings[(i, v)]
 
     def f_string(self, i, v):
-        assert i in self.indices
+        assert i in self.extended_indices
         assert v in self.vertices
         if (i, v) not in self.f_strings:
             k = 0

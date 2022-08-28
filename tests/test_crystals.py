@@ -117,13 +117,15 @@ def inv_negative_one_operator_test(crystal, subset):
 
 
 def inv_zero_operator_test(crystal, subset):
+    n = crystal.rank
     for b in subset:
-        c = crystal.f_operator(0, b)
-        if c is not None and c not in subset:
-            return False
-        c = crystal.e_operator(0, b)
-        if c is not None and c not in subset:
-            return False
+        for i in range(0, n * n, n):
+            c = crystal.f_operator(i, b)
+            if c is not None and c not in subset:
+                return False
+            c = crystal.e_operator(i, b)
+            if c is not None and c not in subset:
+                return False
     return True
 
 
@@ -138,7 +140,6 @@ def _is_bounded(f, flag=None):
         return flag[a - 1] if flag is not None and a <= len(flag) else a
 
     return all(len(a) == 0 or all(i + 1 <= phi(x) for x in a) for i, a in enumerate(f))
-
 
 
 def fpf_is_bounded(f, flag=None):
@@ -284,12 +285,61 @@ def test_demazure_generic(n=2, permutation_size=5):
                 input('\n?\n')
 
 
+def verify_fpf_string_lengths(crystal):
+    for b in crystal:
+        for i in crystal.extended_indices:
+            wt = crystal.weight(b)
+            if i > 0:
+                if crystal.f_operator(i, b) is not None or crystal.e_operator(i, b) is not None:
+                    if wt[i - 1] - wt[i] != crystal.f_string(i, b) - crystal.e_string(i, b):
+                        print('')
+                        print('failure at element b =', b, 'index i =', i, 'of', crystal.extended_indices)
+                        print('')
+                        raise Exception
+            elif i < 0:
+                pass
+
+
+def verify_inv_string_lengths(crystal):
+    for b in crystal:
+        for i in crystal.extended_indices:
+            wt = crystal.weight(b)
+            if i >= 0 and i % crystal.rank == 0:
+                j = i // crystal.rank
+                if wt[j] != 0 and crystal.f_string(i, b) + crystal.e_string(i, b) != 1:
+                    print('')
+                    print('failure at element b =', b, 'index i =', i, 'of', crystal.extended_indices)
+                    print('')
+                    raise Exception
+            elif i > 0:
+                if crystal.f_operator(i, b) is not None or crystal.e_operator(i, b) is not None:
+                    if wt[i - 1] - wt[i] != crystal.f_string(i, b) - crystal.e_string(i, b):
+                        print('')
+                        print('failure at element b =', b, 'index i =', i, 'of', crystal.extended_indices)
+                        print('')
+                        raise Exception
+            elif i < 0:
+                pass
+
+
+def verify_string_lengths(crystal):
+    for b in crystal:
+        for i in crystal.indices:
+            wt = crystal.weight(b)
+            if crystal.f_operator(i, b) is not None or crystal.e_operator(i, b) is not None:
+                if wt[i - 1] - wt[i] != crystal.f_string(i, b) - crystal.e_string(i, b):
+                    print('')
+                    print('failure at element b =', b, 'index i =', i, 'of', crystal.indices)
+                    print('')
+                    raise Exception
+
+
 def test_demazure(n=2, limit=8):
     is_bounded = _is_bounded
     for mu in partitions(n, limit):
         w_mu = Permutation.from_shape(*mu)
         crystal = AbstractGLCrystal.from_permutation(w_mu, n, increasing=False)
-        brf = [f for f in crystal if is_bounded(f)]
+        brf = crystal.truncate([f for f in crystal if is_bounded(f)])
 
         highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
         assert len(highest) == 1
@@ -297,12 +347,13 @@ def test_demazure(n=2, limit=8):
         demazure = {mu: brf}
         for ku, i, nu in partition_permutations(mu, n):
             if i is not None:
-                demazure[nu] = [f for f in crystal if emax(crystal, i, f) in demazure[ku]]
+                demazure[nu] = crystal.truncate([f for f in crystal if emax(crystal, i, f) in demazure[ku]])
             ch = factorization_character(demazure[nu])
             expected_ch = key(nu) #restrict_variables(q_key(nu), n)
             
             print(nu, w_mu)
             assert ch == expected_ch
+            verify_string_lengths(demazure[nu])
             # crystal.draw(highlighted_nodes=demazure[nu])
             # input('')
 
@@ -330,8 +381,7 @@ def test_inv_demazure(n=2, limit=8):
     for mu in strict_partitions(n, limit):
         w_mu = Permutation.from_involution_shape(*mu)
         crystal = AbstractPrimedQCrystal.from_involution(w_mu, n, increasing=False)
-        extended = tuple(range(n, n * n, n))
-        brf = [f for f in crystal if is_bounded(f)]
+        brf = crystal.truncate([f for f in crystal if is_bounded(f)])
 
         highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
         assert len(highest) == 1
@@ -340,17 +390,21 @@ def test_inv_demazure(n=2, limit=8):
         demazure = {alpha: brf}
         for ku, i, nu in partition_permutations(alpha, n):
             if i is not None:
-                demazure[nu] = [f for f in crystal if emax(crystal, i, f) in demazure[ku]]
+                demazure[nu] = crystal.truncate([f for f in crystal if emax(crystal, i, f) in demazure[ku]])
             ch = factorization_character(demazure[nu])
             expected_ch = restrict_variables(q_key(nu), n)
             
-            # crystal.draw(highlighted_nodes=demazure[nu], extended=extended)
             print(nu, w_mu)
 
-            assert ch == expected_ch
-            assert inv_negative_one_operator_test(crystal, demazure[nu])
-            assert inv_zero_operator_test(crystal, demazure[nu])
-                
+            try:
+                assert ch == expected_ch
+                assert inv_negative_one_operator_test(crystal, demazure[nu])
+                assert inv_zero_operator_test(crystal, demazure[nu])
+                verify_inv_string_lengths(demazure[nu])
+            except:
+                crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
+                input('\n?\n')
+
 
 def fpf_negative_one_operator_test(crystal, subset):
     for b in subset:
@@ -388,7 +442,7 @@ def test_fpf_demazure(n=2, limit=8):
     for mu in strict_partitions(n, limit):
         w_mu = Permutation.from_fpf_involution_shape(*mu)
         crystal = AbstractQCrystal.from_fpf_involution(w_mu, n, increasing=False)
-        brf = [f for f in crystal if is_bounded(f)]
+        brf = crystal.truncate([f for f in crystal if is_bounded(f)])
 
         highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
         assert len(highest) == 1
@@ -398,16 +452,20 @@ def test_fpf_demazure(n=2, limit=8):
 
         for ku, i, nu in partition_permutations(alpha, n):
             if i is not None:
-                demazure[nu] = [f for f in crystal if emax(crystal, i, f) in demazure[ku]]
+                demazure[nu] = crystal.truncate([f for f in crystal if emax(crystal, i, f) in demazure[ku]])
             ch = factorization_character(demazure[nu])
             expected_ch = restrict_variables(p_key(nu), n)
             
-            # crystal.draw(highlighted_nodes=demazure[nu])
             print(nu, w_mu)
 
-            assert ch == expected_ch
-            assert fpf_negative_one_operator_test(crystal, demazure[nu])
-                
+            try:
+                assert ch == expected_ch
+                assert fpf_negative_one_operator_test(crystal, demazure[nu])
+                verify_fpf_string_lengths(demazure[nu])
+            except:
+                crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
+                input('\n?\n')
+
 
 def test_brf(n=5):
     # testing whether Demazure crystals are closed under raising operators e_i
