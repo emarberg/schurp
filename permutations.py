@@ -1180,6 +1180,10 @@ class Permutation:
         return ans if ans else '()'
         # return self.cycle_repr()
 
+    def oneline_repr(self, n):
+        assert n >= len(self.oneline)
+        return ('' if n < 10 else ',').join([str(self(i)) for i in range(1, n + 1)])
+
     def cycle_repr(self):
         if len(self) == 0:
             return '1'
