@@ -37,14 +37,16 @@ def factorization_character(subset):
 
 
 def flags(n):
-    level = {tuple(range(1, n + 1))}
+    seed = tuple(range(1, n + 1))
+    level = {seed}
     while level:
         nextlevel = set()
         for f in level:
             yield f
             for i in range(n - 1):
                 if f[i] + 1 <= min(f[i + 1], n):
-                    nextlevel.add(f[:i] + (f[i] + 1,) + f[i + 1:])
+                    g = f[:i] + (f[i] + 1,) + f[i + 1:]
+                    nextlevel.add(g)
         level = nextlevel
 
 
@@ -260,6 +262,61 @@ def get_expected_ch(decomposition, fn):
     return expected_ch
 
 
+
+def verify_fpf_string_lengths(crystal, demazure):
+    n = crystal.rank
+    for b in demazure:
+        for i in range(1, n):
+            wt = demazure.weight(b)
+            if demazure.f_operator(i, b) is not None or demazure.e_operator(i, b) is not None:
+                if wt[i - 1] - wt[i] != demazure.f_string(i, b) - demazure.e_string(i, b):
+                    print('')
+                    print('failure at element b =', b, 'index i =', i, 'of', demazure.extended_indices)
+                    print('')
+                    raise Exception
+        for i in range(1, n):
+            if all(crystal.e_operator(i, b) is None for i in range(-i + 1, i + 1) if i != 0) and crystal.e_operator(-i, b) is not None:
+                assert crystal.e_operator(-i, b) in demazure
+
+
+def verify_inv_string_lengths(crystal, demazure):
+    n = crystal.rank
+    for b in demazure:
+        for i in demazure.extended_indices:
+            wt = demazure.weight(b)
+            if i >= 0 and i % demazure.rank == 0:
+                j = i // demazure.rank
+                if wt[j] != 0 and demazure.f_string(i, b) + demazure.e_string(i, b) != 1:
+                    print('')
+                    print('failure at element b =', b, 'index i =', i, 'of', demazure.extended_indices)
+                    print('')
+                    raise Exception
+            elif i > 0:
+                if demazure.f_operator(i, b) is not None or demazure.e_operator(i, b) is not None:
+                    if wt[i - 1] - wt[i] != demazure.f_string(i, b) - demazure.e_string(i, b):
+                        print('')
+                        print('failure at element b =', b, 'index i =', i, 'of', demazure.extended_indices)
+                        print('')
+                        raise Exception
+        for i in range(1, n):
+            if all(crystal.e_operator(i, b) is None for i in range(-i + 1, i + 1)) and crystal.e_operator(-i, b) is not None:
+                assert crystal.e_operator(-i, b) in demazure
+
+
+def verify_string_lengths(crystal):
+    for b in crystal:
+        for i in crystal.indices:
+            wt = crystal.weight(b)
+            if crystal.f_operator(i, b) is not None or crystal.e_operator(i, b) is not None:
+                if wt[i - 1] - wt[i] != crystal.f_string(i, b) - crystal.e_string(i, b):
+                    print('')
+                    print('failure at element b =', b, 'index i =', i, 'of', crystal.indices)
+                    print('')
+                    raise Exception
+
+
+
+
 def test_demazure_generic(n=2, permutation_size=5):
     demazure = {}
     is_bounded = _is_bounded
@@ -267,6 +324,7 @@ def test_demazure_generic(n=2, permutation_size=5):
         crystal = AbstractGLCrystal.from_permutation(w, n, increasing=False)
         for flag in flags(n):
             brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
+
             highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
             for f in highest:
                 generate_demazure(crystal.weight(f), demazure)
@@ -283,55 +341,6 @@ def test_demazure_generic(n=2, permutation_size=5):
                 print('ch =', ch)
                 print('ex =', expected_ch)
                 input('\n?\n')
-
-
-def verify_fpf_string_lengths(crystal):
-    for b in crystal:
-        for i in crystal.extended_indices:
-            wt = crystal.weight(b)
-            if i > 0:
-                if crystal.f_operator(i, b) is not None or crystal.e_operator(i, b) is not None:
-                    if wt[i - 1] - wt[i] != crystal.f_string(i, b) - crystal.e_string(i, b):
-                        print('')
-                        print('failure at element b =', b, 'index i =', i, 'of', crystal.extended_indices)
-                        print('')
-                        raise Exception
-            elif i < 0:
-                pass
-
-
-def verify_inv_string_lengths(crystal):
-    for b in crystal:
-        for i in crystal.extended_indices:
-            wt = crystal.weight(b)
-            if i >= 0 and i % crystal.rank == 0:
-                j = i // crystal.rank
-                if wt[j] != 0 and crystal.f_string(i, b) + crystal.e_string(i, b) != 1:
-                    print('')
-                    print('failure at element b =', b, 'index i =', i, 'of', crystal.extended_indices)
-                    print('')
-                    raise Exception
-            elif i > 0:
-                if crystal.f_operator(i, b) is not None or crystal.e_operator(i, b) is not None:
-                    if wt[i - 1] - wt[i] != crystal.f_string(i, b) - crystal.e_string(i, b):
-                        print('')
-                        print('failure at element b =', b, 'index i =', i, 'of', crystal.extended_indices)
-                        print('')
-                        raise Exception
-            elif i < 0:
-                pass
-
-
-def verify_string_lengths(crystal):
-    for b in crystal:
-        for i in crystal.indices:
-            wt = crystal.weight(b)
-            if crystal.f_operator(i, b) is not None or crystal.e_operator(i, b) is not None:
-                if wt[i - 1] - wt[i] != crystal.f_string(i, b) - crystal.e_string(i, b):
-                    print('')
-                    print('failure at element b =', b, 'index i =', i, 'of', crystal.indices)
-                    print('')
-                    raise Exception
 
 
 def test_demazure(n=2, limit=8):
@@ -400,7 +409,7 @@ def test_inv_demazure(n=2, limit=8):
                 assert ch == expected_ch
                 assert inv_negative_one_operator_test(crystal, demazure[nu])
                 assert inv_zero_operator_test(crystal, demazure[nu])
-                verify_inv_string_lengths(demazure[nu])
+                verify_inv_string_lengths(crystal, demazure[nu])
             except:
                 crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
@@ -434,7 +443,10 @@ def test_fpf_demazure_generic(n=2, permutation_size=4):
             ch = factorization_character(brf)
             expected_ch = get_expected_ch(decomposition, lambda alpha: restrict_variables(p_key(alpha), n))     
             print(w.oneline_repr(permutation_size), 'flag =', flag, ch == expected_ch, decomposition)
-            assert ch == expected_ch and decomposition is not None
+            try:
+                assert ch == expected_ch and decomposition is not None
+            except:
+                input('\n?\n')
 
 
 def test_fpf_demazure(n=2, limit=8):
@@ -461,9 +473,9 @@ def test_fpf_demazure(n=2, limit=8):
             try:
                 assert ch == expected_ch
                 assert fpf_negative_one_operator_test(crystal, demazure[nu])
-                verify_fpf_string_lengths(demazure[nu])
+                verify_fpf_string_lengths(crystal, demazure[nu])
             except:
-                crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
+                # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
 
 
