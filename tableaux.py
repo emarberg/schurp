@@ -1368,6 +1368,15 @@ class Tableau:
             ans[i - 1].append(n)
         return ans
 
+    def get_columns(self):
+        ans = []
+        for i, j in sorted(self.mapping):
+            n = self.mapping[(i, j)].number
+            while j > len(ans):
+                ans.append([])
+            ans[j - 1].append(n)
+        return ans
+
     def row_reading_word(self):
         return tuple(
             self.mapping[key].number for key in sorted(self.mapping, key=lambda x: (-x[0], x[1]))

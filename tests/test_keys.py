@@ -2221,7 +2221,6 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
 
 
 def is_fpf_vexillary(w):
-    return True
     f = FPFStanleyExpander(w).expand()
     if len(f) > 1:
         return False
@@ -2255,7 +2254,18 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
             assert len(d[w]) == 1 and set(d[w].values()) == {1}
     pvex = {w: list(d[w])[0] for w in d if len(d[w]) == 1 and set(d[w].values()) == {1}}
     fvex = {w: w.code() for w in i if is_fpf_vexillary(w)}
-    # assert pvex == fvex
+    try:
+        assert set(pvex) == set(fvex)
+    except:
+        print('p-vexillary not fpf vexillary:')
+        for w in set(pvex) - set(fvex):
+            print(w, pvex[w])
+            print()
+        print('fpf-vexillary not p-vexillary:')
+        for w in set(fvex) - set(pvex):
+            print(w, fvex[w])
+            print()
+        input('?')
     print()
     print('caches =', len(p_halves_cache), len(p_alphas_cache))
     return i, s, d, pvex, fvex

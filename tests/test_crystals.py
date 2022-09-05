@@ -20,11 +20,78 @@ from symmetric import (
 )
 from permutations import Permutation
 from schubert import X
-from words import Word
+from words import Word, eg_insert, fpf_insert, involution_insert
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
 
+
+def test_highest_lowest(n, k=6):
+    for w in Permutation.all(k):
+        crystal = AbstractGLCrystal.from_permutation(w, n, increasing=False)
+        highest = [f for f in crystal if crystal.is_highest_weight(f)]
+        lowest = [f for f in crystal if crystal.is_lowest_weight(f)]
+        
+        for f in highest:
+            tab = eg_insert(*f)[0]
+            expected = tuple(tuple(reversed(c)) for c in tab.get_columns())
+            expected += (n - len(expected)) * ((),)
+            assert f == expected
+
+        for f in lowest:
+            fstar = tuple(tuple(k - i for i in part) for part in f)
+            tab = eg_insert(*fstar)[0]
+            tab = tab.__class__({b: k - v.number for b, v in tab.mapping.items()})
+            expected = tuple(tuple(r) for r in reversed(tab.get_rows()))
+            expected = (n - len(expected)) * ((),) + expected
+            assert f == expected
+
+
+def test_highest_lowest_fpf(n, k=6):
+    for w in Permutation.fpf_involutions(k):
+        crystal = AbstractQCrystal.from_fpf_involution(w, n, increasing=False)
+        highest = [f for f in crystal if crystal.is_highest_weight(f)]
+        lowest = [f for f in crystal if crystal.is_lowest_weight(f)]
+        
+        for f in highest:
+            tab = fpf_insert(*f)[0]
+            # expected = tuple(tuple(reversed(c)) for c in tab.get_columns())
+            # expected += (n - len(expected)) * ((),)
+            print(tab)
+            print(f)
+            input('\n?\n')
+
+        for f in lowest:
+            fstar = tuple(tuple(k - i for i in part) for part in f)
+            tab = fpf_insert(*fstar)[0]
+            t = tab
+            tab = tab.__class__({b: k - v.number for b, v in tab.mapping.items()})
+            expected = tuple(tuple(r) for r in reversed(tab.get_rows()))
+            expected = (n - len(expected)) * ((),) + expected
+
+
+def test_highest_lowest_inv(n, k=6):
+    for w in Permutation.involutions(k):
+        crystal = AbstractQCrystal.from_involution(w, n, increasing=False)
+        highest = [f for f in crystal if crystal.is_highest_weight(f)]
+        lowest = [f for f in crystal if crystal.is_lowest_weight(f)]
+        
+        for f in highest:
+            tab = involution_insert(*f)[0]
+            # expected = tuple(tuple(reversed(c)) for c in tab.get_columns())
+            # expected += (n - len(expected)) * ((),)
+            print(tab)
+            print(f)
+            input('\n?\n')
+
+        for f in lowest:
+            fstar = tuple(tuple(k - i for i in part) for part in f)
+            tab = involution_insert(*fstar)[0]
+            t = tab
+            tab = tab.__class__({b: k - v.number for b, v in tab.mapping.items()})
+            expected = tuple(tuple(r) for r in reversed(tab.get_rows()))
+            expected = (n - len(expected)) * ((),) + expected
+            
 
 def factorization_character(subset):
     ans = 0
