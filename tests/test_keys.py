@@ -26,7 +26,8 @@ from keys import (
     is_symmetric_composition,
     symmetric_partitions,
     skew_symmetric_partitions,
-    symmetric_half
+    symmetric_half,
+    print_skew_symmetric_diagram
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -2157,9 +2158,10 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
     print('. . . s')
     d = {}
     for t, w in enumerate(s):
+        isvex = w.is_vexillary()
         d[w] = try_to_decompose_q(s[w], q_halves_cache, q_alphas_cache, positive, multiple)
         for dec in d[w]:
-            print(len(s) - t, ':', w, '->', dec)
+            print(len(s) - t, ':', w, '->', dec, isvex, w.code())
         print()
         w.print_rothe_diagram(sep='.')
         assert (not positive and multiple) or len(d[w]) == 1
@@ -2237,17 +2239,38 @@ def vexify(w):
     return w
 
 
+def special_fpf_code(w):
+    ans = []
+    for i, j in w.rothe_diagram():
+        if i == j and w(i) == i + 1: # all(w(a) < i for a in range(i + 1, w(i))): # or all(w(i) < b for (a, b) in w.rothe_diagram() if i < a < w(i))):
+            continue
+        while i > len(ans):
+            ans.append(0)
+        ans[i - 1] += 1
+    return tuple(ans)
+
+
 def test_fpf_schubert(n=4, positive=True, multiple=True):
     i = list(Permutation.fpf_involutions(n))
     s = {w: FPFSchubert.get(w) for w in i}
     print('. . . s')
     d = {}
     for t, w in enumerate(s):
+        isvex = is_fpf_vexillary(w)
         d[w] = try_to_decompose_p(s[w], p_halves_cache, p_alphas_cache, positive, multiple)
         for dec in d[w]:
-            print(len(s) - t, ':', w, '->', dec)
+            print(len(s) - t, ':', w.cycle_repr(), '->', dec, isvex, w.code())
+            # if len(dec) == 1:
+            #    print()
+            #    print_skew_symmetric_diagram(next(iter(dec)))
+            #    print()
             assert set(dec.values()) == {1}
+        # w.print_rothe_diagram(sep='.')
         print()
+        if any(len(dec) == 1 for dec in d[w]) and not isvex:
+            input('\n!\n')
+        # if isvex and not any(special_fpf_code(w) in dec for dec in d[w]):
+        #    input('\n?\n')
         # assert (not positive and multiple) or len(d[w]) == 1
         d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         if vexify(w).is_vexillary():
