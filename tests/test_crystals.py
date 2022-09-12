@@ -93,6 +93,16 @@ def test_highest_lowest_inv(n, k=6):
             expected = (n - len(expected)) * ((),) + expected
             
 
+def test_e0_preserves_strings(n, k=6):
+    for w in Permutation.involutions(k):
+        crystal = AbstractPrimedQCrystal.from_involution(w, n, increasing=False)
+        for f in crystal:
+            for j in range(0, n * n, n):
+                g = crystal.e_operator(j, f)
+                assert g is None or all(crystal.e_string(-i, f) == crystal.e_string(-i, g) for i in range(1, n))
+                assert g is None or all(crystal.f_string(-i, f) == crystal.f_string(-i, g) for i in range(1, n))
+                        
+
 def factorization_character(subset):
     ans = 0
     for v in subset:
@@ -342,7 +352,7 @@ def verify_fpf_string_lengths(crystal, demazure):
                     print('')
                     raise Exception
         for i in range(1, n):
-            if all(crystal.e_operator(i, b) is None for i in range(-i + 1, i + 1) if i != 0) and crystal.e_operator(-i, b) is not None:
+            if all(crystal.e_operator(j, b) is None for j in range(-i + 1, i + 1) if j != 0) and crystal.e_operator(-i, b) is not None:
                 assert crystal.e_operator(-i, b) in demazure
 
 
@@ -366,7 +376,7 @@ def verify_inv_string_lengths(crystal, demazure):
                         print('')
                         raise Exception
         for i in range(1, n):
-            if all(crystal.e_operator(i, b) is None for i in range(-i + 1, i + 1)) and crystal.e_operator(-i, b) is not None:
+            if all(crystal.e_operator(j, b) is None for j in range(-i + 1, i + 1)) and crystal.e_operator(-i, b) is not None:
                 assert crystal.e_operator(-i, b) in demazure
 
 
