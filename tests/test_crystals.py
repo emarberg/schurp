@@ -93,6 +93,16 @@ def test_highest_lowest_inv(n, k=6):
             expected = (n - len(expected)) * ((),) + expected
             
 
+def test_e0_preserves_strings(n, k=6):
+    for w in Permutation.involutions(k):
+        crystal = AbstractPrimedQCrystal.from_involution(w, n, increasing=False)
+        for f in crystal:
+            for j in range(0, n * n, n):
+                g = crystal.e_operator(j, f)
+                assert g is None or all(crystal.e_string(-i, f) == crystal.e_string(-i, g) for i in range(1, n))
+                assert g is None or all(crystal.f_string(-i, f) == crystal.f_string(-i, g) for i in range(1, n))
+                        
+
 def factorization_character(subset):
     ans = 0
     for v in subset:
@@ -175,12 +185,13 @@ def restrict_variables(ans, n):
 
 
 def inv_negative_one_operator_test(crystal, subset):
-    for b in subset:
-        c = crystal.f_operator(-1, b)
-        if c is not None and c != crystal.f_operator(1, b) and c not in subset:
-            return False
+    for b in crystal:
         c = crystal.e_operator(-1, b)
-        if c is not None and c != crystal.e_operator(1, b) and c not in subset:
+        if c is None or c == crystal.e_operator(1, b):
+            continue
+        if b in subset and c not in subset:
+            return False
+        if b not in subset and c in subset:
             return False
     return True
 
@@ -342,7 +353,7 @@ def verify_fpf_string_lengths(crystal, demazure):
                     print('')
                     raise Exception
         for i in range(1, n):
-            if all(crystal.e_operator(i, b) is None for i in range(-i + 1, i + 1) if i != 0) and crystal.e_operator(-i, b) is not None:
+            if all(crystal.e_operator(j, b) is None for j in range(-i + 1, i + 1) if j != 0) and crystal.e_operator(-i, b) is not None:
                 assert crystal.e_operator(-i, b) in demazure
 
 
@@ -366,7 +377,7 @@ def verify_inv_string_lengths(crystal, demazure):
                         print('')
                         raise Exception
         for i in range(1, n):
-            if all(crystal.e_operator(i, b) is None for i in range(-i + 1, i + 1)) and crystal.e_operator(-i, b) is not None:
+            if all(crystal.e_operator(j, b) is None for j in range(-i + 1, i + 1)) and crystal.e_operator(-i, b) is not None:
                 assert crystal.e_operator(-i, b) in demazure
 
 
@@ -473,23 +484,28 @@ def test_inv_demazure(n=2, limit=8):
             print(nu, w_mu)
 
             try:
+                if n < max(alpha):
+                    assert ch != q_key(nu)
+                else:
+                    assert ch == q_key(nu)
                 assert ch == expected_ch
                 assert inv_negative_one_operator_test(crystal, demazure[nu])
                 assert inv_zero_operator_test(crystal, demazure[nu])
                 verify_inv_string_lengths(crystal, demazure[nu])
             except:
-                crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
+                # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
 
 
 def fpf_negative_one_operator_test(crystal, subset):
-    for b in subset:
-        c = crystal.f_operator(-1, b)
-        if not (c is None or c in subset):
-            return False
-        c = crystal.e_operator(-1, b)
-        if not (c is None or c in subset):
-            return False
+    for i in [1]:
+        for b in subset:
+            c = crystal.f_operator(-i, b)
+            if not (c is None or c in subset):
+                return False
+            c = crystal.e_operator(-i, b)
+            if not (c is None or c in subset):
+                return False
     return True
       
 
@@ -513,6 +529,7 @@ def test_fpf_demazure_generic(n=2, permutation_size=4):
             try:
                 assert ch == expected_ch and decomposition is not None
             except:
+                # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
 
 
@@ -538,6 +555,10 @@ def test_fpf_demazure(n=2, limit=8):
             print(nu, w_mu)
 
             try:
+                if n < max(alpha):
+                    assert ch != p_key(nu)
+                else:
+                    assert ch == p_key(nu)
                 assert ch == expected_ch
                 assert fpf_negative_one_operator_test(crystal, demazure[nu])
                 verify_fpf_string_lengths(crystal, demazure[nu])
