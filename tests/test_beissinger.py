@@ -203,9 +203,15 @@ def test_all_row(n=7):
                 assert not (a < b < c) and not (a > b > c)
         print()
 
+
+SYT = [1, 1, 2, 4, 10, 26, 76, 232, 764, 2620, 9496, 35696, 140152, 568504, 2390480, 10349536, 46206736, 211799312, 997313824, 4809701440, 23758664096, 119952692896, 618884638912, 3257843882624, 17492190577600, 95680443760576, 532985208200576, 3020676745975552]
+
+
 def test_all_col(n=7):
     seen = {}
-    for w in Permutation.involutions(n):
+    for count, w in enumerate(Permutation.involutions(n)):
+        if count % (SYT[n] // 100) == 0:
+            print('left:', int((SYT[n] - count) / SYT[n] * 100), '%')
         f = len([i for i in range(n) if i + 1 == w(i + 1)])
 
         w = [w(i + 1) for i in range(n)]
@@ -221,12 +227,14 @@ def test_all_col(n=7):
         oddrows = sum([i % 2 for i in btab.partition()])
         assert f == oddrows
 
+    print()
     for tab, w in seen.items():
         v = seen[beissinger_rsk(w, sgn=False).transpose()]
         if v == w:
-            print('rank', n, 'fixed point:', w)
+            print('S_%s' % n, ' case, Psi fixed point:', w)
 
     print()
+    print('done first part')
     print()
 
     orders = defaultdict(int)
