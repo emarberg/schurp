@@ -4,6 +4,7 @@ from words import (
     get_fpf_involution_words,
     Tableau,
     involution_insert,
+    fpf_insert,
     primed_sw_insert,
     sagan_worley_insert
 )
@@ -15,6 +16,32 @@ from crystals import (
 )
 from permutations import Permutation
 import random
+
+
+def test_fpf_increasing_decreasing(n=4):
+    for z in Permutation.fpf_involutions(n):
+        for w in z.get_fpf_involution_words():
+            wstar = [n - x for x in w]
+            p, _ = fpf_insert(*((x,) for x in w))
+            q, _ = fpf_insert(*((x,) for x in wstar))
+            assert p.shape() == q.shape()
+
+
+def test_inv_increasing_decreasing(n=5):
+    for z in Permutation.involutions(n):
+        for w in z.get_primed_involution_words():
+            wstar = [n - x if x > 0 else -n - x for x in w]
+            p, _ = involution_insert(*((x,) for x in w))
+            q, _ = involution_insert(*((x,) for x in wstar))
+            try:
+                assert p.shape() == q.shape()
+            except:
+                print(z)
+                print(w)
+                print(wstar)
+                print(p)
+                print(q)
+                input('?')
 
 
 def test_increasing_factorizations(n=4):

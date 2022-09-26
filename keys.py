@@ -456,14 +456,12 @@ def is_skew_symmetric_composition(alpha):
     if not is_symmetric_composition(alpha):
         return False
     mu = sorted(alpha, reverse=True) + [0]
+    # if any(mu[i] == i and (i == 0 or mu[i - 1] > i) for i in range(len(mu))):
+    #     return False
     if any(mu[i] == i and mu[i + 1] < i for i in range(len(mu) - 1)):
         return False
     if any(mu[i] == i + 1 and mu[i + 1] == i for i in range(len(mu) - 1)):
         return False
-    # if alpha and alpha[0] == 0:
-    #     a = [a for a in alpha if a > 0]
-    #     if a and a[0] == min(a):
-    #         return False
     return True
 
 

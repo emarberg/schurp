@@ -711,6 +711,13 @@ class Permutation:
         return cls.from_code(*mu)
 
     @classmethod
+    def from_cycles(cls, *c):
+        ans = Permutation()
+        for a, b in c:
+            ans *= Permutation.transposition(a, b)
+        return ans
+
+    @classmethod
     def from_code(cls, *code):
         if len(code) == 1 and type(code[0]) in [list, tuple]:
             code = code[0]
