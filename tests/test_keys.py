@@ -53,6 +53,104 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def test_distinct_atom(m=4, l=4):
+    seen = {}
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in weak_compositions(n, k, reduced=True):
+                f = atom(alpha)
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+
+
+def test_distinct_p_key(m=4, l=4):
+    seen = {}
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                f = p_key(alpha)
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+
+
+def test_distinct_p_atom(m=4, l=4):
+    seen = {}
+    nonzero = 0
+    zero = 0
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                f = p_atom(alpha)
+                if f == 0:
+                    # print('zero:', alpha)
+                    zero += 1
+                    continue
+                nonzero += 1
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+    print(zero, 'nonzero:', nonzero)
+
+
+def test_distinct_q_atom(m=4, l=4):
+    seen = {}
+    nonzero = 0
+    zero = 0
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                f = q_atom(alpha)
+                if f == 0:
+                    # print('zero:', alpha)
+                    zero += 1
+                    continue
+                nonzero += 1
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+    print(zero, 'nonzero:', nonzero)
+
+
+def test_distinct_q_key(m=4, l=4):
+    seen = {}
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                f = q_key(alpha)
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+
+
+def test_q_key_into_p_key(m=4, l=4):
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                attempt = try_to_decompose_p(q_key(alpha))
+                print(alpha, '->', attempt)
+
 def flags(length, upperbound, lowerbound=0):
     if length == 0:
         yield ()
@@ -2033,7 +2131,13 @@ def test_leading_p_key(m=30, l=4):
             print()
     print()
     print('values:', len(valuesdict))
-    assert not any(len(v) > 1 for v in valuesdict.values())
+    try:
+        assert not any(len(v) > 1 for v in valuesdict.values())
+    except:
+        for k, v in valuesdict.items():
+            if len(v) > 1:
+                print(k, '-->', v)
+        assert False
     prev = None
     for betas in sorted(toprint):
         alpha, a, b, dec = toprint[betas]

@@ -462,6 +462,12 @@ def is_skew_symmetric_composition(alpha):
         return False
     if any(mu[i] == i + 1 and mu[i + 1] == i for i in range(len(mu) - 1)):
         return False
+    # if any(
+    #     alpha[i] > 0 == alpha[i + 1] and 
+    #     any(alpha[i] <= alpha[j] for j in range(i + 1, len(alpha))) and 
+    #     not any(0 < alpha[j] < alpha[i] for j in range(i + 1, len(alpha))
+    # ) for i in range(len(alpha) - 1)):
+    #     return False
     return True
 
 
