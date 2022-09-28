@@ -62,10 +62,7 @@ def test_distinct_atom(m=4, l=4):
                 if f not in seen:
                     seen[f] = set()
                 seen[f].add(alpha)
-                try:
-                    assert len(seen[f]) == 1
-                except:
-                    print(seen[f], '-->', str(f)[:20])
+                assert len(seen[f]) == 1
 
 
 def test_distinct_p_key(m=4, l=4):

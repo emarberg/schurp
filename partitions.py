@@ -508,6 +508,38 @@ class StrictPartition(Partition):
         return StrictPartition(*parts)
 
     @classmethod
+    def symmetric_double(cls, mu):
+        if type(mu) in [StrictPartition, Partition]:
+            mu = mu.tuple()
+        shape = {(i + 1, i + j + 1) for i in range(len(mu)) for j in range(mu[i])}
+        shape = shape | {(j, i) for (i, j) in shape}
+        mu = []
+        for i, j in shape:
+            while i - 1 >= len(mu):
+                mu.append(0)
+            mu[i - 1] += 1
+        return tuple(mu)
+
+    @classmethod
+    def skew_symmetric_double(cls, mu):
+        if type(mu) in [StrictPartition, Partition]:
+            mu = mu.tuple()
+        shape = {(i + 1, i + j + 2) for i in range(len(mu)) for j in range(mu[i])}
+        shape = shape | {(j, i) for (i, j) in shape}
+        i = 1
+        while (i, i + 1) in shape:
+            shape.add((i, i))
+            i += 1
+        if i > 1 and (i - 1, i + 1) not in shape:
+            shape.add((i, i))
+        mu = []
+        for i, j in shape:
+            while i - 1 >= len(mu):
+                mu.append(0)
+            mu[i - 1] += 1
+        return tuple(mu)
+
+    @classmethod
     def all(cls, n, max_part=None):
         if max_part is None:
             max_part = n

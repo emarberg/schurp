@@ -29,7 +29,7 @@
 
 
 from schubert import X
-from partitions import Partition
+from partitions import Partition, StrictPartition
 from tableaux import Tableau
 from words import Word
 from marked import MarkedNumber
@@ -447,9 +447,28 @@ def skew_symmetric_partitions(n):
 
 
 def symmetric_weak_compositions(n, parts, reduced=False):
-    for alpha in weak_compositions(n, parts, True, reduced):
-        if is_symmetric_composition(alpha):
-            yield alpha
+    seen = set()
+    for mu in StrictPartition.all(n, parts):
+        mu = StrictPartition.symmetric_double(mu)
+        for gamma in itertools.permutations(mu):
+            if gamma in seen:
+                continue
+            seen.add(gamma)
+            if reduced:
+                if len(gamma) == 0:
+                    continue
+                for indices in itertools.combinations(range(parts - 1),len(gamma) - 1):
+                    alpha = parts * [0]
+                    alpha[-1] = gamma[-1]
+                    for i, a in enumerate(indices):
+                        alpha[a] = gamma[i]
+                    yield tuple(alpha)
+            else:
+                for indices in itertools.combinations(range(parts),len(gamma)):
+                    alpha = parts * [0]
+                    for i, a in enumerate(indices):
+                        alpha[a] = gamma[i]
+                    yield tuple(alpha)
 
 
 def is_skew_symmetric_composition(alpha):
@@ -462,19 +481,42 @@ def is_skew_symmetric_composition(alpha):
         return False
     if any(mu[i] == i + 1 and mu[i + 1] == i for i in range(len(mu) - 1)):
         return False
-    # if any(
-    #     alpha[i] > 0 == alpha[i + 1] and 
-    #     any(alpha[i] <= alpha[j] for j in range(i + 1, len(alpha))) and 
-    #     not any(0 < alpha[j] < alpha[i] for j in range(i + 1, len(alpha))
-    # ) for i in range(len(alpha) - 1)):
-    #     return False
+    if any(
+        alpha[i] > 0 == alpha[i + 1] and
+        any(alpha[i] <= alpha[j] for j in range(i + 1, len(alpha))) and
+        not any(0 < alpha[j] < alpha[i] for j in range(i + 1, len(alpha))
+    ) for i in range(len(alpha) - 1)):
+        return False
     return True
 
 
 def skew_symmetric_weak_compositions(n, parts, reduced=False):
-    for alpha in symmetric_weak_compositions(n, parts, reduced):
-        if is_skew_symmetric_composition(alpha):
-            yield alpha
+    seen = set()
+    for mu in StrictPartition.all(n, parts - 1):
+        mu = StrictPartition.skew_symmetric_double(mu)
+        for gamma in itertools.permutations(mu):
+            if gamma in seen:
+                continue
+            seen.add(gamma)
+            if reduced:
+                if len(gamma) == 0:
+                    continue
+                for indices in itertools.combinations(range(parts - 1),len(gamma) - 1):
+                    alpha = parts * [0]
+                    alpha[-1] = gamma[-1]
+                    for i, a in enumerate(indices):
+                        alpha[a] = gamma[i]
+                    alpha = tuple(alpha)
+                    if is_skew_symmetric_composition(alpha):
+                        yield alpha
+            else:
+                for indices in itertools.combinations(range(parts),len(gamma)):
+                    alpha = parts * [0]
+                    for i, a in enumerate(indices):
+                        alpha[a] = gamma[i]
+                    alpha = tuple(alpha)
+                    assert is_skew_symmetric_composition(alpha)
+                    yield alpha
 
 
 def strict_weak_compositions(n, parts, reduced=False):
