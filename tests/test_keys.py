@@ -27,7 +27,8 @@ from keys import (
     symmetric_partitions,
     skew_symmetric_partitions,
     symmetric_half,
-    print_skew_symmetric_diagram
+    print_skew_symmetric_diagram,
+    print_symmetric_diagram
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -139,6 +140,8 @@ def test_distinct_q_key(m=4, l=4):
                     assert len(seen[f]) == 1
                 except:
                     print(seen[f], '-->', str(f)[:20])
+                if len(seen) % 1000 == 0:
+                    print('  seen:', len(seen))
 
 
 def test_q_key_into_p_key(m=4, l=4):
@@ -2113,6 +2116,16 @@ def test_leading_p_key(m=30, l=4):
                 exponents = get_exponents(kappa)
                 a, b = skew_symmetric_halves(alpha)
                 beta = exponents[0]
+
+                print(alpha)
+                print_skew_symmetric_diagram(alpha)
+                print()
+                print(a, b)
+                print(exponents[0], exponents[-1])
+                print()
+                print({e: kappa[dict_from_tuple(a)] for e in exponents})
+                input('\n\n')
+
                 assert beta == b
                 assert a in exponents
                 assert kappa[dict_from_tuple(a)] >= 1
@@ -2157,6 +2170,14 @@ def test_leading_q_key(m=4, l=4):
                 exponents = get_exponents(kappa)
                 a, b = symmetric_halves(alpha)
                 beta = exponents[0]
+                print(alpha)
+                print_symmetric_diagram(alpha)
+                print()
+                print(a, b)
+                print(exponents[0], exponents[-1])
+                print()
+                print({e: kappa[dict_from_tuple(a)] for e in exponents})
+                input('\n\n')
                 assert beta == b
                 assert a in exponents
                 assert kappa[dict_from_tuple(a)] >= 2**q_power(alpha)

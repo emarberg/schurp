@@ -331,6 +331,14 @@ def symmetric_halves(alpha, pad=False):
     return a, b
 
 
+def symmetric_diagram(alpha):
+    return skew_symmetric_diagram(alpha)
+
+
+def print_symmetric_diagram(alpha, sep='.'):
+    print_skew_symmetric_diagram(alpha, sep)
+
+
 def skew_symmetric_double(alpha):
     pass
 
