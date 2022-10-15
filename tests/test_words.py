@@ -2,6 +2,14 @@ from words import Word
 from vectors import Vector
 
 
+def test_drop():
+    assert Word.drop_alignment((3, 6), (4, 7)) == [[3, 6, None], [None, 4, 7]]
+    assert Word.drop_alignment((3, 4, 5), (2, 4)) == [[3, 4, 5], [2, None, 4]]
+
+    assert Word.drop((3, 6), (4, 7)) == ([None, 6, None], [3, 4, 7])
+    assert Word.drop((3, 4, 5), (2, 4)) == ([3, None, 5], [2, 4, 5])
+
+
 def test_sums():
     s = {1, 2, 3}
     assert Word(3, 2, 1, subset=s) - Word(3, 2, 1, subset=s) == Vector()

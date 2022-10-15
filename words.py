@@ -18,6 +18,48 @@ class Word:
         assert all(i in self.subset for i in args)
 
     @classmethod
+    def drop(cls, top, bot):
+        top, bot = cls.drop_alignment(top, bot)
+
+        n = len(top)
+        assert n == len(bot)
+
+        for i in range(n):
+            if bot[i] is None:
+                bot[i] = top[i]
+                top[i] = None
+                j = 1
+                while i + j < n and bot[i + j] is not None and bot[i + j] + 1 == top[i + j]:
+                    bot[i + j] += 1
+                    j += 1
+        return top, bot
+
+    @classmethod
+    def drop_alignment(cls, top, bot):
+        ans = [[], []]
+        i = j = 0
+        while i < len(top) or j < len(bot):
+            if i == len(top):
+                ans[0].append(None)
+                ans[1].append(bot[j])
+                j += 1
+            elif j == len(bot):
+                ans[0].append(top[i])
+                ans[1].append(None)
+                i += 1
+            elif top[i] > bot[j]:
+                ans[0].append(top[i])
+                ans[1].append(bot[j])
+                i += 1
+                j += 1
+            else:
+                ans[0].append(top[i])
+                ans[1].append(None)
+                i += 1
+        return ans
+
+
+    @classmethod
     def _incr_pairing(cls, x, y):
         pairing = [[], []]
         for b in reversed(y):
