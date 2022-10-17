@@ -18,21 +18,53 @@ class Word:
         assert all(i in self.subset for i in args)
 
     @classmethod
-    def drop(cls, top, bot):
-        top, bot = cls.drop_alignment(top, bot)
+    def run_decomposition(cls, w):
+        ans = []
+        for i in range(len(w)):
+            if i == 0 or w[i - 1] > w[i]:
+                ans.append([])
+            ans[-1].append(w[i])
+        return ans
 
-        n = len(top)
-        assert n == len(bot)
+    @classmethod
+    def drop(cls, top, bot=None):
+        if bot is None:
+            rho = cls.run_decomposition(top)
+            should_continue = True
+            while should_continue:
+                should_continue = False
+                for k in range(len(rho) - 1):
+                    top = rho[k]
+                    bot = rho[k + 1]
+                    if len(top) > len(bot) or any(top[i] <= bot[i] for i in range(len(top))):
+                        should_continue = True
+                        rho[k], rho[k + 1] = cls.drop(top, bot)
+                        break
+            rho = list(reversed(rho))
+            dictionary = {(i + 1, j + 1): rho[i][j] for i in range(len(rho)) for j in range(len(rho[i]))}
+            ans = Tableau(dictionary)
+            # assert ans.is_increasing()
+            return ans
+        if bot is not None:
+            top, bot = cls.drop_alignment(top, bot)
 
-        for i in range(n):
-            if bot[i] is None:
-                bot[i] = top[i]
-                top[i] = None
-                j = 1
-                while i + j < n and bot[i + j] is not None and bot[i + j] + 1 == top[i + j]:
-                    bot[i + j] += 1
-                    j += 1
-        return top, bot
+            n = len(top)
+            assert n == len(bot)
+
+            for i in range(n):
+                if bot[i] is None:
+                    x = top[i]
+                    bot[i] = x
+                    top[i] = None
+
+                    if i + 1 < n and x + 1 == top[i + 1]:
+                        # error in Definition 4.1.3 in Assaf 1903.05802v1:
+                        # should be b_j = max{b : x_j + i == tau_i^(j) == sigma_i^(j) + 1 for 1<=i<=b }
+                        j = 1
+                        while i + j < n and bot[i + j] is not None and bot[i + j] + 1 == top[i + j] == x + j:
+                            bot[i + j] += 1
+                            j += 1
+            return tuple(a for a in top if a is not None), tuple(a for a in bot if a is not None)
 
     @classmethod
     def drop_alignment(cls, top, bot):

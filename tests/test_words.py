@@ -1,13 +1,31 @@
-from words import Word
+from permutations import Permutation
+from words import Word, eg_insert
 from vectors import Vector
+from tableaux import Tableau
 
 
 def test_drop():
     assert Word.drop_alignment((3, 6), (4, 7)) == [[3, 6, None], [None, 4, 7]]
     assert Word.drop_alignment((3, 4, 5), (2, 4)) == [[3, 4, 5], [2, None, 4]]
 
-    assert Word.drop((3, 6), (4, 7)) == ([None, 6, None], [3, 4, 7])
-    assert Word.drop((3, 4, 5), (2, 4)) == ([3, None, 5], [2, 4, 5])
+    assert Word.drop((1, 3), (2,)) == ((3,), (1, 2))
+    assert Word.drop((1,2,4),(1,3)) == ((2, 4), (1, 2, 3))
+    assert Word.drop((3, 6), (4, 7)) == ((6,), (3, 4, 7))
+    assert Word.drop((3, 4, 5), (2, 4)) == ((3, 5), (2, 4, 5))
+
+    assert Word.drop((3, 6, 4, 7, 5, 2, 4)) == Tableau.from_string("2,4,5;3,5;6,7")
+
+
+def test_drop_all(n=5):
+    for g in Permutation.all(n):
+        for w in g.get_reduced_words():
+            tab = Word.drop(w)
+            eg_tab = eg_insert(w)[0]
+            if tab != eg_tab:
+                print(w)
+                print(tab)
+                print(eg_tab)
+            assert tab == eg_tab
 
 
 def test_sums():
