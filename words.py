@@ -58,7 +58,7 @@ class Word:
                     top[i] = None
 
                     if i + 1 < n and x + 1 == top[i + 1]:
-                        # error in Definition 4.1.3 in Assaf 1903.05802v1:
+                        # error in Definition 4.1.3 in Assaf 1903.05802v1 (not corrected in published version):
                         # should be b_j = max{b : x_j + i == tau_i^(j) == sigma_i^(j) + 1 for 1<=i<=b }
                         j = 1
                         while i + j < n and bot[i + j] is not None and bot[i + j] + 1 == top[i + j] == x + j:
@@ -90,6 +90,73 @@ class Word:
                 i += 1
         return ans
 
+    @classmethod
+    def lift(cls, top, bot):
+        # error after Definition 4.2.6 in Assaf 1903.05802v1 (corrected in published version):
+        # lifting first example in Fig. 12 does not give every in Fig. 10
+        if bot is None:
+            rho = cls.run_decomposition(top)
+            # should_continue = True
+            # while should_continue:
+            #     should_continue = False
+            #     for k in range(len(rho) - 1):
+            #         top = rho[k]
+            #         bot = rho[k + 1]
+            #         if len(top) > len(bot) or any(top[i] <= bot[i] for i in range(len(top))):
+            #             should_continue = True
+            #             rho[k], rho[k + 1] = cls.drop(top, bot)
+            #             break
+            # rho = list(reversed(rho))
+            # dictionary = {(i + 1, j + 1): rho[i][j] for i in range(len(rho)) for j in range(len(rho[i]))}
+            # ans = Tableau(dictionary)
+            # # assert ans.is_increasing()
+            # return ans
+        if bot is not None:
+            top, bot = cls.lift_alignment(top, bot)
+
+            n = len(top)
+            assert n == len(bot)
+
+            for i in range(n - 1, -1, -1):
+                if top[i] is None:
+                    x = bot[i]
+                    top[i] = x
+                    bot[i] = None
+
+                    if i + 1 < n and x + 1 == bot[i + 1]:
+                        j = 1
+                        while i + j < n and top[i + j] is not None and top[i + j] == bot[i + j] == x + j:
+                            bot[i + j] -= 1
+                            j += 1
+            return tuple(a for a in top if a is not None), tuple(a for a in bot if a is not None)
+
+    @classmethod
+    def lift_alignment(cls, top, bot):
+        ans = [[], []]
+        i = len(top) - 1
+        j = len(bot) - 1
+        while i >= 0 or j >= 0:
+            if i < 0:
+                ans[0].append(None)
+                ans[1].append(bot[j])
+                j -= 1
+            elif j < 0:
+                ans[0].append(top[i])
+                ans[1].append(None)
+                i -= 1
+            elif top[i] >= bot[j]:
+                ans[0].append(top[i])
+                ans[1].append(bot[j])
+                i -= 1
+                j -= 1
+            else:
+                ans[0].append(None)
+                ans[1].append(bot[j])
+                j -= 1
+        top, bot = ans
+        top = list(reversed(top))
+        bot = list(reversed(bot))
+        return [top, bot]
 
     @classmethod
     def _incr_pairing(cls, x, y):
