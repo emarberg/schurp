@@ -13,7 +13,7 @@ def test_lift():
     assert Word.lift((6,), (3, 4, 7)) == ((3, 6, 7), (4,))
     assert Word.lift((3, 5), (2, 4, 5)) == ((3, 4, 5), (2, 4))
 
-    # assert Word.drop((3, 6, 4, 7, 5, 2, 4)) == Tableau.from_string("2,4,5;3,5;6,7")
+    assert Word.lift((6, 9, 3, 7, 8, 2, 3, 5, 9, 1, 2, 4, 5, 6)) == Tableau.from_string("1,2,4;2,3,4,5,6;3,8;6,7,8,9")
 
 
 def test_drop():

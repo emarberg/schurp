@@ -91,26 +91,43 @@ class Word:
         return ans
 
     @classmethod
-    def lift(cls, top, bot):
+    def lift_sequence(cls, rho, i, j=None):
+        if rho is None:
+            return None
+        if j is not None:
+            assert i <= j
+            for t in range(i, j + 1):
+                rho = cls.lift_sequence(rho, t)
+            return rho
+        if j is None:
+            ans = rho[:]
+            top = rho[i]
+            bot = rho[i - 1]
+            ntop, nbot = cls.lift(top, bot)
+            if not (ntop and ntop[0] == bot[0]):
+                ans[i], ans[i - 1] = ntop, nbot
+            return ans if ans != rho else None
+
+    @classmethod
+    def lift(cls, top, bot=None):
         # error after Definition 4.2.6 in Assaf 1903.05802v1 (corrected in published version):
         # lifting first example in Fig. 12 does not give every in Fig. 10
         if bot is None:
-            rho = cls.run_decomposition(top)
-            # should_continue = True
-            # while should_continue:
-            #     should_continue = False
-            #     for k in range(len(rho) - 1):
-            #         top = rho[k]
-            #         bot = rho[k + 1]
-            #         if len(top) > len(bot) or any(top[i] <= bot[i] for i in range(len(top))):
-            #             should_continue = True
-            #             rho[k], rho[k + 1] = cls.drop(top, bot)
-            #             break
-            # rho = list(reversed(rho))
-            # dictionary = {(i + 1, j + 1): rho[i][j] for i in range(len(rho)) for j in range(len(rho[i]))}
-            # ans = Tableau(dictionary)
-            # # assert ans.is_increasing()
-            # return ans
+            rho = list(reversed(cls.run_decomposition(top)))
+            should_continue = True
+            while should_continue:
+                should_continue = False
+                for j in range(len(rho) - 1, 0, -1):
+                    indices = [i for i in range(1, j + 1) if cls.lift_sequence(rho, i, j) is not None]
+                    if indices:
+                        should_continue = True
+                        i = indices[0]
+                        rho = cls.lift_sequence(rho, i, j)
+                        break
+            dictionary = {(i + 1, j + 1): rho[i][j] for i in range(len(rho)) for j in range(len(rho[i]))}
+            ans = Tableau(dictionary)
+            # assert ans.is_increasing()
+            return ans
         if bot is not None:
             top, bot = cls.lift_alignment(top, bot)
 
