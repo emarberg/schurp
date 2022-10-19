@@ -1,6 +1,7 @@
 import itertools
 from tableaux import Tableau
 from partitions import Partition
+from words import Word
 import operator
 import random
 
@@ -193,6 +194,20 @@ class Permutation:
                 words |= {e + (i,) for e in (self * s).get_reduced_words()}
             REDUCED_WORDS[oneline] = words
         return REDUCED_WORDS[oneline]
+
+    def get_increasing_factorizations(self, k):
+        for w in self.get_reduced_words():
+            for f in Word.increasing_factorizations(w, k):
+                yield tuple(_.elements for _ in f)
+
+    def get_bounded_increasing_factorizations(self, k=None, flag=None):
+        if k is None:
+            k = self.rank - 1
+        if flag is None:
+            flag = list(range(1, k + 1))
+        for f in self.get_increasing_factorizations(k):
+            if all(a[0] >= flag[-i - 1] for i, a in enumerate(f) if a):
+                yield f
 
     def get_bottom_pipe_dream(self):
         from pipedreams import Pipedream

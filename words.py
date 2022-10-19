@@ -928,6 +928,20 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def weak_eg_insert(self):
+        n = len(self)
+        p, q = Tableau(), Tableau()
+        for i_zerobased, a in enumerate(self):
+            i = i_zerobased + 1
+            j, p = p.eg_insert(MarkedNumber(a))
+            lifted_p = self.lift(p.row_reading_word())
+            v = MarkedNumber(i)
+            for k, l in lifted_p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert lifted_p.shape() == lifted_p.shape()
+        return lifted_p, q
+
     def mystery_insert(self, verbose=True):
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
@@ -975,7 +989,7 @@ class Word:
 
 
 def get_insertion_mapping(words):
-    words = [Word(*a) if type(a) != Word else a for a in words]
+    words = [Word(a) if type(a) == int else Word(*a) if type(a) != Word else a for a in words]
     elements = []
     mapping = {}
     for i, w in enumerate(words):
@@ -1047,6 +1061,13 @@ def eg_insert(*words):
     w, mapping = get_insertion_mapping(words)
     p, q = w.eg_insert()
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
+
+
+def weak_eg_insert(*words):
+    w, mapping = get_insertion_mapping(words)
+    n = len(words) + 1
+    p, q = w.weak_eg_insert()
+    return p, Tableau({(i, j): n - mapping[q.entry(i, j)].number for (i, j) in q})
 
 
 REDUCED_WORDS = {(): {()}}

@@ -1,7 +1,22 @@
+from partitions import Partition
 from permutations import Permutation
-from words import Word, eg_insert
+from words import Word, eg_insert, weak_eg_insert
 from vectors import Vector
 from tableaux import Tableau
+
+
+def test_weak_eg_insertion(n=5):
+    for flag in Partition.flags(n - 1):
+        print('flag =', flag)
+        for w in Permutation.all(n):
+            for f in w.get_bounded_increasing_factorizations(flag=flag):
+                p, q = weak_eg_insert(*f)
+                if not q.is_key_flagged(flag=flag):
+                    print(p)
+                    print(q)
+                    print(f)
+                    print()
+                    assert q.is_key_flagged(flag=flag)
 
 
 def test_lift():

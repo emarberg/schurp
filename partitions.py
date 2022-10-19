@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, deque
 
 
 class Shape:
@@ -465,6 +465,18 @@ class Partition:
 
         for nu in _subpartitions(mu, strict):
             yield cls.trim(nu)
+
+    @classmethod
+    def flags(cls, n):
+        q = deque([()])
+        while q:
+            flag = q.popleft()
+            if len(flag) == n:
+                yield flag
+                continue
+            minpart = 1 if len(flag) == 0 else max(len(flag) + 1, flag[-1])
+            for a in range(minpart, n + 1):
+                q.append(flag + (a,))
 
 
 class StrictPartition(Partition):

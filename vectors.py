@@ -1,4 +1,3 @@
-from polynomials import MPolynomial
 import math
 
 
@@ -107,7 +106,7 @@ class Vector:
         return Vector(dictionary={k: v // c for k, v in self.items()}, printer=self.printer)
 
     def is_scalar(self, other):
-        return type(other) in [int, MPolynomial]
+        return type(other) == int or str(type(other)) == 'MPolynomial'
 
     def is_zero(self):
         return len(self) == 0
@@ -117,7 +116,7 @@ class Vector:
             return ' + '
         elif coeff == -1:
             return ' - '
-        elif type(coeff) == MPolynomial:
+        elif type(coeff) != int:
             return ' + (%s)*' % coeff
         elif coeff > 0:
             return ' + %s*' % coeff

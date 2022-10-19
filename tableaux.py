@@ -1085,6 +1085,44 @@ class Tableau:
         q = cls.random_shifted(StrictPartition(p.partition()))
         return cls.inverse_fpf(p, q)
 
+    def is_key_tableau(self):
+        rows = self.get_rows()
+        # check that shape is key diagram with weakly increasing rows
+        for index, r in enumerate(rows):
+            if any(r[j] < r[j + 1] for j in range(len(r) - 1)):
+                print('*1')
+                return False
+            if any(self.get(index + 1, j + 1) is None for j in range(len(r))):
+                print('*2')
+                return False
+        n = max([0] + [len(r) for r in rows])
+        m = len(rows)
+        # check that columns have distinct entries + triangle condition
+        for j in range(1, n + 1):
+            for i1 in range(1, m + 1):
+                a = self.get(i1, j)
+                if a is None:
+                    continue
+                a = a.number
+                for i2 in range(i1 + 1, m + 1): 
+                    b = self.get(i2, j)
+                    if b is None:
+                        continue
+                    b = b.number
+                    if a == b:
+                        print('*3')
+                        return False
+                    if a > b and not ((i1, j + 1) in self and self.get(i1, j + 1).number > b):
+                        print('*4')
+                        return False
+        return True
+
+    def is_key_flagged(self, flag=None):
+        if flag is None:
+            return self.is_key_tableau() and all(self.get(i, j).number <= i for i, j in self)
+        else:
+            return self.is_key_tableau() and all(self.get(i, j).number <= flag[i - 1] for i, j in self)
+
     def is_shifted(self):
         return not any(j < i for i, j in self.mapping)
 
