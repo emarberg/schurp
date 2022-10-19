@@ -100,11 +100,15 @@ class Word:
                 rho = cls.lift_sequence(rho, t)
             return rho
         if j is None:
+            if i > len(rho):
+                return None
             ans = rho[:]
-            top = rho[i]
-            bot = rho[i - 1]
+            if i == len(ans):
+                ans.append([])
+            top = ans[i]
+            bot = ans[i - 1]
             ntop, nbot = cls.lift(top, bot)
-            if not (ntop and ntop[0] == bot[0]):
+            if not (top and ntop and bot and ntop[0] == bot[0]):
                 ans[i], ans[i - 1] = ntop, nbot
             return ans if ans != rho else None
 
@@ -112,22 +116,26 @@ class Word:
     def lift(cls, top, bot=None):
         # error after Definition 4.2.6 in Assaf 1903.05802v1 (corrected in published version):
         # lifting first example in Fig. 12 does not give every in Fig. 10
+
         if bot is None:
             rho = list(reversed(cls.run_decomposition(top)))
-            should_continue = True
-            while should_continue:
-                should_continue = False
-                for j in range(len(rho) - 1, 0, -1):
-                    indices = [i for i in range(1, j + 1) if cls.lift_sequence(rho, i, j) is not None]
-                    if indices:
-                        should_continue = True
-                        i = indices[0]
-                        rho = cls.lift_sequence(rho, i, j)
-                        break
+            for k in range(len(rho) - 1, -1, -1):
+                j = rho[k][0] - 1
+                indices = [i for i in range(1, j + 1) if cls.lift_sequence(rho, i, j) is not None]
+                if indices:
+                    i = indices[0]
+                    rho = cls.lift_sequence(rho, i, j)
             dictionary = {(i + 1, j + 1): rho[i][j] for i in range(len(rho)) for j in range(len(rho[i]))}
             ans = Tableau(dictionary)
             # assert ans.is_increasing()
             return ans
+
+        # errors/omissions in Definitions 4.19 and 4.22 of Assaf 1903.05802v1 published version:
+        #
+        # * lift_i(T) and lift(rho) are not ever formally defined?
+        # * lift_i(T) should move row i to row i + 1 if row i + 1 is empty
+        # * if P has n - 1 rows then j_k in Def. 4.22 should be (first entry in row n - k of P) - 1
+        #
         if bot is not None:
             top, bot = cls.lift_alignment(top, bot)
 
