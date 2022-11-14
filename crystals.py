@@ -52,11 +52,11 @@ class AbstractCrystalMixin:
             parts = []
             for tup in n:
                 if len(tup) == 0:
-                    parts += ['\\emptyset']
+                    parts += ['\\cdot']
                 else:
                     letters = [str(i) if i > 0 else str(-i) + "'" for i in tup]
                     parts += [''.join(letters)]
-            return '$' + '\\hspace{0.5mm} /\\hspace{0.5mm} '.join(parts) + '$'
+            return '$' + '\\hspace{0.0mm} /\\hspace{0.0mm} '.join(parts) + '$'
 
         def tex_string(n):
             try:
@@ -75,9 +75,14 @@ class AbstractCrystalMixin:
         if not tex:
             s += ['    node [shape=box; fontname="courier"; style=filled];']
         if tex:
-            s += ['    node [shape=box,style=filled,color=lightgray];']
+            s += ['    node [shape=box,style=filled,color=gray92];']
             for x in self:
-                s += ['    "%s" [margin="0.0",width="0.0",height="0.0",texlbl="%s"];' % (printer(x), tex_string(x))]
+                ts = tex_string(x)
+                color = 'gray95'
+                if x in highlighted_nodes:
+                    ts = '$\\boxed{' + ts[1:-1] + '}$'
+                    color = 'none'
+                s += ['    "%s" [color="%s",margin="0.0",width="0.0",height="0.0",texlbl="%s"];' % (printer(x), color, ts)]
         else:
             for x in self:
                 if x in highlighted_nodes:
