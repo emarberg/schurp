@@ -2194,7 +2194,7 @@ def test_leading_q_key(m=4, l=4):
     assert not any(len(v) > 1 for v in valuesdict.values())
 
 
-def q_update(targets, exponents, halves, alphas):
+def q_update(targets, exponents, halves, alphas, functional):
     for e in targets:
         for d in exponents:
             try:
@@ -2203,7 +2203,7 @@ def q_update(targets, exponents, halves, alphas):
             except:
                 continue
             if a not in alphas:
-                alphas[a] = q_key(a)
+                alphas[a] = functional(a)
                 halves[e] = halves.get(e, []) + [(alphas[a], a)]
 
 
@@ -2237,6 +2237,7 @@ def decompose_q(f):
 
 
 def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False):
+    functional = q_key
     if halves is None:
         halves = q_halves_cache
     if alphas is None:
@@ -2247,12 +2248,12 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
         return []
     exponents = get_exponents(f)
     targets = [exponents[0]]
-    q_update(targets, exponents, halves, alphas)
+    q_update(targets, exponents, halves, alphas, functional)
     answers = []
     for target in targets:
         dict_key = dict_from_tuple(target)
         for g, alpha in sorted(halves.get(target, [])):
-            assert g == q_key(alpha)
+            assert g == functional(alpha)
             a = f[dict_key]
             b = g[dict_key]
             if a % b == 0:
@@ -2269,7 +2270,7 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
     for ans in answers:
         g = 0
         for alpha, coeff in ans.items():
-            g += coeff * q_key(alpha)
+            g += coeff * functional(alpha)
         assert f == g
     return answers
 
@@ -2296,7 +2297,7 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
     return i, s, d, qvex, ivex
 
 
-def p_update(targets, exponents, halves, alphas):
+def p_update(targets, exponents, halves, alphas, functional):
     for e in targets:
         for d in exponents:
             try:
@@ -2305,11 +2306,12 @@ def p_update(targets, exponents, halves, alphas):
                 continue
             assert skew_symmetric_halves(a) == (d, e)
             if a not in alphas:
-                alphas[a] = p_key(a)
+                alphas[a] = functional(a)
                 halves[e] = halves.get(e, []) + [(alphas[a], a)]
 
 
 def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False):
+    functional = p_key
     if halves is None:
         halves = p_halves_cache
     if alphas is None:
@@ -2320,7 +2322,7 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
         return []
     exponents = get_exponents(f)
     targets = [exponents[0]]
-    p_update(targets, exponents, halves, alphas)
+    p_update(targets, exponents, halves, alphas, functional)
     answers = []
     for target in targets:
         dict_key = dict_from_tuple(target)
@@ -2339,7 +2341,7 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
     for ans in answers:
         g = 0
         for alpha, coeff in ans.items():
-            g += coeff * p_key(alpha)
+            g += coeff * functional(alpha)
         assert f == g
     return answers
 

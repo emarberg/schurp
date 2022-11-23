@@ -26,6 +26,44 @@ from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
 
 
+def test_inv_odd_almost_highest(n):
+    for permutation_size in range(9):
+        for w in Permutation.involutions(permutation_size):
+            crystal = AbstractQCrystal.from_involution(w, n, increasing=False)
+            for f in crystal:
+                 if all(crystal.e_operator(i, f) is None for i in range(-n + 2, n) if i != 0) and crystal.e_operator(-n + 1, f) is not None:
+                    g = crystal.e_operator(-n + 1, f)
+                    print(f, '--->', g)
+                    print()
+
+                    x = crystal.s_operator(n - 2, f)
+                    print(x)
+                    print()
+                    x = crystal.s_operator(n - 1, x)
+                    print(x)
+                    print()
+                    x = crystal.e_operator(-n + 2, x)
+                    print(x)
+                    print()
+                    x = crystal.s_operator(n - 1, x)
+                    print(x)
+                    print()
+                    x = crystal.s_operator(n - 2, x)
+                    print(x)
+                    print()
+                    
+                    print()
+                    print(eg_insert(*f)[0])
+                    print()
+                    print(eg_insert(*g)[0])
+                    input('')
+
+
+            
+
+def test_fpf_odd_almost_highest(n):
+    pass
+
 def test_highest_lowest(n, k=6):
     for w in Permutation.all(k):
         crystal = AbstractGLCrystal.from_permutation(w, n, increasing=False)
