@@ -5,6 +5,36 @@ from vectors import Vector
 from tableaux import Tableau
 
 
+def test_weak_eg_descent(n=5):
+    for pi in Permutation.all(n):
+        for w in pi.get_reduced_words():
+            l = len(w)
+            if l < 2:
+                continue
+
+            p, q = weak_eg_insert(*w)
+
+            i1, j1, = [a for a, b in q.mapping.items() if abs(b) == 1][0]
+            i2, j2, = [a for a, b in q.mapping.items() if abs(b) == 2][0]
+
+            print()
+            print(w)
+
+            q = Tableau({a: b if abs(b) in [1, 2] else 0 for a, b in q.mapping.items()})
+
+            # p, q = eg_insert(*w)
+            # q = Tableau({a: b for a, b in q.mapping.items() if abs(b) in [l - 1, l]})
+            print(q)
+
+            if w[-2] < w[-1]:
+                assert j1 > j2
+                # assert i1 <= i2
+
+            if w[-2] > w[-1]:
+                assert j1 <= j2
+                # assert i1 > i2
+
+
 def test_weak_eg_insertion(n=5):
     for flag in Partition.flags(n - 1):
         print('flag =', flag)
