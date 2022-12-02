@@ -5,6 +5,23 @@ from vectors import Vector
 from tableaux import Tableau
 
 
+def test(n):
+    w = Permutation.random_reduced_word(n)
+    last = None
+    for i in range(len(w)):
+        p, q = eg_insert(*w[:i + 1])
+        print(p)
+        path = Word.lifting_path(p.row_reading_word())
+        print(path) #, w[:i + 1])
+        if last is not None:
+            box = [b for b in p.mapping if b not in last.mapping][0]
+            print(box)
+        last = p
+        # p, q = weak_eg_insert(*w[:i + 1])
+        # print(p)
+    print(w)
+
+
 def test_weak_eg_descent(n=5):
     for pi in Permutation.all(n):
         for w in pi.get_reduced_words():
@@ -20,19 +37,20 @@ def test_weak_eg_descent(n=5):
             print()
             print(w)
 
-            q = Tableau({a: b if abs(b) in [1, 2] else 0 for a, b in q.mapping.items()})
+            # q = Tableau({a: b if abs(b) in [1, 2] else 0 for a, b in q.mapping.items()})
 
             # p, q = eg_insert(*w)
             # q = Tableau({a: b for a, b in q.mapping.items() if abs(b) in [l - 1, l]})
-            print(q)
+            # print(p)
+            # print(q)
 
             if w[-2] < w[-1]:
                 assert j1 > j2
-                # assert i1 <= i2
+            #    assert i1 <= i2
 
             if w[-2] > w[-1]:
                 assert j1 <= j2
-                # assert i1 > i2
+            #    assert i1 > i2
 
 
 def test_weak_eg_insertion(n=5):
