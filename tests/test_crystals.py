@@ -27,36 +27,30 @@ import random
 
 
 def test_inv_odd_almost_highest(n):
-    for permutation_size in range(9):
+    for permutation_size in range(8):
         for w in Permutation.involutions(permutation_size):
             crystal = AbstractQCrystal.from_involution(w, n, increasing=False)
             for f in crystal:
-                 if all(crystal.e_operator(i, f) is None for i in range(-n + 2, n) if i != 0) and crystal.e_operator(-n + 1, f) is not None:
-                    g = crystal.e_operator(-n + 1, f)
-                    print(f, '--->', g)
-                    print()
+                i = 0
+                while i + 1 < n and crystal.e_operator(i + 1, f) is None:
+                    i += 1
+                if i == 0:
+                    continue
+                j = 1
+                while j <= i and crystal.e_operator(-j, f) is None:
+                    j += 1
+                if i < j:
+                    continue
 
-                    x = crystal.s_operator(n - 2, f)
-                    print(x)
-                    print()
-                    x = crystal.s_operator(n - 1, x)
-                    print(x)
-                    print()
-                    x = crystal.e_operator(-n + 2, x)
-                    print(x)
-                    print()
-                    x = crystal.s_operator(n - 1, x)
-                    print(x)
-                    print()
-                    x = crystal.s_operator(n - 2, x)
-                    print(x)
-                    print()
-                    
-                    print()
-                    print(eg_insert(*f)[0])
-                    print()
-                    print(eg_insert(*g)[0])
-                    input('')
+                g = crystal.e_operator(-j, f)
+                print('i =', i, 'j =', j)
+                print(f, '---', -j, '--->', g)
+                print()
+                print(eg_insert(*f)[0])
+                print()
+                print(eg_insert(*g)[0])
+                # input('')
+                assert all(crystal.e_operator(k, g) is None for k in range(1, j + 1))
 
 
             
@@ -223,6 +217,8 @@ def restrict_variables(ans, n):
 
 
 def inv_negative_one_operator_test(crystal, subset):
+    if crystal.rank == 1:
+        return True
     for b in crystal:
         c = crystal.e_operator(-1, b)
         if c is None or c == crystal.e_operator(1, b):
@@ -523,21 +519,24 @@ def test_inv_demazure(n=2, limit=8):
             
             print(nu, w_mu)
 
+            assert inv_negative_one_operator_test(crystal, demazure[nu])
+            assert inv_zero_operator_test(crystal, demazure[nu])
+            verify_inv_string_lengths(crystal, demazure[nu])
+
             try:
-                if n < max(alpha):
+                if n < max(nu):
                     assert ch != q_key(nu)
                 else:
                     assert ch == q_key(nu)
                 assert ch == expected_ch
-                assert inv_negative_one_operator_test(crystal, demazure[nu])
-                assert inv_zero_operator_test(crystal, demazure[nu])
-                verify_inv_string_lengths(crystal, demazure[nu])
             except:
                 # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
 
 
 def fpf_negative_one_operator_test(crystal, subset):
+    if crystal.rank == 1:
+        return True
     for i in [1]:
         for b in subset:
             c = crystal.f_operator(-i, b)
@@ -594,14 +593,15 @@ def test_fpf_demazure(n=2, limit=8):
             
             print(nu, w_mu)
 
+            assert fpf_negative_one_operator_test(crystal, demazure[nu])
+            verify_fpf_string_lengths(crystal, demazure[nu])
+
             try:
-                if n < max(alpha):
+                if n < max(nu):
                     assert ch != p_key(nu)
                 else:
                     assert ch == p_key(nu)
                 assert ch == expected_ch
-                assert fpf_negative_one_operator_test(crystal, demazure[nu])
-                verify_fpf_string_lengths(crystal, demazure[nu])
             except:
                 # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
