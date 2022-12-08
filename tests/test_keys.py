@@ -6,8 +6,8 @@ from keys import (
     skew_symmetric_weak_compositions,
     key, atom,
     q_power,
-    p_key, p_atom,
-    q_key, q_atom,
+    p_key, p_atom, p_lascoux,
+    q_key, q_atom, q_lascoux,
     get_exponents,
     decompose_key,
     decompose_into_compositions,
@@ -28,7 +28,9 @@ from keys import (
     skew_symmetric_partitions,
     symmetric_half,
     print_skew_symmetric_diagram,
-    print_symmetric_diagram
+    print_symmetric_diagram,
+    symmetrize_strict_partition,
+    skew_symmetrize_strict_partition,
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, FPFSchubert
@@ -39,6 +41,9 @@ from words import Word
 from marked import MarkedNumber
 from vectors import Vector
 from tableaux import Tableau
+
+from stable.utils import GP, GQ
+
 import pyperclip
 import pytest
 import time
@@ -52,6 +57,50 @@ p_halves_cache = {}
 
 q_insertion_cache = {}
 p_insertion_cache = {}
+
+
+def test_p_lascoux_to_gp(n=10):
+    k = 0
+    while n is None or k <= n:
+        print(k)
+        for mu in StrictPartition.all(k):
+            mu = tuple(mu)
+            print('  ', mu)
+            lam = tuple(reversed(skew_symmetrize_strict_partition(mu)))
+            nvars = max((0,) + mu) + 1
+            print('  ', mu, '-->', lam, ':', nvars)
+            f = p_lascoux(lam)
+            g = GP(nvars, mu).polynomial()
+            if f != g:
+                print()
+                print('**** L =', str(f)[:nch])
+                print('*** GP =', str(g)[:nch])
+                print('GP - L =', str(g - f)[:nch])
+                print('L < GP :', f < g)
+                print()
+
+
+def test_q_lascoux_to_gq(n=10):
+    nch = 150
+    k = 0
+    while n is None or k <= n:
+        print(k)
+        for mu in StrictPartition.all(k):
+            mu = tuple(mu)
+            lam = tuple(reversed(symmetrize_strict_partition(mu)))
+            nvars = max((0,) + mu)
+            print('  ', mu, '-->', lam, ':', nvars)
+            f = q_lascoux(lam)
+            g = GQ(nvars, mu).polynomial()
+            if f != g:
+                print()
+                print('FAIL')
+                # print('**** L =', str(f)[:nch])
+                # print('*** GQ =', str(g)[:nch])
+                # print('GQ - L =', str(g - f)[:nch])
+                print('L < GQ :', f < g)
+                print()
+        k +=1
 
 
 def test_distinct_atom(m=4, l=4):

@@ -26,7 +26,7 @@ from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
 
 
-def test_inv_odd_almost_highest(n):
+def test_inv_odd_almost_highest(n=3):
     for permutation_size in range(8):
         for w in Permutation.involutions(permutation_size):
             crystal = AbstractQCrystal.from_involution(w, n, increasing=False)
@@ -55,10 +55,10 @@ def test_inv_odd_almost_highest(n):
 
             
 
-def test_fpf_odd_almost_highest(n):
+def test_fpf_odd_almost_highest(n=3):
     pass
 
-def test_highest_lowest(n, k=6):
+def test_highest_lowest(n=3, k=6):
     for w in Permutation.all(k):
         crystal = AbstractGLCrystal.from_permutation(w, n, increasing=False)
         highest = [f for f in crystal if crystal.is_highest_weight(f)]
@@ -79,7 +79,7 @@ def test_highest_lowest(n, k=6):
             assert f == expected
 
 
-def test_highest_lowest_fpf(n, k=6):
+def test_highest_lowest_fpf(n=3, k=6):
     for w in Permutation.fpf_involutions(k):
         crystal = AbstractQCrystal.from_fpf_involution(w, n, increasing=False)
         highest = [f for f in crystal if crystal.is_highest_weight(f)]
@@ -102,7 +102,7 @@ def test_highest_lowest_fpf(n, k=6):
             expected = (n - len(expected)) * ((),) + expected
 
 
-def test_highest_lowest_inv(n, k=6):
+def test_highest_lowest_inv(n=3, k=6):
     for w in Permutation.involutions(k):
         crystal = AbstractQCrystal.from_involution(w, n, increasing=False)
         highest = [f for f in crystal if crystal.is_highest_weight(f)]
@@ -125,7 +125,7 @@ def test_highest_lowest_inv(n, k=6):
             expected = (n - len(expected)) * ((),) + expected
             
 
-def test_e0_preserves_strings(n, k=6):
+def test_e0_preserves_strings(n=3, k=6):
     for w in Permutation.involutions(k):
         crystal = AbstractPrimedQCrystal.from_involution(w, n, increasing=False)
         for f in crystal:

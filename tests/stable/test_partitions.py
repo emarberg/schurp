@@ -95,11 +95,11 @@ def test_subpartitions():
     assert set(Partition.subpartitions([2, 1])) == {(), (1,), (1, 1), (2,), (2, 1)}
     assert len(list(Partition.subpartitions([2, 1]))) == 5
 
-    assert set(Partition.subpartitions((), True)) == {()}
-    assert set(Partition.subpartitions([1], True)) == {(), (1,)}
-    assert set(Partition.subpartitions([1, 1], True)) == {(), (1,)}
-    assert set(Partition.subpartitions([2, 1], True)) == {(), (1,), (2,), (2, 1)}
-    assert len(list(Partition.subpartitions([2, 1], True))) == 4
+    assert set(Partition.subpartitions((), strict=True)) == {()}
+    assert set(Partition.subpartitions([1], strict=True)) == {(), (1,)}
+    assert set(Partition.subpartitions([1, 1], strict=True)) == {(), (1,)}
+    assert set(Partition.subpartitions([2, 1], strict=True)) == {(), (1,), (2,), (2, 1)}
+    assert len(list(Partition.subpartitions([2, 1], strict=True))) == 4
 
 
 def test_find_shifted_corners():

@@ -2,7 +2,7 @@ from stable.tableaux import Tableau
 from stable.partitions import Partition
 from stable.vectors import Vector
 import pytest
-import stable.utils
+import stable.utils as utils
 import time
 from collections import defaultdict
 import numpy
