@@ -45,6 +45,14 @@ KEY_ATOM_CACHE = {}
 PKEY_ATOM_CACHE = {}
 QKEY_ATOM_CACHE = {}
 
+LASCOUX_POLYNOMIAL_CACHE = {}
+PLASCOUX_POLYNOMIAL_CACHE = {}
+QLASCOUX_POLYNOMIAL_CACHE = {}
+
+LASCOUX_ATOM_CACHE = {}
+PLASCOUX_ATOM_CACHE = {}
+QLASCOUX_ATOM_CACHE = {}
+
 REDUCED_TABLEAU_CACHE = {}
 O_REDUCED_TABLEAU_CACHE = {}
 SP_REDUCED_TABLEAU_CACHE = {}
@@ -574,6 +582,24 @@ def q_shifted_monomial(weak_composition):
     return ans
 
 
+def gp_shifted_monomial(weak_composition):
+    mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+    ans = X(0)**0
+    for i in range(1, len(mu) + 1):
+        for j in range(i + 1, mu[i - 1] + 1):
+            ans *= X(i) + X(j) + X(0) * X(i) * X(j)
+    return ans
+
+
+def gq_shifted_monomial(weak_composition):
+    mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+    ans = X(0)**0
+    for i in range(1, len(mu) + 1):
+        for j in range(i, mu[i - 1] + 1):
+            ans *= X(i) + X(j) + X(0) * X(i) * X(j)
+    return ans
+
+
 def sorting_permutation(weak_comp):
     word = []
     n = len(weak_comp)
@@ -595,7 +621,7 @@ def sorting_descent(weak_comp):
     return weak_comp, None
 
 
-def _generic_key(weak_comp, cache, name, atomic, monomial_fn):
+def _generic_key(weak_comp, cache, name, atomic, monomial_fn, ktheoretic):
     while weak_comp and weak_comp[-1] == 0:
         weak_comp = weak_comp[:-1]
     if weak_comp not in cache:
@@ -603,35 +629,60 @@ def _generic_key(weak_comp, cache, name, atomic, monomial_fn):
         if i is None:
             cache[weak_comp] = monomial_fn(weak_comp)
         else:
-            f = _generic_key(new_comp, cache, name, atomic, monomial_fn)
-            cache[weak_comp] = f.isobaric_divided_difference(i) - (f if atomic else 0)
+            f = _generic_key(new_comp, cache, name, atomic, monomial_fn, ktheoretic)
+            g = (f * (1 + X(0) * X(i + 1))) if ktheoretic else f
+            cache[weak_comp] = g.isobaric_divided_difference(i) - (f if atomic else 0)
         # if len(cache) % 100 == 0:
         #    print(' . . .', name, 'cache:', len(cache))
     return cache[weak_comp]
 
 
 def key(weak_comp):
-    return _generic_key(weak_comp, KEY_POLYNOMIAL_CACHE, 'Key Polynomial', False, leading_monomial)
+    return _generic_key(weak_comp, KEY_POLYNOMIAL_CACHE, 'Key Polynomial', False, leading_monomial, False)
 
 
 def atom(weak_comp):
-    return _generic_key(weak_comp, KEY_ATOM_CACHE, 'Key Atom', True, leading_monomial)
+    return _generic_key(weak_comp, KEY_ATOM_CACHE, 'Key Atom', True, leading_monomial, False)
 
 
 def p_key(weak_comp):
-    return _generic_key(weak_comp, PKEY_POLYNOMIAL_CACHE, 'PKey Polynomial', False, p_shifted_monomial)
+    return _generic_key(weak_comp, PKEY_POLYNOMIAL_CACHE, 'PKey Polynomial', False, p_shifted_monomial, False)
 
 
 def p_atom(weak_comp):
-    return _generic_key(weak_comp, PKEY_ATOM_CACHE, 'PKey Atom', True, p_shifted_monomial)
+    return _generic_key(weak_comp, PKEY_ATOM_CACHE, 'PKey Atom', True, p_shifted_monomial, False)
 
 
 def q_key(weak_comp):
-    return _generic_key(weak_comp, QKEY_POLYNOMIAL_CACHE, 'QKey Polynomial', False, q_shifted_monomial)
+    return _generic_key(weak_comp, QKEY_POLYNOMIAL_CACHE, 'QKey Polynomial', False, q_shifted_monomial, False)
 
 
 def q_atom(weak_comp):
-    return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', True, q_shifted_monomial)
+    return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', True, q_shifted_monomial, False)
+
+
+def lascoux(weak_comp):
+    return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE, 'Lascoux Polynomial', False, leading_monomial, True)
+
+
+def lascoux_atom(weak_comp):
+    return _generic_key(weak_comp, LASCOUX_ATOM_CACHE, 'Lascoux Atom', True, leading_monomial, True)
+
+
+def p_lascoux(weak_comp):
+    return _generic_key(weak_comp, PLASCOUX_POLYNOMIAL_CACHE, 'PLascoux Polynomial', False, gp_shifted_monomial, True)
+
+
+def p_lascoux_atom(weak_comp):
+    return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE, 'PLascoux Atom', True, gp_shifted_monomial, True)
+
+
+def q_lascoux(weak_comp):
+    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE, 'QKey Polynomial', False, gq_shifted_monomial, True)
+
+
+def q_lascoux_atom(weak_comp):
+    return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE, 'QLASCOUX Atom', True, gq_shifted_monomial, True)
 
 
 def tuplize(g):
