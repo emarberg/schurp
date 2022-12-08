@@ -65,7 +65,6 @@ def test_p_lascoux_to_gp(n=10):
         print(k)
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
-            print('  ', mu)
             lam = tuple(reversed(skew_symmetrize_strict_partition(mu)))
             nvars = max((0,) + mu) + 1
             print('  ', mu, '-->', lam, ':', nvars)
@@ -73,11 +72,13 @@ def test_p_lascoux_to_gp(n=10):
             g = GP(nvars, mu).polynomial()
             if f != g:
                 print()
-                print('**** L =', str(f)[:nch])
-                print('*** GP =', str(g)[:nch])
-                print('GP - L =', str(g - f)[:nch])
+                print('FAIL')
+                # print('**** L =', str(f)[:nch])
+                # print('*** GP =', str(g)[:nch])
+                # print('GP - L =', str(g - f)[:nch])
                 print('L < GP :', f < g)
                 print()
+        k += 1
 
 
 def test_q_lascoux_to_gq(n=10):

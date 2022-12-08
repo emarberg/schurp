@@ -91,7 +91,7 @@ def test_highest_lowest_fpf(n=3, k=6):
             # expected += (n - len(expected)) * ((),)
             print(tab)
             print(f)
-            input('\n?\n')
+            # input('\n?\n')
 
         for f in lowest:
             fstar = tuple(tuple(k - i for i in part) for part in f)
@@ -114,7 +114,7 @@ def test_highest_lowest_inv(n=3, k=6):
             # expected += (n - len(expected)) * ((),)
             print(tab)
             print(f)
-            input('\n?\n')
+            # input('\n?\n')
 
         for f in lowest:
             fstar = tuple(tuple(k - i for i in part) for part in f)

@@ -2,7 +2,7 @@ from schubert import *
 from collections import defaultdict
 
 
-def test_topdegree(n):
+def _test_topdegree(n):
     for w in Permutation.fpf_involutions(n):
         gp = FPFGrothendieck.get(w)
         print(w, gp)
