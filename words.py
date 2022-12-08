@@ -24,7 +24,7 @@ class Word:
             if i == 0 or w[i - 1] > w[i]:
                 ans.append([])
             ans[-1].append(w[i])
-        return ans
+        return [tuple(a) for a in ans]
 
     @classmethod
     def drop(cls, top, bot=None):
@@ -111,6 +111,21 @@ class Word:
             if not (top and ntop and bot and ntop[0] == bot[0]):
                 ans[i], ans[i - 1] = ntop, nbot
             return ans if ans != rho else None
+
+    @classmethod
+    def lifting_path(cls, top):
+        ans = []
+        rho = list(reversed(cls.run_decomposition(top)))
+        for k in range(len(rho) - 1, -1, -1):
+            j = rho[k][0] - 1
+            indices = [i for i in range(1, j + 1) if cls.lift_sequence(rho, i, j) is not None]
+            if indices:
+                i = indices[0]
+                rho = cls.lift_sequence(rho, i, j)
+                ans.append((i, j + 1))
+            else:
+                ans.append((j + 1, j + 1))
+        return ans
 
     @classmethod
     def lift(cls, top, bot=None):
