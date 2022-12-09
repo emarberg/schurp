@@ -24,6 +24,7 @@ from keys import (
     shifted_knuth_class,
     shifted_key_maps,
     is_symmetric_composition,
+    is_skew_symmetric_composition,
     symmetric_partitions,
     skew_symmetric_partitions,
     symmetric_half,
@@ -927,6 +928,24 @@ def test_symmetric_halves(m=6, l=6):
                     print()
                     print()
                 assert alpha == beta
+
+
+def test_skew_symmetric_weak_compositions(nn=8, pp=8):
+    def testfun(n, parts, reduced=False):
+        for alpha in symmetric_weak_compositions(n, parts, reduced):
+            if is_skew_symmetric_composition(alpha):
+                yield alpha
+
+    for n in range(nn):
+        for p in range(pp):
+            for r in [True, False]:
+                expected = sorted(testfun(n, p, r))
+                computed = sorted(skew_symmetric_weak_compositions(n, p, r))
+                print()
+                print(n, p, r)
+                print(expected)
+                print(computed)
+                assert expected == computed
 
 
 def test_skew_symmetric_halves(m=6, l=6):
@@ -2319,7 +2338,7 @@ def _decompose(f, halves, alphas, positive, multiple, functional, update):
     if positive and not f.is_positive():
         return []
     exponents = get_exponents(f)
-    targets = exponents # [exponents[0]]
+    targets = [exponents[0]]
     answers = []
     for target in targets:
         update([target], exponents, halves, alphas, functional)
