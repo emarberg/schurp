@@ -33,7 +33,7 @@ from keys import (
     skew_symmetrize_strict_partition,
 )
 from symmetric import FPFStanleyExpander
-from schubert import Schubert, InvSchubert, FPFSchubert
+from schubert import Schubert, InvSchubert, FPFSchubert, FPFGrothendieck
 from permutations import Permutation
 from partitions import Partition, StrictPartition
 from collections import defaultdict
@@ -50,12 +50,16 @@ import time
 
 
 q_alphas_cache = {}
-q_lascoux_alphas_cache = {}
 q_halves_cache = {}
 
+q_lascoux_alphas_cache = {}
+q_lascoux_halves_cache = {}
+
 p_alphas_cache = {}
-p_lascoux_alphas_cache = {}
 p_halves_cache = {}
+
+p_lascoux_alphas_cache = {}
+p_lascoux_halves_cache = {}
 
 q_insertion_cache = {}
 p_insertion_cache = {}
@@ -2305,8 +2309,8 @@ def q_update(targets, exponents, halves, alphas, functional):
             except:
                 continue
             if a not in alphas:
-                alphas[a] = functional(a)
-                halves[e] = halves.get(e, []) + [(alphas[a], a)]
+                alphas[a] = 1
+                halves[e] = halves.get(e, []) + [a]
 
 
 def _decompose(f, halves, alphas, positive, multiple, functional, update):
@@ -2315,13 +2319,13 @@ def _decompose(f, halves, alphas, positive, multiple, functional, update):
     if positive and not f.is_positive():
         return []
     exponents = get_exponents(f)
-    targets = [exponents[0]]
-    update(targets, exponents, halves, alphas, functional)
+    targets = exponents # [exponents[0]]
     answers = []
     for target in targets:
+        update([target], exponents, halves, alphas, functional)
         dict_key = dict_from_tuple(target)
-        for g, alpha in sorted(halves.get(target, [])):
-            assert g == functional(alpha)
+        for alpha in sorted(halves.get(target, [])):
+            g = functional(alpha)
             a = f[dict_key]
             b = g[dict_key]
             if a % b == 0:
@@ -2383,12 +2387,12 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
 
 
 def try_to_decompose_q_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
-    functional = lambda a: q_lascoux(a).set(0, 1)
+    functional = q_lascoux
     update = q_update
-    halves = q_halves_cache if halves is None else halves
+    halves = q_lascoux_halves_cache if halves is None else halves
     alphas = q_lascoux_alphas_cache if alphas is None else alphas
     return _decompose(f, halves, alphas, positive, multiple, functional, update)
-    
+
 
 def test_inv_schubert(n=4, positive=True, multiple=True):
     i = list(Permutation.involutions(n))
@@ -2421,8 +2425,8 @@ def p_update(targets, exponents, halves, alphas, functional):
                 continue
             assert skew_symmetric_halves(a) == (d, e)
             if a not in alphas:
-                alphas[a] = functional(a)
-                halves[e] = halves.get(e, []) + [(alphas[a], a)]
+                alphas[a] = 1
+                halves[e] = halves.get(e, []) + [a]
 
 
 def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False):
@@ -2431,7 +2435,15 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
     halves = p_halves_cache if halves is None else halves
     alphas = p_alphas_cache if alphas is None else alphas
     return _decompose(f, halves, alphas, positive, multiple, functional, update)
-    
+
+
+def try_to_decompose_p_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
+    functional = p_lascoux
+    update = p_update
+    halves = p_lascoux_halves_cache if halves is None else halves
+    alphas = p_lascoux_alphas_cache if alphas is None else alphas
+    return _decompose(f, halves, alphas, positive, multiple, functional, update)
+
 
 def is_fpf_vexillary(w):
     f = FPFStanleyExpander(w).expand()
@@ -2503,3 +2515,22 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
     print()
     print('caches =', len(p_halves_cache), len(p_alphas_cache))
     return i, s, d, pvex, fvex
+
+
+def test_fpf_grothendieck(n=4, positive=True, multiple=False):
+    i = list(Permutation.fpf_involutions(n))
+    s = {w: FPFGrothendieck.get(w).set(0, 1) for w in i}
+    d = {}
+    for t, w in enumerate(s):
+        print(len(s) - t, ':', w)
+        d[w] = try_to_decompose_p_lascoux(s[w], p_lascoux_halves_cache, p_lascoux_alphas_cache, positive, multiple)
+        print()
+        if d[w]:
+            for dec in d[w]:
+                print('  *', dec, w.code())
+            d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
+        else:
+            print('  ** FAILED')
+        print()
+    print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
+    return i, s, d

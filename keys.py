@@ -587,7 +587,7 @@ def gp_shifted_monomial(weak_composition):
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
         for j in range(i + 1, mu[i - 1] + 1):
-            ans *= X(i) + X(j) + X(0) * X(i) * X(j)
+            ans *= X(i) + X(j) + X(i) * X(j)
     return ans
 
 
@@ -596,7 +596,7 @@ def gq_shifted_monomial(weak_composition):
     ans = X(0)**0
     for i in range(1, len(mu) + 1):
         for j in range(i, mu[i - 1] + 1):
-            ans *= X(i) + X(j) + X(0) * X(i) * X(j)
+            ans *= X(i) + X(j) + X(i) * X(j)
     return ans
 
 
@@ -630,7 +630,7 @@ def _generic_key(weak_comp, cache, name, atomic, monomial_fn, ktheoretic):
             cache[weak_comp] = monomial_fn(weak_comp)
         else:
             f = _generic_key(new_comp, cache, name, atomic, monomial_fn, ktheoretic)
-            g = (f * (1 + X(0) * X(i + 1))) if ktheoretic else f
+            g = (f * (1 + X(i + 1))) if ktheoretic else f
             cache[weak_comp] = g.isobaric_divided_difference(i) - (f if atomic else 0)
         # if len(cache) % 100 == 0:
         #    print(' . . .', name, 'cache:', len(cache))
@@ -696,6 +696,8 @@ def tuplize(g):
 
 
 def get_exponents(kappa):
+    # ans = sorted([tuplize(g) for g in kappa], key=lambda x: (sum(x), x))
+    # return [a for a in ans if sum(a) == sum(ans[0])]
     return sorted([tuplize(g) for g in kappa])
 
 
@@ -721,6 +723,24 @@ def decompose_into_compositions(kappa):
         kappa = kappa - coeff * xbeta(beta)
         ans[beta] = ans.get(beta, 0) + coeff
     return {k: v for k, v in ans.items() if v}
+
+
+def decompose_into_lascoux(kappa):
+    ans = {}
+    while kappa != 0:
+        betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
+        beta = betas[0]
+        coeff = kappa[dict_from_tuple(beta)]
+        kappa = kappa - coeff * lascoux(beta)
+        ans[beta] = ans.get(beta, 0) + coeff
+    return {k: v for k, v in ans.items() if v}
+
+
+def decompose_lascoux(kappa):
+    dec = decompose_into_lascoux(kappa)
+    assert len(dec) == 1
+    assert set(dec.values()) == {1}
+    return list(dec)[0]
 
 
 def decompose_into_keys(kappa):
