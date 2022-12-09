@@ -531,8 +531,8 @@ def skew_symmetric_weak_compositions(n, parts, reduced=False):
                     for i, a in enumerate(indices):
                         alpha[a] = gamma[i]
                     alpha = tuple(alpha)
-                    assert is_skew_symmetric_composition(alpha)
-                    yield alpha
+                    if is_skew_symmetric_composition(alpha):
+                        yield alpha
 
 
 def strict_weak_compositions(n, parts, reduced=False):

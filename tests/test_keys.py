@@ -42,7 +42,7 @@ from marked import MarkedNumber
 from vectors import Vector
 from tableaux import Tableau
 
-from stable.utils import GP, GQ
+from stable.utils import GP, GQ, Q, P, G_expansion, GP_expansion, SymmetricPolynomial
 
 import pyperclip
 import pytest
@@ -50,16 +50,18 @@ import time
 
 
 q_alphas_cache = {}
+q_lascoux_alphas_cache = {}
 q_halves_cache = {}
 
 p_alphas_cache = {}
+p_lascoux_alphas_cache = {}
 p_halves_cache = {}
 
 q_insertion_cache = {}
 p_insertion_cache = {}
 
 
-def test_p_lascoux_to_gp(n=10):
+def test_p_lascoux_to_gp(n=5):
     k = 0
     while n is None or k <= n:
         print(k)
@@ -72,16 +74,12 @@ def test_p_lascoux_to_gp(n=10):
             g = GP(nvars, mu).polynomial()
             if f != g:
                 print()
-                print('FAIL')
-                # print('**** L =', str(f)[:nch])
-                # print('*** GP =', str(g)[:nch])
-                # print('GP - L =', str(g - f)[:nch])
-                print('L < GP :', f < g)
+                print('FAIL,', 'L < GP :', f < g)
                 print()
         k += 1
 
 
-def test_q_lascoux_to_gq(n=10):
+def test_q_lascoux_to_gq(n=5):
     nch = 150
     k = 0
     while n is None or k <= n:
@@ -92,16 +90,41 @@ def test_q_lascoux_to_gq(n=10):
             nvars = max((0,) + mu)
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_lascoux(lam)
-            g = GQ(nvars, mu).polynomial()
+            gg = GQ(nvars, mu)
+            g = gg.polynomial()
+            if f != g:
+                ff = SymmetricPolynomial.from_polynomial(f)
+                print()
+                print('FAIL,', 'L < GQ :', f < g, 'nvars =', nvars)
+                print('    ', sorted(list(G_expansion(GQ(nvars, mu) - ff)), key=len))
+                try:
+                    print('    ', GP_expansion(ff))
+                except:
+                    print('    ', '(no GP expansion)')
+                # print()
+                # print(' L =', f)
+                # print('GQ =', g)
+                print()
+        k += 1
+
+
+def test_q_key_to_q(n=5):
+    nch = 150
+    k = 0
+    while n is None or k <= n:
+        print(k)
+        for mu in StrictPartition.all(k):
+            mu = tuple(mu)
+            lam = tuple(reversed(symmetrize_strict_partition(mu)))
+            nvars = max((0,) + mu)
+            print('  ', mu, '-->', lam, ':', nvars)
+            f = q_key(lam)
+            g = Q(nvars, mu).polynomial()
             if f != g:
                 print()
-                print('FAIL')
-                # print('**** L =', str(f)[:nch])
-                # print('*** GQ =', str(g)[:nch])
-                # print('GQ - L =', str(g - f)[:nch])
-                print('L < GQ :', f < g)
+                print('FAIL,', 'k < Q :', f < g)
                 print()
-        k +=1
+        k += 1
 
 
 def test_distinct_atom(m=4, l=4):
@@ -2227,7 +2250,7 @@ def test_leading_q_key(m=4, l=4):
                 print(exponents[0], exponents[-1])
                 print()
                 print({e: kappa[dict_from_tuple(a)] for e in exponents})
-                input('\n\n')
+                # input('\n\n')
                 assert beta == b
                 assert a in exponents
                 assert kappa[dict_from_tuple(a)] >= 2**q_power(alpha)
@@ -2242,19 +2265,6 @@ def test_leading_q_key(m=4, l=4):
         print(alpha, ':', b, a, '->', betas)
         print()
     assert not any(len(v) > 1 for v in valuesdict.values())
-
-
-def q_update(targets, exponents, halves, alphas, functional):
-    for e in targets:
-        for d in exponents:
-            try:
-                a = symmetric_composition_from_row_column_counts(d, e)
-                assert symmetric_halves(a) == (d, e)
-            except:
-                continue
-            if a not in alphas:
-                alphas[a] = functional(a)
-                halves[e] = halves.get(e, []) + [(alphas[a], a)]
 
 
 def test_decompose_q():
@@ -2286,19 +2296,27 @@ def decompose_q(f):
     return list(ans.keys())[0]
 
 
-def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False):
-    functional = q_key
-    if halves is None:
-        halves = q_halves_cache
-    if alphas is None:
-        alphas = q_alphas_cache
+def q_update(targets, exponents, halves, alphas, functional):
+    for e in targets:
+        for d in exponents:
+            try:
+                a = symmetric_composition_from_row_column_counts(d, e)
+                assert symmetric_halves(a) == (d, e)
+            except:
+                continue
+            if a not in alphas:
+                alphas[a] = functional(a)
+                halves[e] = halves.get(e, []) + [(alphas[a], a)]
+
+
+def _decompose(f, halves, alphas, positive, multiple, functional, update):
     if f == 0:
         return [{}]
     if positive and not f.is_positive():
         return []
     exponents = get_exponents(f)
     targets = [exponents[0]]
-    q_update(targets, exponents, halves, alphas, functional)
+    update(targets, exponents, halves, alphas, functional)
     answers = []
     for target in targets:
         dict_key = dict_from_tuple(target)
@@ -2309,7 +2327,7 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
             if a % b == 0:
                 h = f - a // b * g
                 assert h[dict_key] == 0
-                for ans in try_to_decompose_q(h, halves, alphas, positive, multiple):
+                for ans in _decompose(h, halves, alphas, positive, multiple, functional, update):
                     ans[alpha] = ans.get(alpha, 0) + a // b
                     if ans[alpha] == 0:
                         del ans[alpha]
@@ -2324,6 +2342,53 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
         assert f == g
     return answers
 
+
+def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=False):
+    functional = q_key
+    update = q_update
+    halves = q_halves_cache if halves is None else halves
+    alphas = q_alphas_cache if alphas is None else alphas
+    return _decompose(f, halves, alphas, positive, multiple, functional, update)
+    # if f == 0:
+    #     return [{}]
+    # if positive and not f.is_positive():
+    #     return []
+    # exponents = get_exponents(f)
+    # targets = [exponents[0]]
+    # update(targets, exponents, halves, alphas, functional)
+    # answers = []
+    # for target in targets:
+    #     dict_key = dict_from_tuple(target)
+    #     for g, alpha in sorted(halves.get(target, [])):
+    #         assert g == functional(alpha)
+    #         a = f[dict_key]
+    #         b = g[dict_key]
+    #         if a % b == 0:
+    #             h = f - a // b * g
+    #             assert h[dict_key] == 0
+    #             for ans in try_to_decompose_q(h, halves, alphas, positive, multiple):
+    #                 ans[alpha] = ans.get(alpha, 0) + a // b
+    #                 if ans[alpha] == 0:
+    #                     del ans[alpha]
+    #                 if not multiple:
+    #                     return [ans]
+    #                 elif ans not in answers:
+    #                     answers.append(ans)
+    # for ans in answers:
+    #     g = 0
+    #     for alpha, coeff in ans.items():
+    #         g += coeff * functional(alpha)
+    #     assert f == g
+    # return answers
+
+
+def try_to_decompose_q_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
+    functional = lambda a: q_lascoux(a).set(0, 1)
+    update = q_update
+    halves = q_halves_cache if halves is None else halves
+    alphas = q_lascoux_alphas_cache if alphas is None else alphas
+    return _decompose(f, halves, alphas, positive, multiple, functional, update)
+    
 
 def test_inv_schubert(n=4, positive=True, multiple=True):
     i = list(Permutation.involutions(n))
@@ -2362,39 +2427,11 @@ def p_update(targets, exponents, halves, alphas, functional):
 
 def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=False):
     functional = p_key
-    if halves is None:
-        halves = p_halves_cache
-    if alphas is None:
-        alphas = p_alphas_cache
-    if f == 0:
-        return [{}]
-    if positive and not f.is_positive():
-        return []
-    exponents = get_exponents(f)
-    targets = [exponents[0]]
-    p_update(targets, exponents, halves, alphas, functional)
-    answers = []
-    for target in targets:
-        dict_key = dict_from_tuple(target)
-        for g, alpha in sorted(halves.get(target, [])):
-            a = f[dict_key]
-            b = g[dict_key]
-            if a % b == 0:
-                for ans in try_to_decompose_p(f - a // b * g, halves, alphas, positive, multiple):
-                    ans[alpha] = ans.get(alpha, 0) + a // b
-                    if ans[alpha] == 0:
-                        del ans[alpha]
-                    if not multiple:
-                        return [ans]
-                    elif ans not in answers:
-                        answers.append(ans)
-    for ans in answers:
-        g = 0
-        for alpha, coeff in ans.items():
-            g += coeff * functional(alpha)
-        assert f == g
-    return answers
-
+    update = p_update
+    halves = p_halves_cache if halves is None else halves
+    alphas = p_alphas_cache if alphas is None else alphas
+    return _decompose(f, halves, alphas, positive, multiple, functional, update)
+    
 
 def is_fpf_vexillary(w):
     f = FPFStanleyExpander(w).expand()

@@ -136,6 +136,9 @@ class Polynomial:
             ans = ans + term
         return ans
 
+    def set(self, i, e):
+        return self.substitute(i, e)
+
     def divide_linear(self, i, c):
         # divide by x(i) + c
         ans = self.substitute(i, x(i) - c) * self.monomial(i, -1)

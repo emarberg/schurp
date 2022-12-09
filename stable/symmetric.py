@@ -184,6 +184,31 @@ class SymmetricPolynomial(Vector):
 
         self.multiplier = m
 
+    @classmethod
+    def from_polynomial(cls, f):
+        ans = 0
+        
+        nvars = 0
+        for hd in f:
+            nvars = max(nvars, max(hd))
+        
+        for hd in f:
+            coeff = f[hd]
+            mu = []
+            for i in hd:
+                if i == 0:
+                    coeff *= BETA**hd[0]
+                    continue
+                while i - 1 >= len(mu):
+                    mu.append(0)
+                mu[i - 1] = hd[i]
+            mu = tuple(mu)
+            if all(mu[i] >= mu[i + 1] for i in range(len(mu) - 1)):
+                ans += SymmetricMonomial(nvars, mu) * coeff
+
+        assert ans.polynomial() == f
+        return ans
+
     def __eq__(self, other):
         if type(other) == int:
             if other == 0:
