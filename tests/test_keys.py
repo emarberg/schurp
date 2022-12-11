@@ -2537,8 +2537,9 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
 
 
 def test_fpf_grothendieck(n=4, positive=True, multiple=False):
+    assert FPFGrothendieck.beta == -1
     i = list(Permutation.fpf_involutions(n))
-    s = {w: FPFGrothendieck.get(w).set(0, 1) for w in i}
+    s = {w: FPFGrothendieck.get(w) for w in i}
     d = {}
     for t, w in enumerate(s):
         print(len(s) - t, ':', w)

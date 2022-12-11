@@ -25,8 +25,12 @@ class AbstractSchubert(object):
         raise NotImplementedError
 
     @classmethod
-    def top(cls, n):
+    def top(cls, w):
         raise NotImplementedError
+
+    @classmethod
+    def invalid_case(cls):
+        raise Exception
 
     @classmethod
     def is_valid(cls, w):
@@ -54,8 +58,10 @@ class AbstractSchubert(object):
             if i is not None:
                 s = cls.get(v)
                 s = cls.divided_difference(s, i)
+            elif v is not None:
+                s = cls.top(v)
             else:
-                s = cls.top(len(oneline))
+                s = cls.invalid_case()
             cache[oneline] = s
             print(' . . .', cls.__name__, 'cache:', len(cache))
         return cache[oneline]
@@ -96,18 +102,15 @@ class Schubert(AbstractSchubert):
         return tuple(oneline)
 
     @classmethod
-    def top(cls, n):
-        s = one()
-        for i in range(1, n):
-            s *= MPolynomial.monomial(i, n - i)
-        return s
+    def top(cls, w):
+        return cls.product(w)
 
     @classmethod
     def get_ascent(cls, w):
         n = len(w.oneline)
         if n == 0:
             return w.s_i(1), 1
-        if len(w.right_descent_set) == n - 1:
+        if w.is_dominant():
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
         return w * w.s_i(i), i
@@ -144,10 +147,9 @@ class DoubleSchubert(AbstractSchubert):
         return DOUBLE_SCHUBERT_CACHE
 
     @classmethod
-    def top(cls, n):
+    def top(cls, w):
         s = one()
-        for i in range(1, n):
-            for j in range(1, n + 1 - i):
+        for i, j in w.rothe_diagram():
                 s *= (x(i) - y(j))
         return s
 
@@ -169,17 +171,20 @@ class FPFSchubert(AbstractSchubert):
         return tuple(oneline)
 
     @classmethod
-    def top(cls, n):
+    def top(cls, w):
+        return cls.product(w)
+
+    @classmethod
+    def product(cls, w):
         s = one()
-        for i in range(1, n + 1):
-            for j in range(i + 1, n + 1 - i):
-                s *= (x(i) + x(j))
+        for i, j in w.fpf_rothe_diagram():
+            s *= x(i) + x(j)
         return s
 
     @classmethod
     def get_ascent(cls, w):
         n = len(w.oneline)
-        if len(w.right_descent_set) in [0, n - 1]:
+        if w.is_fpf_dominant():
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
         s = w.s_i(i)
@@ -196,19 +201,15 @@ class FPFSchubert(AbstractSchubert):
 
 class FPFGrothendieck(FPFSchubert):
 
-    beta = X(0)
+    beta = -1
 
     @classmethod
     def cache(cls):
         return FPF_GROTHENDIECK_CACHE
 
     @classmethod
-    def top(cls, n):
-        s = one()
-        for i in range(1, n + 1):
-            for j in range(i + 1, n + 1 - i):
-                s *= (x(i) + x(j) + cls.beta * x(i) * x(j))
-        return s
+    def top(cls, w):
+        return cls.product(w)
 
     @classmethod
     def product(cls, w):
@@ -229,20 +230,17 @@ class InvSchubert(AbstractSchubert):
         return INV_SCHUBERT_CACHE
 
     @classmethod
-    def top(cls, n):
+    def top(cls, w):
         s = one()
-        for i in range(1, n + 1):
-            for j in range(i, n + 1 - i):
-                if i == j:
-                    s *= x(i)
-                else:
-                    s *= (x(i) + x(j))
+        for i, j in w.involution_rothe_diagram():
+            s *= (x(i) + x(j)) if i != j else x(i)
         return s
+
 
     @classmethod
     def get_ascent(cls, w):
         n = len(w.oneline)
-        if len(w.right_descent_set) in [0, n - 1]:
+        if w.is_dominant():
             return w, None
         i = min(set(range(1, n)) - w.right_descent_set)
         s = w.s_i(i)
@@ -269,12 +267,25 @@ class InvGrothendieck(InvSchubert):
         return INV_GROTHENDIECK_CACHE
 
     @classmethod
-    def top(cls, n):
-        s = one()
-        for i in range(1, n + 1):
-            for j in range(i, n + 1 - i):
-                s *= (x(i) + x(j) + cls.beta * x(i) * x(j))
-        return s
+    def invalid_case(cls):
+        return 0
+
+    @classmethod
+    def get_ascent(cls, w):
+        n = len(w.oneline)
+        if w.is_dominant():
+            return w, None
+        i = min(set(range(1, n)) - w.right_descent_set)
+        s = w.s_i(i)
+        ws = w * s if  s * w == w * s else s * w *s
+        if ws.is_vexillary():
+            return ws, i
+        else:
+            return None, None
+
+    @classmethod
+    def top(cls, w):
+        return cls.product(w)
 
     @classmethod
     def product(cls, w):
@@ -285,4 +296,5 @@ class InvGrothendieck(InvSchubert):
 
     @classmethod
     def divided_difference(cls, f, i):
-        raise NotImplementedError
+        return (f * (1 + cls.beta * MPolynomial.monomial(i + 1))).divided_difference(i)
+
