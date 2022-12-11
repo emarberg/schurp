@@ -105,7 +105,7 @@ def test_q_lascoux_to_GQ(n=4):
                 # print('G:', expand)
                 # print()
                 # assert all(v > 0 for v in expand.values())
-                assert f < g
+            assert f == g
         k += 1
 
 
