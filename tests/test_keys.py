@@ -11,7 +11,7 @@ from keys import (
     get_exponents,
     decompose_key,
     decompose_into_compositions,
-    decompose_into_keys, decompose_into_atoms, dict_from_tuple,
+    decompose_into_keys, decompose_into_lascoux, decompose_into_atoms, dict_from_tuple,
     symmetric_composition_from_row_column_counts, symmetric_halves,
     skew_symmetric_composition_from_row_column_counts, skew_symmetric_halves,
     maximal_decreasing_factors,
@@ -34,7 +34,7 @@ from keys import (
     skew_symmetrize_strict_partition,
 )
 from symmetric import FPFStanleyExpander
-from schubert import Schubert, InvSchubert, FPFSchubert, FPFGrothendieck
+from schubert import Schubert, InvSchubert, Grothendieck, InvGrothendieck, FPFSchubert, FPFGrothendieck, X
 from permutations import Permutation
 from partitions import Partition, StrictPartition
 from collections import defaultdict
@@ -43,7 +43,7 @@ from marked import MarkedNumber
 from vectors import Vector
 from tableaux import Tableau
 
-from stable.utils import GP, GQ, Q, P, G_expansion, GP_expansion, SymmetricPolynomial
+from stable.utils import GP, GQ, Q, P, G_expansion, GP_expansion, SymmetricPolynomial, schur_expansion
 
 import pyperclip
 import pytest
@@ -66,7 +66,7 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
-def test_p_lascoux_to_gp(n=5):
+def test_p_lascoux_to_GP(n=4):
     k = 0
     while n is None or k <= n:
         print(k)
@@ -76,15 +76,16 @@ def test_p_lascoux_to_gp(n=5):
             nvars = max((0,) + mu) + 1
             print('  ', mu, '-->', lam, ':', nvars)
             f = p_lascoux(lam)
-            g = GP(nvars, mu).polynomial()
+            g = GP(nvars, mu).polynomial().set(0, 1)
             if f != g:
                 print()
                 print('FAIL,', 'L < GP :', f < g)
                 print()
+            assert f == g
         k += 1
 
 
-def test_q_lascoux_to_gq(n=5):
+def test_q_lascoux_to_GQ(n=4):
     nch = 150
     k = 0
     while n is None or k <= n:
@@ -95,21 +96,16 @@ def test_q_lascoux_to_gq(n=5):
             nvars = max((0,) + mu)
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_lascoux(lam)
-            gg = GQ(nvars, mu)
-            g = gg.polynomial()
+            g = GQ(nvars, mu).polynomial().set(0, 1)
             if f != g:
-                ff = SymmetricPolynomial.from_polynomial(f)
                 print()
-                print('FAIL,', 'L < GQ :', f < g, 'nvars =', nvars)
-                print('    ', sorted(list(G_expansion(GQ(nvars, mu) - ff)), key=len))
-                try:
-                    print('    ', GP_expansion(ff))
-                except:
-                    print('    ', '(no GP expansion)')
+                print(' * FAIL,', 'L < GQ :', f < g)
+                print()
+                # expand = G_expansion(GQ(nvars, mu) - SymmetricPolynomial.from_polynomial(f))
+                # print('G:', expand)
                 # print()
-                # print(' L =', f)
-                # print('GQ =', g)
-                print()
+                # assert all(v > 0 for v in expand.values())
+                assert f < g
         k += 1
 
 
@@ -129,6 +125,7 @@ def test_q_key_to_q(n=5):
                 print()
                 print('FAIL,', 'k < Q :', f < g)
                 print()
+            assert f == g
         k += 1
 
 
@@ -795,7 +792,6 @@ def test_q_key_into_p_key(m=4, l=4):
 
 
 def altschurp(mu, n):
-    from polynomials import X
     p = 1
     for i in range(len(mu)):
         p *= X(i)**mu[i]
@@ -1027,6 +1023,7 @@ def test_nil_key_compatible_sequences(m=3):
     return keys
 
 
+@pytest.mark.slow
 def test_shifted_key_compatible_sequences(m=4, l=4):
     # FAILS
     def test_shifted_key(p):
@@ -1167,6 +1164,7 @@ def test_inverse_sagan_worley(n=5):
         assert w == inverse_sagan_worley(p, q)
 
 
+@pytest.mark.slow
 def test_shifted_knuth_class(n=4):
     # FAILS
     for w in words(n):
@@ -2492,31 +2490,7 @@ def special_fpf_code(w):
     return tuple(ans)
 
 
-def test_fpf_schubert(n=4, positive=True, multiple=True):
-    i = list(Permutation.fpf_involutions(n))
-    s = {w: FPFSchubert.get(w) for w in i}
-    print('. . . s')
-    d = {}
-    for t, w in enumerate(s):
-        isvex = is_fpf_vexillary(w)
-        d[w] = try_to_decompose_p(s[w], p_halves_cache, p_alphas_cache, positive, multiple)
-        for dec in d[w]:
-            print(len(s) - t, ':', w.cycle_repr(), '->', dec, isvex, w.code())
-            # if len(dec) == 1:
-            #    print()
-            #    print_skew_symmetric_diagram(next(iter(dec)))
-            #    print()
-            assert set(dec.values()) == {1}
-        # w.print_rothe_diagram(sep='.')
-        print()
-        if any(len(dec) == 1 for dec in d[w]) and not isvex:
-            input('\n!\n')
-        # if isvex and not any(special_fpf_code(w) in dec for dec in d[w]):
-        #    input('\n?\n')
-        # assert (not positive and multiple) or len(d[w]) == 1
-        d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
-        if vexify(w).is_vexillary():
-            assert len(d[w]) == 1 and set(d[w].values()) == {1}
+def _test_vex(d, i):
     pvex = {w: list(d[w])[0] for w in d if len(d[w]) == 1 and set(d[w].values()) == {1}}
     fvex = {w: w.code() for w in i if is_fpf_vexillary(w)}
     try:
@@ -2532,25 +2506,89 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
             print()
         input('?')
     print()
+
+def test_fpf_schubert(n=4, positive=True, multiple=True):
+    i = list(Permutation.fpf_involutions(n))
+    s = {w: FPFSchubert.get(w) for w in i}
+    print('. . . s')
+    d = {}
+    seenkeys = {}
+    vexkeys = {}
+    for t, w in enumerate(s):
+        isvex = is_fpf_vexillary(w)
+        d[w] = try_to_decompose_p(s[w], p_halves_cache, p_alphas_cache, positive, multiple)
+        for dec in d[w]:
+            print(len(s) - t, ':', w.cycle_repr(), '->', dec, isvex, w.code())
+            assert set(dec.values()) == {1}
+        w.print_rothe_diagram(sep='.')
+        print()
+        if any(len(dec) == 1 for dec in d[w]) and not isvex:
+            input('\n!\n')
+        # assert not isvex or not any(special_fpf_code(w) in dec for dec in d[w])
+        d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
+        if vexify(w).is_vexillary():
+            assert len(d[w]) == 1 and set(d[w].values()) == {1}
+    _test_vex(d, i)
     print('caches =', len(p_halves_cache), len(p_alphas_cache))
     return i, s, d, pvex, fvex
 
 
-def test_fpf_grothendieck(n=4, positive=True, multiple=False):
-    assert FPFGrothendieck.beta == -1
+def test_fpf_grothendieck(n=4, positive=True, multiple=True):
+    assert FPFGrothendieck.beta == 1
     i = list(Permutation.fpf_involutions(n))
     s = {w: FPFGrothendieck.get(w) for w in i}
     d = {}
     for t, w in enumerate(s):
-        print(len(s) - t, ':', w)
+        isvex = is_fpf_vexillary(w)
+        print(len(s) - t, ':', w, '=', w.cycle_repr(), '->', isvex, w.code())
         d[w] = try_to_decompose_p_lascoux(s[w], p_lascoux_halves_cache, p_lascoux_alphas_cache, positive, multiple)
         print()
         if d[w]:
             for dec in d[w]:
                 print('  *', dec, w.code())
             d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
+        print()
+        assert len(d[w]) > 0
+        if any(len(dec) == 1 for dec in d[w]) and not isvex:
+            input('\n!\n')
+    _test_vex(d, i)
+    print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
+    return i, s, d
+
+
+def test_inv_grothendieck(n=4, positive=True, multiple=True):
+    assert InvGrothendieck.beta == 1
+    i = list(Permutation.involutions(n))
+    s = {w: InvGrothendieck.get(w) for w in i if w.is_vexillary()}
+    d = {}
+    for t, w in enumerate(s):
+        if w.is_dominant():
+            continue
+        print(len(s) - t, ':', w, w.code())
+        print()
+        w.print_rothe_diagram(sep='.')
+        print()
+        # print(s[w])
+        # print()
+        # print(q_lascoux(w.code()))
+        # print()
+        diff = s[w] - q_lascoux(w.code())
+        # print(diff)
+        # print()
+        expand = decompose_into_lascoux(diff)
+        # print('difference:', expand)
+        d[w] = try_to_decompose_q_lascoux(s[w], q_lascoux_halves_cache, q_lascoux_alphas_cache, positive, multiple)
+        print()
+        if d[w]:
+            print('  ++ SUCCESS')
+            print()
+            for dec in d[w]:
+                print('  *', dec, w.code())
+            d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         else:
             print('  ** FAILED')
         print()
+        # assert len(d[w]) > 0
+        assert all(v > 0 for v in expand.values())
     print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
     return i, s, d

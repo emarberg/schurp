@@ -129,7 +129,7 @@ class Schubert(AbstractSchubert):
 
 class Grothendieck(Schubert):
 
-    beta = -1
+    beta = 1
 
     @classmethod
     def cache(cls):
@@ -201,7 +201,7 @@ class FPFSchubert(AbstractSchubert):
 
 class FPFGrothendieck(FPFSchubert):
 
-    beta = -1
+    beta = 1
 
     @classmethod
     def cache(cls):
@@ -260,7 +260,7 @@ class InvSchubert(AbstractSchubert):
 
 class InvGrothendieck(InvSchubert):
 
-    beta = -1
+    beta = 1
 
     @classmethod
     def cache(cls):
@@ -268,20 +268,21 @@ class InvGrothendieck(InvSchubert):
 
     @classmethod
     def invalid_case(cls):
-        return 0
+        return MPolynomial.zero()
 
     @classmethod
     def get_ascent(cls, w):
         n = len(w.oneline)
         if w.is_dominant():
             return w, None
-        i = min(set(range(1, n)) - w.right_descent_set)
-        s = w.s_i(i)
-        ws = w * s if  s * w == w * s else s * w *s
-        if ws.is_vexillary():
-            return ws, i
-        else:
+        if not w.is_vexillary():
             return None, None
+        for i in set(range(1, n)) - w.right_descent_set:
+            s = w.s_i(i)
+            ws = w * s if  s * w == w * s else s * w *s
+            if ws.is_vexillary():
+                return ws, i
+        return None, None
 
     @classmethod
     def top(cls, w):

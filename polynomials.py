@@ -325,6 +325,13 @@ class MPolynomial:
         other = self.one() * other if type(other) == int else other
         return all(v > 0 for v in (self - other).coeffs.values())
 
+    def is_symmetric(self):
+        for m in self.coeffs:
+            s = HashableDict({i + 1: v for i, v in enumerate(sorted(m.values()))})
+            if self[s] != self[m]:
+                return False
+        return True
+
     def is_positive(self):
         return self > 0
 
@@ -440,6 +447,14 @@ class MPolynomial:
 
     def constant_term(self):
         return self[HashableDict({})]
+
+    def positive_part(self):
+        coeffs = {m: c for (m, c) in self.coeffs.items() if c > 0}
+        return self.__class__(coeffs)
+
+    def negative_part(self):
+        coeffs = {m: c for (m, c) in self.coeffs.items() if c < 0}
+        return self.__class__(coeffs)
 
     @classmethod
     def letters(cls, i):

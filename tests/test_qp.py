@@ -402,6 +402,7 @@ def test_gelfand_a_positivity(n=8):
     assert success
 
 
+@pytest.mark.slow
 def test_gelfand_bc_positivity(n=4):
     # fails n >= 4
     success = True

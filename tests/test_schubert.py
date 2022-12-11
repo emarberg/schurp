@@ -4,6 +4,7 @@ from schubert import (
     InvSchubert,
     FPFSchubert,
     FPFGrothendieck,
+    InvGrothendieck,
 )
 from polynomials import (
     MPolynomial,
@@ -112,6 +113,16 @@ def test_inv_schubert():
 
     w = Permutation(3, 4, 1, 2)
     assert InvSchubert.get(w) == x**2 * y + x * y**2
+
+
+def test_inv_grothendieck(n=4):
+    i = list(Permutation.involutions(n))
+    s = {w: InvGrothendieck.get(w) for w in i}
+    for w in s:
+        if not w.is_vexillary():
+            assert s[w] == 0
+        else:
+            assert s[w] != 0
 
 
 def test_fpf_schubert():

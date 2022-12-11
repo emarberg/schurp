@@ -507,32 +507,36 @@ def is_skew_symmetric_composition(alpha):
 
 
 def skew_symmetric_weak_compositions(n, parts, reduced=False):
-    seen = set()
-    for mu in StrictPartition.all(n, parts - 1):
-        mu = StrictPartition.skew_symmetric_double(mu)
-        for gamma in itertools.permutations(mu):
-            if gamma in seen:
-                continue
-            seen.add(gamma)
-            if reduced:
-                if len(gamma) == 0:
-                    continue
-                for indices in itertools.combinations(range(parts - 1),len(gamma) - 1):
-                    alpha = parts * [0]
-                    alpha[-1] = gamma[-1]
-                    for i, a in enumerate(indices):
-                        alpha[a] = gamma[i]
-                    alpha = tuple(alpha)
-                    if is_skew_symmetric_composition(alpha):
-                        yield alpha
-            else:
-                for indices in itertools.combinations(range(parts),len(gamma)):
-                    alpha = parts * [0]
-                    for i, a in enumerate(indices):
-                        alpha[a] = gamma[i]
-                    alpha = tuple(alpha)
-                    if is_skew_symmetric_composition(alpha):
-                        yield alpha
+    for alpha in symmetric_weak_compositions(n, parts, reduced):
+        if is_skew_symmetric_composition(alpha):
+            yield alpha
+
+    # seen = set()
+    # for mu in StrictPartition.all(n, parts - 1):
+    #     mu = StrictPartition.skew_symmetric_double(mu)
+    #     for gamma in itertools.permutations(mu):
+    #         if gamma in seen:
+    #             continue
+    #         seen.add(gamma)
+    #         if reduced:
+    #             if len(gamma) == 0:
+    #                 continue
+    #             for indices in itertools.combinations(range(parts - 1),len(gamma) - 1):
+    #                 alpha = parts * [0]
+    #                 alpha[-1] = gamma[-1]
+    #                 for i, a in enumerate(indices):
+    #                     alpha[a] = gamma[i]
+    #                 alpha = tuple(alpha)
+    #                 if is_skew_symmetric_composition(alpha):
+    #                     yield alpha
+    #         else:
+    #             for indices in itertools.combinations(range(parts),len(gamma)):
+    #                 alpha = parts * [0]
+    #                 for i, a in enumerate(indices):
+    #                     alpha[a] = gamma[i]
+    #                 alpha = tuple(alpha)
+    #                 if is_skew_symmetric_composition(alpha):
+    #                     yield alpha
 
 
 def strict_weak_compositions(n, parts, reduced=False):
@@ -621,7 +625,7 @@ def sorting_descent(weak_comp):
     return weak_comp, None
 
 
-def _generic_key(weak_comp, cache, name, atomic, monomial_fn, ktheoretic):
+def _generic_key(weak_comp, cache, name, monomial_fn, isobaric_divided_difference_fn):
     while weak_comp and weak_comp[-1] == 0:
         weak_comp = weak_comp[:-1]
     if weak_comp not in cache:
@@ -629,60 +633,70 @@ def _generic_key(weak_comp, cache, name, atomic, monomial_fn, ktheoretic):
         if i is None:
             cache[weak_comp] = monomial_fn(weak_comp)
         else:
-            f = _generic_key(new_comp, cache, name, atomic, monomial_fn, ktheoretic)
-            g = (f * (1 + X(i + 1))) if ktheoretic else f
-            cache[weak_comp] = g.isobaric_divided_difference(i) - (f if atomic else 0)
+            f = _generic_key(new_comp, cache, name, monomial_fn, isobaric_divided_difference_fn)
+            cache[weak_comp] = isobaric_divided_difference_fn(f, i)
         # if len(cache) % 100 == 0:
         #    print(' . . .', name, 'cache:', len(cache))
     return cache[weak_comp]
 
 
 def key(weak_comp):
-    return _generic_key(weak_comp, KEY_POLYNOMIAL_CACHE, 'Key Polynomial', False, leading_monomial, False)
+    isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i)
+    return _generic_key(weak_comp, KEY_POLYNOMIAL_CACHE, 'Key Polynomial', leading_monomial, isobaric_divided_difference_fn)
 
 
 def atom(weak_comp):
-    return _generic_key(weak_comp, KEY_ATOM_CACHE, 'Key Atom', True, leading_monomial, False)
+    isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, KEY_ATOM_CACHE, 'Key Atom', leading_monomial, isobaric_divided_difference_fn)
 
 
 def p_key(weak_comp):
-    return _generic_key(weak_comp, PKEY_POLYNOMIAL_CACHE, 'PKey Polynomial', False, p_shifted_monomial, False)
+    isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i)
+    return _generic_key(weak_comp, PKEY_POLYNOMIAL_CACHE, 'PKey Polynomial', p_shifted_monomial, isobaric_divided_difference_fn)
 
 
 def p_atom(weak_comp):
-    return _generic_key(weak_comp, PKEY_ATOM_CACHE, 'PKey Atom', True, p_shifted_monomial, False)
+    isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, PKEY_ATOM_CACHE, 'PKey Atom', p_shifted_monomial, isobaric_divided_difference_fn)
 
 
 def q_key(weak_comp):
-    return _generic_key(weak_comp, QKEY_POLYNOMIAL_CACHE, 'QKey Polynomial', False, q_shifted_monomial, False)
+    isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i)    
+    return _generic_key(weak_comp, QKEY_POLYNOMIAL_CACHE, 'QKey Polynomial', q_shifted_monomial, isobaric_divided_difference_fn)
 
 
 def q_atom(weak_comp):
-    return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', True, q_shifted_monomial, False)
-
+    isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', q_shifted_monomial, isobaric_divided_difference_fn)
 
 def lascoux(weak_comp):
-    return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE, 'Lascoux Polynomial', False, leading_monomial, True)
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i)
+    return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE, 'Lascoux Polynomial', leading_monomial, isobaric_divided_difference_fn)
 
 
 def lascoux_atom(weak_comp):
-    return _generic_key(weak_comp, LASCOUX_ATOM_CACHE, 'Lascoux Atom', True, leading_monomial, True)
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, LASCOUX_ATOM_CACHE, 'Lascoux Atom', leading_monomial, isobaric_divided_difference_fn)
 
 
 def p_lascoux(weak_comp):
-    return _generic_key(weak_comp, PLASCOUX_POLYNOMIAL_CACHE, 'PLascoux Polynomial', False, gp_shifted_monomial, True)
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i)
+    return _generic_key(weak_comp, PLASCOUX_POLYNOMIAL_CACHE, 'PLascoux Polynomial', gp_shifted_monomial, isobaric_divided_difference_fn)
 
 
 def p_lascoux_atom(weak_comp):
-    return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE, 'PLascoux Atom', True, gp_shifted_monomial, True)
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE, 'PLascoux Atom', gp_shifted_monomial, isobaric_divided_difference_fn)
 
 
 def q_lascoux(weak_comp):
-    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE, 'QKey Polynomial', False, gq_shifted_monomial, True)
+    isobaric_divided_difference_fn = lambda f, i: (f * (X(i) * (1 + X(i + 1)))).divided_difference(i)
+    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE, 'QKey Polynomial', gq_shifted_monomial, isobaric_divided_difference_fn)
 
 
 def q_lascoux_atom(weak_comp):
-    return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE, 'QLASCOUX Atom', True, gq_shifted_monomial, True)
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE, 'QLascoux Atom', gq_shifted_monomial, isobaric_divided_difference_fn)
 
 
 def tuplize(g):
