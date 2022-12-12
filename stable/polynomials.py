@@ -191,6 +191,9 @@ class Polynomial:
     def __rsub__(self, other):
         return -(self - other)
 
+    def is_positive(self):
+        return self > 0
+
     def __lt__(self, other):
         other = Polynomial.one() * other if type(other) == int else other
         return all(v > 0 for v in (other - self).coeffs.values())
