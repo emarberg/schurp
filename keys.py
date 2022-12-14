@@ -59,6 +59,9 @@ SP_REDUCED_TABLEAU_CACHE = {}
 SHIFTED_REDUCED_TABLEAU_CACHE = {}
 
 
+LASCOUX_BETA = X(0)
+
+
 def _get_key_maps(tab, shape, get_class, get_factors):
     left_keys, right_keys = {}, {}
     for w in get_class(tab):
@@ -586,22 +589,26 @@ def q_shifted_monomial(weak_composition):
     return ans
 
 
-def gp_shifted_monomial(weak_composition):
-    mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-    ans = X(0)**0
-    for i in range(1, len(mu) + 1):
-        for j in range(i + 1, mu[i - 1] + 1):
-            ans *= X(i) + X(j) + X(i) * X(j)
-    return ans
+def gp_shifted_monomial(beta=LASCOUX_BETA):
+    def fun(weak_composition):
+        mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+        ans = X(0)**0
+        for i in range(1, len(mu) + 1):
+            for j in range(i + 1, mu[i - 1] + 1):
+                ans *= X(i) + X(j) + beta * X(i) * X(j)
+        return ans
+    return fun
 
 
-def gq_shifted_monomial(weak_composition):
-    mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-    ans = X(0)**0
-    for i in range(1, len(mu) + 1):
-        for j in range(i, mu[i - 1] + 1):
-            ans *= X(i) + X(j) + X(i) * X(j)
-    return ans
+def gq_shifted_monomial(beta=LASCOUX_BETA):
+    def fun(weak_composition):
+        mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+        ans = X(0)**0
+        for i in range(1, len(mu) + 1):
+            for j in range(i, mu[i - 1] + 1):
+                ans *= X(i) + X(j) + beta * X(i) * X(j)
+        return ans
+    return fun
 
 
 def sorting_permutation(weak_comp):
@@ -669,34 +676,39 @@ def q_atom(weak_comp):
     isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i) - f
     return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', q_shifted_monomial, isobaric_divided_difference_fn)
 
-def lascoux(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i)
-    return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE, 'Lascoux Polynomial', leading_monomial, isobaric_divided_difference_fn)
+def lascoux(weak_comp, beta=LASCOUX_BETA):
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i)
+    return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE[beta], 'Lascoux Polynomial', leading_monomial, isobaric_divided_difference_fn)
 
 
-def lascoux_atom(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
-    return _generic_key(weak_comp, LASCOUX_ATOM_CACHE, 'Lascoux Atom', leading_monomial, isobaric_divided_difference_fn)
+def lascoux_atom(weak_comp, beta=LASCOUX_BETA):
+    LASCOUX_ATOM_CACHE[beta] = LASCOUX_ATOM_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, LASCOUX_ATOM_CACHE[beta], 'Lascoux Atom', leading_monomial, isobaric_divided_difference_fn)
 
 
-def p_lascoux(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i)
-    return _generic_key(weak_comp, PLASCOUX_POLYNOMIAL_CACHE, 'PLascoux Polynomial', gp_shifted_monomial, isobaric_divided_difference_fn)
+def p_lascoux(weak_comp, beta=LASCOUX_BETA):
+    PLASCOUX_POLYNOMIAL_CACHE[beta] = PLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i)
+    return _generic_key(weak_comp, PLASCOUX_POLYNOMIAL_CACHE[beta], 'PLascoux Polynomial', gp_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
-def p_lascoux_atom(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
-    return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE, 'PLascoux Atom', gp_shifted_monomial, isobaric_divided_difference_fn)
+def p_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
+    PLASCOUX_ATOM_CACHE[beta] = PLASCOUX_ATOM_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE[beta], 'PLascoux Atom', gp_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
-def q_lascoux(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (X(i) * (1 + X(i + 1)))).divided_difference(i)
-    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE, 'QKey Polynomial', gq_shifted_monomial, isobaric_divided_difference_fn)
+def q_lascoux(weak_comp, beta=LASCOUX_BETA):
+    QLASCOUX_POLYNOMIAL_CACHE[beta] = QLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (X(i) * (1 + beta * X(i + 1)))).divided_difference(i)
+    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
-def q_lascoux_atom(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
-    return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE, 'QLascoux Atom', gq_shifted_monomial, isobaric_divided_difference_fn)
+def q_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
+    QLASCOUX_ATOM_CACHE[beta] = QLASCOUX_ATOM_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE[beta], 'QLascoux Atom', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
 def tuplize(g):

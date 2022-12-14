@@ -6,8 +6,8 @@ from keys import (
     skew_symmetric_weak_compositions,
     key, atom,
     q_power,
-    p_key, p_atom, p_lascoux,
-    q_key, q_atom, q_lascoux,
+    p_key, p_atom, p_lascoux, p_lascoux_atom,
+    q_key, q_atom, q_lascoux, q_lascoux_atom,
     get_exponents,
     decompose_key,
     decompose_into_compositions,
@@ -73,14 +73,17 @@ def test_p_lascoux_to_GP(n=4):
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
             lam = tuple(reversed(skew_symmetrize_strict_partition(mu)))
-            nvars = max((0,) + mu) + 1
+            nvars = (max(mu) + 1) if mu else 0
             print('  ', mu, '-->', lam, ':', nvars)
             f = p_lascoux(lam)
-            g = GP(nvars, mu).polynomial().set(0, 1)
+            g = GP(nvars, mu).polynomial()
             if f != g:
                 print()
                 print('FAIL,', 'L < GP :', f < g)
+                print(str(f)[:150])
+                print(str(g)[:150])
                 print()
+            assert nvars == len(lam)
             assert f == g
         k += 1
 
@@ -96,16 +99,19 @@ def test_q_lascoux_to_GQ(n=4):
             nvars = max((0,) + mu)
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_lascoux(lam)
-            g = GQ(nvars, mu).polynomial().set(0, 1)
+            g = GQ(nvars, mu).polynomial()
             if f != g:
                 print()
                 print(' * FAIL,', 'L < GQ :', f < g)
+                print(str(f)[:150])
+                print(str(g)[:150])
                 print()
                 # expand = G_expansion(GQ(nvars, mu) - SymmetricPolynomial.from_polynomial(f))
                 # print('G:', expand)
                 # print()
                 # assert all(v > 0 for v in expand.values())
             assert f == g
+            assert nvars == len(lam)
         k += 1
 
 
@@ -217,6 +223,95 @@ def test_distinct_q_key(m=4, l=4):
                     print(seen[f], '-->', str(f)[:20])
                 if len(seen) % 1000 == 0:
                     print('  seen:', len(seen))
+
+
+def test_distinct_p_lascoux(m=4, l=4):
+    seen = {}
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                f = p_lascoux(alpha)
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print({a: p_lascoux_atom(a) == 0 for a in seen[f]}, '-->', str(f)[:20])
+                    assert len({p_key(a) for a in seen[f]}) == 1
+                    assert sum([p_lascoux_atom(a) == 0 for a in seen[f]]) >= len(seen[f]) - 1
+                    if sum([p_lascoux_atom(a) == 0 for a in seen[f]]) == len(seen[f]):
+                       print('\n\n')
+                    
+
+def test_distinct_p_lascoux_atom(m=4, l=4):
+    seen = {}
+    nonzero = 0
+    zero = 0
+    for n in range(m + 1):
+        print('n =', n)
+        for k in range(l + 1):
+            print('  k =', k)
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                f = p_lascoux_atom(alpha)
+                if f == 0:
+                    print('zero:', alpha, 'atom is zero?', p_atom(alpha) == 0)
+                    zero += 1
+                    continue
+                nonzero += 1
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+                    input('\n')
+    print(zero, 'nonzero:', nonzero)
+
+
+def test_distinct_q_lascoux(m=4, l=4):
+    seen = {}
+    for n in range(m + 1):
+        print('n =', n)
+        for k in range(l + 1):
+            print('  k =', k)
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                f = q_lascoux(alpha)
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20],)
+                    assert len({q_key(a) for a in seen[f]}) == 1
+                    
+
+def test_distinct_q_lascoux_atom(m=4, l=4):
+    seen = {}
+    nonzero = 0
+    zero = 0
+    for n in range(m + 1):
+        print('n =', n)
+        for k in range(l + 1):
+            print('  k =', k)
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                f = q_lascoux_atom(alpha)
+                if f == 0:
+                    print('zero:', alpha, 'atom is zero?', q_atom(alpha) == 0)
+                    zero += 1
+                    continue
+                nonzero += 1
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+                    input('\n')
+    print(zero, 'nonzero:', nonzero)
 
 
 def test_q_key_into_p_key(m=4, l=4):
@@ -2404,7 +2499,7 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
 
 
 def try_to_decompose_q_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
-    functional = q_lascoux
+    functional = lambda a: q_lascoux(a, beta=1)
     update = q_update
     halves = q_lascoux_halves_cache if halves is None else halves
     alphas = q_lascoux_alphas_cache if alphas is None else alphas
@@ -2455,10 +2550,10 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
 
 
 def try_to_decompose_p_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
-    functional = p_lascoux
+    functional = lambda a: p_lascoux(a, beta=1)
     update = p_update
     halves = p_lascoux_halves_cache if halves is None else halves
-    alphas = p_lascoux_alphas_cache if alphas is None else alphas
+    alphas = p_lascoux_alphas_cache if alphas is None else alphas 
     return _decompose(f, halves, alphas, positive, multiple, functional, update)
 
 
@@ -2545,7 +2640,7 @@ def test_fpf_grothendieck(n=4, positive=True, multiple=True):
         print()
         if d[w]:
             for dec in d[w]:
-                print('  *', dec, w.code())
+                print('  *', dec, w.code(), {a: p_lascoux_atom(a) == 0 for a in dec})
             d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         print()
         assert len(d[w]) > 0
@@ -2573,9 +2668,9 @@ def test_inv_grothendieck(n=4, positive=True, multiple=True):
         # print(q_lascoux(w.code()))
         # print()
         diff = s[w] - q_lascoux(w.code())
-        # print(diff)
-        # print()
-        expand = decompose_into_lascoux(diff)
+        print(diff)
+        print()
+        #expand = decompose_into_lascoux(diff)
         # print('difference:', expand)
         d[w] = try_to_decompose_q_lascoux(s[w], q_lascoux_halves_cache, q_lascoux_alphas_cache, positive, multiple)
         print()
@@ -2589,6 +2684,7 @@ def test_inv_grothendieck(n=4, positive=True, multiple=True):
             print('  ** FAILED')
         print()
         # assert len(d[w]) > 0
-        assert all(v > 0 for v in expand.values())
+        # assert all(v > 0 for v in expand.values())
+        input('\n\n\n')
     print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
     return i, s, d
