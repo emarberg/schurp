@@ -579,6 +579,11 @@ class Permutation:
         oneline = [i + 1 for i in range(n)] + [i + n for i in self.oneline]
         return Permutation(oneline)
 
+    def fpf_shift(self, n):
+        assert n >= 0 and n % 2 == 0
+        oneline = [i + 1 + (-1)**i for i in range(n)] + [i + n for i in self.oneline]
+        return Permutation(oneline)
+
     def standardize(self, e):
         index = {b: a + 1 for a, b in enumerate(sorted(map(self, e)))}
         oneline = [index[self(i)] for i in sorted(e)]
@@ -757,7 +762,9 @@ class Permutation:
         code = mu[0] * [0]
         for i, j in shape:
             code[j - 1] += 1
-        return cls.from_involution_code(*code)
+        ans = cls.from_involution_code(*code)
+        assert sorted(ans.involution_shape()) == sorted(mu)
+        return ans
 
     @classmethod
     def from_involution_code(cls, *code):
@@ -1183,6 +1190,9 @@ class Permutation:
 
     def __ne__(self, other):
         return not (self == other)
+
+    def strong_bruhat_less_equal(self, other):
+        return self == other or self.strong_bruhat_less_than(other)
 
     def strong_bruhat_less_than(self, other):
         if self.length() >= other.length():

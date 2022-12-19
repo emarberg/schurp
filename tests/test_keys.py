@@ -32,6 +32,7 @@ from keys import (
     print_symmetric_diagram,
     symmetrize_strict_partition,
     skew_symmetrize_strict_partition,
+    restrict_variables,
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, Grothendieck, InvGrothendieck, FPFSchubert, FPFGrothendieck, X
@@ -66,6 +67,74 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def symmetrizer(f, n):
+    for i in Permutation.longest_element(n).get_reduced_word():
+        f = (f * (1 + X(0) * X(i + 1))).isobaric_divided_difference(i)
+    return f
+
+
+def test_gq_inv_grassmannian(n=4, m=2):
+    k = 1
+    while n is None or k <= n:
+        print(k)
+        for mu in StrictPartition.all(k):
+            mu = tuple(mu)
+            print('mu =', mu)
+            # w = Permutation.get_inv_grassmannian(*mu)
+            w = Permutation.from_involution_shape(*mu).shift(1)
+            for i in range(m):
+                u = w.shift(i)
+                d = max(mu) + i
+                print('  n =', d, u.cycle_repr())
+                f = InvGrothendieck.get(u).homogenize(sum(mu))
+                f = restrict_variables(f, d)
+                f = symmetrizer(f, d)
+                g = GQ(d, mu).polynomial()
+                if f != g:
+                    print()
+                    print('FAIL,', 'L < GQ :', f < g)
+                    print()
+                    print(str(f)[:150])
+                    print()
+                    print(str(g)[:150])
+                    print()
+                    print(str(g - f)[:150])
+                    print()
+                assert f == g
+        k += 1
+
+
+def test_gp_fpf_grassmannian(n=4, m=2):
+    k = 1
+    while n is None or k <= n:
+        print(k)
+        for mu in StrictPartition.all(k):
+            mu = tuple(mu)
+            print('mu =', mu)
+            #w = Permutation.get_fpf_grassmannian(*mu)
+            w = Permutation.from_fpf_involution_shape(*mu)
+            for i in range(0, m, 2):
+                u = w.fpf_shift(i)
+                d = max(mu) + 1 + i
+                print('  n =', d, u.cycle_repr())
+                f = FPFGrothendieck.get(u).homogenize(sum(mu))
+                f = restrict_variables(f, d)
+                f = symmetrizer(f, d)
+                g = GP(d, mu).polynomial()
+                if f != g:
+                    print()
+                    print('FAIL,', 'L < GP :', f < g)
+                    print()
+                    print(str(f)[:150])
+                    print()
+                    print(str(g)[:150])
+                    print()
+                    print(str(g - f)[:150])
+                    print()
+                assert f == g
+        k += 1
+
+
 def test_p_lascoux_to_GP(n=4):
     k = 0
     while n is None or k <= n:
@@ -92,24 +161,33 @@ def test_q_lascoux_to_GQ(n=4):
     nch = 150
     k = 0
     while n is None or k <= n:
+        print()
         print(k)
+        print()
+        failure, success = 0, 0
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
-            lam = tuple(reversed(symmetrize_strict_partition(mu)))
-            nvars = max((0,) + mu)
+            lam = (0,) + tuple(reversed(symmetrize_strict_partition(mu)))
+            nvars = max((0,) + mu) + 1
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_lascoux(lam)
             g = GQ(nvars, mu).polynomial()
             if f != g:
+                failure += 1
                 print()
                 print(' * FAIL,', 'L < GQ :', f < g)
-                print(str(f)[:150])
-                print(str(g)[:150])
+                print(str(f)[:100])
+                print(str(g)[:100])
                 print()
                 # expand = G_expansion(GQ(nvars, mu) - SymmetricPolynomial.from_polynomial(f))
-                # print('G:', expand)
+                # print('G:', all(v > 0 for v in expand.values()), expand)
                 # print()
                 # assert all(v > 0 for v in expand.values())
+            else:
+                success += 1
+            print()
+            print('success =', success, 'failed =', failure)
+            print()
             assert f == g
             assert nvars == len(lam)
         k += 1
@@ -122,8 +200,8 @@ def test_q_key_to_q(n=5):
         print(k)
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
-            lam = tuple(reversed(symmetrize_strict_partition(mu)))
-            nvars = max((0,) + mu)
+            lam = (0,) + tuple(reversed(symmetrize_strict_partition(mu)))
+            nvars = max((0,) + mu) + 1
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_key(lam)
             g = Q(nvars, mu).polynomial()
@@ -159,7 +237,8 @@ def test_distinct_p_key(m=4, l=4):
                 try:
                     assert len(seen[f]) == 1
                 except:
-                    print(seen[f], '-->', str(f)[:20])
+                    print({a: p_atom(a) == 0 for a in seen[f]}, '-->', str(f)[:20])
+
 
 
 def test_distinct_p_atom(m=4, l=4):
@@ -237,12 +316,18 @@ def test_distinct_p_lascoux(m=4, l=4):
                 try:
                     assert len(seen[f]) == 1
                 except:
+                    allzero = False
                     print({a: p_lascoux_atom(a) == 0 for a in seen[f]}, '-->', str(f)[:20])
                     assert len({p_key(a) for a in seen[f]}) == 1
                     assert sum([p_lascoux_atom(a) == 0 for a in seen[f]]) >= len(seen[f]) - 1
                     if sum([p_lascoux_atom(a) == 0 for a in seen[f]]) == len(seen[f]):
+                       allzero = True
                        print('\n\n')
-                    
+                    w = {a: Permutation.from_word(sorting_permutation(a)) for a in seen[f]} 
+                    top = [a for a in w if all(w[a].strong_bruhat_less_equal(w[b]) for b in w)]
+                    assert len(top) == 1
+                    assert allzero or p_lascoux_atom(top[0]) != 0
+
 
 def test_distinct_p_lascoux_atom(m=4, l=4):
     seen = {}
@@ -2512,10 +2597,12 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
     print('. . . s')
     d = {}
     for t, w in enumerate(s):
+        print()
+        print(len(s) - t, ':', w)
         isvex = w.is_vexillary()
         d[w] = try_to_decompose_q(s[w], q_halves_cache, q_alphas_cache, positive, multiple)
         for dec in d[w]:
-            print(len(s) - t, ':', w, '->', dec, isvex, w.code())
+            print('  ->', dec, isvex, w.code())
         print()
         w.print_rothe_diagram(sep='.')
         assert (not positive and multiple) or len(d[w]) == 1
@@ -2601,6 +2688,7 @@ def _test_vex(d, i):
             print()
         input('?')
     print()
+    return pvex, fvex
 
 def test_fpf_schubert(n=4, positive=True, multiple=True):
     i = list(Permutation.fpf_involutions(n))
@@ -2623,7 +2711,7 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
         d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         if vexify(w).is_vexillary():
             assert len(d[w]) == 1 and set(d[w].values()) == {1}
-    _test_vex(d, i)
+    pvex, fvex = _test_vex(d, i)
     print('caches =', len(p_halves_cache), len(p_alphas_cache))
     return i, s, d, pvex, fvex
 
@@ -2652,13 +2740,15 @@ def test_fpf_grothendieck(n=4, positive=True, multiple=True):
 
 
 def test_inv_grothendieck(n=4, positive=True, multiple=True):
+    success = 0
+    failure = 0
     assert InvGrothendieck.beta == 1
     i = list(Permutation.involutions(n))
     s = {w: InvGrothendieck.get(w) for w in i if w.is_vexillary()}
     d = {}
     for t, w in enumerate(s):
-        if w.is_dominant():
-            continue
+        #if w.is_dominant():
+        #    continue
         print(len(s) - t, ':', w, w.code())
         print()
         w.print_rothe_diagram(sep='.')
@@ -2668,23 +2758,28 @@ def test_inv_grothendieck(n=4, positive=True, multiple=True):
         # print(q_lascoux(w.code()))
         # print()
         diff = s[w] - q_lascoux(w.code())
-        print(diff)
+        # print(diff)
         print()
         #expand = decompose_into_lascoux(diff)
         # print('difference:', expand)
         d[w] = try_to_decompose_q_lascoux(s[w], q_lascoux_halves_cache, q_lascoux_alphas_cache, positive, multiple)
         print()
         if d[w]:
+            success += 1
             print('  ++ SUCCESS')
             print()
             for dec in d[w]:
                 print('  *', dec, w.code())
             d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         else:
+            failure += 1
             print('  ** FAILED')
+            assert False
         print()
         # assert len(d[w]) > 0
         # assert all(v > 0 for v in expand.values())
-        input('\n\n\n')
-    print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
+        print('success =', success, 'failed =', failure)
+        # input('\n\n\n')
+    # print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
+    print('success =', success, 'failed =', failure)
     return i, s, d

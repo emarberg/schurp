@@ -28,7 +28,7 @@
 #         print()
 
 
-from schubert import X
+from schubert import X, InvGrothendieck, InvSchubert
 from partitions import Partition, StrictPartition
 from tableaux import Tableau
 from words import Word
@@ -587,6 +587,12 @@ def q_shifted_monomial(weak_composition):
         for j in range(i, mu[i - 1] + 1):
             ans *= X(i) + X(j)
     return ans
+    # mu = symmetric_half(weak_composition)
+    # w = Permutation.get_inv_grassmannian(*mu).shift(1)
+    # w = Permutation.from_involution_shape(*mu).shift(1)
+    # ans = InvSchubert.get(w).homogenize(sum(mu)) * 2**len(mu)
+    # ans = restrict_variables(ans, max((1,) + mu))
+    # return ans
 
 
 def gp_shifted_monomial(beta=LASCOUX_BETA):
@@ -600,14 +606,29 @@ def gp_shifted_monomial(beta=LASCOUX_BETA):
     return fun
 
 
+def restrict_variables(ans, n):
+    while any(i > n for i in ans.variables()):
+        ans = ans.set(max(ans.variables()), 0)
+    return ans
+
+
 def gq_shifted_monomial(beta=LASCOUX_BETA):
+    assert InvGrothendieck.beta == 1
     def fun(weak_composition):
+        old = X(0)**0
         mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-        ans = X(0)**0
         for i in range(1, len(mu) + 1):
             for j in range(i, mu[i - 1] + 1):
-                ans *= X(i) + X(j) + beta * X(i) * X(j)
-        return ans
+                old *= X(i) + X(j) + beta * X(i) * X(j)
+        return old
+        # lam = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+        # mu = symmetric_half(weak_composition)
+        # w = Permutation.from_involution_shape(*mu)
+        # w = Permutation.get_inv_grassmannian(*mu)
+        # w = w.shift(1)
+        # ans = InvGrothendieck.get(w).homogenize(sum(mu))
+        # ans = ans.set(0, beta)
+        # return ans
     return fun
 
 
@@ -701,8 +722,13 @@ def p_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
 
 def q_lascoux(weak_comp, beta=LASCOUX_BETA):
     QLASCOUX_POLYNOMIAL_CACHE[beta] = QLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
-    isobaric_divided_difference_fn = lambda f, i: (f * (X(i) * (1 + beta * X(i + 1)))).divided_difference(i)
-    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
+    term = lambda i: X(i) * (1 + beta * X(i + 1))
+    isobaric_divided_difference_fn = lambda f, i: (f * term(i)).divided_difference(i)
+    ans = _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
+    # n = len(weak_comp)
+    # if n > 0 and min(weak_comp) > 0:
+    #    ans = ans.set(n + 1, 0)
+    return ans
 
 
 def q_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
@@ -710,6 +736,11 @@ def q_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
     isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i) - f
     return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE[beta], 'QLascoux Atom', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
 
+
+def composition_length(alpha):
+    while alpha and alpha[-1] == 0:
+        alpha = alpha[:-1]
+    return len(alpha)
 
 def tuplize(g):
     beta = []
