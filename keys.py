@@ -587,7 +587,8 @@ def q_shifted_monomial(weak_composition):
         for j in range(i, mu[i - 1] + 1):
             ans *= X(i) + X(j)
     return ans
-    # mu = symmetric_half(weak_composition)
+    # lam = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+    # mu = symmetric_half(lam)
     # w = Permutation.get_inv_grassmannian(*mu).shift(1)
     # w = Permutation.from_involution_shape(*mu).shift(1)
     # ans = InvSchubert.get(w).homogenize(sum(mu)) * 2**len(mu)
@@ -615,20 +616,31 @@ def restrict_variables(ans, n):
 def gq_shifted_monomial(beta=LASCOUX_BETA):
     assert InvGrothendieck.beta == 1
     def fun(weak_composition):
-        old = X(0)**0
-        mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-        for i in range(1, len(mu) + 1):
-            for j in range(i, mu[i - 1] + 1):
-                old *= X(i) + X(j) + beta * X(i) * X(j)
-        return old
-        # lam = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-        # mu = symmetric_half(weak_composition)
-        # w = Permutation.from_involution_shape(*mu)
+        # old = X(0)**0
+        # mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+        # for i in range(1, len(mu) + 1):
+        #     for j in range(i, mu[i - 1] + 1):
+        #         old *= X(i) + X(j) + beta * X(i) * X(j)
+        # return old
+        lam = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+        mu = symmetric_half(lam)
+        w = Permutation.from_involution_shape(*mu)
         # w = Permutation.get_inv_grassmannian(*mu)
-        # w = w.shift(1)
-        # ans = InvGrothendieck.get(w).homogenize(sum(mu))
-        # ans = ans.set(0, beta)
-        # return ans
+        w = w.shift(1)
+        ans = restrict_variables(InvGrothendieck.get(w).homogenize(sum(mu)).set(0, beta), max((0,) + mu))
+        isobaric_divided_difference_fn = lambda f, i: (f * X(i) * (1 + beta * X(i + 1))).divided_difference(i)
+        found = True
+        while found:
+            found = False
+            for i in range(len(lam) - 1):
+                if lam[i] == lam[i + 1]:
+                    bns = isobaric_divided_difference_fn(ans, i + 1)
+                    if ans != bns:
+                        ans = bns
+                        found = True 
+                        break
+        return ans
+
     return fun
 
 
@@ -698,6 +710,7 @@ def q_atom(weak_comp):
     return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', q_shifted_monomial, isobaric_divided_difference_fn)
 
 def lascoux(weak_comp, beta=LASCOUX_BETA):
+    LASCOUX_POLYNOMIAL_CACHE[beta] = LASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
     isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i)
     return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE[beta], 'Lascoux Polynomial', leading_monomial, isobaric_divided_difference_fn)
 
@@ -720,15 +733,21 @@ def p_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
     return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE[beta], 'PLascoux Atom', gp_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
+def q_lascoux_sorting_descent(weak_comp):
+    for i in range(1, len(weak_comp)):
+        if weak_comp[i] > weak_comp[i - 1] and all(weak_comp[j] == 0 for j in range(i)):
+            continue
+        if weak_comp[i] > weak_comp[i - 1]:
+            new_comp = list(weak_comp)
+            new_comp[i - 1], new_comp[i] = new_comp[i], new_comp[i - 1]
+            return tuple(new_comp), i
+    return weak_comp, None
+
+
 def q_lascoux(weak_comp, beta=LASCOUX_BETA):
     QLASCOUX_POLYNOMIAL_CACHE[beta] = QLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
-    term = lambda i: X(i) * (1 + beta * X(i + 1))
-    isobaric_divided_difference_fn = lambda f, i: (f * term(i)).divided_difference(i)
-    ans = _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
-    # n = len(weak_comp)
-    # if n > 0 and min(weak_comp) > 0:
-    #    ans = ans.set(n + 1, 0)
-    return ans
+    isobaric_divided_difference_fn = lambda f, i: (f * X(i) * (1 + beta * X(i + 1))).divided_difference(i)
+    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
 def q_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
@@ -788,7 +807,7 @@ def decompose_into_lascoux(kappa):
         betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
         beta = betas[0]
         coeff = kappa[dict_from_tuple(beta)]
-        kappa = kappa - coeff * lascoux(beta)
+        kappa = kappa - coeff * lascoux(beta, 1)
         ans[beta] = ans.get(beta, 0) + coeff
     return {k: v for k, v in ans.items() if v}
 

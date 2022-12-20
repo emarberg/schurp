@@ -167,17 +167,22 @@ def test_q_lascoux_to_GQ(n=4):
         failure, success = 0, 0
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
-            lam = (0,) + tuple(reversed(symmetrize_strict_partition(mu)))
-            nvars = max((0,) + mu) + 1
+            lam = tuple(reversed(symmetrize_strict_partition(mu)))
+            nvars = max((0,) + mu)
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_lascoux(lam)
             g = GQ(nvars, mu).polynomial()
             if f != g:
+                # f = (f * X(1) * (1 + X(0) * X(2))).divided_difference(1)
                 failure += 1
                 print()
                 print(' * FAIL,', 'L < GQ :', f < g)
+                print()
                 print(str(f)[:100])
+                print()
                 print(str(g)[:100])
+                print()
+                print(str(g - f)[:150])
                 print()
                 # expand = G_expansion(GQ(nvars, mu) - SymmetricPolynomial.from_polynomial(f))
                 # print('G:', all(v > 0 for v in expand.values()), expand)
