@@ -848,6 +848,17 @@ def decompose_into_atoms(kappa):
     return {k: v for k, v in ans.items() if v}
 
 
+def decompose_into_lascoux_atoms(kappa):
+    ans = {}
+    while kappa != 0:
+        betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
+        beta = betas[0]
+        coeff = kappa[dict_from_tuple(beta)]
+        kappa = kappa - coeff * lascoux_atom(beta, 1)
+        ans[beta] = ans.get(beta, 0) + coeff
+    return {k: v for k, v in ans.items() if v}
+
+
 def maximal_weakly_increasing_factors(w):
     factors = [[]]
     for a in w:

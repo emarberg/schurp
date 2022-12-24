@@ -37,6 +37,19 @@ class Permutation:
             print(' '.join([str(self.rank_table(p, q)) for q in range(1, n + 1)]))
 
     @classmethod
+    def inversions(cls, word):
+        inv = []
+        for index, i in enumerate(word):
+            a = i
+            b = i + 1
+            for k in word[index + 1:]:
+                a = Permutation.s_i(k)(a)
+                b = Permutation.s_i(k)(b)
+            assert a < b
+            inv.append((a, b))
+        return tuple(inv)
+
+    @classmethod
     def northeast_chains(cls, p, q, size):
         ans = set()
         for rows in itertools.combinations(range(1, p + 1), size):
@@ -763,7 +776,7 @@ class Permutation:
         for i, j in shape:
             code[j - 1] += 1
         ans = cls.from_involution_code(*code)
-        assert sorted(ans.involution_shape()) == sorted(mu)
+        assert sorted(ans.involution_shape()) == sorted([m for m in mu if m != 0])
         return ans
 
     @classmethod

@@ -243,6 +243,10 @@ def test_distinct_p_key(m=4, l=4):
                     assert len(seen[f]) == 1
                 except:
                     print({a: p_atom(a) == 0 for a in seen[f]}, '-->', str(f)[:20])
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({p_lascoux(v) for v in seen[k]}))
 
 
 
@@ -267,6 +271,10 @@ def test_distinct_p_atom(m=4, l=4):
                 except:
                     print(seen[f], '-->', str(f)[:20])
     print(zero, 'nonzero:', nonzero)
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({p_lascoux_atom(v) for v in seen[k]}))
 
 
 def test_distinct_q_atom(m=4, l=4):
@@ -290,6 +298,10 @@ def test_distinct_q_atom(m=4, l=4):
                 except:
                     print(seen[f], '-->', str(f)[:20])
     print(zero, 'nonzero:', nonzero)
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({q_lascoux_atom(v) for v in seen[k]}))
 
 
 def test_distinct_q_key(m=4, l=4):
@@ -307,6 +319,10 @@ def test_distinct_q_key(m=4, l=4):
                     print(seen[f], '-->', str(f)[:20])
                 if len(seen) % 1000 == 0:
                     print('  seen:', len(seen))
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({q_lascoux(v) for v in seen[k]}))
 
 
 def test_distinct_p_lascoux(m=4, l=4):
@@ -2493,6 +2509,7 @@ def decompose_p(f):
     assert set(ans.values()) == {1}
     return list(ans.keys())[0]
 
+
 def decompose_q(f):
     answers = try_to_decompose_q(f, positive=True, multiple=True)
     assert len(answers) == 1
@@ -2612,6 +2629,7 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
         w.print_rothe_diagram(sep='.')
         assert (not positive and multiple) or len(d[w]) == 1
         d[w] = d[w][0]
+        assert all(v == 1 or v % 2 == 0 for v in d[w].values())
     qvex = {w: list(d[w])[0] for w in d if len(d[w]) == 1 and set(d[w].values()) == {1}}
     ivex = {w: w.code() for w in i if w.is_vexillary()}
     assert qvex == ivex
