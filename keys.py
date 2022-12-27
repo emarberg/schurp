@@ -388,48 +388,104 @@ def skew_symmetric_halves(alpha):
 
 
 def skew_symmetric_composition_from_row_column_counts(row_counts, col_counts):
-    def helper(rc, cc):
-        if len(rc) == 0 or max(rc) == 0:
-            yield set()
-            return
-        m = max(rc)
-        i = [i for i, a in enumerate(rc) if a == m][-1]
-        columns = [j for j, c in enumerate(cc) if c > 0 and j > i]
-        for subset in itertools.combinations(columns, m):
-            new_rc = rc[:i] + (0,) + rc[i + 1:]
-            new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
-            for ans in helper(new_rc, new_cc):
-                for j in subset:
-                    ans |= {(i + 1, j + 1), (j + 1, i + 1)}
-                yield ans
-    #
+    shape = _skew_symmetric_composition_from_row_column_counts(row_counts, col_counts)
+    ans = []
+    for i, j in shape:
+        while not (i < len(ans)):
+            ans.append(0)
+        ans[i] += 1
+    return tuple(ans)
+
+
+def _skew_symmetric_composition_from_row_column_counts(row_counts, col_counts):
     n = max(len(row_counts), len(col_counts))
     row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
     col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
     assert sum(row_counts) == sum(col_counts)
-    #
-    answers = []
-    for cns in helper(row_counts, col_counts):
-        s = list(range(1, n + 1))
-        for k in range(n + 1):
-            for diagonal in itertools.combinations(s, k):
-                bns = cns.copy()
-                for i in diagonal:
-                    bns.add((i, i))
-                # print(Tableau({box: 1 for box in bns}))
-                ans = n * [0]
-                for i, j in bns:
-                    ans[i - 1] += 1
-                ans = tuple(ans)
-                while ans and ans[-1] == 0:
-                    ans = ans[:-1]
-                if is_skew_symmetric_composition(ans):
-                    answers.append(ans)
-    if len(answers) > 1:
-        raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
-    if len(answers) == 0:
-        raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
-    return answers[0]
+
+    if sum(row_counts) == 0:
+        return set()
+
+    c = tuple(row_counts[i] + col_counts[i] + 1 for i in range(n))
+    m = [i for i in range(n) if c[i] == max(c)]
+
+    # print(row_counts, col_counts, c, 'I = ', m)
+
+    a = list(row_counts)
+    for i in m:
+        a[i] = 0
+    for i in range(n):
+        if a[i] > 0:
+            a[i] -= len([j for j in m if i < j])
+    a = tuple(a)
+
+    b = list(col_counts)
+    for i in m:
+        b[i] = 0
+    for i in range(n):
+        if b[i] > 0:
+            b[i] -= len([j for j in m if j < i])
+    b = tuple(b)
+
+    mu = _skew_symmetric_composition_from_row_column_counts(a, b)
+
+    new_rows = n * [0]
+    new_cols = n * [0]
+    for i, j in mu:
+        if i < j:
+            new_rows[i] += 1
+            new_cols[j] += 1
+    for i in range(n):
+        if new_rows[i] < row_counts[i] or new_cols[i] < col_counts[i]:
+            for j in m:
+                mu.add((i, j))
+                mu.add((j, i))
+    return mu
+
+
+# def skew_symmetric_composition_from_row_column_counts(row_counts, col_counts):
+#     def helper(rc, cc):
+#         if len(rc) == 0 or max(rc) == 0:
+#             yield set()
+#             return
+#         m = max(rc)
+#         i = [i for i, a in enumerate(rc) if a == m][-1]
+#         columns = [j for j, c in enumerate(cc) if c > 0 and j > i]
+#         for subset in itertools.combinations(columns, m):
+#             new_rc = rc[:i] + (0,) + rc[i + 1:]
+#             new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
+#             for ans in helper(new_rc, new_cc):
+#                 for j in subset:
+#                     ans |= {(i + 1, j + 1), (j + 1, i + 1)}
+#                 yield ans
+#     #
+#     n = max(len(row_counts), len(col_counts))
+#     row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
+#     col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
+#     assert sum(row_counts) == sum(col_counts)
+#     #
+#     answers = []
+#     for cns in helper(row_counts, col_counts):
+#         s = list(range(1, n + 1))
+#         for k in range(n + 1):
+#             for diagonal in itertools.combinations(s, k):
+#                 bns = cns.copy()
+#                 for i in diagonal:
+#                     bns.add((i, i))
+#                 # print(Tableau({box: 1 for box in bns}))
+#                 ans = n * [0]
+#                 for i, j in bns:
+#                     ans[i - 1] += 1
+#                 ans = tuple(ans)
+#                 while ans and ans[-1] == 0:
+#                     ans = ans[:-1]
+#                 if is_skew_symmetric_composition(ans):
+#                     answers.append(ans)
+#     if len(answers) > 1:
+#         raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
+#     if len(answers) == 0:
+#         raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
+#     return answers[0]
 
 
 def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
