@@ -2674,9 +2674,9 @@ def p_update(targets, exponents, halves, alphas, functional):
         for d in exponents:
             try:
                 a = skew_symmetric_composition_from_row_column_counts(d, e)
+                assert skew_symmetric_halves(a) == (d, e)
             except:
                 continue
-            assert skew_symmetric_halves(a) == (d, e)
             if a not in alphas:
                 alphas[a] = 1
                 halves[e] = halves.get(e, []) + [a]
