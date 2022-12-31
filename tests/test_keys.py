@@ -2648,6 +2648,7 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
     print('. . . s')
     d = {}
     for t, w in enumerate(s):
+        c = w.number_two_cycles()
         print()
         print(len(s) - t, ':', w)
         isvex = w.is_vexillary()
@@ -2658,7 +2659,7 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
         w.print_rothe_diagram(sep='.')
         # assert (not positive and multiple) or len(d[w]) == 1
         d[w] = d[w][0]
-        assert all(v == 1 or v % 2 == 0 for v in d[w].values())
+        assert all(v == 2**(c - q_power(k)) for k, v in d[w].items())
     qvex = {w: list(d[w])[0] for w in d if len(d[w]) == 1 and set(d[w].values()) == {1}}
     ivex = {w: w.code() for w in i if w.is_vexillary()}
     print()
@@ -2755,7 +2756,7 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
         isvex = is_fpf_vexillary(w)
         d[w] = try_to_decompose_p(s[w], p_halves_cache, p_alphas_cache, positive, multiple)
         for dec in d[w]:
-            print(len(s) - t, ':', w.cycle_repr(), '->', dec, isvex, w.code())
+            print(len(s) - t, ':', w.cycle_repr(), '->', dec, isvex, w.code(), w.dearc_R().code(), w.dearc_L().code())
             assert set(dec.values()) == {1}
         w.print_rothe_diagram(sep='.')
         print()
@@ -2783,6 +2784,7 @@ def test_fpf_grothendieck(n=4, positive=True, multiple=True):
         if d[w]:
             for dec in d[w]:
                 print('  *', dec, w.code(), {a: p_lascoux_atom(a) == 0 for a in dec})
+                assert set(dec.values()) == {1}
             d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         print()
         assert len(d[w]) > 0

@@ -664,6 +664,21 @@ class Permutation:
     def support(self):
         return [i + 1 for i in range(len(self.oneline)) if self.oneline[i] != i + 1]
 
+    def dearc_L(self):
+        assert self.is_fpf_involution()
+        z = self
+        oneline = [z(i) if any(j < z(j) for j in range(min(i, z(i)) + 1,  max(i, z(i)))) else i for i in range(1, len(self.oneline) + 1)]
+        return Permutation(*oneline)
+
+    def dearc_R(self):
+        assert self.is_fpf_involution()
+        z = self
+        oneline = [z(i) if any(j > z(j) for j in range(min(i, z(i)) + 1,  max(i, z(i)))) else i for i in range(1, len(self.oneline) + 1)]
+        return Permutation(*oneline)
+        
+    def is_sp_vexillary(self):
+        assert self.is_fpf_involution()
+        
     def is_vexillary(self):
         n = self.rank
         for i in range(1, n + 1):
