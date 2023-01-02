@@ -778,9 +778,14 @@ class Permutation:
             newcode = list(code)
             newcode[i + 1] = newcode[i] - 1
             newcode[i] = 0
-            return cls.from_code(newcode) * Permutation.s_i(i + 1)
+            ans = cls.from_code(newcode) * Permutation.s_i(i + 1)
         else:
-            return Permutation()
+            ans = Permutation()
+        if ans.code() != Partition.trim(code):
+            print('         code:', ans.code())
+            print('expected code:', Partition.trim(code))
+        assert ans.code() == Partition.trim(code)
+        return ans
 
     @classmethod
     def from_involution_shape(cls, *mu):
@@ -809,9 +814,15 @@ class Permutation:
             newcode[i] = 0
             s = Permutation.s_i(i + 1)
             w = cls.from_involution_code(newcode)
-            return w * s if s * w == w * s else s * w * s
+            ans = w * s if s * w == w * s else s * w * s
         else:
-            return Permutation()
+            ans = Permutation()
+        assert ans.is_involution()
+        if ans.involution_code() != Partition.trim(code):
+            print('involution code:', ans.involution_code())
+            print('  expected code:', Partition.trim(code))
+        assert ans.involution_code() == Partition.trim(code)
+        return ans
 
     @classmethod
     def from_fpf_involution_shape(cls, *mu):
@@ -822,7 +833,6 @@ class Permutation:
         for i, j in shape:
             code[j] += 1
         return cls.from_fpf_involution_code(*code)
-
 
     @classmethod
     def from_fpf_involution_code(cls, *code):
@@ -844,9 +854,14 @@ class Permutation:
             ans = s * cls.from_fpf_involution_code(newcode) * s
             while len(ans.oneline) < r:
                 ans *= Permutation.s_i(len(ans.oneline) + 1)
-            return ans
         else:
-            return Permutation.shortest_fpf_involution(r)
+            ans = Permutation.shortest_fpf_involution(r)
+        assert ans.is_fpf_involution()
+        if ans.fpf_involution_code() != Partition.trim(code):
+            print('involution code:', ans.fpf_involution_code())
+            print('  expected code:', Partition.trim(code))
+        assert ans.fpf_involution_code() == Partition.trim(code)
+        return ans
 
     @classmethod
     def shortest_fpf_involution(cls, rank):

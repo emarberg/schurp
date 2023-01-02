@@ -2809,24 +2809,17 @@ def test_inv_grothendieck(n=4, positive=True, multiple=True):
         print()
         w.print_rothe_diagram(sep='.')
         print()
-        # print(s[w])
+        expected = s[w]
+        # print(expected)
         # print()
-        # print(q_lascoux(w.code()))
+        result = q_lascoux(w.code(), 1)
+        # print(result)
         # print()
-        diff = s[w] - q_lascoux(w.code())
-        # print(diff)
-        print()
-        #expand = decompose_into_lascoux(diff)
-        # print('difference:', expand)
-        d[w] = try_to_decompose_q_lascoux(s[w], q_lascoux_halves_cache, q_lascoux_alphas_cache, positive, multiple)
-        print()
-        if d[w]:
+        if result == expected:
             success += 1
             print('  ++ SUCCESS')
             print()
-            for dec in d[w]:
-                print('  *', dec, w.code())
-            d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
+            d[w] = {w.code(): 1}
         else:
             failure += 1
             print('  ** FAILED')

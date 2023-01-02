@@ -678,25 +678,8 @@ def gq_shifted_monomial(beta=LASCOUX_BETA):
         #     for j in range(i, mu[i - 1] + 1):
         #         old *= X(i) + X(j) + beta * X(i) * X(j)
         # return old
-        lam = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-        mu = symmetric_half(lam)
-        w = Permutation.from_involution_shape(*mu)
-        # w = Permutation.get_inv_grassmannian(*mu)
-        w = w.shift(1)
-        ans = restrict_variables(InvGrothendieck.get(w).homogenize(sum(mu)).set(0, beta), max((0,) + mu))
-        isobaric_divided_difference_fn = lambda f, i: (f * X(i) * (1 + beta * X(i + 1))).divided_difference(i)
-        found = True
-        while found:
-            found = False
-            for i in range(len(lam) - 1):
-                if lam[i] == lam[i + 1]:
-                    bns = isobaric_divided_difference_fn(ans, i + 1)
-                    if ans != bns:
-                        ans = bns
-                        found = True 
-                        break
-        return ans
-
+        w = Permutation.from_code(*weak_composition)
+        return InvGrothendieck.get(w).homogenize(w.involution_length()).set(0, beta)
     return fun
 
 
@@ -721,15 +704,16 @@ def sorting_descent(weak_comp):
     return weak_comp, None
 
 
-def _generic_key(weak_comp, cache, name, monomial_fn, isobaric_divided_difference_fn):
+def _generic_key(weak_comp, cache, name, monomial_fn, isobaric_divided_difference_fn, sorting_descent_fn=None):
+    sorting_descent_fn = sorting_descent if sorting_descent_fn is None else sorting_descent_fn
     while weak_comp and weak_comp[-1] == 0:
         weak_comp = weak_comp[:-1]
     if weak_comp not in cache:
-        new_comp, i = sorting_descent(weak_comp)
+        new_comp, i = sorting_descent_fn(weak_comp)
         if i is None:
             cache[weak_comp] = monomial_fn(weak_comp)
         else:
-            f = _generic_key(new_comp, cache, name, monomial_fn, isobaric_divided_difference_fn)
+            f = _generic_key(new_comp, cache, name, monomial_fn, isobaric_divided_difference_fn, sorting_descent_fn)
             cache[weak_comp] = isobaric_divided_difference_fn(f, i)
         # if len(cache) % 100 == 0:
         #    print(' . . .', name, 'cache:', len(cache))
@@ -791,9 +775,12 @@ def p_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
 
 def q_lascoux_sorting_descent(weak_comp):
     for i in range(1, len(weak_comp)):
-        if weak_comp[i] > weak_comp[i - 1] and all(weak_comp[j] == 0 for j in range(i)):
-            continue
+        # if weak_comp[i] > weak_comp[i - 1] and all(weak_comp[j] == 0 for j in range(i)):
+        #    continue
         if weak_comp[i] > weak_comp[i - 1]:
+            shape = symmetric_diagram(weak_comp)
+            if ((i + 1, i + 1) in shape) ^ ((i, i) in shape):
+                continue
             new_comp = list(weak_comp)
             new_comp[i - 1], new_comp[i] = new_comp[i], new_comp[i - 1]
             return tuple(new_comp), i
@@ -803,7 +790,7 @@ def q_lascoux_sorting_descent(weak_comp):
 def q_lascoux(weak_comp, beta=LASCOUX_BETA):
     QLASCOUX_POLYNOMIAL_CACHE[beta] = QLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
     isobaric_divided_difference_fn = lambda f, i: (f * X(i) * (1 + beta * X(i + 1))).divided_difference(i)
-    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
+    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn, q_lascoux_sorting_descent)
 
 
 def q_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
