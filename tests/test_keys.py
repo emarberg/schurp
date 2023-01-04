@@ -67,6 +67,25 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def test_fpf_vexillary(n=10):
+    for index, z in enumerate(Permutation.fpf_involutions(n)):
+        if not is_fpf_vexillary(z):
+            continue
+        z = z.shift(2) * Permutation.s_i(n + 3) * Permutation.s_i(1)
+        des = z.get_descentset_fpf_visible()
+        if des:
+            print('. . .', index)
+            k = max(des)
+            l = k + 1
+            while z(l + 1) < min(k, z(k)):
+                l += 1
+            t = Permutation.t_ij(k, l)
+            v = t * z * t
+            j = v(k)
+            a = [i for i in range(1, j) if (Permutation.t_ij(i, j) * v * Permutation.t_ij(i, j)).length() == v.length() + 2]
+            assert len(a) == 1
+
+
 def symmetrizer(f, n):
     for i in Permutation.longest_element(n).get_reduced_word():
         f = (f * (1 + X(0) * X(i + 1))).isobaric_divided_difference(i)
@@ -361,7 +380,7 @@ def test_distinct_p_lascoux_atom(m=4, l=4):
             for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
                 f = p_lascoux_atom(alpha)
                 if f == 0:
-                    print('zero:', alpha, 'atom is zero?', p_atom(alpha) == 0)
+                    # print('zero:', alpha, 'atom is zero?', p_atom(alpha) == 0)
                     zero += 1
                     continue
                 nonzero += 1
