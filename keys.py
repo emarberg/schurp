@@ -145,6 +145,15 @@ def shifted_key_maps(p):
             _map_to_shifted_key(mu, increasing_right_keys))
 
 
+def composition_from_diagram(diagram):
+    ans = []
+    for i, j in diagram:
+        while i > len(ans):
+            ans.append(0)
+        ans[i - 1] += 1
+    return tuple(ans)
+
+
 def symmetric_composition_from_row_column_counts(row_counts, col_counts):
     shape = _symmetric_composition_from_row_column_counts(row_counts, col_counts)
     ans = []
@@ -790,7 +799,7 @@ def q_lascoux_sorting_descent(weak_comp):
 def q_lascoux(weak_comp, beta=LASCOUX_BETA):
     QLASCOUX_POLYNOMIAL_CACHE[beta] = QLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
     isobaric_divided_difference_fn = lambda f, i: (f * X(i) * (1 + beta * X(i + 1))).divided_difference(i)
-    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn, q_lascoux_sorting_descent)
+    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
 def q_lascoux_atom(weak_comp, beta=LASCOUX_BETA):

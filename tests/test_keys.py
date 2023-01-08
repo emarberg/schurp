@@ -9,6 +9,7 @@ from keys import (
     p_key, p_atom, p_lascoux, p_lascoux_atom,
     q_key, q_atom, q_lascoux, q_lascoux_atom,
     get_exponents,
+    composition_from_diagram,
     decompose_key,
     decompose_into_compositions,
     decompose_into_keys, decompose_into_lascoux, decompose_into_atoms, dict_from_tuple,
@@ -30,6 +31,7 @@ from keys import (
     symmetric_half,
     print_skew_symmetric_diagram,
     print_symmetric_diagram,
+    symmetric_diagram,
     symmetrize_strict_partition,
     skew_symmetrize_strict_partition,
     restrict_variables,
@@ -90,6 +92,32 @@ def symmetrizer(f, n):
     for i in Permutation.longest_element(n).get_reduced_word():
         f = (f * (1 + X(0) * X(i + 1))).isobaric_divided_difference(i)
     return f
+
+
+def test_ortho_groth_symmetrizer(nn=4, k=4):
+    for w in Permutation.involutions(nn):
+        if not w.is_vexillary():
+            continue
+        if w(1) > 1:
+            continue
+        mu = w.involution_shape().tuple()
+        print('w =', w, '=', w.cycle_repr(), 'shape =', mu, 'DesV =', w.get_descentset_visible())
+        u = w.shift(0)
+        d = max([0] + u.get_descentset_visible())
+        for n in range(d, d + k):
+            print('  n =', n)
+            f = InvGrothendieck.get(u).homogenize(sum(mu))
+            assert f == restrict_variables(f, n)
+            f = symmetrizer(f, n)
+            g = GQ(n, mu).polynomial()
+            if f != g:
+                print()
+                print('f =', f)
+                print()
+                print('g =', g)
+                print('\n*** not equal ***\n')
+                assert len(w.get_descentset_visible()) != 1
+                break
 
 
 def test_gq_inv_grassmannian(n=4, m=2):
@@ -995,20 +1023,79 @@ def _attempt_p_into_q(alpha, attempts=10):
             coeff *= 2
 
 
-def test_p_key_into_q_key(m=4, l=4):
+def test_p_key_into_q_key(m=13, l=5):
     for n in range(m + 1):
         for k in range(l + 1):
             for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                # if not all(alpha[i] >= alpha[i + 1] for i in range(1, len(alpha) - 1)):
+                #    continue
+                diagram = symmetric_diagram(alpha)
                 attempt = _attempt_p_into_q(alpha)
+                print()
                 print(alpha, '->', attempt)
+                if attempt is not None and augment_hook(attempt[0]) != alpha:
+                    continue
+                p = 2**q_power(alpha) * p_key(alpha)
+                maximum = max((0,) + alpha)
+                # print(try_to_decompose_q(p))
+                # print()
+                print_symmetric_diagram(alpha)
+                print()
+                if not all((j, j) in diagram for (i, j) in diagram if i == 1 < j) or not all((1, j) in diagram for (i, j) in diagram if i == j > 1):
+                    assert len(try_to_decompose_q(p)) == 0
+                else:
+                    assert len(try_to_decompose_q(p)) > 0
+                    print_symmetric_diagram(attempt[0])
+                    print()
+
+
+
+def augment_hook(alpha):
+    diagram = symmetric_diagram(alpha)
+    i = max([i for (i, j) in diagram if i == j])
+    expected = diagram | {(1, j) for j in range(2, i + 1) if (j, j) in diagram} | {(j, 1) for j in range(2, i + 1) if (j, j) in diagram} | {(1, 1)}
+    delta = composition_from_diagram(expected)
+    return delta
 
 
 def test_q_key_into_p_key(m=4, l=4):
+    a = b = 0
     for n in range(m + 1):
         for k in range(l + 1):
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
-                attempt = try_to_decompose_p(q_key(alpha))
+                # if not(alpha and alpha[0] == 0 and all(alpha[i] >= alpha[i + 1] for i in range(1, len(alpha) - 1))):
+                #    continue
+                attempt = try_to_decompose_p(q_key(alpha), positive=True, multiple=False)
+                # if len(attempt) == 0:
+                #    attempt = try_to_decompose_p(q_key(alpha), positive=False, multiple=True)
                 print(alpha, '->', attempt)
+                if not alpha or alpha[0] == 0:
+                    assert len(attempt) > 0
+                    gamma = list(attempt[0])[0]
+                    sortedgamma = tuple(sorted(gamma, reverse=True))
+                    diagram = symmetric_diagram(alpha)
+                    i = max([i for (i, j) in diagram if i == j])
+                    expected = diagram | {(1, j) for j in range(2, i + 1) if (j, j) in diagram} | {(j, 1) for j in range(2, i + 1) if (j, j) in diagram} | {(1, 1)}
+                    delta = composition_from_diagram(expected)
+                    print_symmetric_diagram(alpha)
+                    print()
+                    print_symmetric_diagram(gamma)
+                    print()
+                    print_symmetric_diagram(sortedgamma)
+                    print()
+                    print(symmetric_halves(alpha), '::', symmetric_halves(gamma), is_skew_symmetric_composition(delta))
+                    print()
+                    print(Permutation.print_diagram(expected, sep='.'))
+                    print()
+                    assert q_key(alpha) == 2**q_power(alpha) * p_key(delta)
+                    assert is_symmetric_composition(delta)
+                    assert is_skew_symmetric_composition(delta) or is_skew_symmetric_composition(composition_from_diagram(expected.difference({(1, 1)})))
+                    a += int(is_skew_symmetric_composition(delta))
+                    b += int(is_skew_symmetric_composition(composition_from_diagram(expected.difference({(1, 1)}))))
+                    print(a / (a + b) * 100.0, 'vs', b / (a + b) * 100.0)
+                    print()
+                else:
+                    assert len(attempt) == 0
 
 
 def altschurp(mu, n):
