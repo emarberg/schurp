@@ -1058,8 +1058,7 @@ def augment_hook(alpha):
     return delta
 
 
-def test_q_key_into_p_key(m=4, l=4):
-    a = b = 0
+def test_q_key_into_p_key(m=13, l=5):
     for n in range(m + 1):
         for k in range(l + 1):
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
@@ -1075,7 +1074,10 @@ def test_q_key_into_p_key(m=4, l=4):
                     sortedgamma = tuple(sorted(gamma, reverse=True))
                     diagram = symmetric_diagram(alpha)
                     i = max([i for (i, j) in diagram if i == j])
-                    expected = diagram | {(1, j) for j in range(2, i + 1) if (j, j) in diagram} | {(j, 1) for j in range(2, i + 1) if (j, j) in diagram} | {(1, 1)}
+                    expected = diagram | {(1, j) for j in range(2, i + 1) if (j, j) in diagram} | {(j, 1) for j in range(2, i + 1) if (j, j) in diagram}
+                    lam = tuple(sorted(alpha, reverse=True))
+                    if lam[q_power(alpha) - 1] == q_power(alpha):
+                        expected |= {(1, 1)}
                     delta = composition_from_diagram(expected)
                     print_symmetric_diagram(alpha)
                     print()
@@ -1089,11 +1091,7 @@ def test_q_key_into_p_key(m=4, l=4):
                     print()
                     assert q_key(alpha) == 2**q_power(alpha) * p_key(delta)
                     assert is_symmetric_composition(delta)
-                    assert is_skew_symmetric_composition(delta) or is_skew_symmetric_composition(composition_from_diagram(expected.difference({(1, 1)})))
-                    a += int(is_skew_symmetric_composition(delta))
-                    b += int(is_skew_symmetric_composition(composition_from_diagram(expected.difference({(1, 1)}))))
-                    print(a / (a + b) * 100.0, 'vs', b / (a + b) * 100.0)
-                    print()
+                    assert is_skew_symmetric_composition(delta)
                 else:
                     assert len(attempt) == 0
 
@@ -2593,7 +2591,8 @@ def test_leading_q_key(m=4, l=4):
                 beta = exponents[0]
                 
                 print()
-                print(alpha)
+                print(alpha, '=', kappa)
+                print()
                 print_symmetric_diagram(alpha)
                 print()
                 print(a, b)
@@ -2603,7 +2602,7 @@ def test_leading_q_key(m=4, l=4):
                 print()
                 print(dec)
 
-                # input('\n\n')
+                input('\n\n')
                 assert beta == b
                 assert a in exponents
                 assert kappa[dict_from_tuple(a)] >= 2**q_power(alpha) # equality can fail
@@ -2683,16 +2682,16 @@ def _decompose(f, halves, alphas, positive, multiple, functional, update):
             a = f[dict_key]
             b = g[dict_key]
             if a % b == 0:
-                h = f - a // b * g
-                assert h[dict_key] == 0
-                for ans in _decompose(h, halves, alphas, positive, multiple, functional, update):
-                    ans[alpha] = ans.get(alpha, 0) + a // b
-                    if ans[alpha] == 0:
-                        del ans[alpha]
-                    if not multiple:
-                        return [ans]
-                    elif ans not in answers:
-                        answers.append(ans)
+                for c in [1 if positive else a // b]:
+                    h = f - c * g
+                    for ans in _decompose(h, halves, alphas, positive, multiple, functional, update):
+                        ans[alpha] = ans.get(alpha, 0) + c
+                        if ans[alpha] == 0:
+                            del ans[alpha]
+                        if not multiple:
+                            return [ans]
+                        elif ans not in answers:
+                            answers.append(ans)
     for ans in answers:
         g = 0
         for alpha, coeff in ans.items():
