@@ -2592,3 +2592,22 @@ def test_inv_grothendieck(n=4, positive=True, multiple=True):
         assert all(v > 0 for v in expand.values())
     print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
     return i, s, d
+
+
+def test_grothendieck(n=4):
+    assert Grothendieck.beta == 1
+    i = list(Permutation.all(n))
+    s = {w: Grothendieck.get(w) for w in i}
+    d = {}
+    for t, w in enumerate(s):
+        isvex = w.is_vexillary()
+        print(len(s) - t, ':', w, '->', isvex, w.code())
+        d[w] = decompose_into_lascoux(s[w])
+        print()
+        print('  *', d[w], w.code())
+        print()
+        if isvex:
+            assert d[w] == {w.code(): 1}
+        else:
+            assert len(d[w]) > 1 or set(d[w].values()) != {1}
+    return i, s, d
