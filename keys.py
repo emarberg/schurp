@@ -28,7 +28,7 @@
 #         print()
 
 
-from schubert import X
+from schubert import X, InvGrothendieck, InvSchubert
 from partitions import Partition, StrictPartition
 from tableaux import Tableau
 from words import Word
@@ -57,6 +57,9 @@ REDUCED_TABLEAU_CACHE = {}
 O_REDUCED_TABLEAU_CACHE = {}
 SP_REDUCED_TABLEAU_CACHE = {}
 SHIFTED_REDUCED_TABLEAU_CACHE = {}
+
+
+LASCOUX_BETA = X(0)
 
 
 def _get_key_maps(tab, shape, get_class, get_factors):
@@ -140,6 +143,15 @@ def shifted_key_maps(p):
     increasing_left_keys, increasing_right_keys = _get_key_maps(p, mu, shifted_knuth_class, maximal_weakly_increasing_factors)
     return (_map_to_shifted_key(mu, increasing_left_keys),
             _map_to_shifted_key(mu, increasing_right_keys))
+
+
+def composition_from_diagram(diagram):
+    ans = []
+    for i, j in diagram:
+        while i > len(ans):
+            ans.append(0)
+        ans[i - 1] += 1
+    return tuple(ans)
 
 
 def symmetric_composition_from_row_column_counts(row_counts, col_counts):
@@ -385,48 +397,104 @@ def skew_symmetric_halves(alpha):
 
 
 def skew_symmetric_composition_from_row_column_counts(row_counts, col_counts):
-    def helper(rc, cc):
-        if len(rc) == 0 or max(rc) == 0:
-            yield set()
-            return
-        m = max(rc)
-        i = [i for i, a in enumerate(rc) if a == m][-1]
-        columns = [j for j, c in enumerate(cc) if c > 0 and j > i]
-        for subset in itertools.combinations(columns, m):
-            new_rc = rc[:i] + (0,) + rc[i + 1:]
-            new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
-            for ans in helper(new_rc, new_cc):
-                for j in subset:
-                    ans |= {(i + 1, j + 1), (j + 1, i + 1)}
-                yield ans
-    #
+    shape = _skew_symmetric_composition_from_row_column_counts(row_counts, col_counts)
+    ans = []
+    for i, j in shape:
+        while not (i < len(ans)):
+            ans.append(0)
+        ans[i] += 1
+    return tuple(ans)
+
+
+def _skew_symmetric_composition_from_row_column_counts(row_counts, col_counts):
     n = max(len(row_counts), len(col_counts))
     row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
     col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
     assert sum(row_counts) == sum(col_counts)
-    #
-    answers = []
-    for cns in helper(row_counts, col_counts):
-        s = list(range(1, n + 1))
-        for k in range(n + 1):
-            for diagonal in itertools.combinations(s, k):
-                bns = cns.copy()
-                for i in diagonal:
-                    bns.add((i, i))
-                # print(Tableau({box: 1 for box in bns}))
-                ans = n * [0]
-                for i, j in bns:
-                    ans[i - 1] += 1
-                ans = tuple(ans)
-                while ans and ans[-1] == 0:
-                    ans = ans[:-1]
-                if is_skew_symmetric_composition(ans):
-                    answers.append(ans)
-    if len(answers) > 1:
-        raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
-    if len(answers) == 0:
-        raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
-    return answers[0]
+
+    if sum(row_counts) == 0:
+        return set()
+
+    c = tuple(row_counts[i] + col_counts[i] + 1 for i in range(n))
+    m = [i for i in range(n) if c[i] == max(c)]
+
+    # print(row_counts, col_counts, c, 'I = ', m)
+
+    a = list(row_counts)
+    for i in m:
+        a[i] = 0
+    for i in range(n):
+        if a[i] > 0:
+            a[i] -= len([j for j in m if i < j])
+    a = tuple(a)
+
+    b = list(col_counts)
+    for i in m:
+        b[i] = 0
+    for i in range(n):
+        if b[i] > 0:
+            b[i] -= len([j for j in m if j < i])
+    b = tuple(b)
+
+    mu = _skew_symmetric_composition_from_row_column_counts(a, b)
+
+    new_rows = n * [0]
+    new_cols = n * [0]
+    for i, j in mu:
+        if i < j:
+            new_rows[i] += 1
+            new_cols[j] += 1
+    for i in range(n):
+        if new_rows[i] < row_counts[i] or new_cols[i] < col_counts[i]:
+            for j in m:
+                mu.add((i, j))
+                mu.add((j, i))
+    return mu
+
+
+# def skew_symmetric_composition_from_row_column_counts(row_counts, col_counts):
+#     def helper(rc, cc):
+#         if len(rc) == 0 or max(rc) == 0:
+#             yield set()
+#             return
+#         m = max(rc)
+#         i = [i for i, a in enumerate(rc) if a == m][-1]
+#         columns = [j for j, c in enumerate(cc) if c > 0 and j > i]
+#         for subset in itertools.combinations(columns, m):
+#             new_rc = rc[:i] + (0,) + rc[i + 1:]
+#             new_cc = tuple((a - 1) if j in subset else a for j, a in enumerate(cc))
+#             for ans in helper(new_rc, new_cc):
+#                 for j in subset:
+#                     ans |= {(i + 1, j + 1), (j + 1, i + 1)}
+#                 yield ans
+#     #
+#     n = max(len(row_counts), len(col_counts))
+#     row_counts = tuple(row_counts) + (n - len(row_counts)) * (0,)
+#     col_counts = tuple(col_counts) + (n - len(col_counts)) * (0,)
+#     assert sum(row_counts) == sum(col_counts)
+#     #
+#     answers = []
+#     for cns in helper(row_counts, col_counts):
+#         s = list(range(1, n + 1))
+#         for k in range(n + 1):
+#             for diagonal in itertools.combinations(s, k):
+#                 bns = cns.copy()
+#                 for i in diagonal:
+#                     bns.add((i, i))
+#                 # print(Tableau({box: 1 for box in bns}))
+#                 ans = n * [0]
+#                 for i, j in bns:
+#                     ans[i - 1] += 1
+#                 ans = tuple(ans)
+#                 while ans and ans[-1] == 0:
+#                     ans = ans[:-1]
+#                 if is_skew_symmetric_composition(ans):
+#                     answers.append(ans)
+#     if len(answers) > 1:
+#         raise Exception('Failed uniqueness %s, %s: %s' % (str(row_counts), str(col_counts), str(answers)))
+#     if len(answers) == 0:
+#         raise Exception('Failed existence %s, %s' % (str(row_counts), str(col_counts)))
+#     return answers[0]
 
 
 def weak_compositions(n, parts, allow_repeated_parts=True, reduced=False):
@@ -584,24 +652,44 @@ def q_shifted_monomial(weak_composition):
         for j in range(i, mu[i - 1] + 1):
             ans *= X(i) + X(j)
     return ans
+    # lam = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+    # mu = symmetric_half(lam)
+    # w = Permutation.get_inv_grassmannian(*mu).shift(1)
+    # w = Permutation.from_involution_shape(*mu).shift(1)
+    # ans = InvSchubert.get(w).homogenize(sum(mu)) * 2**len(mu)
+    # ans = restrict_variables(ans, max((1,) + mu))
+    # return ans
 
 
-def gp_shifted_monomial(weak_composition):
-    mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-    ans = X(0)**0
-    for i in range(1, len(mu) + 1):
-        for j in range(i + 1, mu[i - 1] + 1):
-            ans *= X(i) + X(j) + X(i) * X(j)
+def gp_shifted_monomial(beta=LASCOUX_BETA):
+    def fun(weak_composition):
+        mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+        ans = X(0)**0
+        for i in range(1, len(mu) + 1):
+            for j in range(i + 1, mu[i - 1] + 1):
+                ans *= X(i) + X(j) + beta * X(i) * X(j)
+        return ans
+    return fun
+
+
+def restrict_variables(ans, n):
+    while any(i > n for i in ans.variables()):
+        ans = ans.set(max(ans.variables()), 0)
     return ans
 
 
-def gq_shifted_monomial(weak_composition):
-    mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
-    ans = X(0)**0
-    for i in range(1, len(mu) + 1):
-        for j in range(i, mu[i - 1] + 1):
-            ans *= X(i) + X(j) + X(i) * X(j)
-    return ans
+def gq_shifted_monomial(beta=LASCOUX_BETA):
+    assert InvGrothendieck.beta == 1
+    def fun(weak_composition):
+        # old = X(0)**0
+        # mu = tuple(sorted((i for i in weak_composition if i != 0), reverse=True))
+        # for i in range(1, len(mu) + 1):
+        #     for j in range(i, mu[i - 1] + 1):
+        #         old *= X(i) + X(j) + beta * X(i) * X(j)
+        # return old
+        w = Permutation.from_code(*weak_composition)
+        return InvGrothendieck.get(w).homogenize(w.involution_length()).set(0, beta)
+    return fun
 
 
 def sorting_permutation(weak_comp):
@@ -625,15 +713,16 @@ def sorting_descent(weak_comp):
     return weak_comp, None
 
 
-def _generic_key(weak_comp, cache, name, monomial_fn, isobaric_divided_difference_fn):
+def _generic_key(weak_comp, cache, name, monomial_fn, isobaric_divided_difference_fn, sorting_descent_fn=None):
+    sorting_descent_fn = sorting_descent if sorting_descent_fn is None else sorting_descent_fn
     while weak_comp and weak_comp[-1] == 0:
         weak_comp = weak_comp[:-1]
     if weak_comp not in cache:
-        new_comp, i = sorting_descent(weak_comp)
+        new_comp, i = sorting_descent_fn(weak_comp)
         if i is None:
             cache[weak_comp] = monomial_fn(weak_comp)
         else:
-            f = _generic_key(new_comp, cache, name, monomial_fn, isobaric_divided_difference_fn)
+            f = _generic_key(new_comp, cache, name, monomial_fn, isobaric_divided_difference_fn, sorting_descent_fn)
             cache[weak_comp] = isobaric_divided_difference_fn(f, i)
         # if len(cache) % 100 == 0:
         #    print(' . . .', name, 'cache:', len(cache))
@@ -669,35 +758,60 @@ def q_atom(weak_comp):
     isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i) - f
     return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', q_shifted_monomial, isobaric_divided_difference_fn)
 
-def lascoux(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i)
-    return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE, 'Lascoux Polynomial', leading_monomial, isobaric_divided_difference_fn)
+def lascoux(weak_comp, beta=LASCOUX_BETA):
+    LASCOUX_POLYNOMIAL_CACHE[beta] = LASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i)
+    return _generic_key(weak_comp, LASCOUX_POLYNOMIAL_CACHE[beta], 'Lascoux Polynomial', leading_monomial, isobaric_divided_difference_fn)
 
 
-def lascoux_atom(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
-    return _generic_key(weak_comp, LASCOUX_ATOM_CACHE, 'Lascoux Atom', leading_monomial, isobaric_divided_difference_fn)
+def lascoux_atom(weak_comp, beta=LASCOUX_BETA):
+    LASCOUX_ATOM_CACHE[beta] = LASCOUX_ATOM_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, LASCOUX_ATOM_CACHE[beta], 'Lascoux Atom', leading_monomial, isobaric_divided_difference_fn)
 
 
-def p_lascoux(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i)
-    return _generic_key(weak_comp, PLASCOUX_POLYNOMIAL_CACHE, 'PLascoux Polynomial', gp_shifted_monomial, isobaric_divided_difference_fn)
+def p_lascoux(weak_comp, beta=LASCOUX_BETA):
+    PLASCOUX_POLYNOMIAL_CACHE[beta] = PLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i)
+    return _generic_key(weak_comp, PLASCOUX_POLYNOMIAL_CACHE[beta], 'PLascoux Polynomial', gp_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
-def p_lascoux_atom(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
-    return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE, 'PLascoux Atom', gp_shifted_monomial, isobaric_divided_difference_fn)
+def p_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
+    PLASCOUX_ATOM_CACHE[beta] = PLASCOUX_ATOM_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, PLASCOUX_ATOM_CACHE[beta], 'PLascoux Atom', gp_shifted_monomial(beta), isobaric_divided_difference_fn)
 
 
-def q_lascoux(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (X(i) * (1 + X(i + 1)))).divided_difference(i)
-    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE, 'QKey Polynomial', gq_shifted_monomial, isobaric_divided_difference_fn)
+def q_lascoux_sorting_descent(weak_comp):
+    for i in range(1, len(weak_comp)):
+        # if weak_comp[i] > weak_comp[i - 1] and all(weak_comp[j] == 0 for j in range(i)):
+        #    continue
+        if weak_comp[i] > weak_comp[i - 1]:
+            shape = symmetric_diagram(weak_comp)
+            if ((i + 1, i + 1) in shape) ^ ((i, i) in shape):
+                continue
+            new_comp = list(weak_comp)
+            new_comp[i - 1], new_comp[i] = new_comp[i], new_comp[i - 1]
+            return tuple(new_comp), i
+    return weak_comp, None
 
 
-def q_lascoux_atom(weak_comp):
-    isobaric_divided_difference_fn = lambda f, i: (f * (1 + X(i + 1))).isobaric_divided_difference(i) - f
-    return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE, 'QLascoux Atom', gq_shifted_monomial, isobaric_divided_difference_fn)
+def q_lascoux(weak_comp, beta=LASCOUX_BETA):
+    QLASCOUX_POLYNOMIAL_CACHE[beta] = QLASCOUX_POLYNOMIAL_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * X(i) * (1 + beta * X(i + 1))).divided_difference(i)
+    return _generic_key(weak_comp, QLASCOUX_POLYNOMIAL_CACHE[beta], 'QKey Polynomial', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
 
+
+def q_lascoux_atom(weak_comp, beta=LASCOUX_BETA):
+    QLASCOUX_ATOM_CACHE[beta] = QLASCOUX_ATOM_CACHE.get(beta, None) or {}
+    isobaric_divided_difference_fn = lambda f, i: (f * (1 + beta * X(i + 1))).isobaric_divided_difference(i) - f
+    return _generic_key(weak_comp, QLASCOUX_ATOM_CACHE[beta], 'QLascoux Atom', gq_shifted_monomial(beta), isobaric_divided_difference_fn)
+
+
+def composition_length(alpha):
+    while alpha and alpha[-1] == 0:
+        alpha = alpha[:-1]
+    return len(alpha)
 
 def tuplize(g):
     beta = []
@@ -745,7 +859,7 @@ def decompose_into_lascoux(kappa):
         betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
         beta = betas[0]
         coeff = kappa[dict_from_tuple(beta)]
-        kappa = kappa - coeff * lascoux(beta)
+        kappa = kappa - coeff * lascoux(beta, 1)
         ans[beta] = ans.get(beta, 0) + coeff
     return {k: v for k, v in ans.items() if v}
 
@@ -782,6 +896,17 @@ def decompose_into_atoms(kappa):
         beta = betas[0]
         coeff = kappa[dict_from_tuple(beta)]
         kappa = kappa - coeff * atom(beta)
+        ans[beta] = ans.get(beta, 0) + coeff
+    return {k: v for k, v in ans.items() if v}
+
+
+def decompose_into_lascoux_atoms(kappa):
+    ans = {}
+    while kappa != 0:
+        betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
+        beta = betas[0]
+        coeff = kappa[dict_from_tuple(beta)]
+        kappa = kappa - coeff * lascoux_atom(beta, 1)
         ans[beta] = ans.get(beta, 0) + coeff
     return {k: v for k, v in ans.items() if v}
 

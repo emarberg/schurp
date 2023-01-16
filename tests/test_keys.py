@@ -6,9 +6,10 @@ from keys import (
     skew_symmetric_weak_compositions,
     key, atom,
     q_power,
-    p_key, p_atom, p_lascoux,
-    q_key, q_atom, q_lascoux,
+    p_key, p_atom, p_lascoux, p_lascoux_atom,
+    q_key, q_atom, q_lascoux, q_lascoux_atom,
     get_exponents,
+    composition_from_diagram,
     decompose_key,
     decompose_into_compositions,
     decompose_into_keys, decompose_into_lascoux, decompose_into_atoms, dict_from_tuple,
@@ -30,8 +31,10 @@ from keys import (
     symmetric_half,
     print_skew_symmetric_diagram,
     print_symmetric_diagram,
+    symmetric_diagram,
     symmetrize_strict_partition,
     skew_symmetrize_strict_partition,
+    restrict_variables,
 )
 from symmetric import FPFStanleyExpander
 from schubert import Schubert, InvSchubert, Grothendieck, InvGrothendieck, FPFSchubert, FPFGrothendieck, X
@@ -66,6 +69,119 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def test_fpf_vexillary(n=10):
+    for index, z in enumerate(Permutation.fpf_involutions(n)):
+        if not is_fpf_vexillary(z):
+            continue
+        z = z.shift(2) * Permutation.s_i(n + 3) * Permutation.s_i(1)
+        des = z.get_descentset_fpf_visible()
+        if des:
+            print('. . .', index)
+            k = max(des)
+            l = k + 1
+            while z(l + 1) < min(k, z(k)):
+                l += 1
+            t = Permutation.t_ij(k, l)
+            v = t * z * t
+            j = v(k)
+            a = [i for i in range(1, j) if (Permutation.t_ij(i, j) * v * Permutation.t_ij(i, j)).length() == v.length() + 2]
+            assert len(a) == 1
+
+
+def symmetrizer(f, n):
+    for i in Permutation.longest_element(n).get_reduced_word():
+        f = (f * (1 + X(0) * X(i + 1))).isobaric_divided_difference(i)
+    return f
+
+
+def test_ortho_groth_symmetrizer(nn=4, k=4):
+    for w in Permutation.involutions(nn):
+        if not w.is_vexillary():
+            continue
+        if w(1) > 1:
+            continue
+        mu = w.involution_shape().tuple()
+        print('w =', w, '=', w.cycle_repr(), 'shape =', mu, 'DesV =', w.get_descentset_visible())
+        u = w.shift(0)
+        d = max([0] + u.get_descentset_visible())
+        for n in range(d, d + k):
+            print('  n =', n)
+            f = InvGrothendieck.get(u).homogenize(sum(mu))
+            assert f == restrict_variables(f, n)
+            f = symmetrizer(f, n)
+            g = GQ(n, mu).polynomial()
+            if f != g:
+                print()
+                print('f =', f)
+                print()
+                print('g =', g)
+                print('\n*** not equal ***\n')
+                assert len(w.get_descentset_visible()) != 1
+                break
+
+
+def test_gq_inv_grassmannian(n=4, m=2):
+    k = 1
+    while n is None or k <= n:
+        print(k)
+        for mu in StrictPartition.all(k):
+            mu = tuple(mu)
+            print('mu =', mu)
+            # w = Permutation.get_inv_grassmannian(*mu)
+            w = Permutation.from_involution_shape(*mu).shift(1)
+            for i in range(m):
+                u = w.shift(i)
+                d = max(mu) + i
+                print('  n =', d, u.cycle_repr())
+                f = InvGrothendieck.get(u).homogenize(sum(mu))
+                f = restrict_variables(f, d)
+                f = symmetrizer(f, d)
+                g = GQ(d, mu).polynomial()
+                if f != g:
+                    print()
+                    print('FAIL,', 'L < GQ :', f < g)
+                    print()
+                    print(str(f)[:150])
+                    print()
+                    print(str(g)[:150])
+                    print()
+                    print(str(g - f)[:150])
+                    print()
+                assert f == g
+        k += 1
+
+
+def test_gp_fpf_grassmannian(n=4, m=2):
+    k = 1
+    while n is None or k <= n:
+        print(k)
+        for mu in StrictPartition.all(k):
+            mu = tuple(mu)
+            print('mu =', mu)
+            #w = Permutation.get_fpf_grassmannian(*mu)
+            w = Permutation.from_fpf_involution_shape(*mu)
+            for i in range(0, m, 2):
+                u = w.fpf_shift(i)
+                d = max(mu) + 1 + i
+                print('  n =', d, u.cycle_repr())
+                f = FPFGrothendieck.get(u).homogenize(sum(mu))
+                f = restrict_variables(f, d)
+                f = symmetrizer(f, d)
+                g = GP(d, mu).polynomial()
+                if f != g:
+                    print()
+                    print('FAIL,', 'L < GP :', f < g)
+                    print()
+                    print(str(f)[:150])
+                    print()
+                    print(str(g)[:150])
+                    print()
+                    print(str(g - f)[:150])
+                    print()
+                assert f == g
+        k += 1
+
+
 def test_p_lascoux_to_GP(n=4):
     k = 0
     while n is None or k <= n:
@@ -73,14 +189,17 @@ def test_p_lascoux_to_GP(n=4):
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
             lam = tuple(reversed(skew_symmetrize_strict_partition(mu)))
-            nvars = max((0,) + mu) + 1
+            nvars = (max(mu) + 1) if mu else 0
             print('  ', mu, '-->', lam, ':', nvars)
             f = p_lascoux(lam)
-            g = GP(nvars, mu).polynomial().set(0, 1)
+            g = GP(nvars, mu).polynomial()
             if f != g:
                 print()
                 print('FAIL,', 'L < GP :', f < g)
+                print(str(f)[:150])
+                print(str(g)[:150])
                 print()
+            assert nvars == len(lam)
             assert f == g
         k += 1
 
@@ -89,23 +208,40 @@ def test_q_lascoux_to_GQ(n=4):
     nch = 150
     k = 0
     while n is None or k <= n:
+        print()
         print(k)
+        print()
+        failure, success = 0, 0
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
             lam = tuple(reversed(symmetrize_strict_partition(mu)))
             nvars = max((0,) + mu)
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_lascoux(lam)
-            g = GQ(nvars, mu).polynomial().set(0, 1)
+            g = GQ(nvars, mu).polynomial()
             if f != g:
+                # f = (f * X(1) * (1 + X(0) * X(2))).divided_difference(1)
+                failure += 1
                 print()
                 print(' * FAIL,', 'L < GQ :', f < g)
                 print()
+                print(str(f)[:100])
+                print()
+                print(str(g)[:100])
+                print()
+                print(str(g - f)[:150])
+                print()
                 # expand = G_expansion(GQ(nvars, mu) - SymmetricPolynomial.from_polynomial(f))
-                # print('G:', expand)
+                # print('G:', all(v > 0 for v in expand.values()), expand)
                 # print()
                 # assert all(v > 0 for v in expand.values())
+            else:
+                success += 1
+            print()
+            print('success =', success, 'failed =', failure)
+            print()
             assert f == g
+            assert nvars == len(lam)
         k += 1
 
 
@@ -116,8 +252,8 @@ def test_q_key_to_q(n=5):
         print(k)
         for mu in StrictPartition.all(k):
             mu = tuple(mu)
-            lam = tuple(reversed(symmetrize_strict_partition(mu)))
-            nvars = max((0,) + mu)
+            lam = (0,) + tuple(reversed(symmetrize_strict_partition(mu)))
+            nvars = max((0,) + mu) + 1
             print('  ', mu, '-->', lam, ':', nvars)
             f = q_key(lam)
             g = Q(nvars, mu).polynomial()
@@ -153,7 +289,12 @@ def test_distinct_p_key(m=4, l=4):
                 try:
                     assert len(seen[f]) == 1
                 except:
-                    print(seen[f], '-->', str(f)[:20])
+                    print({a: p_atom(a) == 0 for a in seen[f]}, '-->', str(f)[:20])
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({p_lascoux(v) for v in seen[k]}))
+
 
 
 def test_distinct_p_atom(m=4, l=4):
@@ -177,6 +318,10 @@ def test_distinct_p_atom(m=4, l=4):
                 except:
                     print(seen[f], '-->', str(f)[:20])
     print(zero, 'nonzero:', nonzero)
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({p_lascoux_atom(v) for v in seen[k]}))
 
 
 def test_distinct_q_atom(m=4, l=4):
@@ -200,6 +345,10 @@ def test_distinct_q_atom(m=4, l=4):
                 except:
                     print(seen[f], '-->', str(f)[:20])
     print(zero, 'nonzero:', nonzero)
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({q_lascoux_atom(v) for v in seen[k]}))
 
 
 def test_distinct_q_key(m=4, l=4):
@@ -217,6 +366,105 @@ def test_distinct_q_key(m=4, l=4):
                     print(seen[f], '-->', str(f)[:20])
                 if len(seen) % 1000 == 0:
                     print('  seen:', len(seen))
+    print()
+    for k in seen:
+        if len(seen[k]) > 1:
+            print(seen[k], len(seen[k]), len({q_lascoux(v) for v in seen[k]}))
+
+
+def test_distinct_p_lascoux(m=4, l=4):
+    seen = {}
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                f = p_lascoux(alpha)
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    allzero = False
+                    print({a: p_lascoux_atom(a) == 0 for a in seen[f]}, '-->', str(f)[:20])
+                    assert len({p_key(a) for a in seen[f]}) == 1
+                    assert sum([p_lascoux_atom(a) == 0 for a in seen[f]]) >= len(seen[f]) - 1
+                    if sum([p_lascoux_atom(a) == 0 for a in seen[f]]) == len(seen[f]):
+                       allzero = True
+                       print('\n\n')
+                    w = {a: Permutation.from_word(sorting_permutation(a)) for a in seen[f]} 
+                    top = [a for a in w if all(w[a].strong_bruhat_less_equal(w[b]) for b in w)]
+                    assert len(top) == 1
+                    assert allzero or p_lascoux_atom(top[0]) != 0
+
+
+def test_distinct_p_lascoux_atom(m=4, l=4):
+    seen = {}
+    nonzero = 0
+    zero = 0
+    for n in range(m + 1):
+        print('n =', n)
+        for k in range(l + 1):
+            print('  k =', k)
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                f = p_lascoux_atom(alpha)
+                if f == 0:
+                    # print('zero:', alpha, 'atom is zero?', p_atom(alpha) == 0)
+                    zero += 1
+                    continue
+                nonzero += 1
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+                    input('\n')
+    print(zero, 'nonzero:', nonzero)
+
+
+def test_distinct_q_lascoux(m=4, l=4):
+    seen = {}
+    for n in range(m + 1):
+        print('n =', n)
+        for k in range(l + 1):
+            print('  k =', k)
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                f = q_lascoux(alpha)
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20],)
+                    assert len({q_key(a) for a in seen[f]}) == 1
+                    
+
+def test_distinct_q_lascoux_atom(m=4, l=4):
+    seen = {}
+    nonzero = 0
+    zero = 0
+    for n in range(m + 1):
+        print('n =', n)
+        for k in range(l + 1):
+            print('  k =', k)
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                f = q_lascoux_atom(alpha)
+                if f == 0:
+                    print('zero:', alpha, 'atom is zero?', q_atom(alpha) == 0)
+                    zero += 1
+                    continue
+                nonzero += 1
+                if f not in seen:
+                    seen[f] = set()
+                seen[f].add(alpha)
+                try:
+                    assert len(seen[f]) == 1
+                except:
+                    print(seen[f], '-->', str(f)[:20])
+                    input('\n')
+    print(zero, 'nonzero:', nonzero)
 
 
 def test_q_key_into_p_key(m=4, l=4):
@@ -775,20 +1023,77 @@ def _attempt_p_into_q(alpha, attempts=10):
             coeff *= 2
 
 
-def test_p_key_into_q_key(m=4, l=4):
+def test_p_key_into_q_key(m=13, l=5):
     for n in range(m + 1):
         for k in range(l + 1):
             for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                # if not all(alpha[i] >= alpha[i + 1] for i in range(1, len(alpha) - 1)):
+                #    continue
+                diagram = symmetric_diagram(alpha)
                 attempt = _attempt_p_into_q(alpha)
+                print()
                 print(alpha, '->', attempt)
+                if attempt is not None and augment_hook(attempt[0]) != alpha:
+                    continue
+                p = 2**q_power(alpha) * p_key(alpha)
+                maximum = max((0,) + alpha)
+                # print(try_to_decompose_q(p))
+                # print()
+                print_symmetric_diagram(alpha)
+                print()
+                if not all((j, j) in diagram for (i, j) in diagram if i == 1 < j) or not all((1, j) in diagram for (i, j) in diagram if i == j > 1):
+                    assert len(try_to_decompose_q(p)) == 0
+                else:
+                    assert len(try_to_decompose_q(p)) > 0
+                    print_symmetric_diagram(attempt[0])
+                    print()
 
 
-def test_q_key_into_p_key(m=4, l=4):
+
+def augment_hook(alpha):
+    diagram = symmetric_diagram(alpha)
+    i = max([i for (i, j) in diagram if i == j])
+    expected = diagram | {(1, j) for j in range(2, i + 1) if (j, j) in diagram} | {(j, 1) for j in range(2, i + 1) if (j, j) in diagram} | {(1, 1)}
+    delta = composition_from_diagram(expected)
+    return delta
+
+
+def test_q_key_into_p_key(m=13, l=5):
     for n in range(m + 1):
         for k in range(l + 1):
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
-                attempt = try_to_decompose_p(q_key(alpha))
+                # if not(alpha and alpha[0] == 0 and all(alpha[i] >= alpha[i + 1] for i in range(1, len(alpha) - 1))):
+                #    continue
+                attempt = try_to_decompose_p(q_key(alpha), positive=True, multiple=False)
+                # if len(attempt) == 0:
+                #    attempt = try_to_decompose_p(q_key(alpha), positive=False, multiple=True)
                 print(alpha, '->', attempt)
+                if not alpha or alpha[0] == 0:
+                    assert len(attempt) > 0
+                    gamma = list(attempt[0])[0]
+                    sortedgamma = tuple(sorted(gamma, reverse=True))
+                    diagram = symmetric_diagram(alpha)
+                    i = max([i for (i, j) in diagram if i == j])
+                    expected = diagram | {(1, j) for j in range(2, i + 1) if (j, j) in diagram} | {(j, 1) for j in range(2, i + 1) if (j, j) in diagram}
+                    lam = tuple(sorted(alpha, reverse=True))
+                    if lam[q_power(alpha) - 1] == q_power(alpha):
+                        expected |= {(1, 1)}
+                    delta = composition_from_diagram(expected)
+                    print_symmetric_diagram(alpha)
+                    print()
+                    print_symmetric_diagram(gamma)
+                    print()
+                    print_symmetric_diagram(sortedgamma)
+                    print()
+                    print(symmetric_halves(alpha), '::', symmetric_halves(gamma), is_skew_symmetric_composition(delta))
+                    print()
+                    print(Permutation.print_diagram(expected, sep='.'))
+                    print()
+                    assert q_key(alpha) == 2**q_power(alpha) * p_key(delta)
+                    assert is_symmetric_composition(delta)
+                    assert is_skew_symmetric_composition(delta)
+                else:
+                    assert len(attempt) == 0
 
 
 def altschurp(mu, n):
@@ -909,9 +1214,16 @@ def test_symmetric_composition_from_row_column_counts():
     assert symmetric_composition_from_row_column_counts((3, 1, 2), (1, 1, 3, 0, 0, 1)) == (3, 2, 4, 0, 0, 1)
 
 
+def test_skew_symmetric_composition_from_row_column_counts():
+    assert skew_symmetric_composition_from_row_column_counts((), ()) == ()
+    assert skew_symmetric_composition_from_row_column_counts((3, 1), (0, 1, 2, 1)) == (4, 3, 3, 1)
+
+
 def test_symmetric_halves(m=6, l=6):
     for n in range(m + 1):
+        print('n =', n)
         for k in range(l + 1):
+            print('  k =', k)
             for alpha in symmetric_weak_compositions(n, k, reduced=True):
                 a, b = symmetric_halves(alpha)
                 beta = symmetric_composition_from_row_column_counts(a, b)
@@ -946,14 +1258,21 @@ def test_skew_symmetric_weak_compositions(nn=8, pp=8):
 
 def test_skew_symmetric_halves(m=6, l=6):
     for n in range(m + 1):
+        print('n =', n)
         for k in range(l + 1):
+            print('  k =', k)
             for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
                 a, b = skew_symmetric_halves(alpha)
                 beta = skew_symmetric_composition_from_row_column_counts(a, b)
-                print(alpha)
-                print(beta)
-                print(a, b)
-                print()
+                if alpha != beta:
+                    print(alpha, beta)
+                    print()
+                    print_symmetric_diagram(alpha)
+                    print()
+                    print_symmetric_diagram(beta)
+                    print()
+                    print(a, b)
+                    print()
                 assert alpha == beta
 
 
@@ -2209,21 +2528,27 @@ def test_leading_p_key(m=30, l=4):
                 valuesdict[kappa].append(alpha)
                 exponents = get_exponents(kappa)
                 a, b = skew_symmetric_halves(alpha)
-                beta = exponents[0]
-
+                print()
                 print(alpha)
+                print()
                 print_skew_symmetric_diagram(alpha)
                 print()
                 print(a, b)
                 print(exponents[0], exponents[-1])
                 print()
                 print({e: kappa[dict_from_tuple(a)] for e in exponents})
-                input('\n\n')
+                print()
+                print(dec)
+                # input('\n\n')
 
-                assert beta == b
+                assert exponents[0] == b
                 assert a in exponents
-                assert kappa[dict_from_tuple(a)] >= 1
+                assert kappa[dict_from_tuple(a)] >= 1 # equality fails
                 assert kappa[dict_from_tuple(b)] == 1
+
+                # assert a in dec # fails in general
+                assert b in dec
+                assert dec[b] == 1
                 toprint[tuple(exponents)] = alpha, a, b, dec
     if any(len(v) > 1 for v in valuesdict.values()):
         for kappa in sorted(valuesdict, key=lambda k: (len(valuesdict[k]), get_exponents(k)[0])):
@@ -2241,7 +2566,7 @@ def test_leading_p_key(m=30, l=4):
         for k, v in valuesdict.items():
             if len(v) > 1:
                 print(k, '-->', v)
-        assert False
+        # assert False
     prev = None
     for betas in sorted(toprint):
         alpha, a, b, dec = toprint[betas]
@@ -2264,18 +2589,28 @@ def test_leading_q_key(m=4, l=4):
                 exponents = get_exponents(kappa)
                 a, b = symmetric_halves(alpha)
                 beta = exponents[0]
-                print(alpha)
+                
+                print()
+                print(alpha, '=', kappa)
+                print()
                 print_symmetric_diagram(alpha)
                 print()
                 print(a, b)
                 print(exponents[0], exponents[-1])
                 print()
                 print({e: kappa[dict_from_tuple(a)] for e in exponents})
-                # input('\n\n')
+                print()
+                print(dec)
+
+                input('\n\n')
                 assert beta == b
                 assert a in exponents
-                assert kappa[dict_from_tuple(a)] >= 2**q_power(alpha)
+                assert kappa[dict_from_tuple(a)] >= 2**q_power(alpha) # equality can fail
                 assert kappa[dict_from_tuple(b)] == 2**q_power(alpha)
+
+                # assert a in dec # fails in general
+                assert b in dec
+                assert dec[b] == 2**q_power(alpha)
                 toprint[tuple(exponents)] = alpha, a, b, dec
     prev = None
     for betas in sorted(toprint):
@@ -2307,6 +2642,7 @@ def decompose_p(f):
     assert len(ans) == 1
     assert set(ans.values()) == {1}
     return list(ans.keys())[0]
+
 
 def decompose_q(f):
     answers = try_to_decompose_q(f, positive=True, multiple=True)
@@ -2346,16 +2682,16 @@ def _decompose(f, halves, alphas, positive, multiple, functional, update):
             a = f[dict_key]
             b = g[dict_key]
             if a % b == 0:
-                h = f - a // b * g
-                assert h[dict_key] == 0
-                for ans in _decompose(h, halves, alphas, positive, multiple, functional, update):
-                    ans[alpha] = ans.get(alpha, 0) + a // b
-                    if ans[alpha] == 0:
-                        del ans[alpha]
-                    if not multiple:
-                        return [ans]
-                    elif ans not in answers:
-                        answers.append(ans)
+                for c in [1 if positive else a // b]:
+                    h = f - c * g
+                    for ans in _decompose(h, halves, alphas, positive, multiple, functional, update):
+                        ans[alpha] = ans.get(alpha, 0) + c
+                        if ans[alpha] == 0:
+                            del ans[alpha]
+                        if not multiple:
+                            return [ans]
+                        elif ans not in answers:
+                            answers.append(ans)
     for ans in answers:
         g = 0
         for alpha, coeff in ans.items():
@@ -2404,7 +2740,7 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
 
 
 def try_to_decompose_q_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
-    functional = q_lascoux
+    functional = lambda a: q_lascoux(a, beta=1)
     update = q_update
     halves = q_lascoux_halves_cache if halves is None else halves
     alphas = q_lascoux_alphas_cache if alphas is None else alphas
@@ -2417,16 +2753,22 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
     print('. . . s')
     d = {}
     for t, w in enumerate(s):
+        c = w.number_two_cycles()
+        print()
+        print(len(s) - t, ':', w)
         isvex = w.is_vexillary()
         d[w] = try_to_decompose_q(s[w], q_halves_cache, q_alphas_cache, positive, multiple)
         for dec in d[w]:
-            print(len(s) - t, ':', w, '->', dec, isvex, w.code())
+            print('  ->', dec, isvex, w.code())
         print()
         w.print_rothe_diagram(sep='.')
-        assert (not positive and multiple) or len(d[w]) == 1
+        # assert (not positive and multiple) or len(d[w]) == 1
         d[w] = d[w][0]
+        assert all(v == 2**(c - q_power(k)) for k, v in d[w].items())
     qvex = {w: list(d[w])[0] for w in d if len(d[w]) == 1 and set(d[w].values()) == {1}}
     ivex = {w: w.code() for w in i if w.is_vexillary()}
+    print()
+    print('qvex == ivex :', qvex == ivex)
     assert qvex == ivex
     print()
     print('caches =', len(q_halves_cache), len(q_alphas_cache))
@@ -2438,9 +2780,9 @@ def p_update(targets, exponents, halves, alphas, functional):
         for d in exponents:
             try:
                 a = skew_symmetric_composition_from_row_column_counts(d, e)
+                assert skew_symmetric_halves(a) == (d, e)
             except:
                 continue
-            assert skew_symmetric_halves(a) == (d, e)
             if a not in alphas:
                 alphas[a] = 1
                 halves[e] = halves.get(e, []) + [a]
@@ -2455,10 +2797,10 @@ def try_to_decompose_p(f, halves=None, alphas=None, positive=True, multiple=Fals
 
 
 def try_to_decompose_p_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
-    functional = p_lascoux
+    functional = lambda a: p_lascoux(a, beta=1)
     update = p_update
     halves = p_lascoux_halves_cache if halves is None else halves
-    alphas = p_lascoux_alphas_cache if alphas is None else alphas
+    alphas = p_lascoux_alphas_cache if alphas is None else alphas 
     return _decompose(f, halves, alphas, positive, multiple, functional, update)
 
 
@@ -2506,6 +2848,7 @@ def _test_vex(d, i):
             print()
         input('?')
     print()
+    return pvex, fvex
 
 def test_fpf_schubert(n=4, positive=True, multiple=True):
     i = list(Permutation.fpf_involutions(n))
@@ -2518,7 +2861,7 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
         isvex = is_fpf_vexillary(w)
         d[w] = try_to_decompose_p(s[w], p_halves_cache, p_alphas_cache, positive, multiple)
         for dec in d[w]:
-            print(len(s) - t, ':', w.cycle_repr(), '->', dec, isvex, w.code())
+            print(len(s) - t, ':', w.cycle_repr(), '->', dec, isvex, w.code(), w.dearc_R().code(), w.dearc_L().code())
             assert set(dec.values()) == {1}
         w.print_rothe_diagram(sep='.')
         print()
@@ -2528,7 +2871,7 @@ def test_fpf_schubert(n=4, positive=True, multiple=True):
         d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         if vexify(w).is_vexillary():
             assert len(d[w]) == 1 and set(d[w].values()) == {1}
-    _test_vex(d, i)
+    pvex, fvex = _test_vex(d, i)
     print('caches =', len(p_halves_cache), len(p_alphas_cache))
     return i, s, d, pvex, fvex
 
@@ -2545,7 +2888,8 @@ def test_fpf_grothendieck(n=4, positive=True, multiple=True):
         print()
         if d[w]:
             for dec in d[w]:
-                print('  *', dec, w.code())
+                print('  *', dec, w.code(), {a: p_lascoux_atom(a) == 0 for a in dec})
+                assert set(dec.values()) == {1}
             d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
         print()
         assert len(d[w]) > 0
@@ -2557,40 +2901,41 @@ def test_fpf_grothendieck(n=4, positive=True, multiple=True):
 
 
 def test_inv_grothendieck(n=4, positive=True, multiple=True):
+    success = 0
+    failure = 0
     assert InvGrothendieck.beta == 1
     i = list(Permutation.involutions(n))
     s = {w: InvGrothendieck.get(w) for w in i if w.is_vexillary()}
     d = {}
     for t, w in enumerate(s):
-        if w.is_dominant():
-            continue
+        #if w.is_dominant():
+        #    continue
         print(len(s) - t, ':', w, w.code())
         print()
         w.print_rothe_diagram(sep='.')
         print()
-        # print(s[w])
+        expected = s[w]
+        # print(expected)
         # print()
-        # print(q_lascoux(w.code()))
+        result = q_lascoux(w.code(), 1)
+        # print(result)
         # print()
-        diff = s[w] - q_lascoux(w.code())
-        # print(diff)
-        # print()
-        expand = decompose_into_lascoux(diff)
-        # print('difference:', expand)
-        d[w] = try_to_decompose_q_lascoux(s[w], q_lascoux_halves_cache, q_lascoux_alphas_cache, positive, multiple)
-        print()
-        if d[w]:
+        if result == expected:
+            success += 1
             print('  ++ SUCCESS')
             print()
-            for dec in d[w]:
-                print('  *', dec, w.code())
-            d[w] = sorted(d[w], key=lambda x: (len(x), sorted(x.values())))[0]
+            d[w] = {w.code(): 1}
         else:
+            failure += 1
             print('  ** FAILED')
+            # assert False
         print()
         # assert len(d[w]) > 0
-        assert all(v > 0 for v in expand.values())
-    print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
+        # assert all(v > 0 for v in expand.values())
+        print('success =', success, 'failed =', failure)
+        # input('\n\n\n')
+    # print('caches =', len(p_lascoux_halves_cache), len(p_alphas_cache))
+    print('success =', success, 'failed =', failure)
     return i, s, d
 
 

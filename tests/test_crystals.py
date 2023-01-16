@@ -481,22 +481,27 @@ def test_demazure(n=2, limit=8):
             # input('')
 
 
+def do_inv_test(n, w, invdemazure=None):
+    is_bounded = inv_is_bounded
+    invdemazure = invdemazure or {}
+    crystal = AbstractPrimedQCrystal.from_involution(w, n, increasing=False)
+    for flag in flags(n):
+        brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
+        highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
+        for f in highest:
+            generate_inv_demazure(crystal.weight(f), invdemazure)
+        decomposition = find_isomorphism(brf, highest, invdemazure)
+
+        ch = factorization_character(brf)
+        expected_ch = get_expected_ch(decomposition, lambda alpha: restrict_variables(q_key(alpha), n))  
+        print(w, 'flag =', flag, ch == expected_ch, decomposition)
+        assert ch == expected_ch and decomposition is not None
+
+
 def test_inv_demazure_generic(n=2, permutation_size=5):
     invdemazure = {}
-    is_bounded = inv_is_bounded
     for w in Permutation.involutions(permutation_size):
-        crystal = AbstractPrimedQCrystal.from_involution(w, n, increasing=False)
-        for flag in flags(n):
-            brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
-            highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
-            for f in highest:
-                generate_inv_demazure(crystal.weight(f), invdemazure)
-            decomposition = find_isomorphism(brf, highest, invdemazure)
-
-            ch = factorization_character(brf)
-            expected_ch = get_expected_ch(decomposition, lambda alpha: restrict_variables(q_key(alpha), n))  
-            print(w.oneline_repr(permutation_size), 'flag =', flag, ch == expected_ch, decomposition)
-            assert ch == expected_ch and decomposition is not None
+        do_inv_test(n, w, invdemazure)
 
 
 def test_inv_demazure(n=2, limit=8):

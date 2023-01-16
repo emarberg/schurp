@@ -206,6 +206,14 @@ class MPolynomial:
     def __init__(self, coeffs={}):
         self.coeffs = coeffs
 
+    def homogenize(self, degree):
+        ans = MPolynomial()
+        for exp, val in self.coeffs.items():
+            d = sum(exp.values()) - 2 * exp.get(0, 0)
+            term =  MPolynomial({exp: val}) * X(0)**(d - degree)
+            ans += term
+        return ans
+
     @classmethod
     def monomial(cls, index, power=1):
         if power == 0:

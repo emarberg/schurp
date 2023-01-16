@@ -37,6 +37,19 @@ class Permutation:
             print(' '.join([str(self.rank_table(p, q)) for q in range(1, n + 1)]))
 
     @classmethod
+    def inversions(cls, word):
+        inv = []
+        for index, i in enumerate(word):
+            a = i
+            b = i + 1
+            for k in word[index + 1:]:
+                a = Permutation.s_i(k)(a)
+                b = Permutation.s_i(k)(b)
+            assert a < b
+            inv.append((a, b))
+        return tuple(inv)
+
+    @classmethod
     def northeast_chains(cls, p, q, size):
         ans = set()
         for rows in itertools.combinations(range(1, p + 1), size):
@@ -579,6 +592,11 @@ class Permutation:
         oneline = [i + 1 for i in range(n)] + [i + n for i in self.oneline]
         return Permutation(oneline)
 
+    def fpf_shift(self, n):
+        assert n >= 0 and n % 2 == 0
+        oneline = [i + 1 + (-1)**i for i in range(n)] + [i + n for i in self.oneline]
+        return Permutation(oneline)
+
     def standardize(self, e):
         index = {b: a + 1 for a, b in enumerate(sorted(map(self, e)))}
         oneline = [index[self(i)] for i in sorted(e)]
@@ -646,6 +664,21 @@ class Permutation:
     def support(self):
         return [i + 1 for i in range(len(self.oneline)) if self.oneline[i] != i + 1]
 
+    def dearc_L(self):
+        assert self.is_fpf_involution()
+        z = self
+        oneline = [z(i) if any(j < z(j) for j in range(min(i, z(i)) + 1,  max(i, z(i)))) else i for i in range(1, len(self.oneline) + 1)]
+        return Permutation(*oneline)
+
+    def dearc_R(self):
+        assert self.is_fpf_involution()
+        z = self
+        oneline = [z(i) if any(j > z(j) for j in range(min(i, z(i)) + 1,  max(i, z(i)))) else i for i in range(1, len(self.oneline) + 1)]
+        return Permutation(*oneline)
+        
+    def is_sp_vexillary(self):
+        assert self.is_fpf_involution()
+        
     def is_vexillary(self):
         n = self.rank
         for i in range(1, n + 1):
@@ -745,9 +778,14 @@ class Permutation:
             newcode = list(code)
             newcode[i + 1] = newcode[i] - 1
             newcode[i] = 0
-            return cls.from_code(newcode) * Permutation.s_i(i + 1)
+            ans = cls.from_code(newcode) * Permutation.s_i(i + 1)
         else:
-            return Permutation()
+            ans = Permutation()
+        if ans.code() != Partition.trim(code):
+            print('         code:', ans.code())
+            print('expected code:', Partition.trim(code))
+        assert ans.code() == Partition.trim(code)
+        return ans
 
     @classmethod
     def from_involution_shape(cls, *mu):
@@ -757,7 +795,9 @@ class Permutation:
         code = mu[0] * [0]
         for i, j in shape:
             code[j - 1] += 1
-        return cls.from_involution_code(*code)
+        ans = cls.from_involution_code(*code)
+        assert sorted(ans.involution_shape()) == sorted([m for m in mu if m != 0])
+        return ans
 
     @classmethod
     def from_involution_code(cls, *code):
@@ -774,9 +814,15 @@ class Permutation:
             newcode[i] = 0
             s = Permutation.s_i(i + 1)
             w = cls.from_involution_code(newcode)
-            return w * s if s * w == w * s else s * w * s
+            ans = w * s if s * w == w * s else s * w * s
         else:
-            return Permutation()
+            ans = Permutation()
+        assert ans.is_involution()
+        if ans.involution_code() != Partition.trim(code):
+            print('involution code:', ans.involution_code())
+            print('  expected code:', Partition.trim(code))
+        assert ans.involution_code() == Partition.trim(code)
+        return ans
 
     @classmethod
     def from_fpf_involution_shape(cls, *mu):
@@ -787,7 +833,6 @@ class Permutation:
         for i, j in shape:
             code[j] += 1
         return cls.from_fpf_involution_code(*code)
-
 
     @classmethod
     def from_fpf_involution_code(cls, *code):
@@ -809,9 +854,14 @@ class Permutation:
             ans = s * cls.from_fpf_involution_code(newcode) * s
             while len(ans.oneline) < r:
                 ans *= Permutation.s_i(len(ans.oneline) + 1)
-            return ans
         else:
-            return Permutation.shortest_fpf_involution(r)
+            ans = Permutation.shortest_fpf_involution(r)
+        assert ans.is_fpf_involution()
+        if ans.fpf_involution_code() != Partition.trim(code):
+            print('involution code:', ans.fpf_involution_code())
+            print('  expected code:', Partition.trim(code))
+        assert ans.fpf_involution_code() == Partition.trim(code)
+        return ans
 
     @classmethod
     def shortest_fpf_involution(cls, rank):
@@ -1183,6 +1233,9 @@ class Permutation:
 
     def __ne__(self, other):
         return not (self == other)
+
+    def strong_bruhat_less_equal(self, other):
+        return self == other or self.strong_bruhat_less_than(other)
 
     def strong_bruhat_less_than(self, other):
         if self.length() >= other.length():

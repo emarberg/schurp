@@ -1,6 +1,31 @@
 from permutations import Permutation
 
 
+
+def test_inversions_commutations(n=5):
+    for w in Permutation.involutions(n):
+        for word in w.get_involution_words():
+            inv = Permutation.inversions(word)
+            com = Permutation.find_commutations(word)
+            print(word, inv, com)
+            for i in range(len(inv)):
+                a, b = inv[i]
+                if i in com:
+                    assert b == w(a)
+                else:
+                    assert b != w(a)
+
+
+def test_inversions(n=5):
+    for w in Permutation.all(n):
+        word = w.get_reduced_word()
+        inv = Permutation.inversions(word)
+        exp = {(a, b) for a in range(1, n) for b in range(a + 1, n + 1) if w(a) > w(b)}
+        # print(w, word, inv, exp)
+        # print()
+        assert exp == set(inv)
+
+
 def test_init():
     w = Permutation(1)
     v = Permutation([1])

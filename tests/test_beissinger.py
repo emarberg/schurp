@@ -210,7 +210,7 @@ SYT = [1, 1, 2, 4, 10, 26, 76, 232, 764, 2620, 9496, 35696, 140152, 568504, 2390
 def test_all_col(n=7):
     seen = {}
     for count, w in enumerate(Permutation.involutions(n)):
-        if count % (SYT[n] // 100) == 0:
+        if count % (SYT[n] // 100 + 1) == 0:
             print('left:', int((SYT[n] - count) / SYT[n] * 100), '%')
         f = len([i for i in range(n) if i + 1 == w(i + 1)])
 
@@ -228,10 +228,12 @@ def test_all_col(n=7):
         assert f == oddrows
 
     print()
+    mapping = {}
     for tab, w in seen.items():
         v = seen[beissinger_rsk(w, sgn=False).transpose()]
         if v == w:
             print('S_%s' % n, ' case, Psi fixed point:', w)
+        mapping[w] = v
 
     print()
     print('done first part')
@@ -295,3 +297,5 @@ def test_all_col(n=7):
                 assert b < a < c or c < a < b
             else:
                 assert False
+
+    return mapping
