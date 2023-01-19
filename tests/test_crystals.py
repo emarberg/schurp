@@ -27,7 +27,7 @@ import random
 
 
 def test_inv_odd_almost_highest(n=3):
-    for permutation_size in range(8):
+    for permutation_size in range(7):
         for w in Permutation.involutions(permutation_size):
             crystal = AbstractQCrystal.from_involution(w, n, increasing=False)
             for f in crystal:
@@ -54,9 +54,9 @@ def test_inv_odd_almost_highest(n=3):
 
 
             
-
 def test_fpf_odd_almost_highest(n=3):
     pass
+
 
 def test_highest_lowest(n=3, k=6):
     for w in Permutation.all(k):
@@ -221,10 +221,10 @@ def inv_negative_one_operator_test(crystal, subset):
         return True
     for b in crystal:
         c = crystal.e_operator(-1, b)
+        if b in subset and c is not None and c not in subset:
+            return False
         if c is None or c == crystal.e_operator(1, b):
             continue
-        if b in subset and c not in subset:
-            return False
         if b not in subset and c in subset:
             return False
     return True

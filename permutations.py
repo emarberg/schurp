@@ -857,10 +857,9 @@ class Permutation:
         else:
             ans = Permutation.shortest_fpf_involution(r)
         assert ans.is_fpf_involution()
-        if ans.fpf_involution_code() != Partition.trim(code):
-            print('involution code:', ans.fpf_involution_code())
-            print('  expected code:', Partition.trim(code))
-        assert ans.fpf_involution_code() == Partition.trim(code)
+        ans_code = Partition.trim(ans.fpf_involution_code())
+        exp_code = Partition.trim(code)
+        assert ans_code == exp_code
         return ans
 
     @classmethod
