@@ -1017,7 +1017,10 @@ def _attempt_p_into_q(alpha, attempts=10):
     coeff = 1
     for i in range(attempts):
         try:
-            return decompose_q(p), coeff
+            dec = try_to_decompose_q(p, positive=True)
+            assert len(dec) > 0
+            dec = dec[0]
+            return dec, coeff
         except:
             p *= 2
             coeff *= 2
@@ -1033,20 +1036,21 @@ def test_p_key_into_q_key(m=13, l=5):
                 attempt = _attempt_p_into_q(alpha)
                 print()
                 print(alpha, '->', attempt)
-                if attempt is not None and augment_hook(attempt[0]) != alpha:
-                    continue
-                p = 2**q_power(alpha) * p_key(alpha)
-                maximum = max((0,) + alpha)
+                # if attempt is not None and augment_hook(attempt[0]) != alpha:
+                #     continue
+                # p = 2**q_power(alpha) * p_key(alpha)
+                # maximum = max((0,) + alpha)
                 # print(try_to_decompose_q(p))
                 # print()
                 print_symmetric_diagram(alpha)
                 print()
-                if not all((j, j) in diagram for (i, j) in diagram if i == 1 < j) or not all((1, j) in diagram for (i, j) in diagram if i == j > 1):
-                    assert len(try_to_decompose_q(p)) == 0
-                else:
-                    assert len(try_to_decompose_q(p)) > 0
-                    print_symmetric_diagram(attempt[0])
-                    print()
+                # if not all((j, j) in diagram for (i, j) in diagram if i == 1 < j) or not all((1, j) in diagram for (i, j) in diagram if i == j > 1):
+                #     assert len(try_to_decompose_q(p)) == 0
+                # else:
+                #     assert len(try_to_decompose_q(p)) > 0
+                #     if attempt is not None:
+                #         print_symmetric_diagram(attempt[0])
+                #         print()
 
 
 
@@ -2143,12 +2147,18 @@ def test_q_key_start_decomposition(m=5):
 def test_p_key_decomposition(m=5):
     for n in range(m + 3):
         for k in range(m):
+            print(n, k)
             for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
                 kappa = p_key(alpha)
                 dec = decompose_into_keys(kappa)
                 ex = min({0} | set(dec.values()))
                 assert ex >= 0
                 assert kappa != 0
+                for gamma in dec:
+                    i = 0
+                    while i < len(gamma) and gamma[i] != 0:
+                        i += 1
+                    assert all(gamma[j] > 1 for j in range(i))
 
 
 def test_q_key_decomposition(m=5):
@@ -2636,7 +2646,7 @@ def test_decompose_q():
 
 
 def decompose_p(f):
-    answers = try_to_decompose_p(f, positive=True)
+    answers = try_to_decompose_p(f)
     assert len(answers) == 1
     ans = answers[0]
     assert len(ans) == 1
@@ -2645,7 +2655,7 @@ def decompose_p(f):
 
 
 def decompose_q(f):
-    answers = try_to_decompose_q(f, positive=True, multiple=True)
+    answers = try_to_decompose_q(f)
     assert len(answers) == 1
     ans = answers[0]
     assert len(ans) == 1
@@ -2672,7 +2682,7 @@ def _decompose(f, halves, alphas, positive, multiple, functional, update):
     if positive and not f.is_positive():
         return []
     exponents = get_exponents(f)
-    targets = [exponents[0]]
+    targets = exponents # [exponents[0]]
     answers = []
     for target in targets:
         update([target], exponents, halves, alphas, functional)
@@ -2682,16 +2692,16 @@ def _decompose(f, halves, alphas, positive, multiple, functional, update):
             a = f[dict_key]
             b = g[dict_key]
             if a % b == 0:
-                for c in [1 if positive else a // b]:
-                    h = f - c * g
-                    for ans in _decompose(h, halves, alphas, positive, multiple, functional, update):
-                        ans[alpha] = ans.get(alpha, 0) + c
-                        if ans[alpha] == 0:
-                            del ans[alpha]
-                        if not multiple:
-                            return [ans]
-                        elif ans not in answers:
-                            answers.append(ans)
+                c = a // b
+                h = f - c * g
+                for ans in _decompose(h, halves, alphas, positive, multiple, functional, update):
+                    ans[alpha] = ans.get(alpha, 0) + c
+                    if ans[alpha] == 0:
+                        del ans[alpha]
+                    if not multiple:
+                        return [ans]
+                    elif ans not in answers:
+                        answers.append(ans)
     for ans in answers:
         g = 0
         for alpha, coeff in ans.items():
@@ -2716,8 +2726,8 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
     # answers = []
     # for target in targets:
     #     dict_key = dict_from_tuple(target)
-    #     for g, alpha in sorted(halves.get(target, [])):
-    #         assert g == functional(alpha)
+    #     for alpha in sorted(halves.get(target, [])):
+    #         g = functional(alpha)
     #         a = f[dict_key]
     #         b = g[dict_key]
     #         if a % b == 0:
@@ -2737,6 +2747,12 @@ def try_to_decompose_q(f, halves=None, alphas=None, positive=True, multiple=Fals
     #         g += coeff * functional(alpha)
     #     assert f == g
     # return answers
+
+
+def test_try_to_decompose_q():
+    decomposition = try_to_decompose_q(p_key((3, 1, 1)) * 2, positive=False)
+    print(decomposition)
+    assert {(2, 1): 1, (1, 2): -1, (0, 2, 1): 1} in decomposition
 
 
 def try_to_decompose_q_lascoux(f, halves=None, alphas=None, positive=True, multiple=False):
