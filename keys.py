@@ -739,22 +739,58 @@ def atom(weak_comp):
     return _generic_key(weak_comp, KEY_ATOM_CACHE, 'Key Atom', leading_monomial, isobaric_divided_difference_fn)
 
 
-def p_key(weak_comp):
+def p_args(*args):
+    if len(args) == 1:
+            return args[0]
+    else:
+        assert len(args) == 2
+        w, mu = args
+        assert type(w) == Permutation
+        assert Partition.is_strict_partition(mu)
+        lam = StrictPartition.skew_symmetric_double(mu)
+        while len(lam) < len(w.oneline):
+            lam += (0,)
+        for i in reversed(w.get_reduced_word()):
+            lam = lam[:i - 1] + (lam[i], lam[i - 1]) + lam[i + 1:]
+        return lam
+
+
+def p_key(*args):
+    weak_comp = p_args(*args)
     isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i)
     return _generic_key(weak_comp, PKEY_POLYNOMIAL_CACHE, 'PKey Polynomial', p_shifted_monomial, isobaric_divided_difference_fn)
 
 
-def p_atom(weak_comp):
+def p_atom(*args):
+    weak_comp = p_args(*args)
     isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i) - f
     return _generic_key(weak_comp, PKEY_ATOM_CACHE, 'PKey Atom', p_shifted_monomial, isobaric_divided_difference_fn)
 
 
-def q_key(weak_comp):
+def q_args(*args):
+    if len(args) == 1:
+            return args[0]
+    else:
+        assert len(args) == 2
+        w, mu = args
+        assert type(w) == Permutation
+        assert Partition.is_strict_partition(mu)
+        lam = StrictPartition.symmetric_double(mu)
+        while len(lam) < len(w.oneline):
+            lam += (0,)
+        for i in reversed(w.get_reduced_word()):
+            lam = lam[:i - 1] + (lam[i], lam[i - 1]) + lam[i + 1:]
+        return lam
+
+
+def q_key(*args):
+    weak_comp = q_args(*args)
     isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i)    
     return _generic_key(weak_comp, QKEY_POLYNOMIAL_CACHE, 'QKey Polynomial', q_shifted_monomial, isobaric_divided_difference_fn)
 
 
-def q_atom(weak_comp):
+def q_atom(*args):
+    weak_comp = q_args(*args)
     isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i) - f
     return _generic_key(weak_comp, QKEY_ATOM_CACHE, 'QKey Atom', q_shifted_monomial, isobaric_divided_difference_fn)
 
