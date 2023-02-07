@@ -69,6 +69,25 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def test_constituent_conjecture(k=10):
+    # k = 1
+    # while k <= n:
+    print(k)
+    for mu in StrictPartition.all(k):
+        mu = mu.tuple()
+        print('  ', mu)
+        pset = decompose_into_keys(p_key(Permutation(), mu))
+        qset = decompose_into_keys(q_key(Permutation(), mu) // 2**len(mu))
+        psort = sorted(pset.items(), key=lambda xy: (xy[-1], xy[0]))
+        qsort = sorted(qset.items(), key=lambda xy: (xy[-1], xy[0]))
+        print()
+        for p, q in zip(psort, qsort):
+            print('    ', p[0], q[0], q[1])
+        print()
+        assert sorted(pset.values()) == sorted(qset.values())
+    #    k += 1
+
+
 def test_fpf_vexillary(n=10):
     for index, z in enumerate(Permutation.fpf_involutions(n)):
         if not is_fpf_vexillary(z):
@@ -78,9 +97,7 @@ def test_fpf_vexillary(n=10):
         if des:
             print('. . .', index)
             k = max(des)
-            l = k + 1
-            while z(l + 1) < min(k, z(k)):
-                l += 1
+            l = max([l for l in range(k + 1, len(z.oneline) + 1) if z(l) < min(k, z(k))])
             t = Permutation.t_ij(k, l)
             v = t * z * t
             j = v(k)
