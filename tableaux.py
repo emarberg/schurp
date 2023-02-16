@@ -693,6 +693,50 @@ class Tableau:
             rows[i] += 1
         return Partition(*sorted(rows.values(), reverse=True))
 
+    @classmethod
+    def shifted_highest_weight(cls, mu):
+        mapping = {}
+        for i in range(len(mu)):
+            for j in range(mu[i]):
+                mapping[i + 1, i + j + 1] = i + 1
+        return cls(mapping)
+
+    @classmethod
+    def shifted_lowest_weight(cls, mu, rank=None, diagonal_primes=False):
+        rank = len(mu) if rank is None else rank
+        if sum(mu) == 0:
+            return Tableau()
+        else:
+            boxes = {(i + 1, i + j + 1) for i in range(len(mu)) for j in range(mu[i])}
+            # find start
+            j = 1
+            while (1, j + 1) in boxes:
+                j += 1
+            i = 1
+            # find outer ribbon
+            ribbon = []
+            while True:
+                if (i + 1, j) in boxes:
+                    ribbon.append((i, j, -1))
+                    i += 1
+                elif (i, j - 1) in boxes:
+                    ribbon.append((i, j, 1))
+                    j -= 1
+                else:
+                    ribbon.append((i, j, -1 if diagonal_primes else 1))
+                    break
+            # trim outer ribbon
+            nu = list(mu)
+            for i, j, _ in ribbon:
+                nu[i - 1] -= 1
+            nu = Partition.trim(nu)
+            print(ribbon, nu, rank)
+            # get inner part of tableau and add outer ribbon
+            mapping = cls.shifted_lowest_weight(nu, rank - 1, diagonal_primes).mapping
+            for (i, j, sign) in ribbon:
+                mapping[i, j] = sign * rank
+            return cls(mapping)
+
     def count_diagonal_cells(self):
         return len([(i, j) for i, j in self.mapping if i == j])
 
