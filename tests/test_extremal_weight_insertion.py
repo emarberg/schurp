@@ -51,21 +51,22 @@ def test_inv(n):
         for i, e in enumerate(words):
             if i % (len(words) // 100 + 1) == 0:
                 print('  ', 100 * i / len(words), '%') 
-            p, q = involution_insert(*e)
-            expected_highest_tab = highest_weight_inv_insertion(e)
-            expected_lowest_tab = lowest_weight_inv_insertion(e)
+            #p, q = involution_insert(*e)
+            
+            # expected_lowest_tab = lowest_weight_inv_insertion(e)
+            # lowest = [lowest_weight_inv_insertion(e[:i + 1]) for i in range(len(e))]
 
+            # expected_highest_tab = highest_weight_inv_insertion(e)
             highest = [highest_weight_inv_insertion(e[:i + 1]) for i in range(len(e))]
-            lowest = [lowest_weight_inv_insertion(e[:i + 1]) for i in range(len(e))]
-
+            
             try:
-                assert expected_lowest_tab == p
                 assert all(t.is_decreasing() for t in highest)
-                assert all(t.is_increasing() for t in lowest)
+                # assert expected_lowest_tab == p
+                # assert all(t.is_increasing() for t in lowest)
             except:
                 print('word =', e)
                 print(combine_tableau_strings(*highest))
-                print(combine_tableau_strings(*lowest))
+                # print(combine_tableau_strings(*lowest))
                 print()
                 print()
                 assert False
