@@ -730,7 +730,6 @@ class Tableau:
             for i, j, _ in ribbon:
                 nu[i - 1] -= 1
             nu = Partition.trim(nu)
-            print(ribbon, nu, rank)
             # get inner part of tableau and add outer ribbon
             mapping = cls.shifted_lowest_weight(nu, rank - 1, diagonal_primes).mapping
             for (i, j, sign) in ribbon:
@@ -985,7 +984,29 @@ class Tableau:
         return tuple(ans)
 
     @classmethod
+    def inverse_involution_insertion(cls, p, q):
+        # q is assumed to be semistandard shifted with no diagonal primes
+        order = sorted(q, key=lambda x: (q[x], x[0] if q[x].is_primed() else x[1]))
+        alpha = []
+        for i, j in q:
+            v = abs(q[i, j])
+            while len(alpha) < v:
+                alpha.append(0)
+            alpha[v - 1] += 1
+        mapping = {}
+        for i, (a, b) in enumerate(order):
+            mapping[a, b] = -(i + 1) if q[a, b].is_primed() else (i + 1)
+        qstandard = Tableau(mapping)
+        word = cls.inverse_inv(p, qstandard)
+        ans = []
+        for a in alpha:
+            ans.append(word[:a])
+            word = word[a:]
+        return tuple(ans)
+
+    @classmethod
     def inverse_inv(cls, p, q):
+        # q is assumed to be standard shifted with no diagonal primes
         ans = len(q) * [0]
 
         p = {k: v.number for k, v in p.mapping.items()}
@@ -1202,6 +1223,15 @@ class Tableau:
                 return False
         return True
 
+    def is_decreasing(self):
+        for i, j in self.cells():
+            u = self.entry(i, j)
+            v = self.entry(i, j + 1)
+            w = self.entry(i + 1, j)
+            if (v and v >= u) or (w and w >= u):
+                return False
+        return True
+
     def is_semistandard(self):
         return self.is_unmarked() and self.is_weakly_increasing()
 
@@ -1343,10 +1373,11 @@ class Tableau:
             v = str(self.mapping[(i, j)])
             base[i - 1][j - 1] = v + (width - len(v)) * ' '
         rows = [' '.join(row) for row in base]
+        pad = max([len(a) for a in rows + ['']]) * ' '
         if FRENCH:
-            return '\n' + '\n'.join(reversed(rows)) + '\n'   # French
+            return pad + '\n' + '\n'.join(reversed(rows)) + '\n' + pad   # French
         else:
-            return '\n' + '\n'.join(rows) + '\n'            # English
+            return pad + '\n' + '\n'.join(rows) + '\n' + pad             # English
 
     @classmethod
     def decreasing_part(cls, row):
