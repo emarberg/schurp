@@ -939,7 +939,30 @@ class Tableau:
         return t
 
     @classmethod
+    def inverse_fpf_insertion(cls, p, q):
+        # q is assumed to be semistandard shifted with no diagonal primes
+        order = sorted(q, key=lambda x: (q[x], x[0] if q[x].is_primed() else x[1]))
+        alpha = []
+        for i, j in q:
+            v = abs(q[i, j])
+            while len(alpha) < v:
+                alpha.append(0)
+            alpha[v - 1] += 1
+        mapping = {}
+        for i, (a, b) in enumerate(order):
+            mapping[a, b] = -(i + 1) if q[a, b].is_primed() else (i + 1)
+        qstandard = Tableau(mapping)
+        word = cls.inverse_fpf(p, qstandard)
+        ans = []
+        for a in alpha:
+            ans.append(word[:a])
+            word = word[a:]
+        return tuple(ans)
+
+
+    @classmethod
     def inverse_fpf(cls, p, q):
+        # q is assumed to be standard shifted with no diagonal primes
         ans = len(q) * [0]
 
         p = {k: v.number for k, v in p.mapping.items()}
@@ -1645,6 +1668,8 @@ class Tableau:
     def eg_insert(self, p, j=0):
         if p is None:
             return (j, self)
+        elif type(p) is int:
+            p = MarkedNumber(p)
 
         def eg_bump(a, tup):
             for i, b in enumerate(tup):
