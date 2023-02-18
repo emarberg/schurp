@@ -65,38 +65,49 @@ def highest_weight_inv_insertion(e):
     # return tab
 
 
+def print_highest_weight_inv_insertion_for_longest_element(n):
+    w = Permutation.longest_element(n)
+    for e in w.get_involution_words():
+        print_highest_weight_inv_insertion(e)
+
+
+def print_highest_weight_fpf_insertion_for_longest_element(n):
+    assert n % 2 == 0
+    w = Permutation.longest_element(n)
+    for e in w.get_fpf_involution_words():
+        print_highest_weight_fpf_insertion(e)
+
+
 def print_lowest_weight_fpf_insertion(e):
     function = lowest_weight_fpf_insertion
-    name = 'lowest-weight fpf-insertion'
     eg_compare = False
-    print_insertion(e, function, name, eg_compare)
+    print_insertion(e, function, eg_compare)
 
 
 def print_lowest_weight_inv_insertion(e):
     function = lowest_weight_inv_insertion
-    name = 'lowest-weight inv-insertion'
     eg_compare = False
-    print_insertion(e, function, name, eg_compare)
+    print_insertion(e, function, eg_compare)
 
 
 def print_highest_weight_fpf_insertion(e):
     function = highest_weight_fpf_insertion
-    name = 'highest-weight fpf-insertion'
     eg_compare = True
-    print_insertion(e, function, name, eg_compare)
+    print_insertion(e, function, eg_compare)
 
 
 def print_highest_weight_inv_insertion(e):
     function = highest_weight_inv_insertion
-    name = 'highest-weight inv-insertion'
     eg_compare = True
-    print_insertion(e, function, name, eg_compare)
+    print_insertion(e, function, eg_compare)
 
 
-def print_insertion(e, insertion_function, insertion_name, eg_compare=False):
+def print_insertion(e, insertion_function, eg_compare=False):
     if len(e) == 0:
-        print('word =', e, 'is empty')
+        print('\ninput word =', e, 'is empty: nothing to show\n')
         return
+    else:
+        print('\ninput word =', e)
 
     e_strs = [str(i) for i in e]
     e_strs[-1] += '\t\t(number inserted into previous)'
@@ -110,13 +121,11 @@ def print_insertion(e, insertion_function, insertion_name, eg_compare=False):
         b_strs = [' ' if b else '*' for b in egstep]
         b_strs[-1] += '\t\t(steps NOT given by EG insertion)'
 
-        strs = [str(highest[j]) + '\n' + e_strs[j] + '\n\n' + b_strs[j] for j in range(len(e))]
+        strs = [str(highest[j]) + '\n' + e_strs[j] + '\n' + b_strs[j] for j in range(len(e))]
     else:
         strs = [str(highest[j]) + '\n' + e_strs[j] for j in range(len(e))]
 
     print(combine_tableau_strings(5, *strs))
-    print()
-    print(insertion_name + ' for word =', e)
     print()
 
 
