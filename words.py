@@ -510,16 +510,17 @@ class Word:
                 if not packed or all(t == 1 or (t - 1) in args for t in args):
                     yield Word(*args)
 
-    def wiring_diagram_tikz(self, n=None):
-        n = max({0} | set(self.elements)) + 1 if n is None else n
+    def wiring_diagram_tikz(self, n=None, labels=False):
+        n = max({0} | {abs(e) for e in self.elements}) + 1 if n is None else n
         #
         pi = [tuple(range(1, n + 1))]
-        for j in reversed(self.elements):
+        for j in self.elements:
+            j = abs(j)
             tup = []
             for i in pi[-1]:
-                if i == j:
+                if j != 0 and i == j:
                     tup += [i + 1]
-                elif i == j + 1:
+                elif j != 0 and i == j + 1:
                     tup += [i - 1]
                 else:
                     tup += [i]
@@ -527,7 +528,7 @@ class Word:
         #
         s = []
         s += ['\\begin{center}']
-        s += ['\\begin{tikzpicture}[scale=0.5]']
+        s += ['\\begin{tikzpicture}[baseline=(dummynode.base), scale=0.5]']
         for i in range(n):
             line = '\\draw (0,%s)' % i
             for j, x in enumerate(pi):
@@ -536,6 +537,14 @@ class Word:
                 line += ' -- (%s,%s)' % (j, x[i] - 1)
             line += ';'
             s += [line]
+        s += ['\\node (dummynode) at (0, %s) {};' % str((n - 1) / 2)]
+        if labels:
+            for i in range(n):
+                s += ['\\node at (%s,%s) {%s};' % (len(pi) - 0.5, i, i + 1)]
+                # s += ['\\node at (%s,%s) {%s};' % (-0.5, i, pi[-1][i])]
+            for i, j in enumerate(self.elements):
+                if j < 0:
+                    s += ['\\filldraw [black,fill=white] (%s,%s) circle (3pt);' % (i + 0.5, abs(j) - 0.5)]
         s += ['\\end{tikzpicture}']
         s += ['\\end{center}']
         return '\n'.join(s)
