@@ -431,7 +431,7 @@ def verify_string_lengths(crystal):
                     raise Exception
 
 
-def _test_results(results, flag, decomposition):
+def _test_results(results, flag, decomposition, brf, crystal):
     def s(a, i):
         return a if a[i] <= a[i + 1] else a[:i] + (a[i + 1], a[i]) + a[i + 2:]
 
@@ -441,21 +441,55 @@ def _test_results(results, flag, decomposition):
                 a = s(a, y)
         return a
 
-    results[flag] = decomposition
+    results[flag] = (decomposition, brf)
     standard = tuple(i + 1 for i in range(len(flag)))
-    expected = results[standard]
+    expected, _ = results[standard]
+    word = []
+    newflag = flag[:]
     while True:
-        i = [i for i in range(len(flag) - 1) if flag[i] == flag[i + 1]]
+        i = [i for i in range(len(newflag) - 1) if newflag[i] == newflag[i + 1]]
         if not i:
             break
         i = i[0]
-        flag = flag[:i] + (flag[i] - 1,) + flag[i + 1:]
-        expected = {s(a, i): expected[a] for a in expected}
+        word.append(i + 1)
+        newflag = newflag[:i] + (newflag[i] - 1,) + newflag[i + 1:]
+
+        new_expected = {}
+        for a in expected:
+            b = s(a, i)
+            new_expected[b] = new_expected.get(b, 0) + expected[a]
+        expected = new_expected
+
     if expected != decomposition:
-        print('  predecessor:', results[standard], decomposition, flag, expected)
+        print('  predecessor:', results[standard][0], decomposition, flag, expected)
         input('\n?\n')
-            # assert newdecomp == decomposition
-            # break
+    print()
+    print('  word =', tuple(reversed(word)))
+    print()
+
+    for i in range(len(flag)):
+        if flag[i] > i + 1:
+            newflag = list(flag)
+            newflag[i] -= 1
+            newflag = tuple(newflag)
+            j = flag[i] - 1
+            print(i + 1, j, flag, newflag)
+            print()
+            newdecomp = {}
+            for a, v in results[newflag][0].items():
+                b = s(a, j - 1)
+                newdecomp[b] = newdecomp.get(b, 0) + v
+            assert newdecomp == decomposition
+
+            _, b = results[newflag]
+            a = crystal.truncate([f for f in crystal if emax(crystal, j, f) in b])
+            if sorted(a) != sorted(brf):
+                print()
+                print(list(a))
+                print(list(brf))
+                print()
+                assert False
+            break
 
 
 def test_demazure_generic(n=2, permutation_size=5):
@@ -479,7 +513,8 @@ def test_demazure_generic(n=2, permutation_size=5):
             for h, alpha in pairs:
                 tab, _ = weak_eg_insert(*[a for f in reversed(h) for a in reversed(f)])
                 #print(h)
-                #print(tab)
+                if all(flag[i] == i + 1 for i in range(len(flag))):
+                    print(tab)
                 #print(alpha)
                 #print()
             try:
@@ -490,7 +525,7 @@ def test_demazure_generic(n=2, permutation_size=5):
                 print('ch =', ch)
                 print('ex =', expected_ch)
                 input('\n?\n')
-            _test_results(results, flag, decomposition)
+            _test_results(results, flag, decomposition, brf, crystal)
 
 
 

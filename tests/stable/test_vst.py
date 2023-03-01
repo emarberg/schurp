@@ -31,7 +31,7 @@ def test_one_var_jq(n=10):
             print('kappa =', kappa, 'nu =', nu)
             a, b, c, d = shifted_ribbon_q_params(kappa, nu)
             t = Polynomial.x(1)
-            expected = (t - beta)**(d - 2) * 2**a * t**(a + b + c) * (2 * t - beta)**b
+            expected = (t + beta)**(d - 2) * 2**a * t**(a + b + c) * (2 * t + beta)**b
             f = jq(1, kappa, nu).polynomial()
             assert expected == f
 
@@ -66,7 +66,7 @@ def test_one_var_jp(n=10):
             a, b, c, d = shifted_ribbon_p_params(kappa, nu)
             print('kappa =', kappa, 'nu =', nu)
             t = Polynomial.x(1)
-            expected = (t - beta)**(d - 1) * 2**a * t**(a + b + c) * (2 * t - beta)**b
+            expected = (t + beta)**(d - 1) * 2**a * t**(a + b + c) * (2 * t + beta)**b
             f = jp(1, kappa, nu).polynomial()
 
             # print()
@@ -123,7 +123,7 @@ def test_hat_z(n=10):
                     expected = Polynomial.zero()
                 else:
                     expected = 2**(a + b) * (a + b + c - 1) + (2**(a + b - 1) * b if b != 0 else 0)
-                    expected *= beta
+                    expected *= -beta
                 assert expansion[s] == expected
             except:
                 print()
@@ -159,7 +159,7 @@ def test_hat_y(n=10):
                         expected //= 2
                     elif a + b - 2 > 0:
                         expected *= 2**(a + b - 2)
-                    expected *= beta
+                    expected *= -beta
                 assert expansion[s] == expected
             except:
                 print()
@@ -544,10 +544,11 @@ def print_transition(vst, i):
     b = m.backward_transition(i)
     image = vst.transition(i)
     post = image.transition(i)
-    print(combine_str(vst, f, m, b, image, post))
+    print(combine_str(vst, f, m, b))
     print()
     print('reverse weight case:', case)
-
+    assert image == b
+    assert post == vst
 
 def _test_small(k=9, dnp=True, verbose=False):
     n = 2
@@ -673,3 +674,61 @@ def test_interstandard(k=8):
                     print(combine_str(vst, image, post))
                     traceback.print_exc()
                     input('\n?\n')
+
+
+def test_tau_exceptional_case(k=9):
+    n = 2
+    for mu in Partition.all(k, strict=True):
+        for nu in Partition.subpartitions(mu, strict=True):
+            print('mu =', mu, 'nu =', nu)
+            test = sorted(ValuedSetTableau.all(n, mu, nu))
+
+            for vst in test:
+                i = [i for (i, j, _) in vst.tableau if i == j]
+                if len(i) != 1:
+                    continue
+                i = i[0]
+                #if vst.tableau.get(i, i) not in [-1, 2]:
+                #    continue
+                f = vst.forward_transition(1)
+                m, case = f.middle_transition(1)
+                b = m.backward_transition(1)
+                image = vst.transition(1)
+
+                assert f.tableau.get(i, i) == vst.tableau.get(i, i)
+                if m.tableau.get(i, i) != vst.tableau.get(i, i) == 2:
+                    assert m.tableau.get(i, i) == 1
+                    assert (i - 1, i) not in vst.tableau.boxes or m.tableau.get(i - 1, i) == -1
+                    if (i - 1, i) in vst.tableau.boxes:
+                        print_transition(vst, 1)
+    #                    input('\n\n\n')
+                        if (i, i + 1) in vst.tableau.boxes and (i - 1, i + 1) in vst.tableau.boxes:
+                            assert f.tableau.get(i, i + 1) == 2
+                            assert (f.tableau.get(i - 1, i) == -1 and f.tableau.get(i - 1, i + 1) == -2) or (f.tableau.get(i - 1, i) == -2 and f.tableau.get(i - 1, i + 1) == 1 and not f.grouping.get(i, i))
+                        if (i, i + 1) not in vst.tableau.boxes and (i - 1, i + 1) in vst.tableau.boxes:
+                            assert (f.tableau.get(i - 1, i) == -2 and f.tableau.get(i - 1, i + 1) in [1, 2]) or (f.tableau.get(i - 1, i) == -1 and f.tableau.get(i - 1, i + 1) == -2)
+
+def test_tau_two_box_case(k=9):
+    n = 2
+    for mu in Partition.all(k, strict=True):
+        for nu in Partition.subpartitions(mu, strict=True):
+            print('mu =', mu, 'nu =', nu)
+            test = sorted(ValuedSetTableau.all(n, mu, nu))
+
+            for vst in test:
+                i = [i for (i, j, _) in vst.tableau if i == j]
+                if len(i) != 2:
+                    continue
+                i = min(i)
+                if vst.tableau.get(i, i) != -1 or vst.tableau.get(i + 1, i + 1) != 2:
+                    continue
+                f = vst.forward_transition(1)
+                if f.tableau.get(i, i + 1) != 1:
+                    continue
+                m, case = f.middle_transition(1)
+                b = m.backward_transition(1)
+                image = vst.transition(1)
+
+                print_transition(vst, 1)
+                input('\n\n\n')
+
