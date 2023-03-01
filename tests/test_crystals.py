@@ -20,7 +20,7 @@ from symmetric import (
 )
 from permutations import Permutation
 from schubert import X
-from words import Word, eg_insert, fpf_insert, involution_insert
+from words import Word, weak_eg_insert, eg_insert, fpf_insert, involution_insert
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
@@ -356,16 +356,18 @@ def generate_fpf_demazure(mu, dictionary):
 def find_isomorphism(target, highest, dictionary):
     n = target.rank
     ans = {}
+    pairs = []
     for h in highest:
         found = False
         for alpha in dictionary:
             if target.isomorphic_highest_weight_crystals(target, h, dictionary[alpha]):
                 ans[alpha] = ans.get(alpha, 0) + 1
+                pairs.append((h, alpha))
                 found = True
                 break
         if not found:
             return None
-    return ans
+    return ans, pairs
 
 
 def get_expected_ch(decomposition, fn):
@@ -429,24 +431,57 @@ def verify_string_lengths(crystal):
                     raise Exception
 
 
+def _test_results(results, flag, decomposition):
+    def s(a, i):
+        return a if a[i] <= a[i + 1] else a[:i] + (a[i + 1], a[i]) + a[i + 2:]
+
+    def swap(a, i, j):
+        for x in range(i, j):
+            for y in range(i, j):
+                a = s(a, y)
+        return a
+
+    results[flag] = decomposition
+    standard = tuple(i + 1 for i in range(len(flag)))
+    expected = results[standard]
+    while True:
+        i = [i for i in range(len(flag) - 1) if flag[i] == flag[i + 1]]
+        if not i:
+            break
+        i = i[0]
+        flag = flag[:i] + (flag[i] - 1,) + flag[i + 1:]
+        expected = {s(a, i): expected[a] for a in expected}
+    if expected != decomposition:
+        print('  predecessor:', results[standard], decomposition, flag, expected)
+        input('\n?\n')
+            # assert newdecomp == decomposition
+            # break
 
 
 def test_demazure_generic(n=2, permutation_size=5):
     demazure = {}
     is_bounded = _is_bounded
     for w in Permutation.all(permutation_size):
+        print(5 * '\n')
         crystal = AbstractGLCrystal.from_permutation(w, n, increasing=False)
+        results = {}
         for flag in flags(n):
             brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
 
             highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
             for f in highest:
                 generate_demazure(crystal.weight(f), demazure)
-            decomposition = find_isomorphism(brf, highest, demazure)
+            decomposition, pairs = find_isomorphism(brf, highest, demazure)
 
             ch = factorization_character(brf)
             expected_ch = get_expected_ch(decomposition, key)
             print(w.oneline_repr(permutation_size), 'flag =', flag, ch == expected_ch, decomposition)
+            for h, alpha in pairs:
+                tab, _ = weak_eg_insert(*[a for f in reversed(h) for a in reversed(f)])
+                #print(h)
+                #print(tab)
+                #print(alpha)
+                #print()
             try:
                 assert ch == expected_ch and decomposition is not None
             except:
@@ -455,6 +490,8 @@ def test_demazure_generic(n=2, permutation_size=5):
                 print('ch =', ch)
                 print('ex =', expected_ch)
                 input('\n?\n')
+            _test_results(results, flag, decomposition)
+
 
 
 def test_demazure(n=2, limit=8):
@@ -490,7 +527,7 @@ def do_inv_test(n, w, invdemazure=None):
         highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
         for f in highest:
             generate_inv_demazure(crystal.weight(f), invdemazure)
-        decomposition = find_isomorphism(brf, highest, invdemazure)
+        decomposition, pairs = find_isomorphism(brf, highest, invdemazure)
 
         ch = factorization_character(brf)
         expected_ch = get_expected_ch(decomposition, lambda alpha: restrict_variables(q_key(alpha), n))  
@@ -559,22 +596,30 @@ def test_fpf_demazure_generic(n=2, permutation_size=4):
 
     for w in Permutation.fpf_involutions(permutation_size):
         crystal = AbstractQCrystal.from_fpf_involution(w, n, increasing=False)
+        print(5 * '\n')
         for flag in flags(n):
             brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
             highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
             
             for f in highest:
                 generate_fpf_demazure(crystal.weight(f), fpfdemazure)
-            decomposition = find_isomorphism(brf, highest, fpfdemazure)
+            decomposition, pairs = find_isomorphism(brf, highest, fpfdemazure)
 
             ch = factorization_character(brf)
             expected_ch = get_expected_ch(decomposition, lambda alpha: restrict_variables(p_key(alpha), n))     
             print(w.oneline_repr(permutation_size), 'flag =', flag, ch == expected_ch, decomposition)
+            for h, alpha in pairs:
+                tab, _ = fpf_insert(*h)
+                print(tab)
+                print(alpha)
+                print()
             try:
                 assert ch == expected_ch and decomposition is not None
             except:
                 # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
+        if len(decomposition) > 1:
+            input('')
 
 
 def test_fpf_demazure(n=2, limit=8):

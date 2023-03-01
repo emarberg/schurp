@@ -955,6 +955,7 @@ class Word:
     def weak_eg_insert(self):
         n = len(self)
         p, q = Tableau(), Tableau()
+        lifted_p = p
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
             j, p = p.eg_insert(MarkedNumber(a))
