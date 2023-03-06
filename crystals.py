@@ -328,9 +328,6 @@ class AbstractCrystalMixin:
     def isomorphic_highest_weight_crystals(cls, crystal_a, highest_a, crystal_b, highest_b=None):
         assert cls == crystal_a.__class__ == crystal_b.__class__ and crystal_a.rank == crystal_b.rank and crystal_a.extended_indices == crystal_b.extended_indices
 
-        if len(crystal_a) != len(crystal_b):
-            return False
-
         if highest_b is None:
             highest_b = [b for b in crystal_b if crystal_b.is_highest_weight(b)]
             assert len(highest_b) == 1
@@ -340,7 +337,6 @@ class AbstractCrystalMixin:
             return False
 
         forward = {}
-        forward[highest_a] = highest_b
         queue = collections.deque([(highest_a, highest_b)])
         while queue:
             a, b = queue.popleft()
@@ -359,11 +355,7 @@ class AbstractCrystalMixin:
                         if fb is None:
                             return False
                         queue.append((fa, fb))
-                        print()
-                        print((a, '--', i, '-->', fa, b, '--', i, '-->', fb))
-                        print()
-        return True
-
+        return len(forward) == len(crystal_b)
 
         # a, b = highest_a, highest_b
         # if crystal_a.weight(a) != crystal_b.weight(b):

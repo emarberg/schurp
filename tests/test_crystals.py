@@ -296,7 +296,7 @@ def draw_fpf_demazure(alpha):
         mu[i] = mu[i] - i - 1 if mu[i] > i + 1 else 0
     w_mu = Permutation.from_fpf_involution_shape(*mu)
     crystal = AbstractQCrystal.from_fpf_involution(w_mu, n, increasing=False)
-    brf = [f for f in crystal if inv_is_bounded(f)]
+    brf = [f for f in crystal if fpf_is_bounded(f)]
     for i in sorting_permutation(alpha):
         brf = [f for f in crystal if emax(crystal, i, f) in brf]
     crystal.draw(highlighted_nodes=brf, extended=True)
@@ -354,7 +354,7 @@ def generate_fpf_demazure(mu, dictionary):
         if i is not None:
             subsets[nu] = [f for f in crystal if emax(crystal, i, f) in subsets[ku]]
         if nu not in dictionary:
-            print('  ', nu)
+            # print('  ', nu)
             dictionary[nu] = crystal.truncate(subsets[nu])
 
 
@@ -539,7 +539,6 @@ def test_demazure_generic(n=2, permutation_size=5):
         results = {}
         for flag in flags(n):
             brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
-
             highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
             for f in highest:
                 generate_demazure(crystal.weight(f), demazure)
@@ -674,6 +673,7 @@ def test_fpf_demazure_tableau(permutation_size=4):
     fpfdemazure = {}
     is_bounded = fpf_is_bounded
     count = 0 
+    dominant = 0
     total = len(list(Permutation.fpf_involutions(permutation_size)))
     for z in Permutation.fpf_involutions(permutation_size):
         total -= 1
@@ -683,49 +683,48 @@ def test_fpf_demazure_tableau(permutation_size=4):
         print('z =', z.cycle_repr(), 'left =', total, 'dominant?', z.is_fpf_dominant())
         if z.is_fpf_dominant():
             count += 1
-            continue
-        tabs = {fpf_decreasing_tableau(*h) for h in z.get_fpf_involution_words()}
-        count += len(tabs)
-        for t in tabs:
-            print(t)
-            a = tuple(tuple(_) for _ in reversed(t.get_rows()))
-            r = len(t.get_rows())
-            s = max([0] + list(t.row_reading_word())) + 1
-            for rank in range(s, s + 1):
-                b = (rank - len(a)) * ((),) + a
-                if rank not in fpfdemazure:
-                    fpfdemazure[rank] = {}
-                crystal = AbstractQCrystal.from_fpf_factorization(b, rank, increasing=False)
-                print('.')
-                
-                brf = crystal.truncate([f for f in crystal if is_bounded(f)])
-                highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
-                assert len(highest) == 1
-                ch = factorization_character(brf)
-                alpha = decompose_p(ch)
-                alpha += (rank - len(alpha)) * (0,)
-                print('..')
+            dominant += 1
+        else:
+            tabs = {fpf_decreasing_tableau(*h) for h in z.get_fpf_involution_words()}
+            count += len(tabs)
+            for t in tabs:
+                print(t)
+                a = tuple(tuple(_) for _ in reversed(t.get_rows()))
+                r = len(t.get_rows())
+                s = max([0] + list(t.row_reading_word())) + 1
+                for rank in range(s, s + 1):
+                    b = (rank - len(a)) * ((),) + a
+                    if rank not in fpfdemazure:
+                        fpfdemazure[rank] = {}
 
-                t0 = time.time()
-                quick_generate_fpf_demazure(alpha, fpfdemazure[rank])
-                t1 = time.time()
+                    t0 = time.time()
+                    crystal = AbstractQCrystal.from_fpf_factorization(b, rank, increasing=False)
+                    t1 = time.time()
+                    print('.  ', 'elapsed', t1 - t0)
 
-                print('... cache size:', len(fpfdemazure[rank]), 'elapsed', t1 - t0)
-                
-                #decomposition, pairs = find_isomorphism(brf, highest, fpfdemazure[rank])
-                # print('....')
-                print()
-                # print(ch, try_to_decompose_p(ch))
-                # print(p_key(next(iter(decomposition))))
-                print('rank =', rank, alpha, len(brf),)
-                
-                t0 = time.time()
-                assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], fpfdemazure[rank][alpha][0])
-                t1 = time.time()
+                    t0 = time.time()
+                    brf = crystal.truncate([f for f in crystal if is_bounded(f)])
+                    highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
+                    assert len(highest) == 1
+                    ch = factorization_character(brf)
+                    alpha = decompose_p(ch)
+                    alpha += (rank - len(alpha)) * (0,)
+                    t1 = time.time()
+                    print('.. ', 'elapsed', t1 - t0)
 
-            # input('\n')
-    print()
-    print('Ifpf', permutation_size, ': number of tableaux is', count)
+                    t0 = time.time()
+                    quick_generate_fpf_demazure(alpha, fpfdemazure[rank])
+                    t1 = time.time()
+                    print('...', 'elapsed', t1 - t0, 'cache size:', len(fpfdemazure[rank]))
+
+                    print()
+                    print('rank =', rank, alpha, len(brf),)
+
+                    t0 = time.time()
+                    assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], fpfdemazure[rank][alpha][0])
+                    t1 = time.time()
+        print()
+        print('Ifpf_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
 
 
 def test_fpf_demazure_generic(n=2, permutation_size=4):
@@ -734,7 +733,8 @@ def test_fpf_demazure_generic(n=2, permutation_size=4):
 
     for w in Permutation.fpf_involutions(permutation_size):
         crystal = AbstractQCrystal.from_fpf_involution(w, n, increasing=False)
-        print(5 * '\n')
+        print()
+        print()
         for flag in [None]: #flags(n):
             brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
             highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
@@ -757,7 +757,9 @@ def test_fpf_demazure_generic(n=2, permutation_size=4):
                 # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
         if len(decomposition) > 1:
+            # crystal.draw(highlighted_nodes=brf, extended=crystal.extended_indices)
             print('* multiple')
+            # input('')
 
 
 def test_fpf_demazure(n=2, limit=8):
