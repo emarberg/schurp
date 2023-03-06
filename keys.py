@@ -289,6 +289,14 @@ def skew_symmetrize_strict_partition(mu, n=None):
     return ans
 
 
+def strict_half_partition(alpha):
+    return skew_symmetric_halves(sorted(alpha, reverse=True))[0]
+
+
+def weak_half_partition(alpha):
+    return symmetric_halves(sorted(alpha, reverse=True))[0]
+
+
 def symmetric_double(alpha):
     word = sorting_permutation(alpha)
     mu = sorted(alpha, reverse=True)

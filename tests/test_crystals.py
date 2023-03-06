@@ -7,6 +7,8 @@ from keys import (
     sorting_permutation,
     skew_symmetrize_strict_partition,
     symmetrize_strict_partition,
+    strict_half_partition,
+    weak_half_partition,
     p_key,
     q_key,
     key,
@@ -352,7 +354,41 @@ def generate_fpf_demazure(mu, dictionary):
         if i is not None:
             subsets[nu] = [f for f in crystal if emax(crystal, i, f) in subsets[ku]]
         if nu not in dictionary:
+            print('  ', nu)
             dictionary[nu] = crystal.truncate(subsets[nu])
+
+
+def quick_generate_fpf_demazure(alpha, dictionary):
+    if alpha in dictionary:
+        return
+
+    sorter = sorting_permutation(alpha)
+    if len(sorter) == 0:
+        n = len(alpha)
+        mu = strict_half_partition(alpha)
+        w_mu = Permutation.from_fpf_involution_shape(*mu)
+        h = w_mu.get_fpf_involution_word()
+        t = fpf_decreasing_tableau(*h)
+        a = tuple(tuple(_) for _ in reversed(t.get_rows()))
+        a += (n - len(a)) * ((),)
+
+        t0 = time.time()
+        crystal = AbstractQCrystal.from_fpf_factorization(a, n, increasing=False)
+        brf = crystal.truncate([f for f in crystal if fpf_is_bounded(f)])
+        t1 = time.time()
+
+        print()
+        print('created %s:' % str(alpha), t1 - t0)
+        print()
+
+        dictionary[alpha] = (brf, crystal)
+    else:
+        i = sorter[0]
+        gamma = alpha[:i - 1] + (alpha[i], alpha[i - 1]) + alpha[i + 1:]
+        quick_generate_fpf_demazure(gamma, dictionary)
+        brf, crystal = dictionary[gamma]
+        crf = [f for f in crystal if emax(crystal, i, f) in brf]
+        dictionary[alpha] = (crystal.truncate(crf), crystal)
 
 
 def find_isomorphism(target, highest, dictionary):
@@ -638,9 +674,13 @@ def test_fpf_demazure_tableau(permutation_size=4):
     fpfdemazure = {}
     is_bounded = fpf_is_bounded
     count = 0 
+    total = len(list(Permutation.fpf_involutions(permutation_size)))
     for z in Permutation.fpf_involutions(permutation_size):
+        total -= 1
         print()
-        print('z =', z.cycle_repr())
+        print()
+        print()
+        print('z =', z.cycle_repr(), 'left =', total)
         tabs = {fpf_decreasing_tableau(*h) for h in z.get_fpf_involution_words()}
         count += len(tabs)
         for t in tabs:
@@ -664,10 +704,10 @@ def test_fpf_demazure_tableau(permutation_size=4):
                 print('..')
 
                 t0 = time.time()
-                generate_fpf_demazure(crystal.weight(highest[0]), fpfdemazure[rank])
+                quick_generate_fpf_demazure(alpha, fpfdemazure[rank])
                 t1 = time.time()
-    
-                print('...', len(fpfdemazure[rank]), t1 - t0)
+
+                print('... cache size:', len(fpfdemazure[rank]), 'elapsed', t1 - t0)
                 
                 #decomposition, pairs = find_isomorphism(brf, highest, fpfdemazure[rank])
                 # print('....')
@@ -677,12 +717,12 @@ def test_fpf_demazure_tableau(permutation_size=4):
                 print('rank =', rank, alpha, len(brf),)
                 
                 t0 = time.time()
-                assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], fpfdemazure[rank][alpha])
+                assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], fpfdemazure[rank][alpha][0])
                 t1 = time.time()
 
             # input('\n')
     print()
-    print(permutation_size, ': number of tableaux is', count)
+    print('Ifpf', permutation_size, ': number of tableaux is', count)
 
 
 def test_fpf_demazure_generic(n=2, permutation_size=4):
