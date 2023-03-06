@@ -680,7 +680,10 @@ def test_fpf_demazure_tableau(permutation_size=4):
         print()
         print()
         print()
-        print('z =', z.cycle_repr(), 'left =', total)
+        print('z =', z.cycle_repr(), 'left =', total, 'dominant?', z.is_fpf_dominant())
+        if z.is_fpf_dominant():
+            count += 1
+            continue
         tabs = {fpf_decreasing_tableau(*h) for h in z.get_fpf_involution_words()}
         count += len(tabs)
         for t in tabs:
