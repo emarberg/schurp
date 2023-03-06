@@ -11,19 +11,21 @@ from keys import (
     q_key,
     key,
 )
-from tests.test_keys import try_to_decompose_p, try_to_decompose_q
+from tests.test_keys import try_to_decompose_p, try_to_decompose_q, decompose_p, decompose_q
 from partitions import Partition
 from symmetric import (
     SchurQ,
     SchurP,
     Schur
 )
+from tableaux import Tableau
 from permutations import Permutation
 from schubert import X
 from words import Word, weak_eg_insert, eg_insert, fpf_insert, involution_insert
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
+import time
 
 
 def test_inv_odd_almost_highest(n=3):
@@ -625,6 +627,64 @@ def fpf_negative_one_operator_test(crystal, subset):
     return True
       
 
+def fpf_decreasing_tableau(*word):
+    m = max([0] + list(word)) + 1
+    m += int(m % 2 != 0)
+    t, _ = fpf_insert(*(m - a for a in word))
+    return Tableau({b: m - v.number for (b, v) in t.mapping.items()})
+
+
+def test_fpf_demazure_tableau(permutation_size=4):
+    fpfdemazure = {}
+    is_bounded = fpf_is_bounded
+    count = 0 
+    for z in Permutation.fpf_involutions(permutation_size):
+        print()
+        print('z =', z.cycle_repr())
+        tabs = {fpf_decreasing_tableau(*h) for h in z.get_fpf_involution_words()}
+        count += len(tabs)
+        for t in tabs:
+            print(t)
+            a = tuple(tuple(_) for _ in reversed(t.get_rows()))
+            r = len(t.get_rows())
+            s = max([0] + list(t.row_reading_word())) + 1
+            for rank in range(s, s + 1):
+                b = (rank - len(a)) * ((),) + a
+                if rank not in fpfdemazure:
+                    fpfdemazure[rank] = {}
+                crystal = AbstractQCrystal.from_fpf_factorization(b, rank, increasing=False)
+                print('.')
+                
+                brf = crystal.truncate([f for f in crystal if is_bounded(f)])
+                highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
+                assert len(highest) == 1
+                ch = factorization_character(brf)
+                alpha = decompose_p(ch)
+                alpha += (rank - len(alpha)) * (0,)
+                print('..')
+
+                t0 = time.time()
+                generate_fpf_demazure(crystal.weight(highest[0]), fpfdemazure[rank])
+                t1 = time.time()
+    
+                print('...', len(fpfdemazure[rank]), t1 - t0)
+                
+                #decomposition, pairs = find_isomorphism(brf, highest, fpfdemazure[rank])
+                # print('....')
+                print()
+                # print(ch, try_to_decompose_p(ch))
+                # print(p_key(next(iter(decomposition))))
+                print('rank =', rank, alpha, len(brf),)
+                
+                t0 = time.time()
+                assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], fpfdemazure[rank][alpha])
+                t1 = time.time()
+
+            # input('\n')
+    print()
+    print(permutation_size, ': number of tableaux is', count)
+
+
 def test_fpf_demazure_generic(n=2, permutation_size=4):
     fpfdemazure = {}
     is_bounded = fpf_is_bounded
@@ -632,7 +692,7 @@ def test_fpf_demazure_generic(n=2, permutation_size=4):
     for w in Permutation.fpf_involutions(permutation_size):
         crystal = AbstractQCrystal.from_fpf_involution(w, n, increasing=False)
         print(5 * '\n')
-        for flag in flags(n):
+        for flag in [None]: #flags(n):
             brf = crystal.truncate([f for f in crystal if is_bounded(f, flag)])
             highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
             
@@ -654,7 +714,7 @@ def test_fpf_demazure_generic(n=2, permutation_size=4):
                 # crystal.draw(highlighted_nodes=demazure[nu], extended=crystal.extended_indices)
                 input('\n?\n')
         if len(decomposition) > 1:
-            input('')
+            print('* multiple')
 
 
 def test_fpf_demazure(n=2, limit=8):

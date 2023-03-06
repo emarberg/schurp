@@ -214,6 +214,14 @@ class Word:
         if len(tup) == 0:
             return None
 
+        if index == 'FPF':
+            if len(tup[1]) == 0 or (len(tup[0]) > 0 and tup[1][0] >= tup[0][0]):
+                return None
+            y = tup[1][0]
+            b = tup[1][1:]
+            a  = ((y,) + tup[0]) if y % 2 == 0 else ((tup[0][0], y + 2) + tup[0][1:])
+            return (a, b) + tuple(tup[2:])
+
         if index == 0:
             if len(tup[0]) == 0 or tup[0][0] > 0:
                 return None

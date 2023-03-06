@@ -10,6 +10,7 @@ from keys import monomial_from_composition, symmetric_halves
 import tests.test_keys as testkeys
 import subprocess
 import time
+import collections
 
 
 BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
@@ -327,47 +328,101 @@ class AbstractCrystalMixin:
     def isomorphic_highest_weight_crystals(cls, crystal_a, highest_a, crystal_b, highest_b=None):
         assert cls == crystal_a.__class__ == crystal_b.__class__ and crystal_a.rank == crystal_b.rank and crystal_a.extended_indices == crystal_b.extended_indices
 
+        if len(crystal_a) != len(crystal_b):
+            return False
+
         if highest_b is None:
             highest_b = [b for b in crystal_b if crystal_b.is_highest_weight(b)]
             assert len(highest_b) == 1
             highest_b = highest_b[0]
 
-        a, b = highest_a, highest_b
-        if crystal_a.weight(a) != crystal_b.weight(b):
+        if crystal_a.weight(highest_a) != crystal_b.weight(highest_b):
             return False
 
-        children_a, children_b = {}, {}
-        none_a, none_b = [], []
-        
-        for i in crystal_a.extended_indices:
-            x = crystal_a.f_operator(i, a)
-            if x is None:
-                none_a.append(i)
-            else:
-                children_a[x] = children_a.get(x, []) + [i]
-
-            x = crystal_b.f_operator(i, b)
-            if x is None:
-                none_b.append(i)
-            else:
-                children_b[x] = children_b.get(x, []) + [i]
-        
-        if none_a != none_b:
-            return False
-        
-        children_a_values = {tuple(v) for v in children_a.values()}
-        children_b_values = {tuple(v) for v in children_b.values()}
-        if children_a_values != children_b_values:
-            return False
-        seen = {(None, None)}
-        for i in crystal_a.extended_indices:
-            x = crystal_a.f_operator(i, a)
-            y = crystal_b.f_operator(i, b)
-            if (x, y) not in seen:
-                if not cls.isomorphic_highest_weight_crystals(crystal_a, x, crystal_b, y):
+        forward = {}
+        forward[highest_a] = highest_b
+        queue = collections.deque([(highest_a, highest_b)])
+        while queue:
+            a, b = queue.popleft()
+            if a in forward:
+                if forward[a] != b:
                     return False
-                seen.add((x, y))
+            else:
+                forward[a] = b
+                for i in crystal_a.extended_indices:
+                    fa = crystal_a.f_operator(i, a)
+                    fb = crystal_b.f_operator(i, b)
+                    if fa is None:
+                        if fb is not None:
+                            return False
+                    else:
+                        if fb is None:
+                            return False
+                        queue.append((fa, fb))
+                        print()
+                        print((a, '--', i, '-->', fa, b, '--', i, '-->', fb))
+                        print()
         return True
+
+
+        # a, b = highest_a, highest_b
+        # if crystal_a.weight(a) != crystal_b.weight(b):
+        #     return False
+
+        # children_a, children_b = {}, {}
+        # none_a, none_b = [], []
+        
+        # for i in crystal_a.extended_indices:
+        #     x = crystal_a.f_operator(i, a)
+        #     if x is None:
+        #         none_a.append(i)
+        #     else:
+        #         children_a[x] = children_a.get(x, []) + [i]
+
+        #     x = crystal_b.f_operator(i, b)
+        #     if x is None:
+        #         none_b.append(i)
+        #     else:
+        #         children_b[x] = children_b.get(x, []) + [i]
+        
+        # if none_a != none_b:
+        #     return False
+        
+        # children_a_values = {tuple(v) for v in children_a.values()}
+        # children_b_values = {tuple(v) for v in children_b.values()}
+        # if children_a_values != children_b_values:
+        #     return False
+        # seen = {(None, None)}
+        # for i in crystal_a.extended_indices:
+        #     x = crystal_a.f_operator(i, a)
+        #     y = crystal_b.f_operator(i, b)
+        #     if (x, y) not in seen:
+        #         if not cls.isomorphic_highest_weight_crystals(crystal_a, x, crystal_b, y):
+        #             return False
+        #         seen.add((x, y))
+        # return True
+
+    @classmethod
+    def from_element(cls, a, rank, indices, e, f):
+        assert len(a) == rank
+        vertices = []
+        edges = set()
+        weights = {}
+        add = {a}
+        while add:
+            new_add = set()
+            for a in add:
+                vertices.append(a)
+                weights[a] = tuple(len(_) for _ in a)
+                new_add |= {(a, i, e(a, i), False) for i in indices} | {(a, i, f(a, i), True) for i in indices}
+            add = set()
+            for a, i, b, fdir in new_add:
+                if b is not None:
+                    if b not in weights:
+                        add.add(b)
+                    edges.add((i, a, b) if fdir else (i, b, a))
+        edges = list(edges)
+        return cls(rank, vertices, edges, weights)
 
 
 class AbstractGLCrystal(AbstractCrystalMixin):
@@ -551,6 +606,29 @@ class AbstractQCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
+    def from_fpf_factorization(cls, a, n, increasing):
+        m = max([0] + [i for _ in a for i in _]) + 1
+        m += int(m % 2 != 0)
+
+        def star(b):
+            return tuple(tuple(m - i for i in _) for _ in b) if b is not None else b
+
+        def f(a, i):
+            if increasing:
+                return Word.incr_crystal_f(a, i if i != -1 else 'FPF')
+            else:
+                return star(Word.incr_crystal_f(star(a), i if i != -1 else 'FPF'))
+
+        def e(a, i):
+            if increasing:
+                return Word.incr_crystal_e(a, i if i != -1 else 'FPF')
+            else:
+                return star(Word.incr_crystal_e(star(a), i if i != -1 else 'FPF'))
+
+        indices = ([-1] if n >= 2 else []) + list(range(1, n))
+        return cls.from_element(a, n, indices, e, f)
+
+    @classmethod
     def from_fpf_involution(cls, z, n, increasing):
         rank = n
         vertices = []
@@ -629,7 +707,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
     @property
     def indices(self):
-        return [-1] + list(range(1, self.rank))
+        return ([-1] if self.rank >= 2 else []) + list(range(1, self.rank))
 
     @property
     def extended_indices(self):
@@ -839,7 +917,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
     @property
     def indices(self):
-        return list(range(-1, self.rank))
+        return ([-1] if self.rank >= 2 else []) + list(range(self.rank))
 
     @property
     def extended_indices(self):
