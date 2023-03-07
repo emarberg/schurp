@@ -45,9 +45,11 @@ class AbstractCrystalMixin:
     def index_printer(self, i, primed=False):
         return str(i)
 
-    def draw(self, extended=(), highlighted_nodes=(), tex=False):
+    def draw(self, extended=(), highlighted_nodes=(), tex=False, exclude=False):
         if type(extended) == bool and extended:
-            extended = self.extended_indices
+            extended_operators = self.extended_indices
+        else:
+            extended_operators = extended
 
         def tex_tuple(n):
             parts = []
@@ -78,6 +80,8 @@ class AbstractCrystalMixin:
         if tex:
             s += ['    node [shape=box,style=filled,color=gray92];']
             for x in self:
+                if exclude and x not in highlighted_nodes:
+                    continue
                 ts = tex_string(x)
                 color = 'gray95'
                 if x in highlighted_nodes:
@@ -86,28 +90,36 @@ class AbstractCrystalMixin:
                 s += ['    "%s" [color="%s",margin="0.0",width="0.0",height="0.0",texlbl="%s"];' % (printer(x), color, ts)]
         else:
             for x in self:
+                if exclude and x not in highlighted_nodes:
+                    continue
                 if x in highlighted_nodes:
                     s += ['    "%s" [fillcolor=white];' % printer(x)]
                 else:
                     s += ['    "%s";' % printer(x)]
         #
         for v in self:
-            for i in set(self.provided_operators) | set(extended):
+            for i in set(self.provided_operators) | set(extended_operators):
                 w = self.f_operator(i, v)
-                if w is not None:
+                if w is None:
+                    continue
+                if not exclude or (v in highlighted_nodes and w in highlighted_nodes):
                     if tex:
-                        istr = self.index_printer(i)
                         cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal"
                         style = "dotted" if i == 0 else "dashed" if i == -1 else "solid"
                         s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
                     else:
                         istr = self.index_printer(i)
                         s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
-                # if i < 0 and extended:
-                #     w = self.fprime_operator(i, v)
-                #     if w is not None:
-                #         istr = self.index_printer(i, primed=True)
-                #         s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
+                if i < 0 and extended:
+                    w = self.fprime_operator(i, v)
+                    if w is not None and (not exclude or (v in highlighted_nodes and w in highlighted_nodes)):
+                        if tex:
+                            cstr = "blue" if i == -1 else "red" if i == -2 else "teal"
+                            style = "dashed"
+                            s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
+                        else:
+                            istr = self.index_printer(i, primed=True)
+                            s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
         s += ['}']
         s = '\n'.join(s)
         #
@@ -156,12 +168,12 @@ class AbstractCrystalMixin:
     def eprime_operator(self, i, v):
         if i >= 0:
             return self.e_operator(i, v)
-        return self.star_operator(self.f_operator(i, self.star_operator(v)))
+        return self.star_operator(self.f_operator(-self.rank - i, self.star_operator(v)))
 
     def fprime_operator(self, i, v):
         if i >= 0:
             return self.f_operator(i, v)
-        return self.star_operator(self.e_operator(i, self.star_operator(v)))
+        return self.star_operator(self.e_operator(-self.rank - i, self.star_operator(v)))
 
     def s_operator(self, i, b):
         assert 0 <= i < self.rank
@@ -653,7 +665,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
             return str(i)
         else:
             assert -(self.rank) < i < 0
-            return str(self.rank + i) + "\'"
+            return str(i) + "\'"
 
     @classmethod
     def s_operator_on_words(cls, j, w):

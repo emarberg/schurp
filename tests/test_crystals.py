@@ -289,18 +289,25 @@ def draw_inv_demazure(alpha):
     crystal.draw(highlighted_nodes=brf, tex=True)
 
 
-def draw_fpf_demazure(alpha):
-    n = len(alpha)
-    mu = list(sorted(alpha, reverse=True))
-    for i in range(len(mu)):
-        mu[i] = mu[i] - i - 1 if mu[i] > i + 1 else 0
-    w_mu = Permutation.from_fpf_involution_shape(*mu)
+def draw_fpf_demazure(alpha, n=None, exclude=False):
+    if type(alpha) == Permutation:
+        w_mu = alpha
+        s = []
+        assert n is not None
+    else:
+        n = len(alpha) if n is None else n
+        mu = list(sorted(alpha, reverse=True))
+        for i in range(len(mu)):
+            mu[i] = mu[i] - i - 1 if mu[i] > i + 1 else 0
+        w_mu = Permutation.from_fpf_involution_shape(*mu)
+        print(w_mu.cycle_repr())
+        s = sorting_permutation(alpha)
     crystal = AbstractQCrystal.from_fpf_involution(w_mu, n, increasing=False)
     brf = [f for f in crystal if fpf_is_bounded(f)]
-    for i in sorting_permutation(alpha):
+    for i in s:
         brf = [f for f in crystal if emax(crystal, i, f) in brf]
-    crystal.draw(highlighted_nodes=brf, extended=True)
-    crystal.draw(highlighted_nodes=brf, tex=True)
+    # crystal.draw(highlighted_nodes=brf, tex=True)
+    crystal.draw(highlighted_nodes=brf, extended=True, exclude=exclude)
 
 
 def generate_demazure(mu, dictionary):
