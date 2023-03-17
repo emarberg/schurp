@@ -776,6 +776,31 @@ class AbstractQCrystal(AbstractCrystalMixin):
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def from_inv_factorization(cls, a, n, increasing):
+        m = max([0] + [abs(i) for _ in a for i in _]) + 1
+
+        def invert(i):
+            return m - i if i > 0 else -(m + i)
+
+        def star(b):
+            return tuple(tuple(invert(i) for i in _) for _ in b) if b is not None else b
+
+        def f(a, i):
+            if increasing:
+                return Word.incr_crystal_f(a, i )
+            else:
+                return star(Word.incr_crystal_f(star(a), i))
+
+        def e(a, i):
+            if increasing:
+                return Word.incr_crystal_e(a, i)
+            else:
+                return star(Word.incr_crystal_e(star(a), i))
+
+        indices = ([-1] if n >= 2 else []) + list(range(0, n))
+        return cls.from_element(a, n, indices, e, f)
+
+    @classmethod
     def from_involution(cls, z, n, increasing):
         rank = n
         vertices = []

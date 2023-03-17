@@ -346,6 +346,36 @@ def generate_inv_demazure(mu, dictionary):
             dictionary[nu] = crystal.truncate(subsets[nu])
 
 
+def quick_generate_inv_demazure(alpha, dictionary):
+    if alpha in dictionary:
+        return
+
+    sorter = sorting_permutation(alpha)
+    if len(sorter) == 0:
+        n = len(alpha)
+        mu = weak_half_partition(alpha)
+        w_mu = Permutation.from_involution_shape(*mu)
+        h = w_mu.get_involution_word()
+        t = inv_decreasing_tableau(*h)
+        a = tuple(tuple(_) for _ in reversed(t.get_rows()))
+        a += (n - len(a)) * ((),)
+
+        t0 = time.time()
+        crystal = AbstractPrimedQCrystal.from_inv_factorization(a, n, increasing=False)
+        brf = crystal.truncate([f for f in crystal if inv_is_bounded(f)])
+        t1 = time.time()
+
+        print('   ', 'created %s:' % str(alpha), t1 - t0)
+        dictionary[alpha] = (brf, crystal)
+    else:
+        i = sorter[0]
+        gamma = alpha[:i - 1] + (alpha[i], alpha[i - 1]) + alpha[i + 1:]
+        quick_generate_inv_demazure(gamma, dictionary)
+        brf, crystal = dictionary[gamma]
+        crf = [f for f in crystal if emax(crystal, i, f) in brf]
+        dictionary[alpha] = (crystal.truncate(crf), crystal)
+
+
 def generate_fpf_demazure(mu, dictionary):
     n = len(mu)
     alpha = skew_symmetrize_strict_partition(mu, n)
@@ -384,10 +414,7 @@ def quick_generate_fpf_demazure(alpha, dictionary):
         brf = crystal.truncate([f for f in crystal if fpf_is_bounded(f)])
         t1 = time.time()
 
-        print()
-        print('created %s:' % str(alpha), t1 - t0)
-        print()
-
+        print('   ', 'created %s:' % str(alpha), t1 - t0)
         dictionary[alpha] = (brf, crystal)
     else:
         i = sorter[0]
@@ -572,7 +599,6 @@ def test_demazure_generic(n=2, permutation_size=5):
             _test_results(results, flag, decomposition, brf, crystal)
 
 
-
 def test_demazure(n=2, limit=8):
     is_bounded = _is_bounded
     for mu in partitions(n, limit):
@@ -595,6 +621,80 @@ def test_demazure(n=2, limit=8):
             verify_string_lengths(demazure[nu])
             # crystal.draw(highlighted_nodes=demazure[nu])
             # input('')
+
+
+def inv_decreasing_tableau(*word):
+    m = max([0] + [abs(i) for i in word]) + 1
+    def invert(i):
+        return m - i if i > 0 else -(m + i)
+    t, _ = involution_insert(*(invert(a) for a in word))
+    ans = Tableau({b: invert(v.number) for (b, v) in t.mapping.items()})
+    return ans
+
+
+def test_inv_demazure_tableau(permutation_size=4):
+    invdemazure = {}
+    is_bounded = inv_is_bounded
+    count = 0 
+    dominant = 0
+    total = len(list(Permutation.involutions(permutation_size)))
+    for z in Permutation.involutions(permutation_size):
+        total -= 1
+        print()
+        print()
+        print()
+        print('#', total, ':', 'z =', z.cycle_repr(), 'dominant?', z.is_dominant())
+        if z.is_dominant():
+            count += 1
+            dominant += 1
+        else:
+            tabs = {inv_decreasing_tableau(*h) for h in z.get_primed_involution_words()}
+            count += len(tabs)
+            for t in tabs:
+                print(t)
+                a = tuple(tuple(_) for _ in reversed(t.get_rows()))
+                r = len(t.get_rows())
+                s = max([1] + list(map(abs, t.row_reading_word())))
+                for rank in [s]:
+                    b = (rank - len(a)) * ((),) + a
+                    if rank not in invdemazure:
+                        invdemazure[rank] = {}
+
+                    t0 = time.time()
+                    crystal = AbstractPrimedQCrystal.from_inv_factorization(b, rank, increasing=False)
+                    t1 = time.time()
+                    print('.  ', 'elapsed', t1 - t0)
+
+                    t0 = time.time()
+                    brf = crystal.truncate([f for f in crystal if is_bounded(f)])
+                    highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
+                    assert len(highest) == 1
+                    ch = factorization_character(brf)
+                    alpha = decompose_q(ch)
+                    alpha += (rank - len(alpha)) * (0,)
+                    t1 = time.time()
+                    print('.. ', 'elapsed', t1 - t0)
+
+                    t0 = time.time()
+                    quick_generate_inv_demazure(alpha, invdemazure[rank])
+                    t1 = time.time()
+                    print('...', 'elapsed', t1 - t0, 'cache size:', len(invdemazure[rank]))
+
+                    print()
+                    print('rank =', rank, 'alpha =', alpha, '# bdd elems =', len(brf),)
+
+                    t0 = time.time()
+                    try:
+                        assert AbstractPrimedQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], invdemazure[rank][alpha][0])
+                    except:
+                        crystal.draw(extended=True, highlighted_nodes=brf)
+                        x, b = invdemazure[rank][alpha]
+                        x.draw(extended=True, highlighted_nodes=b)
+                        print(crystal.extended_indices, x.extended_indices)
+                        input('\n\n\n')
+                    t1 = time.time()
+        print()
+        print('I_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
 
 
 def do_inv_test(n, w, invdemazure=None):
@@ -687,7 +787,7 @@ def test_fpf_demazure_tableau(permutation_size=4):
         print()
         print()
         print()
-        print('z =', z.cycle_repr(), 'left =', total, 'dominant?', z.is_fpf_dominant())
+        print('#', total, ':', 'z =', z.cycle_repr(), 'dominant?', z.is_fpf_dominant())
         if z.is_fpf_dominant():
             count += 1
             dominant += 1
