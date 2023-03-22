@@ -275,18 +275,25 @@ def draw_demazure(alpha):
     crystal.draw(highlighted_nodes=brf, extended=True)
 
 
-def draw_inv_demazure(alpha):
-    n = len(alpha)
-    mu = list(sorted(alpha, reverse=True))
-    for i in range(len(mu)):
-        mu[i] = mu[i] - i if mu[i] > i else 0
-    w_mu = Permutation.from_involution_shape(*mu)
+def draw_inv_demazure(alpha, n=None, exclude=False):
+    if type(alpha) == Permutation:
+        w_mu = alpha
+        s = []
+        assert n is not None
+    else:
+        n = len(alpha) if n is None else n
+        mu = list(sorted(alpha, reverse=True))
+        for i in range(len(mu)):
+            mu[i] = mu[i] - i if mu[i] > i else 0
+        w_mu = Permutation.from_involution_shape(*mu)
+        print(w_mu.cycle_repr())
+        s = sorting_permutation(alpha)
     crystal = AbstractPrimedQCrystal.from_involution(w_mu, n, increasing=False)
     brf = [f for f in crystal if inv_is_bounded(f)]
-    for i in sorting_permutation(alpha):
+    for i in s:
         brf = [f for f in crystal if emax(crystal, i, f) in brf]
-    crystal.draw(highlighted_nodes=brf, extended=True)
-    crystal.draw(highlighted_nodes=brf, tex=True)
+    # crystal.draw(highlighted_nodes=brf, tex=True)
+    crystal.draw(highlighted_nodes=brf, extended=True, exclude=exclude)
 
 
 def draw_fpf_demazure(alpha, n=None, exclude=False):
@@ -632,7 +639,12 @@ def inv_decreasing_tableau(*word):
     return ans
 
 
+def inv_increasing_tableau(*word):
+    return involution_insert(*word)[0]
+
+
 def test_inv_demazure_tableau(permutation_size=4):
+    ans = []
     invdemazure = {}
     is_bounded = inv_is_bounded
     count = 0 
@@ -648,9 +660,9 @@ def test_inv_demazure_tableau(permutation_size=4):
             count += 1
             dominant += 1
         else:
-            tabs = {inv_decreasing_tableau(*h) for h in z.get_primed_involution_words()}
+            tabs = {(inv_decreasing_tableau(*h), inv_increasing_tableau(*h)) for h in z.get_primed_involution_words()}
             count += len(tabs)
-            for t in tabs:
+            for t, u in tabs:
                 print(t)
                 a = tuple(tuple(_) for _ in reversed(t.get_rows()))
                 r = len(t.get_rows())
@@ -683,18 +695,11 @@ def test_inv_demazure_tableau(permutation_size=4):
                     print()
                     print('rank =', rank, 'alpha =', alpha, '# bdd elems =', len(brf),)
 
-                    t0 = time.time()
-                    try:
-                        assert AbstractPrimedQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], invdemazure[rank][alpha][0])
-                    except:
-                        crystal.draw(extended=True, highlighted_nodes=brf)
-                        x, b = invdemazure[rank][alpha]
-                        x.draw(extended=True, highlighted_nodes=b)
-                        print(crystal.extended_indices, x.extended_indices)
-                        input('\n\n\n')
-                    t1 = time.time()
+                    assert AbstractPrimedQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], invdemazure[rank][alpha][0])
+                    ans.append((t, u, alpha))
         print()
         print('I_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
+    return ans
 
 
 def do_inv_test(n, w, invdemazure=None):
@@ -769,6 +774,10 @@ def fpf_negative_one_operator_test(crystal, subset):
     return True
       
 
+def fpf_increasing_tableau(*word):
+    return fpf_insert(*word)[0]
+
+
 def fpf_decreasing_tableau(*word):
     m = max([0] + list(word)) + 1
     m += int(m % 2 != 0)
@@ -777,6 +786,7 @@ def fpf_decreasing_tableau(*word):
 
 
 def test_fpf_demazure_tableau(permutation_size=4):
+    ans = []
     fpfdemazure = {}
     is_bounded = fpf_is_bounded
     count = 0 
@@ -792,9 +802,9 @@ def test_fpf_demazure_tableau(permutation_size=4):
             count += 1
             dominant += 1
         else:
-            tabs = {fpf_decreasing_tableau(*h) for h in z.get_fpf_involution_words()}
+            tabs = {(fpf_decreasing_tableau(*h), fpf_increasing_tableau(*h)) for h in z.get_fpf_involution_words()}
             count += len(tabs)
-            for t in tabs:
+            for t, u in tabs:
                 print(t)
                 a = tuple(tuple(_) for _ in reversed(t.get_rows()))
                 r = len(t.get_rows())
@@ -827,11 +837,11 @@ def test_fpf_demazure_tableau(permutation_size=4):
                     print()
                     print('rank =', rank, alpha, len(brf),)
 
-                    t0 = time.time()
                     assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], fpfdemazure[rank][alpha][0])
-                    t1 = time.time()
+                    ans.append((t, u, alpha))
         print()
         print('Ifpf_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
+    return ans
 
 
 def test_fpf_demazure_generic(n=2, permutation_size=4):
