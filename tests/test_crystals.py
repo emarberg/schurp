@@ -38,6 +38,7 @@ INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
 def print_fpf_demazure_tableau_table(n, thresh=40, columns=3):
+    # last setting: print_fpf_demazure_tableau_table(8, 74, 2)
     def sorter(r):
         p, q, a = r
         mu = p.partition().tuple()
@@ -50,6 +51,7 @@ def print_fpf_demazure_tableau_table(n, thresh=40, columns=3):
 
 
 def print_inv_demazure_tableau_table(n, thresh=40, columns=3):
+    # last setting: print_inv_demazure_tableau_table(6, 68, 2)
     def sorter(r):
         p, q, a = r
         mu = p.partition().tuple()
