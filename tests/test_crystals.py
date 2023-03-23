@@ -12,6 +12,8 @@ from keys import (
     p_key,
     q_key,
     key,
+    skew_symmetric_double,
+    symmetric_double,
 )
 from tests.test_keys import try_to_decompose_p, try_to_decompose_q, decompose_p, decompose_q
 from partitions import Partition
@@ -28,6 +30,97 @@ from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
 import time
+
+
+PRINT_DIR = "/Users/emarberg/Downloads/"
+FPF_DEMAZURE_TABLEAU_CACHE = {}
+INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def print_fpf_demazure_tableau_table(n, thresh=40, columns=3):
+    def sorter(r):
+        p, q, a = r
+        mu = p.partition().tuple()
+        return (len(mu), mu, tuple(-x for x in a))
+    rows = test_fpf_demazure_tableau(n, include_dominant=True)
+    rows.sort(key=sorter)
+    printers = (print_tableau, print_tableau, print_composition)
+    caption = 'Some $\\Sp$-reduced tableaux with the weak compositions predicted in Conjecture~\\ref{sp-demazure-conj2}.'
+    print_table(rows, printers, thresh, columns, caption, 'Sp')
+
+
+def print_inv_demazure_tableau_table(n, thresh=40, columns=3):
+    def sorter(r):
+        p, q, a = r
+        mu = p.partition().tuple()
+        return (len(mu), mu, tuple(-x for x in a))
+    rows = test_inv_demazure_tableau(n, include_dominant=True)
+    rows.sort(key=sorter)
+    printers = (print_tableau, print_tableau, print_composition)
+    caption = 'Some $\\O$-reduced tableaux with the weak compositions predicted in Conjecture~\\ref{o-demazure-conj2}.'
+    print_table(rows, printers, thresh, columns, caption, 'O')
+
+
+def print_table(rows, printers, thresh, columns, caption, tag):
+    def convert(tables, ans):
+        if ans:
+            pre = ['\\ytableausetup{smalltableaux}']
+            pre += ['\\begin{tabular}[t]{%s}' % (len(printers) * 'l')]
+            pre += ['$T$ & & $\\alpha^{\\%s}(T)$ \\\\ \\hline \\\\' % tag]
+            ans = ['\n\\\\ \\\\\n'.join(ans)]
+            ans = pre + ans + ['\\end{tabular}'] 
+            ans = '\n'.join(ans)   
+            tables.append(ans) 
+    tables = []
+    space = 3
+    count = -space
+    ans = []
+    for row in rows:
+        ans += [[]]
+        for a, f in zip(row, printers):
+            ans[-1] += [f(a)]
+        delta = max([len(x.split('\n')) for x in ans[-1]]) + space
+        ans[-1] = ' & '.join(ans[-1])
+        if count + delta > thresh:
+            convert(tables, ans[:-1])
+            ans = [ans[-1]]
+            count = -space
+        count += delta
+    convert(tables, ans)
+    ans = []
+    while tables:
+        ans += ['\\begin{figure}[h]']
+        ans += ['\\begin{center}']
+        ans += ['\\begin{tabular}{%s}' % '|'.join(columns * ['l'])]
+        ans += ['\n&\n'.join(tables[:columns])]
+        ans += ['\\end{tabular}']
+        ans += ['\\end{center}']
+        ans += ['\\caption{%s}' % caption]
+        ans += ['\\end{figure}']
+        ans += []
+        tables = tables[columns:]
+    ans = '\n'.join(ans)
+    with open(PRINT_DIR + 'tables_' + tag + '.tex', 'w') as f:
+        f.write(ans)
+
+
+def print_tableau(t):
+    rows = []
+    for i in range(1, t.max_row + 1):
+        row = []
+        for j in range(1, t.max_column + 1):
+            v = t.entry(i, j)
+            row += [str(v) if v is not None else '\\none']
+        rows += [' & '.join(row)]
+    return '$\\begin{ytableau}' + ' \\\\\n'.join(reversed(rows)) + '\\end{ytableau}$'
+
+
+def print_composition(alpha):
+    while alpha and alpha[-1] == 0:
+        alpha = alpha[:-1]
+    assert alpha
+    return '{\\footnotesize$' + ''.join(map(str, alpha)) + '$}'
+    # return '$\\emptyset$'
 
 
 def test_inv_odd_almost_highest(n=3):
@@ -643,7 +736,11 @@ def inv_increasing_tableau(*word):
     return involution_insert(*word)[0]
 
 
-def test_inv_demazure_tableau(permutation_size=4):
+def test_inv_demazure_tableau(permutation_size=4, include_dominant=False):
+    key = (permutation_size, include_dominant)
+    if key in INV_DEMAZURE_TABLEAU_CACHE:
+        return INV_DEMAZURE_TABLEAU_CACHE[key]
+
     ans = []
     invdemazure = {}
     is_bounded = inv_is_bounded
@@ -659,6 +756,13 @@ def test_inv_demazure_tableau(permutation_size=4):
         if z.is_dominant():
             count += 1
             dominant += 1
+            if len(z) == 0 or not include_dominant:
+                continue
+            h = z.get_involution_word()
+            t, u = inv_decreasing_tableau(*h), inv_increasing_tableau(*h)
+            mu = t.partition().tuple()
+            alpha = symmetric_double(mu)
+            ans.append((t, u, alpha))
         else:
             tabs = {(inv_decreasing_tableau(*h), inv_increasing_tableau(*h)) for h in z.get_primed_involution_words()}
             count += len(tabs)
@@ -699,6 +803,8 @@ def test_inv_demazure_tableau(permutation_size=4):
                     ans.append((t, u, alpha))
         print()
         print('I_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
+
+    INV_DEMAZURE_TABLEAU_CACHE[key] = ans
     return ans
 
 
@@ -785,7 +891,11 @@ def fpf_decreasing_tableau(*word):
     return Tableau({b: m - v.number for (b, v) in t.mapping.items()})
 
 
-def test_fpf_demazure_tableau(permutation_size=4):
+def test_fpf_demazure_tableau(permutation_size=4, include_dominant=False):
+    key = (permutation_size, include_dominant)
+    if key in FPF_DEMAZURE_TABLEAU_CACHE:
+        return FPF_DEMAZURE_TABLEAU_CACHE[key]
+
     ans = []
     fpfdemazure = {}
     is_bounded = fpf_is_bounded
@@ -801,6 +911,13 @@ def test_fpf_demazure_tableau(permutation_size=4):
         if z.is_fpf_dominant():
             count += 1
             dominant += 1
+            if z.fpf_involution_length() == 0 or not include_dominant:
+                continue
+            h = z.get_fpf_involution_word()
+            t, u = fpf_decreasing_tableau(*h), fpf_increasing_tableau(*h)
+            mu = t.partition().tuple()
+            alpha = skew_symmetric_double(mu)
+            ans.append((t, u, alpha))
         else:
             tabs = {(fpf_decreasing_tableau(*h), fpf_increasing_tableau(*h)) for h in z.get_fpf_involution_words()}
             count += len(tabs)
@@ -841,6 +958,8 @@ def test_fpf_demazure_tableau(permutation_size=4):
                     ans.append((t, u, alpha))
         print()
         print('Ifpf_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
+    
+    FPF_DEMAZURE_TABLEAU_CACHE[key] = ans
     return ans
 
 

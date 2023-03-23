@@ -368,7 +368,21 @@ def print_symmetric_diagram(alpha, sep='.'):
 
 
 def skew_symmetric_double(alpha):
-    pass
+    word = sorting_permutation(alpha)
+    assert len(word) == 0
+    mu = alpha
+    shape = {(i, j + 1) for i in range(1, len(mu) + 1) for j in range(i, i + mu[i - 1])}
+    shape |= {(j, i) for (i, j) in shape}
+    i = 1
+    while (i, i + 1) in shape:
+        shape.add((i, i))
+        i += 1
+    mu = Tableau({a: 1 for a in shape}).partition().tuple()
+    if not is_skew_symmetric_composition(mu):
+        shape.add((i, i))
+        mu = Tableau({a: 1 for a in shape}).partition().tuple()
+    assert is_skew_symmetric_composition(mu)
+    return mu
 
 
 def skew_symmetric_diagram(alpha):
