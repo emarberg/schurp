@@ -19,7 +19,10 @@ def pathtest(n):
         if last is not None:
             box = [b for b in p.mapping if b not in last.mapping][0]
             print('last:', last_path)
-            print(box)
+            print() # print(box)
+            print(list(last.partition()) + [0,])
+            print(list(p.partition()))
+            print()
         last = p
         last_path = path
         # print(p)
