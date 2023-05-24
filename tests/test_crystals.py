@@ -12,6 +12,8 @@ from keys import (
     p_key,
     q_key,
     key,
+    skew_symmetric_double,
+    symmetric_double,
 )
 from tests.test_keys import try_to_decompose_p, try_to_decompose_q, decompose_p, decompose_q
 from partitions import Partition
@@ -28,6 +30,117 @@ from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 import random
 import time
+
+
+PRINT_DIR = "/Users/emarberg/Downloads/"
+FPF_DEMAZURE_TABLEAU_CACHE = {}
+INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def print_fpf_demazure_tableau_table(n, thresh=40, columns=3, numtabs=1):
+    # last setting: print_fpf_demazure_tableau_table(8, 68, 4, numtabs=1)
+    def sorter(r):
+        p, q, a, h = r
+        mu = p.partition().tuple()
+        return (len(mu), mu, tuple(-x for x in a))
+    rows = test_fpf_demazure_tableau(n, include_dominant=True)
+    rows.sort(key=sorter)
+    caption = 'Some $\\Sp$-reduced tableaux with the weak compositions predicted in Conjecture~\\ref{sp-demazure-conj2}.'
+    printers = numtabs * (print_tableau,) + (print_composition,)
+    if numtabs == 1:
+        rows = [(p, a) for (p, q, a, h) in rows]
+    elif numtabs == 2:
+        rows = [(p, q, a) for (p, q, a, h) in rows]
+    elif numtabs == 3:
+        rows = [(p, q, eg_insert(*h)[0].transpose(), a) for (p, q, a, h) in rows]
+    else:
+        raise Exception
+    print_table(rows, printers, thresh, columns, caption, 'Sp')
+
+
+def print_inv_demazure_tableau_table(n, thresh=40, columns=3, numtabs=1):
+    # last setting: print_inv_demazure_tableau_table(7, 74, 4, numtabs=1)
+    def sorter(r):
+        p, q, a, h = r
+        mu = p.partition().tuple()
+        return (len(mu), mu, tuple(-x for x in a))
+    rows = test_inv_demazure_tableau(n, include_dominant=True, exclude_one_row=True)
+    rows.sort(key=sorter)
+    caption = 'Some $\\O$-reduced tableaux with the weak compositions predicted in Conjecture~\\ref{o-demazure-conj2}.'
+    printers = numtabs * (print_tableau,) + (print_composition,)
+    if numtabs == 1:
+        rows = [(p, a) for (p, q, a, h) in rows]
+    elif numtabs == 2:
+        rows = [(p, q, a) for (p, q, a, h) in rows]
+    elif numtabs == 3:
+        rows = [(p, q, eg_insert(*h)[0].transpose(), a) for (p, q, a, h) in rows]
+    else:
+        raise Exception
+    print_table(rows, printers, thresh, columns, caption, 'O')
+
+
+def print_table(rows, printers, thresh, columns, caption, tag):
+    def convert(tables, ans):
+        if ans:
+            pre = ['\\ytableausetup{smalltableaux}']
+            pre += ['\\begin{tabular}[t]{%s}' % (len(printers) * 'l')]
+            gaps = ' '.join((len(printers) - 1) * ['&'])
+            pre += ['$T$ %s $\\alpha^{\\%s}(T)$ \\\\ \\hline \\\\[-6pt]' % (gaps, tag)]
+            ans = ['\n\\\\[-6pt] \\\\\n'.join(ans)]
+            ans = pre + ans + ['\\end{tabular}'] 
+            ans = '\n'.join(ans)   
+            tables.append(ans) 
+    tables = []
+    space = 2
+    count = -space
+    ans = []
+    for row in rows:
+        ans += [[]]
+        for a, f in zip(row, printers):
+            ans[-1] += [f(a)]
+        delta = max([len(x.split('\n')) for x in ans[-1]]) + space
+        ans[-1] = ' & '.join(ans[-1])
+        if count + delta > thresh:
+            convert(tables, ans[:-1])
+            ans = [ans[-1]]
+            count = -space
+        count += delta
+    convert(tables, ans)
+    ans = []
+    while tables:
+        curr_columns = min(len(tables), columns)
+        ans += ['\\begin{figure}[h]']
+        ans += ['\\begin{center}']
+        ans += ['\\begin{tabular}{%s}' % '|'.join(curr_columns * ['l'])]
+        ans += ['\n&\n'.join(tables[:curr_columns])]
+        ans += ['\\end{tabular}']
+        ans += ['\\end{center}']
+        ans += ['\\caption{%s}' % caption]
+        ans += ['\\end{figure}']
+        ans += []
+        tables = tables[curr_columns:]
+    ans = '\n'.join(ans)
+    with open(PRINT_DIR + 'tables_' + tag + '.tex', 'w') as f:
+        f.write(ans)
+
+
+def print_tableau(t):
+    rows = []
+    for i in range(1, t.max_row + 1):
+        row = []
+        for j in range(1, t.max_column + 1):
+            v = t.entry(i, j)
+            row += [str(v) if v is not None else '\\none']
+        rows += [' & '.join(row)]
+    return '$\\begin{ytableau}' + ' \\\\\n'.join(rows) + '\\end{ytableau}$'
+
+
+def print_composition(alpha):
+    while alpha and alpha[-1] == 0:
+        alpha = alpha[:-1]
+    assert alpha
+    return '{\\footnotesize$' + ''.join(map(str, alpha)) + '$}'
+    # return '$\\emptyset$'
 
 
 def test_inv_odd_almost_highest(n=3):
@@ -457,7 +570,6 @@ def get_expected_ch(decomposition, fn):
     return expected_ch
 
 
-
 def verify_fpf_string_lengths(crystal, demazure):
     n = crystal.rank
     for b in demazure:
@@ -630,10 +742,21 @@ def test_demazure(n=2, limit=8):
             # input('')
 
 
-def inv_decreasing_tableau(*word):
-    m = max([0] + [abs(i) for i in word]) + 1
+def inv_decreasing_highest(decreasing_tab):
+    m = max([0] + [abs(i) for i in decreasing_tab.row_reading_word()]) + 1
     def invert(i):
         return m - i if i > 0 else -(m + i)
+    t = Tableau({b: invert(v.number) for (b, v) in decreasing_tab.mapping.items()})   
+    ans = Tableau.inverse_involution_insertion(t, Tableau({(i, j): i for (i, j) in t.mapping}))
+    ans = tuple(tuple(invert(x) for x in _) for _ in ans)
+    return ans
+
+
+def inv_decreasing_tableau(*word):
+    word = [(w,) if type(w) == int else w for w in word]
+    m = max([0] + [abs(i) for _ in word for i in _]) + 1
+    def invert(i):
+        return (m - i if i > 0 else -(m + i)) if type(i) == int else tuple(invert(_) for _ in i)
     t, _ = involution_insert(*(invert(a) for a in word))
     ans = Tableau({b: invert(v.number) for (b, v) in t.mapping.items()})
     return ans
@@ -643,7 +766,11 @@ def inv_increasing_tableau(*word):
     return involution_insert(*word)[0]
 
 
-def test_inv_demazure_tableau(permutation_size=4):
+def test_inv_demazure_tableau(permutation_size=4, include_dominant=False, exclude_one_row=False):
+    key = (permutation_size, include_dominant, exclude_one_row)
+    if key in INV_DEMAZURE_TABLEAU_CACHE:
+        return INV_DEMAZURE_TABLEAU_CACHE[key]
+
     ans = []
     invdemazure = {}
     is_bounded = inv_is_bounded
@@ -659,46 +786,61 @@ def test_inv_demazure_tableau(permutation_size=4):
         if z.is_dominant():
             count += 1
             dominant += 1
+            h = z.get_involution_word()
+            t, u = inv_decreasing_tableau(*h), inv_increasing_tableau(*h)
+            highest = inv_decreasing_highest(t)
+            mu = t.partition().tuple()
+            alpha = symmetric_double(mu)
+            if len(z) > 0 and include_dominant and (not exclude_one_row or t.num_rows() > 1):
+                ans.append((t, u, alpha, highest))
+            print(t)
+            print()
+            print('rank = N/A', 'alpha =', alpha, 'highest =', highest)
+            assert inv_decreasing_tableau(*highest) == t
         else:
             tabs = {(inv_decreasing_tableau(*h), inv_increasing_tableau(*h)) for h in z.get_primed_involution_words()}
             count += len(tabs)
             for t, u in tabs:
-                print(t)
-                a = tuple(tuple(_) for _ in reversed(t.get_rows()))
-                r = len(t.get_rows())
-                s = max([1] + list(map(abs, t.row_reading_word())))
-                for rank in [s]:
-                    b = (rank - len(a)) * ((),) + a
-                    if rank not in invdemazure:
-                        invdemazure[rank] = {}
+                if not exclude_one_row or t.num_rows() > 1:
+                    print(t)
+                    a = tuple(tuple(_) for _ in reversed(t.get_rows()))
+                    r = len(t.get_rows())
+                    s = max([1] + list(map(abs, t.row_reading_word())))
+                    for rank in [s]:
+                        b = (rank - len(a)) * ((),) + a
+                        if rank not in invdemazure:
+                            invdemazure[rank] = {}
 
-                    t0 = time.time()
-                    crystal = AbstractPrimedQCrystal.from_inv_factorization(b, rank, increasing=False)
-                    t1 = time.time()
-                    print('.  ', 'elapsed', t1 - t0)
+                        t0 = time.time()
+                        crystal = AbstractPrimedQCrystal.from_inv_factorization(b, rank, increasing=False)
+                        t1 = time.time()
+                        print('.  ', 'elapsed', t1 - t0)
 
-                    t0 = time.time()
-                    brf = crystal.truncate([f for f in crystal if is_bounded(f)])
-                    highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
-                    assert len(highest) == 1
-                    ch = factorization_character(brf)
-                    alpha = decompose_q(ch)
-                    alpha += (rank - len(alpha)) * (0,)
-                    t1 = time.time()
-                    print('.. ', 'elapsed', t1 - t0)
+                        t0 = time.time()
+                        brf = crystal.truncate([f for f in crystal if is_bounded(f)])
+                        highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
+                        assert len(highest) == 1
+                        highest = highest[0]
+                        ch = factorization_character(brf)
+                        alpha = decompose_q(ch)
+                        alpha += (rank - len(alpha)) * (0,)
+                        t1 = time.time()
+                        print('.. ', 'elapsed', t1 - t0)
 
-                    t0 = time.time()
-                    quick_generate_inv_demazure(alpha, invdemazure[rank])
-                    t1 = time.time()
-                    print('...', 'elapsed', t1 - t0, 'cache size:', len(invdemazure[rank]))
+                        t0 = time.time()
+                        quick_generate_inv_demazure(alpha, invdemazure[rank])
+                        t1 = time.time()
+                        print('...', 'elapsed', t1 - t0, 'cache size:', len(invdemazure[rank]))
 
-                    print()
-                    print('rank =', rank, 'alpha =', alpha, '# bdd elems =', len(brf),)
+                        print()
+                        print('rank =', rank, 'alpha =', alpha, '# bdd elems =', len(brf), 'highest =', highest)
 
-                    assert AbstractPrimedQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], invdemazure[rank][alpha][0])
-                    ans.append((t, u, alpha))
+                        assert AbstractPrimedQCrystal.isomorphic_highest_weight_crystals(brf, highest, invdemazure[rank][alpha][0])
+                        ans.append((t, u, alpha, highest))
         print()
         print('I_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
+
+    INV_DEMAZURE_TABLEAU_CACHE[key] = ans
     return ans
 
 
@@ -774,18 +916,31 @@ def fpf_negative_one_operator_test(crystal, subset):
     return True
       
 
+def fpf_decreasing_highest(decreasing_tab):
+    m = max([0] + [abs(i) for i in decreasing_tab.row_reading_word()]) + 1
+    t = Tableau({b: m - v.number for (b, v) in decreasing_tab.mapping.items()})   
+    ans = Tableau.inverse_fpf_insertion(t, Tableau({(i, j): i for (i, j) in t.mapping}))
+    ans = tuple(tuple(m - x for x in _) for _ in ans)
+    return ans
+
+
 def fpf_increasing_tableau(*word):
     return fpf_insert(*word)[0]
 
 
 def fpf_decreasing_tableau(*word):
-    m = max([0] + list(word)) + 1
+    word = [(w,) if type(w) == int else w for w in word]
+    m = max([0] + [i for _ in word for i in _]) + 1
     m += int(m % 2 != 0)
-    t, _ = fpf_insert(*(m - a for a in word))
+    t, _ = fpf_insert(*(tuple(m - i for i in a) for a in word))
     return Tableau({b: m - v.number for (b, v) in t.mapping.items()})
 
 
-def test_fpf_demazure_tableau(permutation_size=4):
+def test_fpf_demazure_tableau(permutation_size=4, include_dominant=False):
+    key = (permutation_size, include_dominant)
+    if key in FPF_DEMAZURE_TABLEAU_CACHE:
+        return FPF_DEMAZURE_TABLEAU_CACHE[key]
+
     ans = []
     fpfdemazure = {}
     is_bounded = fpf_is_bounded
@@ -801,6 +956,17 @@ def test_fpf_demazure_tableau(permutation_size=4):
         if z.is_fpf_dominant():
             count += 1
             dominant += 1
+            h = z.get_fpf_involution_word()
+            t, u = fpf_decreasing_tableau(*h), fpf_increasing_tableau(*h)
+            highest = fpf_decreasing_highest(t)
+            mu = t.partition().tuple()
+            alpha = skew_symmetric_double(mu)
+            if z.fpf_involution_length() > 0 and include_dominant:
+                ans.append((t, u, alpha, highest))
+            print(t)
+            print()
+            print('rank = N/A', 'alpha =', alpha, 'highest =', highest)
+            assert fpf_decreasing_tableau(*highest) == t
         else:
             tabs = {(fpf_decreasing_tableau(*h), fpf_increasing_tableau(*h)) for h in z.get_fpf_involution_words()}
             count += len(tabs)
@@ -823,6 +989,7 @@ def test_fpf_demazure_tableau(permutation_size=4):
                     brf = crystal.truncate([f for f in crystal if is_bounded(f)])
                     highest = [f for f in brf if all(crystal.e_operator(i, f) not in brf for i in crystal.extended_indices)]
                     assert len(highest) == 1
+                    highest = highest[0]
                     ch = factorization_character(brf)
                     alpha = decompose_p(ch)
                     alpha += (rank - len(alpha)) * (0,)
@@ -835,12 +1002,14 @@ def test_fpf_demazure_tableau(permutation_size=4):
                     print('...', 'elapsed', t1 - t0, 'cache size:', len(fpfdemazure[rank]))
 
                     print()
-                    print('rank =', rank, alpha, len(brf),)
+                    print('rank =', rank, 'alpha =', alpha, '# bdd elems =', len(brf), 'highest =', highest)
 
-                    assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest[0], fpfdemazure[rank][alpha][0])
-                    ans.append((t, u, alpha))
+                    assert AbstractQCrystal.isomorphic_highest_weight_crystals(brf, highest, fpfdemazure[rank][alpha][0])
+                    ans.append((t, u, alpha, highest))
         print()
         print('Ifpf_%s' % permutation_size, ': tableaux seen:', count, 'dominant:', dominant)
+    
+    FPF_DEMAZURE_TABLEAU_CACHE[key] = ans
     return ans
 
 
