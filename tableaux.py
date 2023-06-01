@@ -687,6 +687,9 @@ class Tableau:
     def shape(self):
         return Shape(self.mapping.keys())
 
+    def composition(self):
+        return tuple(len(_) for _ in self.get_rows())
+
     def partition(self):
         rows = defaultdict(int)
         for i, j in self.mapping:
