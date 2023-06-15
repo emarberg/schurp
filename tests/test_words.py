@@ -5,6 +5,27 @@ from vectors import Vector
 from tableaux import Tableau
 
 
+def test_smallest_insert(n=6):
+    # tests whether when the last inserted number a is smaller than all earlier numbers,
+    # weak recording tableau shape changes by adding single box in row a
+    for pi in Permutation.all(n):
+        for w in pi.get_reduced_words():
+            if len(w) >= 2 and w[-1] < min(w[:-1]):
+                a = w[-1]
+                p1, q1 = weak_eg_insert(*w[:-1])
+                p2, q2 = weak_eg_insert(*w)
+                shape1 = q1.composition()
+                shape2 = q2.composition()
+                print(w[:-1], w[-1])
+                print(p1)
+                print(p2)
+                print()
+                expected = list(shape1)
+                expected[a - 1] = 1
+                expected = tuple(expected)
+                assert shape2 == expected
+
+
 def pathtest(n):
     w = Permutation.random_reduced_word(n)
     last = None
@@ -19,7 +40,10 @@ def pathtest(n):
         if last is not None:
             box = [b for b in p.mapping if b not in last.mapping][0]
             print('last:', last_path)
-            print(box)
+            print() # print(box)
+            print(list(last.partition()) + [0,])
+            print(list(p.partition()))
+            print()
         last = p
         last_path = path
         # print(p)
