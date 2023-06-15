@@ -1665,6 +1665,32 @@ class Tableau:
         else:
             return self.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
 
+    def eg_tableau(cls, *x):
+        u = Tableau()
+        for i in x:
+            _, u = u.eg_insert(i)
+        return u
+
+    def eg_path(self, *x):
+        assert len(x) > 0
+        u = self
+        for i in x[:-1]:
+            _, u = u.eg_insert(i)
+        _, v = u.eg_insert(x[-1])
+        (new_row, new_col) = next(iter(set(v.mapping) - set(u.mapping)))
+        x = v.get(new_row, new_col)
+        path = [(new_row, new_col)]
+        for i in range(new_row - 1, 0, -1):
+            j = 1
+            while (i, j) in v.mapping:
+                if v.get(i, j) == x or v.get(i, j) != u.get(i, j):
+                    path.append((i, j))
+                    x = v.get(i, j)
+                    break
+                j += 1
+        return tuple(reversed(path))
+
+
     def eg_insert(self, p, j=0):
         if p is None:
             return (j, self)
