@@ -49,7 +49,7 @@ class AbstractSchubert(object):
         return tuple(oneline)
 
     @classmethod
-    def get(cls, w):
+    def get(cls, w, verbose=False):
         assert cls.is_valid(w)
         oneline = cls.reduce(w.oneline)
         cache = cls.cache()
@@ -63,7 +63,8 @@ class AbstractSchubert(object):
             else:
                 s = cls.invalid_case()
             cache[oneline] = s
-            print(' . . .', cls.__name__, 'cache:', len(cache))
+            if verbose:
+                print(' . . .', cls.__name__, 'cache:', len(cache))
         return cache[oneline]
 
     @classmethod

@@ -598,7 +598,7 @@ class Permutation:
         return Permutation(oneline)
 
     def standardize(self, e):
-        index = {b: a + 1 for a, b in enumerate(sorted(map(self, e)))}
+        index = {b: a + 1 for a, b in enumerate(sorted(map(self, sorted(e))))}
         oneline = [index[self(i)] for i in sorted(e)]
         return Permutation(oneline)
 
