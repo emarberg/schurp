@@ -76,6 +76,14 @@ class Tableau:
         )
         self._string_array = None
 
+    def decrement(self):
+        boxes = {}
+        for ij, v in self.boxes.items():
+            assert not any(i == 0 for i in v)
+            v = tuple(i - 1 if i > 0 else i + 1 for i in v)
+            boxes[ij] = v
+        return Tableau(boxes)
+
     def size(self):
         return len(self.boxes)
 

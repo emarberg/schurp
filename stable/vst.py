@@ -532,11 +532,18 @@ class ValuedSetTableau:
 
         return ValuedSetTableau(Tableau(tab), Tableau(grp))
 
-    def promotion(self, n):
+    def promotion(self, n=None, iterations=1):
+        if n is None:
+            n = len(self.tableau)
+
+        assert iterations >= 0
+        if iterations == 0:
+            return self
+
         ans = self
-        for i in range(1, n + 1):
+        for i in range(1, n):
             ans = ans.bender_knuth_involution(i)
-        return ans
+        return ans.promotion(n, iterations - 1)
 
     def bender_knuth_involution(self, index):
         return self.transition(index)
@@ -552,21 +559,30 @@ class ValuedSetTableau:
         return ans
 
     @classmethod
-    def unshifted_semistandard_generator(cls, max_entry, mu, nu=()):
-        key = max_entry, mu, nu, None, 'semistandard unshifted'
+    def _unshifted_as_shifted(cls, mu, nu):
+        mu = Partition.trim(mu)
+        nu = Partition.trim(nu)
+        k = len(mu)
+        mu = tuple(k + a for a in mu)
+        nu = tuple(nu) + (k - len(nu)) * (0,)
+        nu = tuple(k + a for a in nu)
+        return mu, nu
+
+    @classmethod
+    def unshifted_standard_generator(cls, mu, nu=()):
+        key = None, mu, nu, None, 'standard unshifted'
         if key in VALUED_SET_CACHE:
             for obj in VALUED_SET_CACHE[key]:
                 yield obj
             return
+
+        mu, nu = cls._unshifted_as_shifted(mu, nu)
+
         ans = set()
-        tabs = Tableau.semistandard(max_entry, mu, nu)
+        tabs = Tableau.standard(mu, nu)
         for tab in tabs:
             grp = {(i, j): int(cls.is_valid_position(tab, True, i, j)) for (i, j) in tab.boxes}
-            g = sorted(grp)
-            next_grp = {}
-            for i, j in g:
-                next_grp[i, j] = 0
-            next_grp = Tableau(next_grp)
+            next_grp = Tableau({(i, j): 0 for (i, j) in grp})
             obj = cls(tab, next_grp)
             if obj not in ans:
                 yield obj
@@ -574,7 +590,46 @@ class ValuedSetTableau:
         VALUED_SET_CACHE[key] = ans
 
     @classmethod
-    def semistandard_generator(cls, max_entry, mu, nu=(), diagonal_primes=True):
+    def shifted_standard_generator(cls, mu, nu=(), diagonal_primes=True):
+        key = None, mu, nu, diagonal_primes, 'standard'
+        if key in VALUED_SET_CACHE:
+            for obj in VALUED_SET_CACHE[key]:
+                yield obj
+            return
+        ans = set()
+        tabs = Tableau.standard_shifted_marked(mu, nu, diagonal_primes)
+        for tab in tabs:
+            grp = {(i, j): int(cls.is_valid_position(tab, True, i, j)) for (i, j) in tab.boxes}
+            next_grp = Tableau({(i, j): 0 for (i, j) in grp})
+            obj = cls(tab, next_grp)
+            if obj not in ans:
+                yield obj
+                ans.add(obj)
+        VALUED_SET_CACHE[key] = ans
+
+    @classmethod
+    def unshifted_semistandard_generator(cls, max_entry, mu, nu=()):
+        key = max_entry, mu, nu, None, 'semistandard unshifted'
+        if key in VALUED_SET_CACHE:
+            for obj in VALUED_SET_CACHE[key]:
+                yield obj
+            return
+
+        mu, nu = cls._unshifted_as_shifted(mu, nu)
+
+        ans = set()
+        tabs = Tableau.semistandard(max_entry, mu, nu)
+        for tab in tabs:
+            grp = {(i, j): int(cls.is_valid_position(tab, True, i, j)) for (i, j) in tab.boxes}
+            next_grp = Tableau({(i, j): 0 for (i, j) in grp})
+            obj = cls(tab, next_grp)
+            if obj not in ans:
+                yield obj
+                ans.add(obj)
+        VALUED_SET_CACHE[key] = ans
+
+    @classmethod
+    def shifted_semistandard_generator(cls, max_entry, mu, nu=(), diagonal_primes=True):
         key = max_entry, mu, nu, diagonal_primes, 'semistandard'
         if key in VALUED_SET_CACHE:
             for obj in VALUED_SET_CACHE[key]:
@@ -584,11 +639,7 @@ class ValuedSetTableau:
         tabs = Tableau.semistandard_shifted(max_entry, mu, nu, diagonal_primes)
         for tab in tabs:
             grp = {(i, j): int(cls.is_valid_position(tab, True, i, j)) for (i, j) in tab.boxes}
-            g = sorted(grp)
-            next_grp = {}
-            for i, j in g:
-                next_grp[i, j] = 0
-            next_grp = Tableau(next_grp)
+            next_grp = Tableau({(i, j): 0 for (i, j) in grp})
             obj = cls(tab, next_grp)
             if obj not in ans:
                 yield obj
@@ -602,6 +653,9 @@ class ValuedSetTableau:
             for obj in VALUED_SET_CACHE[key]:
                 yield obj
             return
+        
+        mu, nu = cls._unshifted_as_shifted(mu, nu)
+        
         ans = set()
         tabs = Tableau.semistandard(max_entry, mu, nu)
         for tab in tabs:
@@ -624,7 +678,7 @@ class ValuedSetTableau:
         VALUED_SET_CACHE[key] = ans
 
     @classmethod
-    def generator(cls, max_entry, mu, nu=(), diagonal_primes=True):
+    def shifted_generator(cls, max_entry, mu, nu=(), diagonal_primes=True):
         key = max_entry, mu, nu, diagonal_primes
         if key in VALUED_SET_CACHE:
             for obj in VALUED_SET_CACHE[key]:
