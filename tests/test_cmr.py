@@ -50,11 +50,13 @@ def get_symplectic_grothendieck_degree(w):
 def test_fpf(n=6):
     ans = []
     for case, w in enumerate(Permutation.fpf_involutions(n)):
-        print('CASE', case + 1, ':', 'z =', w.cycle_repr())
-        a, degw = get_symplectic_grothendieck_degree(w)
-        print('  degree =', degw, 'atom =', nice_str(a, n))
-        print()
-        ans += [(degw, '$' + w.cycle_repr().replace(',', '\\,') +'$ & $' + nice_str(a, n) + '$ & $' + str(degw) + '$ \\\\ & & \\\\ ')]
+        if w.is_fpf_dominant():
+            print('CASE', case + 1, ':', 'z =', w.cycle_repr())
+            a, degw = get_symplectic_grothendieck_degree(w)
+            print('  degree =', degw, 'atom =', nice_str(a, n))
+            print()
+            w.print_fpf_rothe_diagram(sep='.')
+            ans += [(degw, '$' + w.cycle_repr().replace(',', '\\,') +'$ & $' + nice_str(a, n) + '$ & $' + str(degw) + '$ \\\\ & & \\\\ ')]
         # v = w.standardize({i for i in range(1, n + 1)} - {1, w(1)})
         # b, degv = get_symplectic_grothendieck_degree(v)
         # print(w.cycle_repr(), degw, '-->', v.cycle_repr(), degv)
