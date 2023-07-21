@@ -532,6 +532,9 @@ class ValuedSetTableau:
 
         return ValuedSetTableau(Tableau(tab), Tableau(grp))
 
+    def bender_knuth_involution(self, index):
+        return self.transition(index)
+
     def transition(self, index):
         return self.cached_transition(self, index)
 
@@ -541,6 +544,34 @@ class ValuedSetTableau:
         m, case = f.middle_transition(index)
         ans = m.backward_transition(index)
         return ans
+
+    @classmethod
+    def generator(cls, max_entry, mu, nu=(), diagonal_primes=True):
+        key = max_entry, mu, nu, diagonal_primes
+        if key in VALUED_SET_CACHE:
+            for obj in VALUED_SET_CACHE[key]:
+                yield obj
+            return
+        ans = set()
+        tabs = Tableau.semistandard_shifted(max_entry, mu, nu, diagonal_primes)
+        for tab in tabs:
+            grp = {(i, j): int(cls.is_valid_position(tab, True, i, j)) for (i, j) in tab.boxes}
+            g = sorted(grp)
+            e = sum(grp.values())
+            for v in range(2**e):
+                next_grp = {}
+                for i, j in g:
+                    if grp[i, j]:
+                        next_grp[i, j] = v % 2
+                        v = v // 2
+                    else:
+                        next_grp[i, j] = 0
+                next_grp = Tableau(next_grp)
+                obj = cls(tab, next_grp)
+                if obj not in ans:
+                    yield obj
+                    ans.add(obj)
+        VALUED_SET_CACHE[key] = ans
 
     @classmethod
     def all(cls, max_entry, mu, nu=(), diagonal_primes=True):
