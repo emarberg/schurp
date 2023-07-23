@@ -6,6 +6,23 @@ from stable.utils import beta, jp_expansion, jp, jq_expansion, jq
 import traceback
 
 
+def test_error():
+    tab = {(1, 2): (1,), (1, 3): (1,), (1, 1): (1,), (2, 2): (-2,)}
+    grp = {(1, 1): (1,), (1, 2): (0,), (1, 3): (0,), (2, 2): (0,)}
+    tab = ValuedSetTableau(tab, grp)
+    res = tab.bender_knuth_involution(1)
+    print(tab)
+    print(res)
+    ###
+    tab = {(1, 2): (1,), (1, 3): (1,), (1, 1): (1,), (2, 2): (-2,), (3, 3): (-3,), (2, 3): (-3,)}
+    grp = {(1, 1): (1,), (1, 2): (0,), (1, 3): (0,), (2, 2): (0,), (2, 3): (0,), (3, 3): (0,)}
+    tab = ValuedSetTableau(tab, grp)
+    tab.bender_knuth_involution(1)    
+    res = tab.bender_knuth_involution(1)
+    print(tab)
+    print(res)
+
+
 def shifted_ribbon_q_params(kappa, nu):
     boxes = Partition.shifted_shape(kappa, nu)
     boxes = sorted(boxes, key=lambda xy: (-xy[0], xy[1]))
@@ -730,5 +747,5 @@ def test_tau_two_box_case(k=9):
                 image = vst.transition(1)
 
                 print_transition(vst, 1)
-                input('\n\n\n')
+                # input('\n\n\n')
 

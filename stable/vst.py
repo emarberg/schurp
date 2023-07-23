@@ -478,7 +478,6 @@ class ValuedSetTableau:
                         tab[x, x] = value + 1
                         tab[x - 1, x - 1] = -value
                     case = case or 'C6'
-
         ans = ValuedSetTableau(Tableau(tab), Tableau(grp))
         return ans, case
 
@@ -546,9 +545,23 @@ class ValuedSetTableau:
         return ans.promotion(n, iterations - 1)
 
     def bender_knuth_involution(self, index):
-        return self.transition(index)
+        relevant = {ij for ij in self.tableau.boxes if any(abs(a) in [index, index + 1] for a in self.tableau.boxes[ij])}
+        subtab = Tableau({ij: self.tableau.boxes[ij] for ij in relevant})
+        subgrp = Tableau({ij: self.grouping.boxes[ij] for ij in relevant})
+        
+        subvst = ValuedSetTableau(subtab, subgrp)
+        subvst = subvst.transition(index)
+        
+        tab = subvst.tableau.boxes
+        grp = subvst.grouping.boxes
+        for ij in self.tableau.boxes:
+            if ij not in relevant:
+                tab[ij] = self.tableau.boxes[ij]
+                grp[ij] = self.grouping.boxes[ij]
+        return ValuedSetTableau(tab, grp)
 
     def transition(self, index):
+        assert all(abs(a) in [index, index + 1] for ij in self.tableau.boxes for a in self.tableau.boxes[ij])
         return self.cached_transition(self, index)
 
     @cached_value(TRANSITION_CACHE)
