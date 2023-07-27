@@ -1,14 +1,69 @@
-from schubert import FPFGrothendieck, Grothendieck
+from schubert import FPFGrothendieck, InvGrothendieck, Grothendieck
 from permutations import Permutation
 import subprocess
 import time
 
+O_GROTHENDIECK_DEGREE = {}
 SP_GROTHENDIECK_DEGREE = {}
 BASE_DIRECTORY = '/Users/emarberg/Downloads/symplectic-cmr/'
 
 
 def nice_str(u, n):
     return ' '.join([str(u(i)) for i in range(1, n + 1)])
+
+
+def get_orthogonal_grothendieck_degree(w):
+    if w not in O_GROTHENDIECK_DEGREE:
+        t0 = time.time()
+        print('... computing inv Grothendieck')
+        f = InvGrothendieck.get(w)
+        t1 = time.time()
+        print('... done', t1 - t0, '\n')
+
+        t0 = time.time()
+        print('... computing Grothendieck terms')
+        dec = Grothendieck.decompose(f)
+        a = {u: Grothendieck.get(u).degree() for u in dec}
+        t1 = time.time()
+        print('... done', t1 - t0, '\n')        
+        
+        print('dec =', dec)
+        print()
+
+        deg = max(a.values())
+        
+        found = None
+        for u in a:
+            if a[u] == deg:
+                assert found is None
+                found = u
+        O_GROTHENDIECK_DEGREE[w] = (found, deg)
+    return O_GROTHENDIECK_DEGREE[w]
+
+
+def test_inv(n=6):
+    ans = []
+    for case, w in enumerate(Permutation.involutions(n)):
+        if w.is_vexillary():
+            print('CASE', case + 1, ':', 'z =', w.cycle_repr())
+            print()
+            a, degw = get_orthogonal_grothendieck_degree(w)
+            print('  degree =', degw, 'atom =', nice_str(a, n + 1))
+            print()
+            w.print_involution_rothe_diagram(sep='.')
+            print()
+            ans += [(degw, '$' + w.cycle_repr().replace(',', '\\,') +'$ & $' + nice_str(a, n) + '$ & $' + str(degw) + '$ \\\\ & & \\\\ ')]
+        # v = w.standardize({i for i in range(1, n + 1)} - {1, w(1)})
+        # b, degv = get_symplectic_grothendieck_degree(v)
+        # print(w.cycle_repr(), degw, '-->', v.cycle_repr(), degv)
+        # print('  ', nice_str(a, n), '  ', nice_str(b, n - 2), '==', nice_str(a.standardize({i for i in range(1, n + 1)} - {1, w(1)}), n - 2), b == a.standardize({i for i in range(1, n + 1)} - {1, w(1)}))
+        # print()
+        # ell = len(w.get_symplectic_hecke_atoms())
+        # if ell > 3:
+        #    draw(w)
+        #    input(str(ell))
+    ans = [b for (a, b) in sorted(ans)]
+    print('\n'.join(ans))
 
 
 def get_symplectic_grothendieck_degree(w):
@@ -50,13 +105,12 @@ def get_symplectic_grothendieck_degree(w):
 def test_fpf(n=6):
     ans = []
     for case, w in enumerate(Permutation.fpf_involutions(n)):
-        if w.is_fpf_dominant():
-            print('CASE', case + 1, ':', 'z =', w.cycle_repr())
-            a, degw = get_symplectic_grothendieck_degree(w)
-            print('  degree =', degw, 'atom =', nice_str(a, n))
-            print()
-            w.print_fpf_rothe_diagram(sep='.')
-            ans += [(degw, '$' + w.cycle_repr().replace(',', '\\,') +'$ & $' + nice_str(a, n) + '$ & $' + str(degw) + '$ \\\\ & & \\\\ ')]
+        print('CASE', case + 1, ':', 'z =', w.cycle_repr())
+        a, degw = get_symplectic_grothendieck_degree(w)
+        print('  degree =', degw, 'atom =', nice_str(a, n))
+        print()
+        w.print_fpf_rothe_diagram(sep='.')
+        ans += [(degw, '$' + w.cycle_repr().replace(',', '\\,') +'$ & $' + nice_str(a, n) + '$ & $' + str(degw) + '$ \\\\ & & \\\\ ')]
         # v = w.standardize({i for i in range(1, n + 1)} - {1, w(1)})
         # b, degv = get_symplectic_grothendieck_degree(v)
         # print(w.cycle_repr(), degw, '-->', v.cycle_repr(), degv)
