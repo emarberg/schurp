@@ -15,6 +15,14 @@ import schubert
 import pytest
 
 
+def test_inv_vex_tab_formula(n=5):
+    for w in Permutation.involutions(n):
+        if w.is_vexillary():
+            a = InvSchubert.vexillary_tableau_formula(w)
+            b = InvSchubert.get(w) * 2**w.number_two_cycles()
+            assert a == b
+
+
 def test_formal_operators():
     D = Operator.create(1) # noqa
     x1 = MPolynomial.monomial(1)

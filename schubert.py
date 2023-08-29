@@ -7,6 +7,7 @@ from polynomials import (
     y,
     X,
 )
+from tableaux import Tableau
 
 
 SCHUBERT_CACHE = {}
@@ -259,9 +260,47 @@ class InvSchubert(AbstractSchubert):
         return Permutation.from_involution_code(code)
 
 
+    @classmethod
+    def vexillary_tableau_formula(cls, w):
+        path = w.get_essential_path()
+        
+        t = [0, 0]
+        for i in range(1, len(path)):
+            a1, b1 = path[i - 1]
+            a2, b2 = path[i]
+            assert a1 == a2 or b1 == b2
+            if a1 == a2:
+                assert b2 == b1 - 1
+                t.append(-X(b1))
+            elif b1 == b2:
+                assert a2 == a1 + 1
+                t.append(X(a2))
+        max_entry = path[0][0]
+        mu = w.involution_shape()
+
+        ans = 0
+        for tab in Tableau.get_semistandard_shifted(mu, n=max_entry, diagonal_primes=True):
+            summand = X(0)**0
+            for (i, j) in tab.mapping:
+                a = abs(tab.get(i, j))
+                b = j - i + 1
+                s = -1 if tab.get(i, j).is_primed() else 1
+                summand *= X(a) + s * t[b]
+            ans += summand
+        return ans
+
 class InvGrothendieck(InvSchubert):
 
     beta = 1
+
+    @classmethod
+    def grothendieck_involution_words(cls, w):
+        assert w.is_vexillary()
+        f = cls.get(w)
+        dec = Grothendieck.decompose(f)
+        for u in dec:
+            for word in u.get_reduced_words():
+                yield word, dec[u]
 
     @classmethod
     def cache(cls):

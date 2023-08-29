@@ -678,7 +678,31 @@ class Permutation:
         
     def is_sp_vexillary(self):
         assert self.is_fpf_involution()
+    
+    def get_essential_path(self):
+        assert self.is_involution()
+        assert self.is_vexillary()
+
+        n = self.rank
+        rothe = self.involution_rothe_diagram()
+        ess = [(i, j) for (i, j) in rothe if (i + 1, j) not in rothe and (i, j + 1) not in rothe]
+        ess = sorted(ess, reverse=True)
         
+        path = [(n, 0)]
+        while ess:
+            a0, b0 = path[-1]
+            a1, b1 = ess[0]
+            ess = ess[1:]
+            for i in range(a0 - 1, a1 - 1, -1):
+                path.append((i, b0))
+            for j in range(b0 + 1, b1 + 1):
+                path.append((a1, j))
+        while path[-1][0] > path[-1][1]:
+            a, b = path[-1]
+            path.append((a - 1, b))
+        assert len(path) == n + 1
+        return list(reversed(path))
+
     def is_vexillary(self):
         n = self.rank
         for i in range(1, n + 1):
