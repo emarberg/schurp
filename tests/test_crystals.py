@@ -406,7 +406,7 @@ def draw_inv_demazure(alpha, n=None, exclude=False):
     for i in s:
         brf = [f for f in crystal if emax(crystal, i, f) in brf]
     # crystal.draw(highlighted_nodes=brf, tex=True)
-    crystal.draw(highlighted_nodes=brf, extended=True, exclude=exclude)
+    crystal.draw(highlighted_nodes=brf, extended=False, exclude=exclude)
 
 
 def draw_fpf_demazure(alpha, n=None, exclude=False):
@@ -427,7 +427,7 @@ def draw_fpf_demazure(alpha, n=None, exclude=False):
     for i in s:
         brf = [f for f in crystal if emax(crystal, i, f) in brf]
     # crystal.draw(highlighted_nodes=brf, tex=True)
-    crystal.draw(highlighted_nodes=brf, extended=True, exclude=exclude)
+    crystal.draw(highlighted_nodes=brf, extended=False, exclude=exclude)
 
 
 def generate_demazure(mu, dictionary):

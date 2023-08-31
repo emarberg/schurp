@@ -46,8 +46,8 @@ class AbstractCrystalMixin:
         return str(i)
 
     def draw(self, extended=(), highlighted_nodes=(), tex=False, exclude=False):
-        if type(extended) == bool and extended:
-            extended_operators = self.extended_indices
+        if type(extended) == bool:
+            extended_operators = self.extended_indices if extended else ()
         else:
             extended_operators = extended
 

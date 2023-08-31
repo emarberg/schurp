@@ -646,6 +646,31 @@ class Tableau:
                 #   "southwest" -> "southeast"
             return ans.set(a, b, index)
 
+    @classmethod
+    def decomposition_tableau_from_row_reading_word(cls, word):
+        word = list(reversed(word))
+        rows = []
+        while word:
+            decr = []
+            incr = []
+            i = 0
+            for a in word:
+                if len(incr) > 0 and word[i - 1] > word[i]:
+                    break
+                if len(decr) == 0 or word[i - 1] > word[i]:
+                    decr.append(a)
+                else:
+                    incr.append(a)
+                i += 1
+            word = word[i:]
+            rows.append(list(reversed(decr + incr)))
+        return cls.shifted_from_rows(rows)
+
+    def decomposition_crystal_f(self, index):
+        word = list(reversed(self.row_reading_word()))
+        if index == 0:
+            pass
+
     def restrict(self, n):
         n = MarkedNumber(n) if type(n) == int else n
         assert type(n) == MarkedNumber
