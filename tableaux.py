@@ -1,12 +1,14 @@
 from cached import cached_value
 from partitions import Shape, Partition, StrictPartition
 from marked import MarkedNumber
+from crystals import AbstractPrimedQCrystal
 import random
 from collections import defaultdict
 
 
 STANDARD_CACHE = {}
 SEMISTANDARD_CACHE = {}
+SEMISTANDARD_DECOMPOSITION_CACHE = {}
 STANDARD_SHIFTED_MARKED_CACHE = {}
 SEMISTANDARD_MARKED_RPP_CACHE = {}
 
@@ -15,7 +17,7 @@ SHIFTED_RPP_HORIZONTAL_STRIPS_CACHE = {}
 SHIFTED_RPP_VERTICAL_STRIPS_CACHE = {}
 
 # for French notation
-FRENCH = True
+FRENCH = False
 
 
 class Tableau:
@@ -666,6 +668,52 @@ class Tableau:
             rows.append(list(reversed(decr + incr)))
         return cls.shifted_from_rows(rows)
 
+    @classmethod
+    def get_semistandard_decomposition(cls, max_entry, mu, primed=False):  # noqa
+        return cls._semistandard_decomposition(max_entry, mu, primed)
+
+    @cached_value(SEMISTANDARD_DECOMPOSITION_CACHE)
+    def _semistandard_decomposition(cls, max_entry, mu, primed):  # noqa
+        ans = set()
+    
+        rows = []
+        for r in range(len(mu), 0, -1):
+            row = mu[-1] * [r]
+            for i in range(1, r):
+                row += (mu[r - i - 1] - mu[r - i]) * [r - i]
+            rows.append(row)
+        highest = Tableau.shifted_from_rows(rows)
+
+        level = {highest}
+        while level:
+            next_level = set()
+            for a in level:
+                ans.add(a)
+                for i in range(-max_entry + 1, max_entry):
+                    if i == 0:
+                        continue
+                    b = AbstractPrimedQCrystal.f_operator_on_decomposition_tableaux(i, a)
+                    if b is not None:
+                        next_level.add(b)
+            level = next_level
+
+        if primed:
+            bns = set()
+            for u in ans:
+                for v in range(1, 2**len(mu)):
+                    t = u.copy()
+                    for i in range(1, 1 + len(mu)):
+                        if v % 2 != 0:
+                            for j in range(1, 1 + mu[i - 1]):
+                                if j == mu[i - 1] or abs(t.get(i, i + j - 1)) < abs(t.get(i, i + j)):
+                                    t = t.negate(i, i + j - 1)
+                                    break
+                        v = v // 2
+                    bns.add(t)
+            assert not (ans & bns)
+            ans |= bns
+        return ans
+
     def restrict(self, n):
         n = MarkedNumber(n) if type(n) == int else n
         assert type(n) == MarkedNumber
@@ -792,6 +840,14 @@ class Tableau:
         mapping = self.mapping.copy()
         mapping[(i, j)] = v
         return Tableau(mapping)
+
+    def negate(self, i, j):
+        mapping = self.mapping.copy()
+        mapping[(i, j)] = -mapping[(i, j)]
+        return Tableau(mapping)        
+
+    def copy(self):
+        return Tableau(self.mapping.copy())
 
     def toggle(self):
         subtableau = self.find(MarkedNumber(-2))
@@ -1712,7 +1768,6 @@ class Tableau:
                     break
                 j += 1
         return tuple(reversed(path))
-
 
     def eg_insert(self, p, j=0):
         if p is None:

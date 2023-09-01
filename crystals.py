@@ -534,6 +534,22 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 class AbstractQCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def decomposition_tableaux_from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        from tableaux import Tableau
+        for t in Tableau.get_semistandard_decomposition(n, mu):
+            vertices += [t]
+            weights[t] = t.weight()
+            for i in ([-1] if n >= 2 else []) + list(range(1, n)):
+                u = cls.f_operator_on_decomposition_tableaux(i, t)
+                if u is not None:
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def from_strict_partition(cls, mu, rank):
         n = rank
         vertices = []
@@ -785,6 +801,34 @@ class AbstractQCrystal(AbstractCrystalMixin):
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def f_operator_on_decomposition_tableaux(cls, i, tab):
+        word = tuple(reversed(tab.row_reading_word()))
+        ans = cls.f_operator_on_words(i, word)
+        return None if ans is None else tab.decomposition_tableau_from_row_reading_word(tuple(reversed(ans)))
+
+    @classmethod
+    def e_operator_on_decomposition_tableaux(cls, i, tab):
+        word = tuple(reversed(tab.row_reading_word()))
+        ans = cls.e_operator_on_words(i, word)
+        return None if ans is None else tab.decomposition_tableau_from_row_reading_word(tuple(reversed(ans)))
+
+    @classmethod
+    def decomposition_tableaux_from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        from tableaux import Tableau
+        for t in Tableau.get_semistandard_decomposition(n, mu, primed=True):
+            vertices += [t]
+            weights[t] = t.weight()
+            for i in range(-1 if n >= 2 else 0, n):
+                u = cls.f_operator_on_decomposition_tableaux(i, t)
+                if u is not None:
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def from_inv_factorization(cls, a, n, increasing):
         m = max([0] + [abs(i) for _ in a for i in _]) + 1
 
@@ -887,7 +931,19 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
             return str(self.rank + i) + "\'"
 
     @classmethod
+    def s_operator_on_words(cls, j, w):
+        assert j > 0
+        if w is None:
+            return None
+        k = len([a for a in w if abs(a) == j]) - len([a for a in w if abs(a) == j + 1])
+        for _ in range(abs(k)):
+            w = cls.f_operator_on_words(j, w) if k >= 0 else cls.e_operator_on_words(j, w)
+        return w
+
+    @classmethod
     def f_operator_on_words(cls, i, word):
+        if word is None:
+            return None
         cl, word = type(word), list(word)
         if i > 0:
             u = AbstractGLCrystal.f_operator_on_words(i, [abs(x) for x in word])
@@ -912,9 +968,13 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
                 word[ones[0]] = -2 if a > 0 else 2
                 word[ones[1]] = 1 if a > 0 else -1
             return cl(word)
+        elif i < -1:
+            return cls.s_operator_on_words(-i - 1, cls.s_operator_on_words(-i, cls.f_operator_on_words(i + 1, cls.s_operator_on_words(-i, cls.s_operator_on_words(-i - 1, word)))))
 
     @classmethod
     def e_operator_on_words(cls, i, word):
+        if word is None:
+            return None
         cl, word = type(word), list(word)
         if i > 0:
             u = AbstractGLCrystal.e_operator_on_words(i, [abs(x) for x in word])
@@ -939,6 +999,9 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
                 word[twos[0]] = 1 if a < 0 else -1
                 word[ones[0]] = -1 if a < 0 else 1
             return cl(word)
+        elif i < -1:
+            return cls.s_operator_on_words(-i - 1, cls.s_operator_on_words(-i, cls.e_operator_on_words(i + 1, cls.s_operator_on_words(-i, cls.s_operator_on_words(-i - 1, word)))))
+
 
     def group_highest_weights(self):
         ans = {}
