@@ -5,7 +5,6 @@ from words import (
     Word,
     get_involution_words,
     get_fpf_involution_words,
-    Tableau,
     involution_insert,
     primed_sw_insert,
     sagan_worley_insert,

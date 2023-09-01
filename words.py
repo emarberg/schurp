@@ -1,5 +1,4 @@
 from vectors import Vector
-from tableaux import Tableau
 from marked import MarkedNumber
 from collections import defaultdict
 import itertools
@@ -42,7 +41,7 @@ class Word:
                         break
             rho = list(reversed(rho))
             dictionary = {(i + 1, j + 1): rho[i][j] for i in range(len(rho)) for j in range(len(rho[i]))}
-            ans = Tableau(dictionary)
+            ans = top.__class__(dictionary)
             # assert ans.is_increasing()
             return ans
         if bot is not None:
@@ -141,7 +140,7 @@ class Word:
                     i = indices[0]
                     rho = cls.lift_sequence(rho, i, j)
             dictionary = {(i + 1, j + 1): rho[i][j] for i in range(len(rho)) for j in range(len(rho[i]))}
-            ans = Tableau(dictionary)
+            ans = top.__class__(dictionary)
             # assert ans.is_increasing()
             return ans
 
@@ -773,6 +772,7 @@ class Word:
             add = newadd - seen
 
     def modified_hecke_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -786,6 +786,7 @@ class Word:
         return p, q
 
     def rsk_insert(self):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -798,6 +799,7 @@ class Word:
         return p, q
 
     def hecke_insert(self):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -811,6 +813,7 @@ class Word:
         return p, q
 
     def sp_mixed_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -833,6 +836,7 @@ class Word:
         return Tableau(mapping), q
 
     def mixed_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -858,6 +862,7 @@ class Word:
         return Tableau(mapping), q
 
     def shifted_hecke_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -874,6 +879,7 @@ class Word:
         return p, q
 
     def sagan_worley_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -886,6 +892,7 @@ class Word:
         return p, q
 
     def primed_sw_insert(self, verbose=False, phi=None):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = (i_zerobased + 1) if phi is None else phi[i_zerobased]
@@ -902,6 +909,7 @@ class Word:
         return p, q
 
     def involution_insert(self, verbose=False, phi=None):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = (i_zerobased + 1) if phi is None else phi[i_zerobased]
@@ -918,6 +926,7 @@ class Word:
         return p, q
 
     def alt_involution_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -932,6 +941,7 @@ class Word:
         return p, q
 
     def clan_insert(self, n, verbose=True):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -948,6 +958,7 @@ class Word:
         return p, q
 
     def eg_insert(self):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -961,6 +972,7 @@ class Word:
         return p, q
 
     def weak_eg_insert(self):
+        from tableaux import Tableau
         n = len(self)
         p, q = Tableau(), Tableau()
         lifted_p = p
@@ -976,6 +988,7 @@ class Word:
         return lifted_p, q
 
     def mystery_insert(self, verbose=True):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -989,6 +1002,7 @@ class Word:
         return p, q
 
     def fpf_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -1005,6 +1019,7 @@ class Word:
         return p, q
 
     def alt_fpf_insert(self, verbose=False):
+        from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -1035,12 +1050,14 @@ def get_insertion_mapping(words):
 
 
 def shifted_hecke_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.shifted_hecke_insert(verbose=False)
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
 
 
 def primed_sw_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.primed_sw_insert(verbose=False)
     q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
@@ -1048,6 +1065,7 @@ def primed_sw_insert(*words):
 
 
 def sagan_worley_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.sagan_worley_insert(verbose=False)
     q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
@@ -1055,6 +1073,7 @@ def sagan_worley_insert(*words):
 
 
 def mixed_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.mixed_insert(verbose=False)
     q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
@@ -1062,6 +1081,7 @@ def mixed_insert(*words):
 
 
 def sp_mixed_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.sp_mixed_insert(verbose=False)
     q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
@@ -1069,6 +1089,7 @@ def sp_mixed_insert(*words):
 
 
 def involution_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.involution_insert(verbose=False)
     q = Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
@@ -1076,12 +1097,14 @@ def involution_insert(*words):
 
 
 def fpf_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.fpf_insert(verbose=False)
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
 
 
 def alt_fpf_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     mapping[MarkedNumber(0)] = MarkedNumber(0)
     p, q = w.alt_fpf_insert(verbose=False)
@@ -1091,12 +1114,14 @@ def alt_fpf_insert(*words):
 
 
 def eg_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.eg_insert()
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
 
 
 def weak_eg_insert(*words):
+    from tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     n = len(words) + 1
     p, q = w.weak_eg_insert()

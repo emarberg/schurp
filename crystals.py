@@ -4,10 +4,6 @@ from words import (
     Word,
     get_fpf_involution_words
 )
-from permutations import Permutation
-from tableaux import Tableau
-from keys import monomial_from_composition, symmetric_halves
-import tests.test_keys as testkeys
 import subprocess
 import time
 import collections
@@ -543,6 +539,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
         vertices = []
         edges = []
         weights = {}
+        from tableaux import Tableau
         for t in Tableau.get_semistandard_shifted(mu, n, diagonal_primes=False):
             vertices += [t]
             weights[t] = t.weight()
@@ -564,7 +561,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
                     seen.add(a)
                 else:
                     mapping[(i, j)] = t[(i, j)]
-            return Tableau(mapping)
+            return t.__class__(mapping)
 
         n = rank
         vertices = []
@@ -709,6 +706,18 @@ class AbstractQCrystal(AbstractCrystalMixin):
         elif i < -1:
             return cls.s_operator_on_words(-i - 1, cls.s_operator_on_words(-i, cls.e_operator_on_words(i + 1, cls.s_operator_on_words(-i, cls.s_operator_on_words(-i - 1, word)))))
 
+    @classmethod
+    def f_operator_on_decomposition_tableaux(cls, i, tab):
+        word = tuple(reversed(tab.row_reading_word()))
+        ans = cls.f_operator_on_words(i, word)
+        return None if ans is None else tab.decomposition_tableau_from_row_reading_word(tuple(reversed(ans)))
+
+    @classmethod
+    def e_operator_on_decomposition_tableaux(cls, i, tab):
+        word = tuple(reversed(tab.row_reading_word()))
+        ans = cls.e_operator_on_words(i, word)
+        return None if ans is None else tab.decomposition_tableau_from_row_reading_word(tuple(reversed(ans)))
+
     @property
     def indices(self):
         return ([-1] if self.rank >= 2 else []) + list(range(1, self.rank))
@@ -837,6 +846,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
         vertices = []
         edges = []
         weights = {}
+        from tableaux import Tableau
         for t in Tableau.get_semistandard_shifted(mu, n, diagonal_primes=True):
             vertices += [t]
             weights[t] = t.weight()
@@ -1077,6 +1087,7 @@ class OrthogonalCrystalGenerator:
         return self.DIRECTORY + 'png/' + '%s.png' % self._filename
 
     def node_label(self, i):
+        from keys import symmetric_halves
         # turning increasing factorizations into decreasing by conjugating by long element
         pre = ''
         if i == 0:
@@ -1126,6 +1137,7 @@ class OrthogonalCrystalGenerator:
 
     @property
     def alpha(self):
+        from keys import monomial_from_composition
         if self._alpha is None:
             qkey = 0
             for x in range(len(self)):
@@ -1133,7 +1145,8 @@ class OrthogonalCrystalGenerator:
                     qkey += monomial_from_composition(self.weights[x])
             for i in range(10):
                 try:
-                    self._alpha = testkeys.decompose_q(qkey)
+                    from tests.test_keys import decompose_q
+                    self._alpha = decompose_q(qkey)
                     return self._alpha
                 except:
                     qkey *= 2
@@ -1145,6 +1158,7 @@ class OrthogonalCrystalGenerator:
 
     @classmethod
     def all(cls, n, k, dominant=False):
+        from permutations import Permutation
         for w in Permutation.involutions(n):
             for cg in cls.from_permutation(n, w, k):
                 print()
@@ -1191,7 +1205,8 @@ class OrthogonalCrystalGenerator:
             return (self.rank - abs(a)) * (-1 if a < 0 else 1)
 
         self.word = tuple(adjust(a) for a in self.insertion_tableau(0).row_reading_word())
-        self.tableau = testkeys.o_eg_insert(self.word)[0]
+        from tests.test_keys import o_eg_insert
+        self.tableau = o_eg_insert(self.word)[0]
         self._alpha = None
         self.f = {}
         self.compute_edges()
@@ -1440,16 +1455,19 @@ class SymplecticCrystalGenerator(OrthogonalCrystalGenerator):
 
     @property
     def alpha(self):
+        from keys import monomial_from_composition
+        from tests.test_keys import decompose_p
         if self._alpha is None:
             pkey = 0
             for x in range(len(self)):
                 if self.is_highlighted(x):
                     pkey += monomial_from_composition(self.weights[x])
-            self._alpha = testkeys.decompose_p(pkey)
+            self._alpha = decompose_p(pkey)
         return self._alpha
 
     @classmethod
     def all(cls, n, k, dominant=False):
+        from permutations import Permutation
         for w in Permutation.fpf_involutions(n):
             for cg in cls.from_permutation(n, w, k):
                 print()
@@ -1496,7 +1514,8 @@ class SymplecticCrystalGenerator(OrthogonalCrystalGenerator):
             return (self.rank - abs(a)) * (-1 if a < 0 else 1)
 
         self.word = tuple(adjust(a) for a in self.insertion_tableau(0).row_reading_word())
-        self.tableau = testkeys.sp_eg_insert(self.word)[0]
+        from tests.test_keys import sp_eg_insert
+        self.tableau = sp_eg_insert(self.word)[0]
 
         self._alpha = None
         self.f = {}

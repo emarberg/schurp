@@ -666,11 +666,6 @@ class Tableau:
             rows.append(list(reversed(decr + incr)))
         return cls.shifted_from_rows(rows)
 
-    def decomposition_crystal_f(self, index):
-        word = list(reversed(self.row_reading_word()))
-        if index == 0:
-            pass
-
     def restrict(self, n):
         n = MarkedNumber(n) if type(n) == int else n
         assert type(n) == MarkedNumber

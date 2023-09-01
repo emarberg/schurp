@@ -2,12 +2,12 @@ from words import (
     Word,
     get_involution_words,
     get_fpf_involution_words,
-    Tableau,
     involution_insert,
     fpf_insert,
     primed_sw_insert,
     sagan_worley_insert
 )
+from tableaux import Tableau
 from marked import MarkedNumber
 from hopf import HopfPermutation
 from crystals import (
