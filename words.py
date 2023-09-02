@@ -1035,6 +1035,18 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def decomposition_insert(self):
+        from tableaux import Tableau
+        p, q = Tableau(), Tableau()
+        for i, a in enumerate(self):
+            p = p.decomposition_insert(MarkedNumber(a))
+            v = MarkedNumber(i + 1)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+            assert p.shape() == q.shape()
+        return p, q
+
 
 def get_insertion_mapping(words):
     words = [Word(a) if type(a) == int else Word(*a) if type(a) != Word else a for a in words]
@@ -1126,6 +1138,11 @@ def weak_eg_insert(*words):
     n = len(words) + 1
     p, q = w.weak_eg_insert()
     return p, Tableau({(i, j): n - mapping[q.entry(i, j)].number for (i, j) in q})
+
+
+def decomposition_insert(*w):
+    word = w if type(w) == Word else Word(*w)
+    return word.decomposition_insert()
 
 
 REDUCED_WORDS = {(): {()}}

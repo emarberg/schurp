@@ -2104,6 +2104,33 @@ class Tableau:
         assert tab.is_increasing()
         return tab.fpf_insert(p, j, column_dir, verbose=verbose)
 
+    def decomposition_insert(self, v):
+        def splitrow(r):
+            decr = [a for i, a in enumerate(r) if i == 0 or r[i - 1] >= a]
+            incr = r[len(decr):]
+            return decr, incr
+
+        rows = self.get_rows()
+        for i in range(len(rows)):
+            decr, incr = splitrow(rows[i])
+            if (incr and abs(incr[-1]) < abs(v)) or (not incr):
+                rows[i].append(v)
+                return Tableau.shifted_from_rows(rows)
+            else:
+                for j, a in enumerate(incr):
+                    if abs(a) >= abs(v):
+                        incr[j] = v
+                        v = a
+                        break
+                for j, a in enumerate(decr):
+                    if abs(a) < abs(v):
+                        decr[j] = v
+                        v = a
+                        break
+                rows[i] = decr + incr
+        rows.append([v])
+        return Tableau.shifted_from_rows(rows)
+
     @cached_value(HORIZONTAL_STRIPS_CACHE)
     def _horizontal_strips(cls, mu, lam):  # noqa
         if not Partition._contains(mu, lam):

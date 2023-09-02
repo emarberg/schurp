@@ -1,7 +1,37 @@
 from tableaux import Tableau
 from marked import MarkedNumber
 from partitions import Partition, StrictPartition
-from words import Word
+from words import Word, decomposition_insert
+
+
+def test_decomposition_insertion():
+    t = Tableau()
+    v = 2
+    expected = Tableau.shifted_from_rows([[2]])
+    assert t.decomposition_insert(v) == expected
+
+    t = Tableau.shifted_from_rows([[6, 6, 1, 3, 5]])
+    v = 2
+    expected = Tableau.shifted_from_rows([[6, 6, 3, 2, 5], [1]])
+    assert t.decomposition_insert(v) == expected
+
+    t = Tableau.shifted_from_rows([[3, 2, 4]])
+    v = 1
+    expected = Tableau.shifted_from_rows([[4, 2, 1], [3]])
+    assert t.decomposition_insert(v) == expected
+
+    t = Tableau.shifted_from_rows([[6, 6, 1, 3, 5], [3, 2, 4]])
+    v = 2
+    expected = Tableau.shifted_from_rows([[6, 6, 3, 2, 5], [4, 2, 1], [3]])
+    assert t.decomposition_insert(v) == expected
+
+    p = Tableau.shifted_from_rows([[3, 2, 1], [2]])
+    q = Tableau.shifted_from_rows([[1, 2, 4], [3]])
+    assert (p, q) == decomposition_insert(2, 3, 2, 1)
+
+    p = Tableau.shifted_from_rows([[4, 4, 4, 4, 4, 4], [3, 3, 3, 3], [2, 2], [1]])
+    q = Tableau.shifted_from_rows([[1, 2, 4, 7, 8, 13], [3, 5, 9, 12], [6, 10], [11]])
+    assert (p, q) == decomposition_insert(1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4)
 
 
 def test_standardize(n=6):
