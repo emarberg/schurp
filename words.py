@@ -1039,11 +1039,23 @@ class Word:
         from tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i, a in enumerate(self):
-            p = p.decomposition_insert(MarkedNumber(a))
+            p = p.decomposition_insert(a)
             v = MarkedNumber(i + 1)
             for k, l in p.shape():
                 if (k, l) not in q.shape():
-                    q = q.set(k, l, v)
+                    if k == l:
+                        q = q.set(k, l, v)
+                    else:
+                        x = p.get(k, l - 1)
+                        y = p.get(k, l)
+                        if abs(x) < abs(y):
+                            q = q.set(k, l, v if a > 0 else -v)
+                        elif x.number > 0:
+                            q = q.set(k, l, v)
+                        else:
+                            q = q.set(k, l, -v)
+                            p = p.set(k, l - 1, abs(x))
+                    break
             assert p.shape() == q.shape()
         return p, q
 

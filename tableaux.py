@@ -657,9 +657,9 @@ class Tableau:
             incr = []
             i = 0
             for a in word:
-                if len(incr) > 0 and word[i - 1] > word[i]:
+                if len(incr) > 0 and abs(word[i - 1]) > abs(word[i]):
                     break
-                if len(decr) == 0 or word[i - 1] > word[i]:
+                if len(decr) == 0 or abs(word[i - 1]) > abs(word[i]):
                     decr.append(a)
                 else:
                     incr.append(a)
@@ -2106,26 +2106,29 @@ class Tableau:
 
     def decomposition_insert(self, v):
         def splitrow(r):
-            decr = [a for i, a in enumerate(r) if i == 0 or r[i - 1] >= a]
+            decr = [a for i, a in enumerate(r) if i == 0 or abs(r[i - 1]) >= abs(a)]
             incr = r[len(decr):]
             return decr, incr
-
+        v = v if type(v) is int else v.number
         rows = self.get_rows()
         for i in range(len(rows)):
             decr, incr = splitrow(rows[i])
-            if (incr and abs(incr[-1]) < abs(v)) or (not incr):
+            if (incr and abs(incr[-1]) < abs(v)) or (not incr and abs(decr[-1]) < abs(v)):
+                rows[i].append(abs(v))
+                return Tableau.shifted_from_rows(rows)
+            elif not incr:
                 rows[i].append(v)
                 return Tableau.shifted_from_rows(rows)
             else:
                 for j, a in enumerate(incr):
                     if abs(a) >= abs(v):
-                        incr[j] = v
-                        v = a
+                        incr[j] = abs(v)
+                        v = -a if v < 0 else a
                         break
                 for j, a in enumerate(decr):
                     if abs(a) < abs(v):
-                        decr[j] = v
-                        v = a
+                        decr[j] = -abs(v) if a < 0 else abs(v)
+                        v = a if v * a > 0 else -a
                         break
                 rows[i] = decr + incr
         rows.append([v])

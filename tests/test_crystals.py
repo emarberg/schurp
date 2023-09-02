@@ -61,6 +61,32 @@ def test_decomposition_tableau_crystal(nn=5, f=5):
             c = c.tensor(AbstractQCrystal.standard_object(n))
 
 
+def test_primed_decomposition_tableau_crystal(nn=5, f=5):
+    for n in range(2, nn + 1):
+        c = AbstractPrimedQCrystal.standard_object(n).tensor(AbstractPrimedQCrystal.standard_object(n))
+        for _ in range(f - 1):
+            print('n =', n, 'm =', _ + 2)
+            for i in range(-1, n):
+                for ww1 in c:
+                    w1 = flatten(ww1)
+                    ww2 = c.f_operator(i, ww1)
+                    if ww2 is not None:
+                        w2 = flatten(ww2)
+                        p1, q1 = decomposition_insert(*reversed(w1))
+                        p2, q2 = decomposition_insert(*reversed(w2))
+                        print(w1, '---', i, '--->', w2)
+                        print(p1)
+                        print(p2)
+                        print('???')
+                        print(c.f_operator_on_decomposition_tableaux(i, p1))
+                        print()
+                        print(q1)
+                        print(q2)
+                        assert q1 == q2
+                        assert c.f_operator_on_decomposition_tableaux(i, p1) == p2
+            c = c.tensor(AbstractPrimedQCrystal.standard_object(n))
+
+
 def print_fpf_demazure_tableau_table(n, thresh=40, columns=3, numtabs=1):
     # last setting: print_fpf_demazure_tableau_table(8, 68, 4, numtabs=1)
     def sorter(r):
