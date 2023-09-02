@@ -15,6 +15,7 @@ from keys import (
     skew_symmetric_double,
     symmetric_double,
 )
+from words import decomposition_insert
 from tests.test_keys import try_to_decompose_p, try_to_decompose_q, decompose_p, decompose_q
 from partitions import Partition
 from symmetric import (
@@ -35,6 +36,29 @@ import time
 PRINT_DIR = "/Users/emarberg/Downloads/"
 FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def test_decomposition_tableau_crystal(nn=5, f=5):
+    for n in range(2, nn + 1):
+        c = AbstractQCrystal.standard_object(n).tensor(AbstractQCrystal.standard_object(n))
+        for _ in range(f - 1):
+            print('n =', n, 'm =', _ + 2)
+            for i in [-1] + list(range(1, n)):
+                for ww1 in c:
+                    w1 = flatten(ww1)
+                    ww2 = c.f_operator(i, ww1)
+                    if ww2 is not None:
+                        w2 = flatten(ww2)
+                        p1, q1 = decomposition_insert(*reversed(w1))
+                        p2, q2 = decomposition_insert(*reversed(w2))
+                        # print(w1, '---', i, '--->', w2)
+                        # print(p1)
+                        # print(p2)
+                        # print(c.f_operator_on_decomposition_tableaux(i, p1))
+                        # print()
+                        assert q1 == q2
+                        assert c.f_operator_on_decomposition_tableaux(i, p1) == p2
+            c = c.tensor(AbstractQCrystal.standard_object(n))
 
 
 def print_fpf_demazure_tableau_table(n, thresh=40, columns=3, numtabs=1):
