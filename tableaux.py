@@ -2113,23 +2113,31 @@ class Tableau:
         rows = self.get_rows()
         for i in range(len(rows)):
             decr, incr = splitrow(rows[i])
-            if (incr and abs(incr[-1]) < abs(v)) or (not incr and abs(decr[-1]) < abs(v)):
-                rows[i].append(abs(v))
-                return Tableau.shifted_from_rows(rows)
-            elif not incr:
+            if (incr and abs(incr[-1]) < abs(v)) or (not incr):
                 rows[i].append(v)
                 return Tableau.shifted_from_rows(rows)
             else:
+                in_sign = -1 if v < 0 else 1
+                out_sign = -1 if decr[-1] < 0 else 1
                 for j, a in enumerate(incr):
                     if abs(a) >= abs(v):
                         incr[j] = abs(v)
-                        v = -a if v < 0 else a
+                        v = abs(a)
                         break
                 for j, a in enumerate(decr):
                     if abs(a) < abs(v):
-                        decr[j] = -abs(v) if a < 0 else abs(v)
-                        v = a if v * a > 0 else -a
+                        decr[j] = abs(v)
+                        v = abs(a)
                         break
+                decr[-1] = abs(decr[-1])
+                if abs(decr[-1]) >= abs(incr[0]):
+                    decr += [incr[0]]
+                    incr = incr[1:]
+                    decr[-1] *= in_sign
+                    v *= out_sign
+                else:
+                    decr[-1] *= out_sign
+                    v *= in_sign
                 rows[i] = decr + incr
         rows.append([v])
         return Tableau.shifted_from_rows(rows)

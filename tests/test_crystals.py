@@ -74,16 +74,19 @@ def test_primed_decomposition_tableau_crystal(nn=5, f=5):
                         w2 = flatten(ww2)
                         p1, q1 = decomposition_insert(*reversed(w1))
                         p2, q2 = decomposition_insert(*reversed(w2))
-                        print(w1, '---', i, '--->', w2)
-                        print(p1)
-                        print(p2)
-                        print('???')
-                        print(c.f_operator_on_decomposition_tableaux(i, p1))
-                        print()
-                        print(q1)
-                        print(q2)
+                        expected = c.f_operator_on_decomposition_tableaux(i, p1)
+                        verbose = not (q1 == q2 and expected == p2)
+                        if verbose:
+                            print(w1, '---', i, '--->', w2)
+                            print(p1)
+                            print(p2)
+                            print('???')
+                            print(expected)
+                            print()
+                            print(q1)
+                            print(q2)
                         assert q1 == q2
-                        assert c.f_operator_on_decomposition_tableaux(i, p1) == p2
+                        assert expected == p2
             c = c.tensor(AbstractPrimedQCrystal.standard_object(n))
 
 

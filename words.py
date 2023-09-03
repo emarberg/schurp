@@ -1049,7 +1049,8 @@ class Word:
                         x = p.get(k, l - 1)
                         y = p.get(k, l)
                         if abs(x) < abs(y):
-                            q = q.set(k, l, v if a > 0 else -v)
+                            q = q.set(k, l, v if y.number > 0 else -v)
+                            p = p.set(k, l, abs(y))
                         elif x.number > 0:
                             q = q.set(k, l, v)
                         else:
