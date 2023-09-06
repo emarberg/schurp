@@ -340,5 +340,12 @@ class Polynomial:
     def y(cls, i):
         return cls.monomial(-i)
 
+    @classmethod
+    def from_tuple(cls, tup):
+        ans = X(0)**0
+        for i, a in enumerate(tup):
+            ans *= X(i)**a
+        return ans
+
 
 beta = X(0)

@@ -42,6 +42,8 @@ KLG_MAPS = {}
 KOG_COUNTS_HELPER = {}
 KLG_COUNTS_HELPER = {}
 
+ALL_CACHE = {}
+
 
 def nchoosek(m, k):
     ans = 1
@@ -75,6 +77,66 @@ class Tableau:
             for b in sorted(self.boxes) for v in self.boxes[b]
         )
         self._string_array = None
+
+    def distribute(self):
+        if self.size() == 0:
+            yield self
+        else:
+            (i, j) = next(iter(self.boxes))
+            sub = self.remove(i, j)
+            for v in self.get(i, j, unpack=False):
+                for t in sub.distribute():
+                    yield t.add(i, j, v)
+
+    def get_rows(self, unpack=True):
+        ans = []
+        for i, j in sorted(self.boxes):
+            while i > len(ans):
+                ans.append([])
+            if unpack:
+                for n in self.boxes[i, j]:
+                    ans[i - 1].append(n)
+            else:
+                ans[i - 1].append(self.boxes[i, j])
+        return ans
+
+    def is_decomposition_tableau(self):
+        return self._is_decomposition_tableau(primes_allowed=False)
+
+    def is_primed_decomposition_tableau(self):
+        return self._is_decomposition_tableau(primes_allowed=True)
+
+    def _is_decomposition_tableau(self, primes_allowed=False):
+        def splitrow(r):
+            decr = []
+            for i, a in enumerate(r):
+                if i == 0 or abs(r[i - 1]) >= abs(a):
+                    decr.append(a)
+                else:
+                    break
+            incr = r[len(decr):]
+            return decr, incr
+
+        for t in self.distribute():
+            rows = t.get_rows()
+            for index, r in enumerate(rows):
+                decr, incr = splitrow(r)
+                if any(a < 0 for a in decr[:-1] + incr):
+                    return False
+                if not primes_allowed and decr[-1] < 0:
+                    return False
+                if not all(incr[i] < incr[i + 1] for i in range(len(incr) - 1)):
+                    return False
+                if index + 1 < len(rows):
+                    r = [abs(a) for a in r]
+                    s = [abs(a) for a in rows[index + 1]]
+                    if any(r[0] <= s[i] for i in range(len(s))):
+                        return False
+                    if any(s[i] >= s[j] >= r[i + 1] for i in range(len(s)) for j in range(i + 1, len(s))):
+                        return False
+                    if any(s[j] < r[i] < r[j + 1] for i in range(len(s)) for j in range(i, len(s))):
+                        return False
+        return True
 
     def decrement(self):
         boxes = {}
@@ -904,6 +966,29 @@ class Tableau:
                             for (i, j) in diff2:
                                 tab = tab.add(i, j, -max_entry)
                             ans.add(tab)
+        return ans
+
+    @classmethod
+    def all(cls, max_entry, mu, nu=(), shifted=False, setvalued=False, marked=False):
+        return cls._all(max_entry, mu, nu, shifted, setvalued, marked)
+
+    @cached_value(ALL_CACHE)
+    def _all(cls, max_entry, mu, lam, shifted, setvalued, marked):
+        values = set(range(-max_entry, 1 + max_entry)) - {0} if marked else set(range(1, 1 + max_entry)) 
+        ans = set()
+        if mu == lam:
+            ans = {Tableau()}
+        elif Partition.contains(mu, lam) and max_entry > 0:
+            i = [i for i in range(len(mu)) if (mu[i] > 0 and i >= len(lam)) or mu[i] > lam[i]][-1]
+            nu = list(mu)
+            nu[i] -= 1
+            nu = Partition.trim(nu)
+            for tab in cls._all(max_entry, nu, lam, shifted, setvalued, marked):
+                x = i + 1
+                y = mu[i] + i if shifted else mu[i]
+                for n in range(len(values) if setvalued else 1):
+                    for tup in itertools.combinations(values, n + 1):
+                        ans.add(tab.add(x, y, tup))
         return ans
 
     @classmethod

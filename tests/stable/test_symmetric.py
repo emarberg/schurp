@@ -7,6 +7,48 @@ from stable.polynomials import beta as BETA # noqa
 import pytest
 
 
+def GQ_decomposition_gf(n, mu):
+    ans = 0
+    for tab in Tableau.all(n, mu, shifted=True, marked=True, setvalued=True):
+        if tab.is_primed_decomposition_tableau():
+            weight = tab.weight()
+            print(weight, tab)
+            weight = (sum(weight) - sum(mu),) + weight
+            ans += Polynomial.from_tuple(weight)
+    return ans
+
+
+def test_GQ_decomposition_gf(max_entry=3, max_size=10):
+    for k in range(1, max_size + 1):
+        for mu in Partition.all(k, strict=True):
+            for n in range(1, max_entry + 1):
+                guess = GQ_decomposition_gf(n, mu)
+                expected = GQ(n, mu).polynomial()
+                print(mu, n)
+                assert guess == expected
+
+
+def GP_decomposition_gf(n, mu):
+    ans = 0
+    for tab in Tableau.all(n, mu, shifted=True, marked=False, setvalued=True):
+        if tab.is_decomposition_tableau():
+            weight = tab.weight()
+            print(weight, tab)
+            weight = (sum(weight) - sum(mu),) + weight
+            ans += Polynomial.from_tuple(weight)
+    return ans
+
+
+def test_GP_decomposition_gf(max_entry=3, max_size=10):
+    for k in range(1, max_size + 1):
+        for mu in Partition.all(k, strict=True):
+            for n in range(1, max_entry + 1):
+                guess = GP_decomposition_gf(n, mu)
+                expected = GP(n, mu).polynomial()
+                print(mu, n)
+                assert guess == expected
+
+
 def test_doublebar():
     assert G(1, (), (1,)) == 0
     assert G_doublebar(1, (), (1,)) == 0

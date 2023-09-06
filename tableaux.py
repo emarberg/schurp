@@ -2106,7 +2106,12 @@ class Tableau:
 
     def decomposition_insert(self, v):
         def splitrow(r):
-            decr = [a for i, a in enumerate(r) if i == 0 or abs(r[i - 1]) >= abs(a)]
+            decr = []
+            for i, a in enumerate(r):
+                if i == 0 or abs(r[i - 1]) >= abs(a):
+                    decr.append(a)
+                else:
+                    break
             incr = r[len(decr):]
             return decr, incr
         v = v if type(v) is int else v.number
