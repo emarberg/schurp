@@ -7,6 +7,67 @@ from stable.polynomials import beta as BETA # noqa
 import pytest
 
 
+def setvalued_decomposition_f(tab, index):
+    boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
+    signature = []
+    for i, b in enumerate(boxes):
+        v = tab.get(*b, unpack=False)
+        if index in v and index + 1 in v:
+            continue
+        elif index in v:
+            signature.append((')', i))
+        elif index + 1 in v:
+            signature.append(('(', i))
+
+    exit = len(signature) == 0
+    while not exit:
+        for i in range(len(signature)):
+            if i + 1 == len(signature):
+                exit = True
+            else:
+                s = signature[i][0]
+                t = signature[i + 1][0]
+                if s + t == '()':
+                    signature = signature[:i] + signature[i + 2:]
+                    exit = len(signature) == 0
+                    break
+    signature = [(s, i) for (s, i) in signature if s == ')']
+
+    if len(signature) == 0:
+        return None
+
+    i = signature[-1][-1]
+    x, y = boxes[i]
+
+    for z in range(1, y):
+        if (x, z) in tab.boxes and index in tab.get(x, z, unpack=False):
+            return tab.remove(x, z, index).add(x, y, index + 1)
+
+    z = y + 1
+    while (x, z) in tab.boxes:
+        if (x + 1, z ) in tab.boxes and max(tab.get(x, z, unpack=False)) > index + 1 and index in tab.get(x + 1, z, unpack=False) and index + 1 in tab.get(x + 1, z, unpack=False):
+            return tab.remove(x + 1, z, index).add(x, y, index + 1)
+        z += 1
+
+    return tab.remove(x, y, index).add(x, y, index + 1)
+
+
+
+def test_setvalued_decomposition_f(n=3, max_size=10):
+    for mu in Partition.all(max_size, strict=True):
+        print(n, mu)
+        for tab in Tableau.all(n, mu, shifted=True, marked=False, setvalued=True):
+            if tab.is_decomposition_tableau():
+                for i in range(1, n):
+                    # print(tab, i)
+                    res = setvalued_decomposition_f(tab, i)
+                    # print(res)
+                    if not (res is None or res.is_decomposition_tableau()):
+                        print(tab, i, res)
+                        print(res.boxes)
+                    assert res is None or res.is_decomposition_tableau()
+
+
 def GQ_decomposition_gf(n, mu):
     ans = 0
     for tab in Tableau.all(n, mu, shifted=True, marked=True, setvalued=True):
@@ -19,13 +80,12 @@ def GQ_decomposition_gf(n, mu):
 
 
 def test_GQ_decomposition_gf(max_entry=3, max_size=10):
-    for k in range(1, max_size + 1):
-        for mu in Partition.all(k, strict=True):
-            for n in range(1, max_entry + 1):
-                guess = GQ_decomposition_gf(n, mu)
-                expected = GQ(n, mu).polynomial()
-                print(mu, n)
-                assert guess == expected
+    for mu in Partition.all(max_size, strict=True):
+        for n in range(1, max_entry + 1):
+            guess = GQ_decomposition_gf(n, mu)
+            expected = GQ(n, mu).polynomial()
+            print(mu, n)
+            assert guess == expected
 
 
 def GP_decomposition_gf(n, mu):
@@ -40,13 +100,12 @@ def GP_decomposition_gf(n, mu):
 
 
 def test_GP_decomposition_gf(max_entry=3, max_size=10):
-    for k in range(1, max_size + 1):
-        for mu in Partition.all(k, strict=True):
-            for n in range(1, max_entry + 1):
-                guess = GP_decomposition_gf(n, mu)
-                expected = GP(n, mu).polynomial()
-                print(mu, n)
-                assert guess == expected
+    for mu in Partition.all(max_size, strict=True):
+        for n in range(1, max_entry + 1):
+            guess = GP_decomposition_gf(n, mu)
+            expected = GP(n, mu).polynomial()
+            print(mu, n)
+            assert guess == expected
 
 
 def test_doublebar():
