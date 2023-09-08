@@ -28,12 +28,17 @@ def test_setvalued_decomposition_f(n=3, max_size=10):
 
 def GQ_decomposition_gf(n, mu):
     ans = 0
+    summary = []
     for tab in Tableau.all(n, mu, shifted=True, marked=True, setvalued=True):
         if tab.is_primed_decomposition_tableau():
+            #if 1 in tab.get(2, 2, unpack=False) and -1 in tab.get(2, 2, unpack=False):
+            #    continue
             weight = tab.weight()
-            print(weight, tab)
+            summary += [(weight, tab)]
             weight = (sum(weight) - sum(mu),) + weight
             ans += Polynomial.from_tuple(weight)
+        for weight, tab in sorted(summary):
+            print(weight, tab)
     return ans
 
 
