@@ -8,49 +8,7 @@ import pytest
 
 
 def setvalued_decomposition_f(tab, index):
-    boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
-    signature = []
-    for i, b in enumerate(boxes):
-        v = tab.get(*b, unpack=False)
-        if index in v and index + 1 in v:
-            continue
-        elif index in v:
-            signature.append((')', i))
-        elif index + 1 in v:
-            signature.append(('(', i))
-
-    exit = len(signature) == 0
-    while not exit:
-        for i in range(len(signature)):
-            if i + 1 == len(signature):
-                exit = True
-            else:
-                s = signature[i][0]
-                t = signature[i + 1][0]
-                if s + t == '()':
-                    signature = signature[:i] + signature[i + 2:]
-                    exit = len(signature) == 0
-                    break
-    signature = [(s, i) for (s, i) in signature if s == ')']
-
-    if len(signature) == 0:
-        return None
-
-    i = signature[-1][-1]
-    x, y = boxes[i]
-
-    for z in range(1, y):
-        if (x, z) in tab.boxes and index in tab.get(x, z, unpack=False):
-            return tab.remove(x, z, index).add(x, y, index + 1)
-
-    z = y + 1
-    while (x, z) in tab.boxes:
-        if (x + 1, z ) in tab.boxes and max(tab.get(x, z, unpack=False)) > index + 1 and index in tab.get(x + 1, z, unpack=False) and index + 1 in tab.get(x + 1, z, unpack=False):
-            return tab.remove(x + 1, z, index).add(x, y, index + 1)
-        z += 1
-
-    return tab.remove(x, y, index).add(x, y, index + 1)
-
+    return tab.f_operator_on_setvalued_decomposition_tableaux(index)
 
 
 def test_setvalued_decomposition_f(n=3, max_size=10):

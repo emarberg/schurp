@@ -428,6 +428,25 @@ class AbstractCrystalMixin:
 class AbstractGLCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def setvalued_decomposition_tableaux_from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        from stable.tableaux import Tableau
+        for t in Tableau.all(n, mu, shifted=True, marked=False, setvalued=True):
+            if not t.is_decomposition_tableau():
+                continue
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in range(1, n):
+                u = t.f_operator_on_setvalued_decomposition_tableaux(i)
+                if u is not None:
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+
+    @classmethod
     def from_permutation(cls, z, n, increasing):
         rank = n
         vertices = []
