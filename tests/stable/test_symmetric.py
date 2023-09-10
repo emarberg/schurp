@@ -14,6 +14,7 @@ def setvalued_decomposition_f(tab, index):
 def test_setvalued_decomposition_f(n=3, max_size=10):
     for mu in Partition.all(max_size, strict=True):
         print(n, mu)
+        seen = set()
         for tab in Tableau.all(n, mu, shifted=True, marked=False, setvalued=True):
             if tab.is_decomposition_tableau():
                 for i in range(1, n):
@@ -24,6 +25,9 @@ def test_setvalued_decomposition_f(n=3, max_size=10):
                         print(tab, i, res)
                         print(res.boxes)
                     assert res is None or res.is_decomposition_tableau()
+                    if res is not None:
+                        assert (i, res) not in seen
+                        seen.add((i, res))
 
 
 def GQ_decomposition_gf(n, mu):

@@ -133,6 +133,10 @@ class Tableau:
         i = signature[-1][-1]
         x, y = boxes[i]
 
+        simple = tab.remove(x, y, index).add(x, y, index + 1)
+        if simple.is_decomposition_tableau():
+            return simple
+
         for z in range(1, y):
             if (x, z) in tab.boxes and index in tab.get(x, z, unpack=False):
                 return tab.remove(x, z, index).add(x, y, index + 1)
@@ -143,7 +147,7 @@ class Tableau:
                 return tab.remove(x + 1, z, index).add(x, y, index + 1)
             z += 1
 
-        return tab.remove(x, y, index).add(x, y, index + 1)
+        raise Exception
 
     def is_decomposition_tableau(self):
         return self._is_decomposition_tableau(primes_allowed=False)
