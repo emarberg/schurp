@@ -5,6 +5,24 @@ from vectors import Vector
 from tableaux import Tableau
 
 
+def test_eg_inserts_new_row(n=6):
+    # tests whether ...
+    for pi in Permutation.all(n):
+        for w in pi.get_reduced_words():
+            if len(w) == 0:
+                continue
+            p1, q1 = eg_insert(*w[:-1])
+            p2, q2 = eg_insert(*w)
+            if q2.partition().tuple() != q1.partition().tuple() + (1,):
+                continue
+            pp1, qq1 = weak_eg_insert(*w[:-1])
+            pp2, qq2 = weak_eg_insert(*w)
+            print(w[:-1], w[-1])
+            print(pp1)
+            print(pp2)
+            input('\n?\n\n\n')
+
+
 def test_smallest_insert(n=6):
     # tests whether when the last inserted number a is smaller than all earlier numbers,
     # weak recording tableau shape changes by adding single box in row a

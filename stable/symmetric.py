@@ -27,6 +27,7 @@ TRANSPOSED_DUAL_STABLE_GROTHENDIECK_P_CACHE = {}
 TRANSPOSED_DUAL_STABLE_GROTHENDIECK_Q_CACHE = {}
 
 MONOMIAL_PRODUCT_CACHE = {}
+KTHEORETIC_E_CACHE = {}
 
 
 class SymmetricMonomial:
@@ -383,6 +384,13 @@ class SymmetricPolynomial(Vector):
                 ans += BETA**(sum(nu) - sum(x)) * cls._stable_grothendieck(num_variables, mu, x, degree_bound)
         return ans
 
+    @cached_value(KTHEORETIC_E_CACHE)
+    def ktheoretic_e(cls, num_variables, mu):  # noqa
+        ans = 1
+        for m in mu:
+            ans *= cls.stable_grothendieck(num_variables, m * (1,))
+        return ans
+
     @classmethod
     def stable_grothendieck(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
         return cls._stable_grothendieck(num_variables, mu, nu, degree_bound)
@@ -532,6 +540,10 @@ class SymmetricPolynomial(Vector):
             Partition.transpose(mu): coeff
             for mu, coeff in cls.schur_expansion(f).items()
         })
+
+    @classmethod
+    def ktheoretic_e_expansion(cls, f):
+        return cls._expansion(f, cls.ktheoretic_e, cls._get_term_from_lowest_degree)
 
     @classmethod
     def grothendieck_expansion(cls, f):

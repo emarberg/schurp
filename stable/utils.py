@@ -40,6 +40,9 @@ def shifted_ribbon(alpha):
     return tuple(mu), tuple(nu)
 
 
+GE = SymmetricPolynomial.ktheoretic_e
+GE_expansion = SymmetricPolynomial.ktheoretic_e_expansion
+
 s = SymmetricPolynomial.schur
 P = SymmetricPolynomial.schur_p
 Q = SymmetricPolynomial.schur_q
