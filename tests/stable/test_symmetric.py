@@ -1,10 +1,19 @@
 from stable.symmetric import SymmetricMonomial, SymmetricPolynomial
 from stable.tableaux import Tableau, Partition
 from stable.polynomials import Polynomial, X
-from stable.utils import G, GQ, GP, G_doublebar, GP_doublebar, GQ_doublebar
+from stable.utils import G, GQ, GP, G_doublebar, GP_doublebar, GQ_doublebar, jp, decomposition_jp
 import itertools
 from stable.polynomials import beta as BETA # noqa
 import pytest
+
+
+def test_decomposition_jp(max_entry=5, max_size=10):
+    for mu in Partition.all(max_size, strict=True):
+        for n in range(1, max_entry + 1):
+            guess = decomposition_jp(n, mu)
+            expected = jp(n, mu).polynomial()
+            print(mu, n)
+            assert guess == expected
 
 
 def setvalued_decomposition_f(tab, index):

@@ -73,6 +73,8 @@ jp = SymmetricPolynomial.slow_transposed_dual_stable_grothendieck_p
 jq = SymmetricPolynomial.slow_transposed_dual_stable_grothendieck_q
 js = SymmetricPolynomial.slow_transposed_dual_stable_grothendieck_s
 
+decomposition_jp = SymmetricPolynomial.slow_decomposition_jp
+
 schur_expansion = SymmetricPolynomial.schur_expansion
 
 G_expansion = SymmetricPolynomial.grothendieck_expansion

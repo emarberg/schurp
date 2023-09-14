@@ -682,7 +682,10 @@ class Tableau:
             for i in range(1, r):
                 row += (mu[r - i - 1] - mu[r - i]) * [r - i]
             rows.append(row)
+            if max(row) > max_entry:
+                return ans
         highest = Tableau.shifted_from_rows(rows)
+
 
         level = {highest}
         while level:

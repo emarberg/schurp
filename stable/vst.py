@@ -5,6 +5,7 @@ from .cached import cached_value
 
 VALUED_SET_CACHE = {}
 INTERMEDIARY_CACHE = {}
+DECOMPOSITION_BAR_CACHE = {}
 
 TRANSITION_CACHE = {}
 BACKWARD_TRANSITION_CACHE = {}
@@ -727,6 +728,33 @@ class ValuedSetTableau:
         ans = set()
         tabs = Tableau.semistandard_shifted(max_entry, mu, nu, diagonal_primes)
         for tab in tabs:
+            grp = {(i, j): int(cls.is_valid_position(tab, True, i, j)) for (i, j) in tab.boxes}
+            g = sorted(grp)
+            e = sum(grp.values())
+            for v in range(2**e):
+                next_grp = {}
+                for i, j in g:
+                    if grp[i, j]:
+                        next_grp[i, j] = v % 2
+                        v = v // 2
+                    else:
+                        next_grp[i, j] = 0
+                next_grp = Tableau(next_grp)
+                ans.add(cls(tab, next_grp))
+        return ans
+
+
+    @classmethod
+    def all_decomposition_vst(cls, max_entry, mu):
+        return cls._all_decomposition_vst(max_entry, mu)
+
+    @cached_value(DECOMPOSITION_BAR_CACHE)
+    def _all_decomposition_vst(cls, max_entry, mu):
+        ans = set()
+        from tableaux import Tableau as t
+        tabs = t.get_semistandard_decomposition(max_entry, mu)
+        for tab in tabs:
+            tab = Tableau({a: b.number for (a, b) in tab.mapping.items()})
             grp = {(i, j): int(cls.is_valid_position(tab, True, i, j)) for (i, j) in tab.boxes}
             g = sorted(grp)
             e = sum(grp.values())

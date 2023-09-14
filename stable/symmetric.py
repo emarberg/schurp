@@ -1,5 +1,6 @@
 from .vectors import Vector
 from .tableaux import Tableau, Partition
+from .vst import ValuedSetTableau
 from .polynomials import Polynomial
 from .polynomials import beta as BETA # noqa
 from .cached import cached_value
@@ -749,6 +750,17 @@ class SymmetricPolynomial(Vector):
             for alpha, coeff in dictionary.items()
             if Partition.is_partition(alpha)
         }) * (-beta)**(sum(mu) - sum(nu))
+
+    @classmethod
+    def slow_decomposition_jp(cls, num_variables, mu, eta=BETA):
+        p = Polynomial.zero()
+        for tab in ValuedSetTableau.all_decomposition_vst(num_variables, mu):
+            w = tab.weight(num_variables)
+            m = BETA**(sum(mu) - sum(w))
+            for i in range(num_variables):
+                m *= Polynomial.x(i + 1)**w[i]
+            p += m
+        return p
 
     @classmethod
     def slow_transposed_dual_stable_grothendieck_p(cls, num_variables, mu, nu=(), beta=-BETA):
