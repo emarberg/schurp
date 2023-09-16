@@ -9,6 +9,7 @@ import itertools
 import traceback
 
 
+POWERSUM_CACHE = {}
 SCHUR_CACHE = {}
 SCHUR_S_CACHE = {}
 SCHUR_Q_CACHE = {}
@@ -187,8 +188,21 @@ class SymmetricPolynomial(Vector):
         self.multiplier = m
 
     @classmethod
+    def monomial(cls, num_variables, mu):
+        return SymmetricMonomial(num_variables, mu)
+
+    @cached_value(POWERSUM_CACHE)
+    def powersum(cls, num_variables, mu):
+        ans = SymmetricMonomial(num_variables, ())
+        for m in mu:
+            ans *= SymmetricMonomial(num_variables, (m,))
+        return ans
+
+    @classmethod
     def from_polynomial(cls, f):
         ans = 0
+        if f == 0:
+            return ans
         
         nvars = 0
         for hd in f:
@@ -466,11 +480,11 @@ class SymmetricPolynomial(Vector):
         return (-BETA)**(sum(mu) - sum(nu)) * cls._vectorize(num_variables, tableaux, -BETA**-1)
 
     @classmethod
-    def _expansion(cls, f, function, get_term):
+    def _expansion(cls, f, function, get_term, get_index=None):
         if f:
             t = get_term(f)
             n = t.n
-            mu = t.index()
+            mu = t.index() if get_index is None else get_index(t)
             g = function(n, mu)   
             
             try:
@@ -499,7 +513,7 @@ class SymmetricPolynomial(Vector):
             c = c // d * BETA**cdeg
             g *= c
 
-            ans = cls._expansion(f - g, function, get_term)
+            ans = cls._expansion(f - g, function, get_term, get_index)
             ans += Vector({mu: c})
 
             try:
@@ -532,6 +546,10 @@ class SymmetricPolynomial(Vector):
         return t, c
 
     @classmethod
+    def powersum_expansion(cls, f):
+        return cls._expansion(f, cls.powersum, cls._get_term_from_lowest_degree)
+
+    @classmethod
     def schur_expansion(cls, f):
         return cls._expansion(f, cls.schur, cls._get_term_from_lowest_degree)
 
@@ -544,7 +562,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def ktheoretic_e_expansion(cls, f):
-        return cls._expansion(f, cls.ktheoretic_e, cls._get_term_from_lowest_degree)
+        return cls._expansion(f, cls.ktheoretic_e, cls._get_term_from_lowest_degree, lambda m: Partition.transpose(m.index()))
 
     @classmethod
     def grothendieck_expansion(cls, f):

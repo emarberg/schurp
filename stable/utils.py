@@ -1,6 +1,60 @@
 from .symmetric import SymmetricPolynomial
 from .permutations import Permutation
-from .polynomials import beta # noqa
+from .polynomials import beta, X # noqa
+import itertools
+
+
+def collect_by_numbers_of_parts(vec):
+    ans = []
+    for mu, c in vec.items():
+        while len(mu) > len(ans):
+            ans.append(0)
+        ans[len(mu) - 1] += c
+    return ans
+
+
+def circle_graph(vertices):
+    return {(vertices[i], vertices[i + 1]) for i in range(len(vertices) - 1)} | {(vertices[-1], vertices[0])}
+
+
+def path_graph(vertices):
+    return {(vertices[i], vertices[i + 1]) for i in range(len(vertices) - 1)}
+
+
+def complete_graph(vertices):
+    return {(a, b) for a in vertices for b in vertices if a != b}
+
+
+def _kromatic_helper(num_variables, coloring, vertices, edges):
+    if vertices:
+        v = vertices[0]
+        vertices = vertices[1:]
+        subset = set(range(1, 1 + num_variables))
+        for w in edges.get(v, []):
+            subset -= coloring.get(w, set())
+        for k in range(1, len(subset) + 1):
+            for s in itertools.combinations(subset, k):
+                coloring[v] = set(s)
+                for ans in _kromatic_helper(num_variables, coloring, vertices, edges):
+                    yield ans
+                del coloring[v]
+    else:
+        ans = 1
+        for _, subset in coloring.items():
+            for i in subset:
+                ans *= X(i)
+        yield ans
+
+
+def kromatic(num_variables, vertices, edges):
+    e = {v: set() for v in vertices}
+    for a, b in edges:
+        e[a].add(b)
+        e[b].add(a)
+    ans = 0
+    for a in _kromatic_helper(num_variables, {}, vertices, e):
+        ans += a * beta**(a.total_degree() - len(vertices))
+    return SymmetricPolynomial.from_polynomial(ans)
 
 
 def grothendieck(num_variables, mu, nu=(), degree_bound=None): # noqa
@@ -42,6 +96,10 @@ def shifted_ribbon(alpha):
 
 GE = SymmetricPolynomial.ktheoretic_e
 GE_expansion = SymmetricPolynomial.ktheoretic_e_expansion
+
+m = SymmetricPolynomial.monomial
+p = SymmetricPolynomial.powersum
+p_expansion = SymmetricPolynomial.powersum_expansion
 
 s = SymmetricPolynomial.schur
 P = SymmetricPolynomial.schur_p
