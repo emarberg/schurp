@@ -500,6 +500,19 @@ class AbstractGLCrystal(AbstractCrystalMixin):
             word[stack[0]] -= 1
             return cl(word)
 
+    @classmethod
+    def f_operator_on_semistandard_tableaux(cls, i, tab):
+        word = tuple(tab.row_reading_word())
+        ans = cls.f_operator_on_words(i, word)
+        return None if ans is None else tab.from_row_reading_word(tuple(ans))
+
+    @classmethod
+    def e_operator_on_semistandard_tableaux(cls, i, tab):
+        word = tuple(tab.row_reading_word())
+        ans = cls.e_operator_on_words(i, word)
+        return None if ans is None else tab.from_row_reading_word(tuple(ans))
+
+
     @property
     def indices(self):
         return list(range(1, self.rank))

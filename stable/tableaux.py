@@ -78,6 +78,15 @@ class Tableau:
         )
         self._string_array = None
 
+
+    @classmethod
+    def from_rows(cls, rows, shifted=False):
+        mapping = {}
+        for i in range(len(rows)):
+            for j in range(len(rows[i])):
+                mapping[(i + 1, j + 1 + (i if shifted else 0))] = rows[i][j]
+        return Tableau(mapping)
+
     def distribute(self):
         if self.size() == 0:
             yield self

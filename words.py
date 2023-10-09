@@ -1153,6 +1153,11 @@ def weak_eg_insert(*words):
     return p, Tableau({(i, j): n - mapping[q.entry(i, j)].number for (i, j) in q})
 
 
+def rsk_insert(*w):
+    word = w if type(w) == Word else Word(*w)
+    return word.rsk_insert()
+
+
 def decomposition_insert(*w):
     word = w if type(w) == Word else Word(*w)
     return word.decomposition_insert()

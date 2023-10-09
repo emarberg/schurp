@@ -649,6 +649,18 @@ class Tableau:
             return ans.set(a, b, index)
 
     @classmethod
+    def from_row_reading_word(cls, word):
+        word = list(word)
+        rows = []
+        for a in word:
+            if len(rows) == 0 or rows[-1][-1] > a:
+                rows.append([a])
+            else:
+                rows[-1].append(a)
+        rows = list(reversed(rows))
+        return cls.from_rows(rows)
+
+    @classmethod
     def decomposition_tableau_from_row_reading_word(cls, word):
         word = list(reversed(word))
         rows = []

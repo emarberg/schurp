@@ -15,7 +15,7 @@ from keys import (
     skew_symmetric_double,
     symmetric_double,
 )
-from words import decomposition_insert
+from words import decomposition_insert, rsk_insert
 from tests.test_keys import try_to_decompose_p, try_to_decompose_q, decompose_p, decompose_q
 from partitions import Partition
 from symmetric import (
@@ -36,6 +36,24 @@ import time
 PRINT_DIR = "/Users/emarberg/Downloads/"
 FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def test_semistandard_tableau_crystal(nn=5, f=5):
+    for n in range(1, nn + 1):
+        c = AbstractGLCrystal.standard_object(n).tensor(AbstractGLCrystal.standard_object(n))
+        for _ in range(f - 1):
+            print('n =', n, 'm =', _ + 2)
+            for i in range(1, n):
+                for ww1 in c:
+                    w1 = flatten(ww1)
+                    ww2 = c.f_operator(i, ww1)
+                    if ww2 is not None:
+                        w2 = flatten(ww2)
+                        p1, q1 = rsk_insert(*w1)
+                        p2, q2 = rsk_insert(*w2)
+                        assert q1 == q2
+                        assert c.f_operator_on_semistandard_tableaux(i, p1) == p2
+            c = c.tensor(AbstractGLCrystal.standard_object(n))
 
 
 def test_decomposition_tableau_crystal(nn=5, f=5):
