@@ -208,7 +208,7 @@ class Tableau:
 
         z = y + 1
         while (x, z) in tab.boxes:
-            if (x + 1, z) in tab.boxes and max(tab.get(x, z, unpack=False)) > index + 1 and index in tab.get(x + 1, z, unpack=False) and index + 1 in tab.get(x + 1, z, unpack=False):
+            if (x + 1, z) in tab.boxes and index in tab.get(x + 1, z, unpack=False) and index + 1 in tab.get(x + 1, z, unpack=False):
                 return tab.remove(x + 1, z, index).add(x, y, index + 1)
             z += 1
 
