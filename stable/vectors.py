@@ -3,9 +3,10 @@ from .polynomials import Polynomial
 
 class Vector:
 
-    def __init__(self, dictionary={}, printer=None, multiplier=None):
+    def __init__(self, dictionary={}, printer=None, multiplier=None, sorter=None):
         self.dictionary = {key: value for key, value in dictionary.items() if value}
         self.printer = printer
+        self.sorter = sorter
         self.multiplier = multiplier
 
     def __hash__(self):
@@ -147,7 +148,8 @@ class Vector:
             return self.__class__(
                 {key: self[key] + other[key] for key in keys},
                 self.printer or other.printer,
-                self.multiplier or other.multiplier
+                self.multiplier or other.multiplier,
+                self.sorter or other.sorter,
             )
         else:
             return other.__radd__(self)
@@ -160,7 +162,8 @@ class Vector:
             return self.__class__(
                 {key: self[key] - other[key] for key in keys},
                 self.printer or other.printer,
-                self.multiplier or other.multiplier
+                self.multiplier or other.multiplier,
+                self.sorter or other.sorter,
             )
         else:
             return other.__rsub__(self)
@@ -170,7 +173,8 @@ class Vector:
             return self.__class__(
                 {key: self[key] * other for key in self.keys()},
                 self.printer,
-                self.multiplier
+                self.multiplier,
+                self.sorter,
             )
         elif type(other) == type(self):
             ans = {}
@@ -181,7 +185,8 @@ class Vector:
             return self.__class__(
                 ans,
                 self.printer or other.printer,
-                self.multiplier or other.multiplier
+                self.multiplier or other.multiplier,
+                self.sorter or other.sorter,
             )
         else:
             return self * self.base(other)
@@ -239,5 +244,7 @@ class Vector:
 
     def __repr__(self):
         printer = self.printer or repr
-        sorted_items = sorted([(printer(key), value) for key, value in self.items()])
+        sorter = lambda kv: ((self.sorter or printer)(kv[0]), kv[1])
+        sorted_items = sorted([(key, value) for key, value in self.items()], key=sorter)
+        sorted_items = [(printer(key), value) for key, value in sorted_items]
         return self._print_sorted(sorted_items)

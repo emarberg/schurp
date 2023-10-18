@@ -109,6 +109,59 @@ class Tableau:
                 ans[i - 1].append(self.boxes[i, j])
         return ans
 
+
+    def e_operator_on_setvalued_decomposition_tableaux(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
+        signature = []
+        for i, b in enumerate(boxes):
+            v = tab.get(*b, unpack=False)
+            if index in v and index + 1 in v:
+                continue
+            elif index in v:
+                signature.append((')', i))
+            elif index + 1 in v:
+                signature.append(('(', i))
+
+        exit = len(signature) == 0
+        while not exit:
+            for i in range(len(signature)):
+                if i + 1 == len(signature):
+                    exit = True
+                else:
+                    s = signature[i][0]
+                    t = signature[i + 1][0]
+                    if s + t == '()':
+                        signature = signature[:i] + signature[i + 2:]
+                        exit = len(signature) == 0
+                        break
+        signature = [(s, i) for (s, i) in signature if s == '(']
+
+        if len(signature) == 0:
+            return None
+
+        i = signature[0][-1]
+        x, y = boxes[i]
+
+        simple = tab.remove(x, y, index + 1).add(x, y, index)
+        if simple.is_decomposition_tableau():
+            return simple
+
+        z = y + 1
+        while (x, z) in tab.boxes:
+            if index + 1 in tab.get(x, z, unpack=False):
+                return tab.remove(x, z, index + 1).add(x, y, index)
+            z += 1
+
+        z = y - 1
+        while (x - 1, z) in tab.boxes:
+            if index in tab.get(x - 1, z, unpack=False) and index + 1 in tab.get(x - 1, z, unpack=False):
+                return tab.remove(x - 1, z, index + 1).add(x, y, index)
+            z -= 1
+
+        print('x =', x, 'y =', y)
+        # raise Exception
+
     def f_operator_on_setvalued_decomposition_tableaux(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
@@ -146,13 +199,16 @@ class Tableau:
         if simple.is_decomposition_tableau():
             return simple
 
-        for z in range(1, y):
-            if (x, z) in tab.boxes and index in tab.get(x, z, unpack=False):
+        z = y - 1
+        while (x, z) in tab.boxes:
+            if index in tab.get(x, z, unpack=False):
+                # can have z != y - 1:
                 return tab.remove(x, z, index).add(x, y, index + 1)
+            z -= 1
 
         z = y + 1
         while (x, z) in tab.boxes:
-            if (x + 1, z ) in tab.boxes and max(tab.get(x, z, unpack=False)) > index + 1 and index in tab.get(x + 1, z, unpack=False) and index + 1 in tab.get(x + 1, z, unpack=False):
+            if (x + 1, z) in tab.boxes and index in tab.get(x + 1, z, unpack=False) and index + 1 in tab.get(x + 1, z, unpack=False):
                 return tab.remove(x + 1, z, index).add(x, y, index + 1)
             z += 1
 

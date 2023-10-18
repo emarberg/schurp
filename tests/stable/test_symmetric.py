@@ -20,6 +20,10 @@ def setvalued_decomposition_f(tab, index):
     return tab.f_operator_on_setvalued_decomposition_tableaux(index)
 
 
+def setvalued_decomposition_e(tab, index):
+    return tab.e_operator_on_setvalued_decomposition_tableaux(index)
+
+
 def test_setvalued_decomposition_f(n=3, max_size=10):
     for mu in Partition.all(max_size, strict=True):
         print(n, mu)
@@ -37,6 +41,14 @@ def test_setvalued_decomposition_f(n=3, max_size=10):
                     if res is not None:
                         assert (i, res) not in seen
                         seen.add((i, res))
+                        back = setvalued_decomposition_e(res, i) 
+                        if back is None or back != tab:
+                            print(res)
+                            print('index =', i)
+                            print(back)
+                            print('expected:')
+                            print(tab)
+                        assert back is not None and back == tab
 
 
 def GQ_decomposition_gf(n, mu):

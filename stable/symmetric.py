@@ -179,9 +179,10 @@ class SymmetricMonomial:
 
 
 class SymmetricPolynomial(Vector):
-    def __init__(self, dictionary={}, printer=None, multiplier=None):
+    def __init__(self, dictionary={}, printer=None, multiplier=None, sorter=None):
         self.dictionary = {key: value for key, value in dictionary.items() if value}
         self.printer = printer
+        self.sorter = sorter
 
         def m(a, b):
             for mu, coeff in SymmetricMonomial._multiply(a, b).items():
@@ -540,6 +541,7 @@ class SymmetricPolynomial(Vector):
                 input('\n\n')
                 raise Exception
 
+            ans.sorter = lambda tup: (sum(tup), tup)
             return ans
         else:
             return Vector()

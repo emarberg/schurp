@@ -1,7 +1,36 @@
 from .symmetric import SymmetricPolynomial
 from .permutations import Permutation
 from .polynomials import beta, X # noqa
+from .vectors import Vector
 import itertools
+
+
+def tex_partition(mu):
+    if sum(mu) == 0:
+        return '\\emptyset'
+    ans = []
+    for i, m in enumerate(mu):
+        if i == 0 or m != mu[i - 1]:
+            ans.append([m, 1])
+        else:
+            ans[-1][1] += 1
+    ans = [str(a) if b == 1 else str(a) + '^{' + str(b) + '}' for (a, b) in ans]
+    return '(' + ','.join(ans) + ')'
+            
+
+def tex_expansion(vec, basis_symbol, degree_bound=None):
+    def get_key(k):
+        return (sum(k), k, basis_symbol + '_{' + tex_partition(k) +'}')
+
+    newvec = Vector(
+        {get_key(k): v for (k, v) in vec.items() if degree_bound is None or sum(k) <= degree_bound},
+        printer=lambda k: k[2],
+        sorter=lambda k: k[:2]
+    )
+    ans = str(newvec).replace('*', ' ').replace('β', '\\beta')
+    if len(newvec) < len(vec):
+        ans += ' + \\dots'
+    return '$ ' + ans + ' $'
 
 
 def collect_by_numbers_of_parts(vec):
