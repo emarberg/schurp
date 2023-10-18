@@ -181,6 +181,13 @@ class MPolynomial:
 
 
     """
+    @classmethod
+    def from_tuple(cls, tuple):
+        ans = X(0)**0
+        for i, a in enumerate(tuple):
+            ans *= X(i + 1)**a
+        return ans
+
     def any(self):
         assert len(self.coeffs) > 0
         return next(iter(self.coeffs))
