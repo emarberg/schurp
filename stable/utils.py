@@ -188,19 +188,20 @@ def e_to_p(k):
         for i in range(1, k + 1):
             ans += combine(e_to_p(k - i), i, k)
         ans.multiplier = pprod
+        ans.sorter = lambda tup: (sum(tup), tup)
         e_to_p_cache[k] = ans
 
     return e_to_p_cache[k]
 
 
 def p_expansion(f):
-    e_exp = e_expansion(f)
-    e_exp = Vector({key: val.set(0, 1) for key, val in e_exp.items()}, multiplier=e_exp.multiplier)
-    assert all(val.is_integer() for _, val in e_exp.items())
-    e_exp = Vector({key: val.constant_term() for key, val in e_exp.items()}, multiplier=e_exp.multiplier)
+    exp = e_expansion(f)
+    x = {key: val.set(0, 1) for key, val in exp.items()}
+    assert all(val.is_integer() for _, val in x.items())
+    exp = Vector({key: val.constant_term() for key, val in x.items()}, multiplier=exp.multiplier, sorter=exp.sorter)
 
     ans = 0
-    for mu, coeff in e_exp.items():
+    for mu, coeff in exp.items():
         term = e_to_p(0) * coeff
         for part in mu:
             term *= e_to_p(part)
