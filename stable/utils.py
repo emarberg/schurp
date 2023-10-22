@@ -1,8 +1,55 @@
 from .symmetric import SymmetricPolynomial
 from .permutations import Permutation
 from .polynomials import beta, X # noqa
+from .partitions import Partition
 from .vectors import Vector
+from fractions import Fraction
 import itertools
+
+
+def shortest_expansion(f):
+    expanders = [
+        e_expansion,
+        GE_expansion,
+        p_expansion,
+        schur_expansion,
+        G_expansion,
+        g_expansion,
+        j_expansion,
+        gp_expansion,
+        gq_expansion,
+        gs_expansion,
+        mp_g_expansion,
+        mp_gp_expansion,
+        mp_gq_expansion,
+        mn_G_expansion,
+        mn_GP_expansion,
+        mn_GQ_expansion,
+        gp_free_expansion,
+        jp_expansion,
+        jq_expansion,
+        js_expansion,
+        GP_expansion,
+        GQ_expansion,
+        GS_expansion,
+        P_expansion,
+        Q_expansion,
+        S_expansion,
+    ]
+    best = None
+    ans = []
+    for exp in expanders:
+        try:
+            res = exp(f)
+            ell = len(res)
+            if best is None or ell < best:
+                best = ell
+                ans = [(res, exp.__name__)]
+            elif best == ell:
+                ans += [(res, exp.__name__)]
+        except:
+            continue
+    return ans
 
 
 def tex_partition(mu):
@@ -123,6 +170,44 @@ def shifted_ribbon(alpha):
     return tuple(mu), tuple(nu)
 
 
+def pprod(a, b):
+    return [(Partition.sort(a + b, trim=True), 1)]
+
+
+e_to_p_cache = {0: Vector({(): 1}, multiplier=pprod)}
+
+
+def e_to_p(k):
+    assert k >= 0
+
+    def combine(v, i, k):
+        return Vector({Partition.sort(key + (i,), trim=True): coeff * (-1)**(i - 1) * Fraction(1, k) for (key, coeff) in v.items()})
+
+    if k not in e_to_p_cache:
+        ans = Vector()
+        for i in range(1, k + 1):
+            ans += combine(e_to_p(k - i), i, k)
+        ans.multiplier = pprod
+        e_to_p_cache[k] = ans
+
+    return e_to_p_cache[k]
+
+
+def p_expansion(f):
+    e_exp = e_expansion(f)
+    e_exp = Vector({key: val.set(0, 1) for key, val in e_exp.items()}, multiplier=e_exp.multiplier)
+    assert all(val.is_integer() for _, val in e_exp.items())
+    e_exp = Vector({key: val.constant_term() for key, val in e_exp.items()}, multiplier=e_exp.multiplier)
+
+    ans = 0
+    for mu, coeff in e_exp.items():
+        term = e_to_p(0) * coeff
+        for part in mu:
+            term *= e_to_p(part)
+        ans += term
+    return ans
+
+
 e = SymmetricPolynomial.e
 e_expansion = SymmetricPolynomial.e_expansion
 
@@ -131,7 +216,6 @@ GE_expansion = SymmetricPolynomial.ktheoretic_e_expansion
 
 m = SymmetricPolynomial.monomial
 p = SymmetricPolynomial.powersum
-p_expansion = SymmetricPolynomial.powersum_expansion
 
 s = SymmetricPolynomial.schur
 P = SymmetricPolynomial.schur_p

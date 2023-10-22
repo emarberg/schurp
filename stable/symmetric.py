@@ -557,10 +557,6 @@ class SymmetricPolynomial(Vector):
         return t, c
 
     @classmethod
-    def powersum_expansion(cls, f):
-        return cls._expansion(f, cls.powersum, cls._get_term_from_lowest_degree)
-
-    @classmethod
     def schur_expansion(cls, f):
         return cls._expansion(f, cls.schur, cls._get_term_from_lowest_degree)
 
