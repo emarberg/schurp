@@ -5,6 +5,20 @@ from .partitions import Partition
 from .vectors import Vector
 from fractions import Fraction
 import itertools
+import math
+
+
+def from_kmonomial_expansion(n, a):
+    return sum(kmonomial(n, mu) * coeff for (mu, coeff) in a.items())
+
+
+def from_p_expansion(n, a):
+    fac = math.lcm(*[t.denominator for t in a.dictionary.values()])
+    b = a * fac
+    assert all(coeff.denominator == 1 for (mu, coeff) in b.items())
+    ans = sum(p(n, mu) * coeff.numerator for (mu, coeff) in b.items())
+    assert all(coeff % fac == 0 for (mu, coeff) in ans.items())
+    return (ans // fac).polynomial()
 
 
 def shortest_expansion(f):
@@ -101,8 +115,7 @@ def complete_graph(vertices):
     return {(a, b) for a in vertices for b in vertices if a != b}
 
 
-def _kromatic_helper(num_variables, coloring, vertices, edges, weights=None):
-    weights = weights or {}
+def _kromatic_helper(num_variables, coloring, vertices, edges, weights):
     if vertices:
         v = vertices[0]
         vertices = vertices[1:]
@@ -124,14 +137,34 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights=None):
 
 
 def kromatic(num_variables, vertices, edges, weights=None):
+    weights = weights or {}
+    total_weight = 0
+    for v in vertices:
+        total_weight += weights.get(v, 1)
+
     e = {v: set() for v in vertices}
     for a, b in edges:
         e[a].add(b)
         e[b].add(a)
     ans = 0
+
     for a in _kromatic_helper(num_variables, {}, vertices, e, weights):
-        ans += a * beta**(a.total_degree() - len(vertices))
+        ans += a * beta**(a.total_degree() - total_weight)
     return SymmetricPolynomial.from_polynomial(ans)
+
+
+def kmonomial(num_variables, mu):
+    n = len(mu)
+    m = Partition.stabilizer_order(mu)
+    weights = {i + 1: mu[i] for i in range(n)}
+    v = list(range(1, n + 1))
+    return kromatic(num_variables, v, complete_graph(v), weights) // m
+
+
+def kmonomial_expansion(f):
+    exp = SymmetricPolynomial._expansion(f, kmonomial, SymmetricPolynomial._get_term_from_lowest_degree)
+    ans = Vector({mu: val // Partition.stabilizer_order(mu) for mu, val in exp.items()}, multiplier=exp.multiplier, sorter=exp.sorter)
+    return ans.set_beta(1)
 
 
 def grothendieck(num_variables, mu, nu=(), degree_bound=None): # noqa

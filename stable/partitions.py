@@ -14,6 +14,17 @@ class Partition:
     FRENCH = True
 
     @classmethod
+    def stabilizer_order(cls, mu):
+        mu = cls.sort(mu, trim=True)
+        m = 1
+        end = 0
+        for i in range(1, len(mu)):
+            if mu[i] == mu[end]:
+                m *= (i + 1 - end)
+            else:
+                end = i
+        return m
+    @classmethod
     def add(cls, mu, row):
         if row <= len(mu):
             mu = list(mu)

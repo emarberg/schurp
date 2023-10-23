@@ -137,6 +137,15 @@ class Vector:
     def __getitem__(self, item):
         return self.dictionary.get(item, 0)
 
+    def _instantiate(self, dictionary, other=None):
+        other = other or self
+        return self.__class__(
+            dictionary,
+            self.printer or other.printer,
+            self.multiplier or other.multiplier,
+            self.sorter or other.sorter,
+        )
+
     def __radd__(self, other):
         return self.__add__(other)
 
@@ -145,12 +154,7 @@ class Vector:
             return self
         if type(other) == type(self):
             keys = self.keys() | other.keys()
-            return self.__class__(
-                {key: self[key] + other[key] for key in keys},
-                self.printer or other.printer,
-                self.multiplier or other.multiplier,
-                self.sorter or other.sorter,
-            )
+            return self._instantiate({key: self[key] + other[key] for key in keys}, other)
         else:
             return other.__radd__(self)
 
@@ -159,41 +163,31 @@ class Vector:
             return self
         if type(other) == type(self):
             keys = self.keys() | other.keys()
-            return self.__class__(
-                {key: self[key] - other[key] for key in keys},
-                self.printer or other.printer,
-                self.multiplier or other.multiplier,
-                self.sorter or other.sorter,
-            )
+            return self._instantiate({key: self[key] - other[key] for key in keys}, other)
         else:
             return other.__rsub__(self)
 
     def __mul__(self, other):
         if type(other) in [int, Polynomial]:
-            return self.__class__(
-                {key: self[key] * other for key in self.keys()},
-                self.printer,
-                self.multiplier,
-                self.sorter,
-            )
+            return self._instantiate({key: self[key] * other for key in self.keys()})
         elif type(other) == type(self):
             ans = {}
             for a, x in self.items():
                 for b, y in other.items():
                     for m, coeff in self.multiplier(a, b) if self.multiplier else [(a * b, 1)]:
                         ans[m] = ans.get(m, 0) + x * y * coeff
-            return self.__class__(
-                ans,
-                self.printer or other.printer,
-                self.multiplier or other.multiplier,
-                self.sorter or other.sorter,
-            )
+            return self._instantiate(ans, other)
         else:
             return self * self.base(other)
 
+    def set_beta(self, v):
+        return self._instantiate({key: value.set(0, v) if type(value) == Polynomial else val for (key, value) in self.items()})
+
     def __floordiv__(self, other):
         assert type(other) == int
-        return Vector({key: value // other for (key, value) in self.items()})
+        ans = self._instantiate({key: value // other for (key, value) in self.items()})
+        assert ans * other == self
+        return ans
 
     def __rmul__(self, other):
         return self.__mul__(other)
