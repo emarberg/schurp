@@ -101,7 +101,8 @@ def complete_graph(vertices):
     return {(a, b) for a in vertices for b in vertices if a != b}
 
 
-def _kromatic_helper(num_variables, coloring, vertices, edges):
+def _kromatic_helper(num_variables, coloring, vertices, edges, weights=None):
+    weights = weights or {}
     if vertices:
         v = vertices[0]
         vertices = vertices[1:]
@@ -111,24 +112,24 @@ def _kromatic_helper(num_variables, coloring, vertices, edges):
         for k in range(1, len(subset) + 1):
             for s in itertools.combinations(subset, k):
                 coloring[v] = set(s)
-                for ans in _kromatic_helper(num_variables, coloring, vertices, edges):
+                for ans in _kromatic_helper(num_variables, coloring, vertices, edges, weights):
                     yield ans
                 del coloring[v]
     else:
         ans = 1
-        for _, subset in coloring.items():
+        for v, subset in coloring.items():
             for i in subset:
-                ans *= X(i)
+                ans *= X(i)**weights.get(v, 1)
         yield ans
 
 
-def kromatic(num_variables, vertices, edges):
+def kromatic(num_variables, vertices, edges, weights=None):
     e = {v: set() for v in vertices}
     for a, b in edges:
         e[a].add(b)
         e[b].add(a)
     ans = 0
-    for a in _kromatic_helper(num_variables, {}, vertices, e):
+    for a in _kromatic_helper(num_variables, {}, vertices, e, weights):
         ans += a * beta**(a.total_degree() - len(vertices))
     return SymmetricPolynomial.from_polynomial(ans)
 

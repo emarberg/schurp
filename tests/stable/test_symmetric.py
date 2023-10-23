@@ -1,10 +1,61 @@
 from stable.symmetric import SymmetricMonomial, SymmetricPolynomial
 from stable.tableaux import Tableau, Partition
 from stable.polynomials import Polynomial, X
-from stable.utils import G, GQ, GP, G_doublebar, GP_doublebar, GQ_doublebar, jp, decomposition_jp
-import itertools
+from stable.utils import (
+    G, GQ, GP, G_doublebar, GP_doublebar, GQ_doublebar, 
+    jp, decomposition_jp, 
+    p, p_expansion,
+    e_expansion, GE_expansion,
+    complete_graph,
+    kromatic,
+)
 from stable.polynomials import beta as BETA # noqa
+from stable.vectors import Vector
+
+import itertools
+import math
 import pytest
+from sympy.ntheory import factorint
+
+
+def test_alt_p_e_expansion(n=3, k=2):
+    v = list(range(1, k + 1))
+    x = kromatic(n, v, []) - kromatic(n, v, complete_graph(v))
+    a = GE_expansion(x)
+    ell = max([0] + [sum(mu) for mu in a])
+    for i in range(ell, -1, -1):
+        vec = Vector({mu: coeff for mu, coeff in a.items() if sum(mu) == i})
+        if vec:
+            print(vec, '\n\n+\n')
+
+
+def test_p_expansion(n=3):
+    x = kromatic(n, [1,2,3], [(1,2),(2,3),])
+    a = p_expansion(x)
+
+    fac = math.lcm(*[t.denominator for t in a.dictionary.values()])
+    
+    b = a * fac
+    y = x.polynomial().set(0, 1) * fac
+
+    assert all(coeff.denominator == 1 for (mu, coeff) in b.items())
+    expected = sum(p(n, mu) * coeff.numerator for (mu, coeff) in b.items()).polynomial()
+    if y != expected:
+        print(y)
+        print()
+        print(expected)
+        print()
+    assert y == expected
+    
+    ell = max([sum(mu) for mu in a])
+    for i in range(ell, -1, -1):
+        subset = {coeff.denominator for mu, coeff in a.items() if sum(mu) == i}
+        if subset:
+            print(Vector({mu: coeff for mu, coeff in a.items() if sum(mu) == i}), '\n\n+\n')
+            ell = math.lcm(*subset)
+            print(i, ':', ell, '=', factorint(ell), '\n\n+\n')
+
+
 
 
 def test_decomposition_jp(max_entry=5, max_size=10):
