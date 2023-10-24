@@ -180,8 +180,11 @@ class Vector:
         else:
             return self * self.base(other)
 
+    def set_variable(self, index, v):
+        return self._instantiate({key: value.set(index, v) if type(value) == Polynomial else value for (key, value) in self.items()})
+
     def set_beta(self, v):
-        return self._instantiate({key: value.set(0, v) if type(value) == Polynomial else value for (key, value) in self.items()})
+        return self.set_variable(0, v)
 
     def __floordiv__(self, other):
         assert type(other) == int

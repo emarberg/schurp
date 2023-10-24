@@ -136,6 +136,9 @@ class Polynomial:
             ans = ans + term
         return ans
 
+    def set_variable(self, i, e):
+        return self.substitute(i, e)
+
     def set(self, i, e):
         return self.substitute(i, e)
 

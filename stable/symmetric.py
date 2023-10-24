@@ -1,7 +1,7 @@
 from .vectors import Vector
 from .tableaux import Tableau, Partition
 from .vst import ValuedSetTableau
-from .polynomials import Polynomial
+from .polynomials import Polynomial, Y
 from .polynomials import beta as BETA # noqa
 from .cached import cached_value
 from collections import defaultdict
@@ -215,8 +215,8 @@ class SymmetricPolynomial(Vector):
             coeff = f[hd]
             mu = []
             for i in hd:
-                if i == 0:
-                    coeff *= BETA**hd[0]
+                if i <= 0:
+                    coeff *= Y(i)**hd[i]
                     continue
                 while i - 1 >= len(mu):
                     mu.append(0)
