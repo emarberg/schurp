@@ -153,16 +153,26 @@ def kromatic(num_variables, vertices, edges, weights=None):
     return SymmetricPolynomial.from_polynomial(ans)
 
 
+KMONOMIAL_CACHE = {}
+
+
 def kmonomial(num_variables, mu):
-    n = len(mu)
-    m = Partition.stabilizer_order(mu)
-    weights = {i + 1: mu[i] for i in range(n)}
-    v = list(range(1, n + 1))
-    return kromatic(num_variables, v, complete_graph(v), weights) // m
+    key = (num_variables, mu)
+    cache = KMONOMIAL_CACHE
+    if key not in cache:
+        n = len(mu)
+        weights = {i + 1: mu[i] for i in range(n)}
+        v = list(range(1, n + 1))
+        cache[key] = kromatic(num_variables, v, complete_graph(v), weights)
+    return cache[key]
+
+
+def monic_kmonomial(num_variables, mu):
+    return kmonomial(num_variables, mu) // Partition.stabilizer_order(mu)
 
 
 def kmonomial_expansion(f):
-    exp = SymmetricPolynomial._expansion(f, kmonomial, SymmetricPolynomial._get_term_from_lowest_degree)
+    exp = SymmetricPolynomial._expansion(f, monic_kmonomial, SymmetricPolynomial._get_term_from_lowest_degree)
     ans = Vector({mu: val // Partition.stabilizer_order(mu) for mu, val in exp.items()}, multiplier=exp.multiplier, sorter=exp.sorter)
     return ans.set_beta(1)
 
