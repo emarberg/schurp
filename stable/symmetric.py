@@ -209,7 +209,7 @@ class SymmetricPolynomial(Vector):
         
         nvars = 0
         for hd in f:
-            nvars = max(nvars, max(hd))
+            nvars = max(nvars, max(hd, default=0))
         
         for hd in f:
             coeff = f[hd]

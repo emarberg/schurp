@@ -93,24 +93,24 @@ def complete_graph(vertices):
     return {(a, b) for a in vertices for b in vertices if a != b}
 
 
-def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented):
+def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented, chromatic):
     if vertices:
         v = vertices[0]
         vertices = vertices[1:]
         subset = set(range(1, 1 + num_variables))
         for w in edges.get(v, []):
             subset -= coloring.get(w, set())
-        for k in range(1, len(subset) + 1):
+        for k in range(1, 1 + (1 if chromatic else len(subset))):
             for s in itertools.combinations(subset, k):
                 coloring[v] = set(s)
-                for ans in _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented):
+                for ans in _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented, chromatic):
                     yield ans
                 del coloring[v]
     else:
         ans = 1
         for v, subset in coloring.items():
             for i in subset:
-                ans *= (beta * X(i))**weights.get(v, 1)
+                ans *= (X(i) if chromatic else (beta * X(i)))**weights.get(v, 1)
             if oriented:
                 for w in edges.get(v, []):
                     # if v < w and max(subset) < max(coloring[w]):
@@ -122,11 +122,19 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented
         yield ans
 
 
+def chromatic(num_variables, vertices, edges, weights=None, oriented=False):
+    return kromatic(num_variables, vertices, edges, weights, False, True)
+
+
+def oriented_chromatic(num_variables, vertices, edges, weights=None, oriented=False):
+    return kromatic(num_variables, vertices, edges, weights, True, True)
+
+
 def oriented_kromatic(num_variables, vertices, edges, weights=None):
     return kromatic(num_variables, vertices, edges, weights, True)
 
 
-def kromatic(num_variables, vertices, edges, weights=None, oriented=False):
+def kromatic(num_variables, vertices, edges, weights=None, oriented=False, chromatic=False):
     weights = weights or {}
     total_weight = 0
     for v in vertices:
@@ -138,16 +146,15 @@ def kromatic(num_variables, vertices, edges, weights=None, oriented=False):
         e[b].add(a)
     ans = 0
 
-    for a in _kromatic_helper(num_variables, {}, vertices, e, weights, oriented):
-        ans += a * beta**(-total_weight)
-    # if oriented:
-    #    ans = ans if type(ans) == int else ans.set_variable(0, 0)
+    for a in _kromatic_helper(num_variables, {}, vertices, e, weights, oriented, chromatic):
+        ans += a * (1 if chromatic else beta**(-total_weight))
     # if oriented:
     #    return ans
     return SymmetricPolynomial.from_polynomial(ans)
 
 
 KMONOMIAL_CACHE = {}
+KPOWERSUM_CACHE = {}
 
 
 def kmonomial(num_variables, mu):
@@ -161,6 +168,17 @@ def kmonomial(num_variables, mu):
     return cache[key]
 
 
+def kpowersum(num_variables, mu):
+    key = (num_variables, mu)
+    cache = KPOWERSUM_CACHE
+    if key not in cache:
+        n = len(mu)
+        weights = {i + 1: mu[i] for i in range(n)}
+        v = list(range(1, n + 1))
+        cache[key] = kromatic(num_variables, v, [], weights)
+    return cache[key]
+
+
 def monic_kmonomial(num_variables, mu):
     return kmonomial(num_variables, mu) // Partition.stabilizer_order(mu)
 
@@ -169,3 +187,25 @@ def kmonomial_expansion(f):
     exp = SymmetricPolynomial._expansion(f, monic_kmonomial, SymmetricPolynomial._get_term_from_lowest_degree)
     ans = Vector({mu: val // Partition.stabilizer_order(mu) for mu, val in exp.items()}, multiplier=exp.multiplier, sorter=exp.sorter)
     return ans.set_beta(1)
+
+
+def kpowersum_expansion(f, degree_bound):
+    if not f:
+        return Vector(sorter=lambda x: (sum(x), x))
+    
+    f = f.set_beta(1)
+
+    m = sorted(f, key=lambda x: (x.degree(), x.index()))[0]
+    nvars = m.n
+    mu = m.mu
+
+    if sum(mu) > degree_bound:
+        return Vector(sorter=lambda x: (sum(x), x))
+
+    coeff = f[m]
+    denom = Partition.stabilizer_order(mu)
+    assert coeff % denom == 0
+    coeff = coeff // denom
+    
+    exp = kpowersum_expansion(f - kpowersum(nvars, mu).set_beta(1) * coeff, degree_bound) 
+    return Vector({mu: coeff}, sorter=exp.sorter) + exp

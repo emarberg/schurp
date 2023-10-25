@@ -1,10 +1,71 @@
 from stable.kromatic import (
     kromatic,
+    kmonomial,
     oriented_kromatic,
     oriented_expander
 )
 from stable.utils import mn_G_expansion, schur_expansion
+from stable.symmetric import SymmetricPolynomial
+from stable.partitions import Partition
 import itertools
+
+
+def factorial(n):
+    ans = 1
+    for i in range(n):
+        ans *= i + 1
+    return ans
+
+
+stirling_cache = {}
+
+
+def stirling2(n, k):
+    assert 0 <= k <= n
+    if (n, k) not in stirling_cache:
+        if n == k:
+            ans = 1
+        elif k == 0:
+            ans = 0
+        else:
+            ans = stirling2(n - 1, k) * k + stirling2(n - 1, k - 1)
+        stirling_cache[n, k] = ans
+    return stirling_cache[n, k]
+
+
+def test_kmonomial(nvars=3, k=10):
+    def multiplicity(mu, m):
+        return len([a for a in mu if a == m])
+
+    def coefficient(nu, mu):
+        ans = 1
+        for a in set(mu):
+            r = multiplicity(mu, a)
+            s = multiplicity(nu, a)
+            ans *= stirling2(s, r) * factorial(r)
+        return ans
+
+    def expand(mu, n):
+        if len(mu) == 0:
+            yield mu
+        else:
+            m = mu[0]
+            r = multiplicity(mu, m)
+            for a in range(n - len(mu) + 1):
+                for nu in expand(mu[r:], n - r - a):
+                    yield (m,) * (a + r) + nu
+
+    for mu in Partition.all(k, max_part=3):
+        if len(mu) == 0:
+            continue
+        mu = Partition.transpose(mu)
+        print(mu)
+        expected = 0
+        for nu in expand(mu, nvars):
+            expected += SymmetricPolynomial.monomial(nvars, nu) * coefficient(nu, mu)
+        actual = kmonomial(nvars, mu).set_variable(0, 1)
+        assert expected == actual
+
 
 
 def natural_unit_interval_order_incompability_graph(n, r):
