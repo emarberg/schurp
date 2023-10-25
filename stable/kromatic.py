@@ -113,12 +113,12 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented
                 ans *= (beta * X(i))**weights.get(v, 1)
             if oriented:
                 for w in edges.get(v, []):
-                    if v < w and max(subset) < max(coloring[w]):
-                        ans *= Y()
+                    # if v < w and max(subset) < max(coloring[w]):
+                    #    ans *= Y()
                     # if v < w:
                     #    ans *= Y()**len([i for i in subset if i < max(coloring[w])])
-                    # if v < w:
-                    #     ans *= Y()**len([(i, j) for i in coloring[v] for j in coloring[w] if i < j])
+                    if v < w:
+                        ans *= Y()**len([(i, j) for i in coloring[v] for j in coloring[w] if i < j])
         yield ans
 
 

@@ -7,7 +7,7 @@ from stable.utils import mn_G_expansion, schur_expansion
 import itertools
 
 
-def natural_unit_iterval_order_incompability_graph(n, r):
+def natural_unit_interval_order_incompability_graph(n, r):
     v = list(range(1, n + 1))
     e = [(i, j) for i in v for j in v if 0 < j - i < r]
     return v, e
@@ -50,11 +50,27 @@ def test_G_expansion(nvars=3, nverts=3):
         assert (not icf) or pos
 
 
-def test_G_oriented_expansion(nvars=3, n=5, r=5):
+def test_G_oriented_expansion(nvars=3, nverts=3):
+    for v, e in graphs(nverts):
+        try:
+            f = oriented_kromatic(nvars, v, e)
+        except:
+            print(v, e, 'pass')
+            print()
+            continue
+        exp = oriented_expander(mn_G_expansion, f)
+        icf = is_claw_free(v, e)
+        pos = exp.is_nonnegative()
+        print(v, e, icf, pos, exp)
+        print()
+        assert (not icf) or pos
+
+
+def test_G_oriented_expansion_nui(nvars=3, n=5, r=5):
     seen = set()
     for nn in range(1, n + 1):
         for rr in range(1, r + 1):
-            v, e = natural_unit_iterval_order_incompability_graph(nn, rr)
+            v, e = natural_unit_interval_order_incompability_graph(nn, rr)
             
             v, e = tuple(sorted(v)), tuple(sorted(e))
             if (v, e) not in seen:
