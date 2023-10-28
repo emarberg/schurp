@@ -2,6 +2,8 @@ from stable.kromatic import (
     kromatic,
     kmonomial,
     oriented_kromatic,
+    oriented_kromatic_polynomial,
+    reoriented_kromatic_polynomial,
     oriented_expander,
     strict_galois_number,
     posets,
@@ -12,6 +14,7 @@ from stable.utils import mn_G_expansion, schur_expansion
 from stable.symmetric import SymmetricPolynomial
 from stable.partitions import Partition
 from stable.tableaux import Tableau
+from stable.quasisymmetric import Quasisymmetric
 import itertools
 import math
 
@@ -93,10 +96,6 @@ def test_strict_galois_number(rr=8, nn=8):
             assert expected == f(r + 1, n)
 
 
-def test_complete_oriented_kromatic():
-    pass
-
-
 def factorial(n):
     ans = 1
     for i in range(n):
@@ -152,7 +151,6 @@ def test_kmonomial(nvars=3, k=10):
             expected += SymmetricPolynomial.monomial(nvars, nu) * coefficient(nu, mu)
         actual = kmonomial(nvars, mu).set_variable(0, 1)
         assert expected == actual
-
 
 
 def natural_unit_interval_order_incompability_graph(n, r):
@@ -214,6 +212,32 @@ def test_G_oriented_expansion(nvars=3, nverts=3):
         assert (not icf) or pos
 
 
+def test_multifundamental_oriented_expansion(nvars=3, nverts=3):
+    # fails for v, e = [1, 2, 3, 4], ((1, 2), (1, 3))
+    # fails for v, e = [1, 2, 3, 4], ((1, 2), (1, 3), (1, 4))
+    for v, e in graphs(nverts):
+        f = oriented_kromatic_polynomial(nvars, v, e)
+        exp = Quasisymmetric.multifundamental_expansion(f)
+        assert Quasisymmetric.from_expansion(nvars, exp, Quasisymmetric.multifundamental) == f
+        icf = is_claw_free(v, e)
+        pos = exp.is_nonnegative()
+        print(v, e, icf, pos, exp)
+        print()
+        assert pos
+
+
+def test_multifundamental_reoriented_expansion(nvars=3, nverts=3):
+    for v, e in graphs(nverts):
+        f = reoriented_kromatic_polynomial(nvars, v, e)
+        exp = Quasisymmetric.multifundamental_expansion(f)
+        assert Quasisymmetric.from_expansion(nvars, exp, Quasisymmetric.multifundamental) == f
+        icf = is_claw_free(v, e)
+        pos = exp.is_nonnegative()
+        print(v, e, icf, pos, exp)
+        print()
+        assert pos
+
+
 def test_G_oriented_expansion_nui(nvars=3, n=5, r=5):
     seen = set()
     for nn in range(1, n + 1):
@@ -236,5 +260,4 @@ def test_G_oriented_expansion_nui(nvars=3, n=5, r=5):
                 assert (not icf) or pos
             except:
                 print(v, e, icf)
-                print('pass\n')
-                input('')
+                assert False
