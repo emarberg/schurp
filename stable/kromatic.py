@@ -2,11 +2,98 @@ from .symmetric import SymmetricPolynomial
 from .partitions import Partition
 from .polynomials import beta, X, Y, Polynomial
 from .vectors import Vector
+from .tableaux import Tableau
 import itertools
 import math
 
 
 Y_INDEX = Polynomial.MIN_INT
+
+
+def posets(n):
+    edges = sorted([(i, j) for i in range(1, n + 1) for j in range(1, n + 1) if i != j])
+    for k in range(1 + (n * (n - 1)) // 2):
+        for subset in itertools.combinations(edges, k):
+            if all((i, l) in subset for (i, j) in subset for (k, l) in subset if j == k):
+                yield subset
+
+
+def incomparability_graph(n, poset):
+    v = list(range(1, n + 1))
+    e = [(i, j) for i in v for j in v if i < j and (i, j) not in poset and (j, i) not in poset]
+    return (v, e)
+
+
+q_multinomial_cache = {}
+
+
+def q_multinomial(n, *args):
+    if len(args) == 0:
+        return 0 if n != 0 else 1
+
+    args = tuple(args) + ((n - sum(args),) if sum(args) < n else ())
+    
+    if n < 0 or min(args) < 0:
+        return 0
+    if n == 0:
+        return 1
+    
+    key = (n,) + args
+    cache = q_multinomial_cache
+    if key not in cache:
+        ans = 0
+        m = len(args)
+        for k in range(1, m + 1):
+            for J in itertools.combinations(list(range(m)), k):
+                newargs = list(args)
+                for j in J:
+                    newargs[j] -= 1
+                term = (-1)**(k - 1) * q_multinomial(n - k, *newargs)
+                for i in range(n - k + 1, n):
+                    term *= (1 - Y()**i)
+                ans += term
+        cache[key] = ans
+    return cache[key]
+
+
+def weak_compositions(r, n, strict=False):
+    assert r >= 0
+    if r > 0 >= n:
+        return
+    elif r == n == 0:
+        yield ()
+    else:
+        for i in range(1 if strict else 0, r + 1):
+            for alpha in weak_compositions(r - i, n - 1, strict):
+                yield (i,) + alpha
+
+
+def strict_compositions(r, n):
+    for alpha in weak_compositions(r, n, True):
+        yield alpha
+
+
+galois_number_cache = {}
+
+
+def galois_number(r, n):
+    if (r, n, False) not in galois_number_cache:
+        ans = 0
+        if r >= 0:
+            for alpha in weak_compositions(r, n):
+                ans += q_multinomial(r, *alpha)
+        galois_number_cache[r, n, False] = ans
+    return galois_number_cache[r, n, False]
+
+
+def strict_galois_number(r, n):
+    if (r, n, True) not in galois_number_cache:
+        ans = 0
+        if r >= 0:
+            for alpha in strict_compositions(r, n):
+                ans += q_multinomial(r, *alpha)
+        galois_number_cache[r, n, True] = ans
+    return galois_number_cache[r, n, True]
 
 
 def y_terms(f):
@@ -111,14 +198,14 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented
         for v, subset in coloring.items():
             for i in subset:
                 ans *= (X(i) if chromatic else (beta * X(i)))**weights.get(v, 1)
-            if oriented:
+            if oriented == 1:
                 for w in edges.get(v, []):
-                    # if v < w and max(subset) < max(coloring[w]):
-                    #    ans *= Y()
-                    # if v < w:
-                    #    ans *= Y()**len([i for i in subset if i < max(coloring[w])])
                     if v < w:
                         ans *= Y()**len([(i, j) for i in coloring[v] for j in coloring[w] if i < j])
+            elif oriented == 2:
+                for w in edges.get(v, []):
+                    if v < w and max(subset) < max(coloring[w]):
+                        ans *= Y()
         yield ans
 
 
@@ -130,11 +217,27 @@ def oriented_chromatic(num_variables, vertices, edges, weights=None, oriented=Fa
     return kromatic(num_variables, vertices, edges, weights, True, True)
 
 
+def oriented_chromatic_polynomial(num_variables, vertices, edges, weights=None, oriented=False):
+    return kromatic(num_variables, vertices, edges, weights, True, True, symmetrize=False)
+
+
 def oriented_kromatic(num_variables, vertices, edges, weights=None):
-    return kromatic(num_variables, vertices, edges, weights, True)
+    return kromatic(num_variables, vertices, edges, weights, 1)
 
 
-def kromatic(num_variables, vertices, edges, weights=None, oriented=False, chromatic=False):
+def oriented_kromatic_polynomial(num_variables, vertices, edges, weights=None):
+    return kromatic(num_variables, vertices, edges, weights, 1, symmetrize=False)
+
+
+def reoriented_kromatic(num_variables, vertices, edges, weights=None):
+    return kromatic(num_variables, vertices, edges, weights, 2)
+
+
+def reoriented_kromatic_polynomial(num_variables, vertices, edges, weights=None):
+    return kromatic(num_variables, vertices, edges, weights, 2, symmetrize=False)
+
+
+def kromatic(num_variables, vertices, edges, weights=None, oriented=0, chromatic=False, symmetrize=True):
     weights = weights or {}
     total_weight = 0
     for v in vertices:
@@ -148,9 +251,7 @@ def kromatic(num_variables, vertices, edges, weights=None, oriented=False, chrom
 
     for a in _kromatic_helper(num_variables, {}, vertices, e, weights, oriented, chromatic):
         ans += a * (1 if chromatic else beta**(-total_weight))
-    # if oriented:
-    #    return ans
-    return SymmetricPolynomial.from_polynomial(ans)
+    return SymmetricPolynomial.from_polynomial(ans) if symmetrize else ans
 
 
 KMONOMIAL_CACHE = {}

@@ -5,7 +5,10 @@ from collections import defaultdict
 from operator import itemgetter
 import itertools
 
-FRENCH = True
+FRENCH = False
+
+INNER_GROTHENDIECK_P = {}
+GROTHENDIECK_P = {}
 
 COUNT_SEMISTANDARD_CACHE = {}
 COUNT_SEMISTANDARD_MARKED_CACHE = {}
@@ -1478,6 +1481,73 @@ class Tableau:
                 q = q.add(j, x, v)
 
         return p, q
+
+    def poset_inversions(self, poset):
+        ans = 0
+        for i, j, val in self:
+            for k, l, wal in self:
+                v = val[0]
+                w = wal[0]
+                if v < 0 or w < 0 or (v, w) in poset or (w, v) in poset:
+                    continue
+                if v < w and i > k:
+                    ans += 1
+        return ans
+
+    @classmethod
+    def poset_key(cls, n, poset):
+        key = []
+        for w in itertools.permutations(range(n)):
+            key.append(tuple((w[a - 1] + 1, w[b - 1] + 1) for (a, b) in poset))
+        return (tuple(sorted(key)), n)
+
+    @classmethod
+    def inner_grothendieck_p_tableaux(cls, n, poset, mu):
+        key = (cls.poset_key(n, poset), Partition.trim(mu))
+        cache = INNER_GROTHENDIECK_P
+        if key not in cache:
+            poset = key[0][0][0]
+            ans = []
+            for t in cls.all(n, mu):
+                if t.values() != set(range(1, 1 + n)):
+                    continue
+                if any(
+                    (t.get(i, j), t.get(i, j + 1)) not in poset
+                    for i in range(1, 1 + len(mu))
+                    for j in range(1, mu[i - 1])
+                ):
+                    continue
+                if any(
+                    (t.get(i + 1, j), t.get(i, j)) in poset
+                    for i in range(1, len(mu))
+                    for j in range(1, 1 + mu[i])
+                ):
+                    continue
+                ans.append(t)
+            cache[key] = ans
+        return cache[key]
+
+    @classmethod
+    def grothendieck_p_tableaux(cls, n, poset, mu):
+        key = (cls.poset_key(n, poset), Partition.trim(mu))
+        cache = GROTHENDIECK_P
+        if key not in cache:
+            poset = key[0][0][0]
+            ans = []
+            for nu in Partition.subpartitions(mu):
+                if Partition.get(nu, 1) < Partition.get(mu, 1):
+                    continue
+                shape = Partition.shape(mu) - Partition.shape(nu)
+                m = max([i - 1 for (i, j) in shape], default=0)
+                for inner in cls.inner_grothendieck_p_tableaux(n, poset, nu):
+                    for outer in cls.semistandard(m, mu, nu):
+                        if all(v <= i - 1 for (i, j, val) in outer for v in val):
+                            tab = inner
+                            for (i, j, v) in outer:
+                                tab = tab.add(i, j, -v[0])
+                            ans.append(tab)
+            cache[key] = ans
+        return cache[key]
 
 
 class ReversePlanePartition(Tableau):

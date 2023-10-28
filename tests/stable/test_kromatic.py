@@ -2,12 +2,99 @@ from stable.kromatic import (
     kromatic,
     kmonomial,
     oriented_kromatic,
-    oriented_expander
+    oriented_expander,
+    strict_galois_number,
+    posets,
+    incomparability_graph,
 )
+from stable.polynomials import Y
 from stable.utils import mn_G_expansion, schur_expansion
 from stable.symmetric import SymmetricPolynomial
 from stable.partitions import Partition
+from stable.tableaux import Tableau
 import itertools
+import math
+
+
+def test_grothendieck_p_tableaux(nn=5, kk=5):
+    for n in range(1 + nn):
+        for p in posets(n):
+            if p != Tableau.poset_key(n, p)[0][0]:
+                continue
+            v, e = incomparability_graph(n, p)
+            for k in range(1, 1 + kk):
+                x = kromatic(k, v, e)
+                exp = mn_G_expansion(x).set_variable(0, 1)
+                print()
+                print()
+                print('new poset:', n, p, exp)
+                print()
+                r = max([sum(nu) for nu in exp], default=0)
+                for nu in set(Partition.all(r)) | set(exp):
+                    if len(nu) > k:
+                        continue
+                    tabs = list(Tableau.grothendieck_p_tableaux(n, p, nu))
+                    print(nu, ':', len(tabs), exp[nu])
+                    if len(tabs) != exp[nu]:
+                        print(tabs)
+                    assert len(tabs) == exp[nu]
+
+
+def test_oriented_grothendieck_p_tableaux(nn=5, kk=5):
+    for n in range(1 + nn):
+        for p in posets(n):
+            if p != Tableau.poset_key(n, p)[0][0]:
+                continue
+            v, e = incomparability_graph(n, p)
+            print()
+            print()
+            print('poset:', n, p, 'graph:', v, e)
+            print()
+            for k in range(1, 1 + kk):
+                try:
+                    x = oriented_kromatic(k, v, e)
+                except:
+                    print('nvars:', k, 'expansion:', 'not symmetric')
+                    print()
+                    continue
+                exp = oriented_expander(mn_G_expansion, x).set_variable(0, 1)
+                print()
+                print('nvars:', k, 'expansion:', exp)
+                print()
+                r = max([sum(nu) for nu in exp], default=0)
+                for nu in set(Partition.all(r)) | set(exp):
+                    if len(nu) > k:
+                        continue
+                    tabs = list(Tableau.grothendieck_p_tableaux(n, p, nu))
+                    # print(nu, ':', len(tabs), '==', exp[nu])
+                    counter = 0
+                    for t in tabs:
+                        inv = t.poset_inversions(p)
+                        counter += Y()**inv
+                    # print()
+                    print('  ', nu, ':', exp[nu], '==', counter, exp[nu] == counter)
+                    # print()
+                    assert exp[nu] == counter
+                    # assert len(tabs) == exp[nu]
+
+
+def test_strict_galois_number(rr=8, nn=8):
+    f = strict_galois_number
+    for r in range(rr + 1):
+        for n in range(nn + 1):
+            expected = 0
+            for i in range(n):
+                qq = 1
+                for j in range(r - i + 1, r + 1):
+                    qq *= (1 - Y()**j)
+                for j in range(n - 1 - i, n + 1):
+                    expected += math.comb(n, j) * math.comb(j, n - 1 - i) * (-1)**i * qq * f(r - i, j)
+            print(r, n)
+            assert expected == f(r + 1, n)
+
+
+def test_complete_oriented_kromatic():
+    pass
 
 
 def factorial(n):
