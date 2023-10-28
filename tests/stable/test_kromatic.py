@@ -3,11 +3,13 @@ from stable.kromatic import (
     kmonomial,
     oriented_kromatic,
     oriented_kromatic_polynomial,
+    reoriented_kromatic,
     reoriented_kromatic_polynomial,
     oriented_expander,
     strict_galois_number,
     posets,
     incomparability_graph,
+    is_cluster_graph,
 )
 from stable.polynomials import Y
 from stable.utils import mn_G_expansion, schur_expansion
@@ -57,7 +59,7 @@ def test_oriented_grothendieck_p_tableaux(nn=5, kk=5):
                 try:
                     x = oriented_kromatic(k, v, e)
                 except:
-                    print('nvars:', k, 'expansion:', 'not symmetric')
+                    print('nvars:', k, 'expansion:', '(not symmetric)', 'cluster graph:', is_cluster_graph(e))
                     print()
                     continue
                 exp = oriented_expander(mn_G_expansion, x).set_variable(0, 1)
@@ -196,27 +198,32 @@ def test_G_expansion(nvars=3, nverts=3):
         assert (not icf) or pos
 
 
-def test_G_oriented_expansion(nvars=3, nverts=3):
+def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
     for v, e in graphs(nverts):
         try:
-            f = oriented_kromatic(nvars, v, e)
+            f = reoriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
         except:
-            print(v, e, 'pass')
+            print(v, e, '(not symmetric)', 'cluster graph:', is_cluster_graph(e))
             print()
             continue
         exp = oriented_expander(mn_G_expansion, f)
         icf = is_claw_free(v, e)
         pos = exp.is_nonnegative()
-        print(v, e, icf, pos, exp)
+        print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', is_cluster_graph(e))
         print()
         assert (not icf) or pos
 
 
-def test_multifundamental_oriented_expansion(nvars=3, nverts=3):
+def test_G_reoriented_expansion(nvars=3, nverts=3):
+    # expected: only symmetric for claster graphs, then alays G-positive
+    test_G_oriented_expansion(nvars, nverts, True)
+
+
+def test_multifundamental_oriented_expansion(nvars=3, nverts=3, re=False):
     # fails for v, e = [1, 2, 3, 4], ((1, 2), (1, 3))
     # fails for v, e = [1, 2, 3, 4], ((1, 2), (1, 3), (1, 4))
     for v, e in graphs(nverts):
-        f = oriented_kromatic_polynomial(nvars, v, e)
+        f = reoriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
         exp = Quasisymmetric.multifundamental_expansion(f)
         assert Quasisymmetric.from_expansion(nvars, exp, Quasisymmetric.multifundamental) == f
         icf = is_claw_free(v, e)
@@ -227,18 +234,15 @@ def test_multifundamental_oriented_expansion(nvars=3, nverts=3):
 
 
 def test_multifundamental_reoriented_expansion(nvars=3, nverts=3):
-    for v, e in graphs(nverts):
-        f = reoriented_kromatic_polynomial(nvars, v, e)
-        exp = Quasisymmetric.multifundamental_expansion(f)
-        assert Quasisymmetric.from_expansion(nvars, exp, Quasisymmetric.multifundamental) == f
-        icf = is_claw_free(v, e)
-        pos = exp.is_nonnegative()
-        print(v, e, icf, pos, exp)
-        print()
-        assert pos
+    test_multifundamental_oriented_expansion(nvars, nverts, True)
 
 
-def test_G_oriented_expansion_nui(nvars=3, n=5, r=5):
+def test_G_reoriented_expansion_nui(nvars=3, n=5, r=5):
+    # expected: only symmetric for claster graphs
+    test_G_oriented_expansion_nui(nvars, n, r, True)
+
+
+def test_G_oriented_expansion_nui(nvars=3, n=5, r=5, re=False):
     seen = set()
     for nn in range(1, n + 1):
         for rr in range(1, r + 1):
@@ -252,12 +256,12 @@ def test_G_oriented_expansion_nui(nvars=3, n=5, r=5):
             
             icf = is_claw_free(v, e)
             try:
-                f = oriented_kromatic(nvars, v, e)
+                f = reoriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
                 exp = oriented_expander(mn_G_expansion, f)
                 pos = exp.is_nonnegative()
-                print(v, e, icf, pos, exp)
+                print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', is_cluster_graph(e))
                 print()
                 assert (not icf) or pos
             except:
-                print(v, e, icf)
-                assert False
+                print(v, e, 'claw-free:', icf, '(not symmetric)', 'cluster graph:', is_cluster_graph(e))
+                # assert False

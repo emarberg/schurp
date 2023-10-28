@@ -10,6 +10,18 @@ import math
 Y_INDEX = Polynomial.MIN_INT
 
 
+def is_cluster_graph(e):
+    e = {tuple(sorted(edge)) for edge in e}
+    for (i, j) in e:
+        for (k, l) in e:
+            v = {i, j, k, l}
+            if len(v) == 3:
+                a, b, c = sorted(v)
+                if (a, b) not in e or (a, c) not in e or (b, c) not in e:
+                    return False
+    return True
+
+
 def posets(n):
     edges = sorted([(i, j) for i in range(1, n + 1) for j in range(1, n + 1) if i != j])
     for k in range(1 + (n * (n - 1)) // 2):
