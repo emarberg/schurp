@@ -4,6 +4,7 @@ from words import (
     Word,
     get_fpf_involution_words
 )
+from stable.tableaux import Tableau
 import subprocess
 import time
 import collections
@@ -433,10 +434,7 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         vertices = []
         edges = []
         weights = {}
-        from stable.tableaux import Tableau
-        for t in Tableau.all(n, mu, shifted=True, marked=False, setvalued=True):
-            if not t.is_decomposition_tableau():
-                continue
+        for t in Tableau.setvalued_decomposition_tableaux(n, mu):
             vertices += [t]
             weights[t] = t.weight(n)
             for i in range(1, n):

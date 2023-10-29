@@ -10,6 +10,7 @@ from stable.kromatic import (
     posets,
     incomparability_graph,
     is_cluster_graph,
+    kpowersum_expansion,
 )
 from stable.polynomials import Y
 from stable.utils import mn_G_expansion, schur_expansion
@@ -19,6 +20,45 @@ from stable.tableaux import Tableau
 from stable.quasisymmetric import Quasisymmetric
 import itertools
 import math
+from sympy.ntheory import factorint
+
+
+def test_alt_p_e_expansion(n=3, k=2):
+    v = list(range(1, k + 1))
+    x = kromatic(n, v, []) - kromatic(n, v, complete_graph(v))
+    a = GE_expansion(x)
+    ell = max([0] + [sum(mu) for mu in a])
+    for i in range(ell, -1, -1):
+        vec = Vector({mu: coeff for mu, coeff in a.items() if sum(mu) == i})
+        if vec:
+            print(vec, '\n\n+\n')
+
+
+def test_p_expansion(n=3):
+    x = kromatic(n, [1,2,3], [(1,2),(2,3),])
+    a = p_expansion(x)
+
+    fac = math.lcm(*[t.denominator for t in a.dictionary.values()])
+    
+    b = a * fac
+    y = x.polynomial().set(0, 1) * fac
+
+    assert all(coeff.denominator == 1 for (mu, coeff) in b.items())
+    expected = sum(p(n, mu) * coeff.numerator for (mu, coeff) in b.items()).polynomial()
+    if y != expected:
+        print(y)
+        print()
+        print(expected)
+        print()
+    assert y == expected
+    
+    ell = max([sum(mu) for mu in a])
+    for i in range(ell, -1, -1):
+        subset = {coeff.denominator for mu, coeff in a.items() if sum(mu) == i}
+        if subset:
+            print(Vector({mu: coeff for mu, coeff in a.items() if sum(mu) == i}), '\n\n+\n')
+            ell = math.lcm(*subset)
+            print(i, ':', ell, '=', factorint(ell), '\n\n+\n')
 
 
 def test_grothendieck_p_tableaux(nn=5, kk=5):
@@ -196,6 +236,17 @@ def test_G_expansion(nvars=3, nverts=3):
         print(v, e, icf, pos, exp)
         print()
         assert (not icf) or pos
+
+
+def test_kpowersum_expansion(nvars=3, nverts=3, cutoff=7):
+    for v, e in graphs(nverts):
+        f = kromatic(nvars, v, e)
+        exp = kpowersum_expansion(f, cutoff)
+        icf = is_claw_free(v, e)
+        pos = exp.is_nonnegative()
+        print(v, e, icf, pos, exp)
+        print()
+        # assert (not icf) or pos
 
 
 def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
