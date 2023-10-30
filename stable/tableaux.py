@@ -1496,17 +1496,16 @@ class Tableau:
 
     @classmethod
     def poset_key(cls, n, poset):
-        key = []
-        for w in itertools.permutations(range(n)):
-            key.append(tuple((w[a - 1] + 1, w[b - 1] + 1) for (a, b) in poset))
+        key = [tuple(sorted(ab)) for ab in poset]
         return (tuple(sorted(key)), n)
+        #for w in itertools.permutations(range(n)):
+        #    key.append(tuple((w[a - 1] + 1, w[b - 1] + 1) for (a, b) in poset))
 
     @classmethod
     def inner_grothendieck_p_tableaux(cls, n, poset, mu):
         key = (cls.poset_key(n, poset), Partition.trim(mu))
         cache = INNER_GROTHENDIECK_P
         if key not in cache:
-            poset = key[0][0][0]
             ans = []
             for t in cls.all(n, mu):
                 if t.values() != set(range(1, 1 + n)):
@@ -1532,7 +1531,6 @@ class Tableau:
         key = (cls.poset_key(n, poset), Partition.trim(mu))
         cache = GROTHENDIECK_P
         if key not in cache:
-            poset = key[0][0][0]
             ans = []
             for nu in Partition.subpartitions(mu):
                 if Partition.get(nu, 1) < Partition.get(mu, 1):

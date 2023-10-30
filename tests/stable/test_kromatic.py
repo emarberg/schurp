@@ -10,8 +10,9 @@ from stable.kromatic import (
     posets,
     incomparability_graph,
     is_cluster_graph,
+    Y_INDEX,
 )
-from stable.polynomials import Y
+from stable.polynomials import Y, X
 from stable.utils import mn_G_expansion, schur_expansion
 from stable.symmetric import SymmetricPolynomial
 from stable.partitions import Partition
@@ -24,8 +25,6 @@ import math
 def test_grothendieck_p_tableaux(nn=5, kk=5):
     for n in range(1 + nn):
         for p in posets(n):
-            if p != Tableau.poset_key(n, p)[0][0]:
-                continue
             v, e = incomparability_graph(n, p)
             for k in range(1, 1 + kk):
                 x = kromatic(k, v, e)
@@ -48,8 +47,6 @@ def test_grothendieck_p_tableaux(nn=5, kk=5):
 def test_oriented_grothendieck_p_tableaux(nn=5, kk=5):
     for n in range(1 + nn):
         for p in posets(n):
-            if p != Tableau.poset_key(n, p)[0][0]:
-                continue
             v, e = incomparability_graph(n, p)
             print()
             print()
@@ -199,17 +196,33 @@ def test_G_expansion(nvars=3, nverts=3):
 
 
 def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
+    # v1, e1 = [1, 2, 3, 4, 5], ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5))
+    # v2, e2 = [1, 2, 3, 4, 5], ((1, 2), (1, 5), (2, 3), (3, 4), (4, 5))
+    # for v, e in [(v1, e1), (v2, e2)]:
     for v, e in graphs(nverts):
+        icg = is_cluster_graph(e)
+        icf = is_claw_free(v, e)
+        if icg:
+            continue
         try:
             f = reoriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
         except:
-            print(v, e, '(not symmetric)', 'cluster graph:', is_cluster_graph(e))
+            ind1 = {i + 1: 1 for i in range(nvars)}
+            ind1[nvars - 1] = 2
+
+            ind2 = {i + 1: 1 for i in range(nvars)}
+            ind2[nvars] = 2
+
+            f = reoriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
+            # f = ((f - f.set(0, 0)) * X(0)**-1).set(0, 0).set(Y_INDEX, 0)
+            f = f.set(0, 0).set(Y_INDEX, 0)
+
+            print(v, e, '(not symmetric)', 'cluster graph:', icg, f)
             print()
             continue
         exp = oriented_expander(mn_G_expansion, f)
-        icf = is_claw_free(v, e)
         pos = exp.is_nonnegative()
-        print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', is_cluster_graph(e))
+        print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', icg)
         print()
         assert (not icf) or pos
 
