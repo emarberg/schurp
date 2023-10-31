@@ -7,6 +7,7 @@ import itertools
 
 FRENCH = False
 
+SETVALUED_DECOMPOSITION_CACHE = {}
 INNER_GROTHENDIECK_P = {}
 GROTHENDIECK_P = {}
 
@@ -66,7 +67,7 @@ class Tableau:
 
         def tuplize(i, j):
             v = mapping[(i, j)]
-            if type(v) == tuple:
+            if type(v) in [tuple, list, set]:
                 assert all(type(i) == int for i in v)
                 return tuple(sorted(v))
             else:
@@ -1041,6 +1042,18 @@ class Tableau:
     @classmethod
     def count_semistandard_shifted_marked_setvalued(cls, max_entry, mu, nu=(), diagonal_primes=True):
         return cls.count_semistandard_shifted_marked(max_entry, mu, nu, diagonal_primes, True)
+
+    @classmethod
+    def setvalued_decomposition_tableaux(cls, max_entry, mu):
+        return cls._setvalued_decomposition_tableaux(max_entry, mu)
+
+    @cached_value(SETVALUED_DECOMPOSITION_CACHE)
+    def _setvalued_decomposition_tableaux(cls, max_entry, mu):
+        ans = []
+        for t in cls.all(max_entry, mu, shifted=True, marked=False, setvalued=True):
+            if t.is_decomposition_tableau():
+                ans.append(t)
+        return ans
 
     @classmethod
     def semistandard_rpp(cls, max_entry, mu, nu=()):  # noqa

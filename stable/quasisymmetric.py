@@ -32,15 +32,17 @@ class Quasisymmetric:
 
     @classmethod
     def expansion(cls, f, creator):
+        ans = Vector(sorter=sum)
         if f != 0:
             nvars = cls.nvars(f)
+        while f != 0:
             alpha = cls.leading_term(f)
             coeff = cls.coefficient(f, alpha)
             g = creator(nvars, alpha)
             assert cls.coefficient(g, alpha) == 1
-            return Vector({alpha: coeff}, sorter=sum) + cls.expansion(f - g * coeff, creator)
-        else:
-            return Vector(sorter=sum)
+            ans += Vector({alpha: coeff}, sorter=sum)
+            f = f - g * coeff
+        return Vector(sorter=sum)
 
     @classmethod
     def nvars(cls, f):
