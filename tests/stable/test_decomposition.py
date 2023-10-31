@@ -37,7 +37,6 @@ def test_marked_to_decomposition(max_entry=5, max_size=5):
                     seen.add(out)
             except:
                 print('  failed')
-                
 
 
 def test_decomposition_jp(max_entry=5, max_size=5):

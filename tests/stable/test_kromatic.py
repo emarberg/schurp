@@ -10,7 +10,9 @@ from stable.kromatic import (
     posets,
     incomparability_graph,
     is_cluster_graph,
+    is_connected_graph,
     kpowersum_expansion,
+    Y_INDEX,
 )
 from stable.polynomials import Y
 from stable.utils import mn_G_expansion, schur_expansion
@@ -251,16 +253,33 @@ def test_kpowersum_expansion(nvars=3, nverts=3, cutoff=7):
 
 def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
     for v, e in graphs(nverts):
+        icg = is_cluster_graph(e)
+        isc = is_connected_graph(v, e)
+        if icg or not isc:
+            continue
         try:
             f = reoriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
         except:
-            print(v, e, '(not symmetric)', 'cluster graph:', is_cluster_graph(e))
+            ind = {i + 1: 1 for i in range(nvars)}
+
+            f = reoriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
+            f = f.set(0, 0).set(Y_INDEX, 0)
+
+            coeffs = []
+            for i in range(nvars):
+                ind[i + 1] += 1
+                coeffs.append(f[ind])
+                ind[i + 1] -= 1
+
+            print(v, e, '(not symmetric)', 'cluster graph:', icg)
+            print()
+            print('  ', coeffs)
             print()
             continue
         exp = oriented_expander(mn_G_expansion, f)
         icf = is_claw_free(v, e)
         pos = exp.is_nonnegative()
-        print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', is_cluster_graph(e))
+        print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', icg)
         print()
         assert (not icf) or pos
 

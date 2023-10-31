@@ -10,6 +10,19 @@ import math
 Y_INDEX = Polynomial.MIN_INT
 
 
+def is_connected_graph(v, e):
+    if len(v) == 0:
+        return True
+    component = {v[0]}
+    size = len(component)
+    while True:
+        component |= {b for (a, b) in e if a in component} | {a for (a, b) in e if b in component}
+        if len(component) == size:
+            break
+        size = len(component)
+    return len(component) == len(v)
+
+
 def is_cluster_graph(e):
     e = {tuple(sorted(edge)) for edge in e}
     for (i, j) in e:
@@ -199,17 +212,18 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented
         subset = set(range(1, 1 + num_variables))
         for w in edges.get(v, []):
             subset -= coloring.get(w, set())
-        for k in range(1, 1 + (1 if chromatic else len(subset))):
+        # for k in range(1, 1 + (1 if chromatic else len(subset))):
+        for k in range(1, 1 + (1 if chromatic else 2)):
             for s in itertools.combinations(subset, k):
                 coloring[v] = set(s)
-                for ans in _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented, chromatic):
+                for ans in _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented, chromatic or k == 2):
                     yield ans
                 del coloring[v]
     else:
         ans = 1
         for v, subset in coloring.items():
             for i in subset:
-                ans *= (X(i) if chromatic else (beta * X(i)))**weights.get(v, 1)
+                ans *= (X(i) if chromatic else (beta**0 * X(i)))**weights.get(v, 1)
             if oriented == 1:
                 for w in edges.get(v, []):
                     if v < w:
@@ -262,7 +276,7 @@ def kromatic(num_variables, vertices, edges, weights=None, oriented=0, chromatic
     ans = 0
 
     for a in _kromatic_helper(num_variables, {}, vertices, e, weights, oriented, chromatic):
-        ans += a * (1 if chromatic else beta**(-total_weight))
+        ans += a * (1 if chromatic else beta**(0 * -total_weight))
     return SymmetricPolynomial.from_polynomial(ans) if symmetrize else ans
 
 
