@@ -14,7 +14,7 @@ from stable.kromatic import (
     kpowersum_expansion,
     Y_INDEX,
 )
-from stable.polynomials import Y
+from stable.polynomials import Y, X
 from stable.utils import mn_G_expansion, schur_expansion
 from stable.symmetric import SymmetricPolynomial
 from stable.partitions import Partition
@@ -41,7 +41,7 @@ def test_p_expansion(n=3):
     a = p_expansion(x)
 
     fac = math.lcm(*[t.denominator for t in a.dictionary.values()])
-    
+
     b = a * fac
     y = x.polynomial().set(0, 1) * fac
 
@@ -53,7 +53,7 @@ def test_p_expansion(n=3):
         print(expected)
         print()
     assert y == expected
-    
+
     ell = max([sum(mu) for mu in a])
     for i in range(ell, -1, -1):
         subset = {coeff.denominator for mu, coeff in a.items() if sum(mu) == i}
@@ -66,8 +66,6 @@ def test_p_expansion(n=3):
 def test_grothendieck_p_tableaux(nn=5, kk=5):
     for n in range(1 + nn):
         for p in posets(n):
-            if p != Tableau.poset_key(n, p)[0][0]:
-                continue
             v, e = incomparability_graph(n, p)
             for k in range(1, 1 + kk):
                 x = kromatic(k, v, e)
@@ -90,8 +88,6 @@ def test_grothendieck_p_tableaux(nn=5, kk=5):
 def test_oriented_grothendieck_p_tableaux(nn=5, kk=5):
     for n in range(1 + nn):
         for p in posets(n):
-            if p != Tableau.poset_key(n, p)[0][0]:
-                continue
             v, e = incomparability_graph(n, p)
             print()
             print()
@@ -252,9 +248,13 @@ def test_kpowersum_expansion(nvars=3, nverts=3, cutoff=7):
 
 
 def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
+    # v1, e1 = [1, 2, 3, 4, 5], ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5))
+    # v2, e2 = [1, 2, 3, 4, 5], ((1, 2), (1, 5), (2, 3), (3, 4), (4, 5))
+    # for v, e in [(v1, e1), (v2, e2)]:
     for v, e in graphs(nverts):
         icg = is_cluster_graph(e)
         isc = is_connected_graph(v, e)
+        icf = is_claw_free(v, e)
         if icg or not isc:
             continue
         try:
@@ -277,7 +277,6 @@ def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
             print()
             continue
         exp = oriented_expander(mn_G_expansion, f)
-        icf = is_claw_free(v, e)
         pos = exp.is_nonnegative()
         print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', icg)
         print()
