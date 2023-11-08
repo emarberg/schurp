@@ -149,17 +149,33 @@ class Tableau:
 
         simple = tab.remove(x, y, index + 1).add(x, y, index)
         if simple.is_decomposition_tableau():
+            # print(tab)
+            # print('i=',index)
+            # print('xy=', x, y)
+            # print(simple)
+            # input('')
             return simple
 
         z = y + 1
         while (x, z) in tab.boxes:
             if index + 1 in tab.get(x, z, unpack=False):
+                assert index in tab.get(x, z, unpack=False)
+                # print(tab)
+                # print('i=',index)
+                # print('xy=', x, y)
+                # print(tab.remove(x, z, index + 1).add(x, y, index))
+                # input('')
                 return tab.remove(x, z, index + 1).add(x, y, index)
             z += 1
 
         z = y - 1
         while (x - 1, z) in tab.boxes:
             if index in tab.get(x - 1, z, unpack=False) and index + 1 in tab.get(x - 1, z, unpack=False):
+                # print(tab)
+                # print('i=',index)
+                # print('xy=', x, y)
+                # print(tab.remove(x - 1, z, index + 1).add(x, y, index))
+                # input('')
                 return tab.remove(x - 1, z, index + 1).add(x, y, index)
             z -= 1
 
@@ -206,6 +222,7 @@ class Tableau:
         z = y - 1
         while (x, z) in tab.boxes:
             if index in tab.get(x, z, unpack=False):
+                assert index + 1 in tab.get(x, z, unpack=False)
                 # can have z != y - 1:
                 return tab.remove(x, z, index).add(x, y, index + 1)
             z -= 1

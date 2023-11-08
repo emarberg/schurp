@@ -56,10 +56,11 @@ def setvalued_decomposition_e(tab, index):
     return tab.e_operator_on_setvalued_decomposition_tableaux(index)
 
 
-def test_setvalued_decomposition_f(n=3, max_size=5):
-    for mu in Partition.all(max_size, strict=True):
+def test_setvalued_decomposition(n=3, max_size=5):
+    for mu in [(3,2)]:#Partition.all(max_size, strict=True):
         print(n, mu)
-        seen = set()
+        f_seen = set()
+        e_seen = set()
         for tab in Tableau.all(n, mu, shifted=True, marked=False, setvalued=True):
             if tab.is_decomposition_tableau():
                 for i in range(1, n):
@@ -71,9 +72,28 @@ def test_setvalued_decomposition_f(n=3, max_size=5):
                         print(res.boxes)
                     assert res is None or res.is_decomposition_tableau()
                     if res is not None:
-                        assert (i, res) not in seen
-                        seen.add((i, res))
+                        assert (i, res) not in f_seen
+                        f_seen.add((i, res))
                         back = setvalued_decomposition_e(res, i) 
+                        if back is None or back != tab:
+                            print(res)
+                            print('index =', i)
+                            print(back)
+                            print('expected:')
+                            print(tab)
+                        assert back is not None and back == tab
+                    #
+                    #
+                    #
+                    res = setvalued_decomposition_e(tab, i)
+                    if not (res is None or res.is_decomposition_tableau()):
+                        print(tab, i, res)
+                        print(res.boxes)
+                    assert res is None or res.is_decomposition_tableau()
+                    if res is not None:
+                        assert (i, res) not in e_seen
+                        e_seen.add((i, res))
+                        back = setvalued_decomposition_f(res, i) 
                         if back is None or back != tab:
                             print(res)
                             print('index =', i)

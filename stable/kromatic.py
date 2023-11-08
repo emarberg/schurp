@@ -212,11 +212,11 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented
         subset = set(range(1, 1 + num_variables))
         for w in edges.get(v, []):
             subset -= coloring.get(w, set())
-        # for k in range(1, 1 + (1 if chromatic else len(subset))):
-        for k in range(1, 1 + (1 if chromatic else 2)):
+        for k in range(1, 1 + (1 if chromatic else len(subset))):
+        # for k in range(1, 1 + (1 if chromatic else 2)):
             for s in itertools.combinations(subset, k):
                 coloring[v] = set(s)
-                for ans in _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented, chromatic or k == 2):
+                for ans in _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented, chromatic): # or k == 2):
                     yield ans
                 del coloring[v]
     else:
