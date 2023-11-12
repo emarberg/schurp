@@ -35,6 +35,38 @@ def is_cluster_graph(e):
     return True
 
 
+SMALL_MULTIPERMUTATIONS_CACHE = {}
+
+
+def is_small_multipermutation(n):
+    def ans(w):
+        if sorted(set(w)) != list(range(1, n + 1)):
+            return False
+        for i in range(len(w) - 1):
+            if w[i] == w[i + 1]:
+                return False
+        return True
+    return ans
+
+
+def words(n, m):
+    for v in range(n**m):
+        ans = []
+        for _ in range(m):
+            ans.append((v % n) + 1)
+            v = v // n
+        yield tuple(ans)
+
+
+def small_multipermutations(n, m):
+    assert n >= 0 and m >= n
+    if (n, m) not in SMALL_MULTIPERMUTATIONS_CACHE:
+        ans = list(filter(is_small_multipermutation(n), words(n, m)))
+        SMALL_MULTIPERMUTATIONS_CACHE[n, m] = ans
+    for w in SMALL_MULTIPERMUTATIONS_CACHE[n, m]:
+        yield w
+
+
 def posets(n):
     edges = sorted([(i, j) for i in range(1, n + 1) for j in range(1, n + 1) if i != j])
     for k in range(1 + (n * (n - 1)) // 2):
@@ -223,7 +255,7 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented
         ans = 1
         for v, subset in coloring.items():
             for i in subset:
-                ans *= (X(i) if chromatic else (beta**0 * X(i)))**weights.get(v, 1)
+                ans *= (X(i) if chromatic else (beta * X(i)))**weights.get(v, 1)
             if oriented == 1:
                 for w in edges.get(v, []):
                     if v < w:
@@ -276,7 +308,7 @@ def kromatic(num_variables, vertices, edges, weights=None, oriented=0, chromatic
     ans = 0
 
     for a in _kromatic_helper(num_variables, {}, vertices, e, weights, oriented, chromatic):
-        ans += a * (1 if chromatic else beta**(0 * -total_weight))
+        ans += a * (1 if chromatic else beta**(-total_weight))
     return SymmetricPolynomial.from_polynomial(ans) if symmetrize else ans
 
 

@@ -8,6 +8,7 @@ from stable.kromatic import (
     oriented_expander,
     strict_galois_number,
     posets,
+    small_multipermutations,
     incomparability_graph,
     is_cluster_graph,
     is_connected_graph,
@@ -304,6 +305,57 @@ def test_multifundamental_oriented_expansion(nvars=3, nverts=3, re=False):
 
 def test_multifundamental_reoriented_expansion(nvars=3, nverts=3):
     test_multifundamental_oriented_expansion(nvars, nverts, True)
+
+
+def composition_from_des(ell, des):
+    if ell == 0:
+        return ()
+    # des = [0] + sorted(set(range(1, ell)) - set(des)) + [ell]
+    des = [0] + sorted(des) + [ell]
+    ans = []
+    for i in range(1, len(des)):
+        ans += [des[i] - des[i - 1]]
+    return tuple(ans)
+
+
+def leftreduce(w):
+    seen = set()
+    rw = []
+    for a in w:
+        if a not in seen:
+            rw.append(a)
+            seen.add(a)
+    return tuple(rw)
+
+
+def test_multifundamental_reoriented_posets(nn=5, kk=5):
+    for n in range(1 + nn):
+        for p in posets(n):
+            v, e = incomparability_graph(n, p)
+            print()
+            print()
+            print('poset:', n, p, 'graph:', v, e)
+            print()
+            for k in range(1, 1 + kk):
+                x = reoriented_kromatic_polynomial(k, v, e)
+                exp = oriented_expander(Quasisymmetric.multifundamental_expansion, x).set_variable(0, 1)
+                print()
+                print('nvars:', k, 'expansion:', exp)
+                ted = exp._instantiate({})
+                mm = max([sum(_) for _ in exp], default=0)
+                for m in range(n, 1 + mm):
+                    for w in small_multipermutations(n, m):
+                        rw = leftreduce(w)
+                        ginv = len([(i, j) for i in range(len(rw)) for j in range(i + 1, len(rw)) if rw[i] > rw[j] and ((rw[i], rw[j]) in e or (rw[j], rw[i]) in e)])
+                        pdes = {m - (i + 1) for i in range(len(w) - 1) if (w[i + 1], w[i]) not in p}
+                        alpha = composition_from_des(m, pdes)
+                        if len(alpha) <= k:
+                            # print(w, ginv, pdes, alpha)
+                            ted += ted._instantiate({alpha: Y()**ginv})
+                if exp != ted:
+                    print('          expected:', ted)
+                    print()
+                assert exp == ted
 
 
 def test_G_reoriented_expansion_nui(nvars=3, n=5, r=5):

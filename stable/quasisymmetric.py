@@ -42,7 +42,7 @@ class Quasisymmetric:
             assert cls.coefficient(g, alpha) == 1
             ans += Vector({alpha: coeff}, sorter=sum)
             f = f - g * coeff
-        return Vector(sorter=sum)
+        return ans
 
     @classmethod
     def nvars(cls, f):
