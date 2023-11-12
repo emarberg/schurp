@@ -232,6 +232,10 @@ def _kromatic_helper(num_variables, coloring, vertices, edges, weights, oriented
                 for w in edges.get(v, []):
                     if v < w and max(subset) < max(coloring[w]):
                         ans *= Y()
+            elif oriented == 3:
+                for w in edges.get(v, []):
+                    if v < w and min(subset) < min(coloring[w]):
+                        ans *= Y()
         yield ans
 
 
@@ -255,12 +259,20 @@ def oriented_kromatic_polynomial(num_variables, vertices, edges, weights=None):
     return kromatic(num_variables, vertices, edges, weights, 1, symmetrize=False)
 
 
-def reoriented_kromatic(num_variables, vertices, edges, weights=None):
+def max_oriented_kromatic(num_variables, vertices, edges, weights=None):
     return kromatic(num_variables, vertices, edges, weights, 2)
 
 
-def reoriented_kromatic_polynomial(num_variables, vertices, edges, weights=None):
+def max_oriented_kromatic_polynomial(num_variables, vertices, edges, weights=None):
     return kromatic(num_variables, vertices, edges, weights, 2, symmetrize=False)
+
+
+def min_oriented_kromatic(num_variables, vertices, edges, weights=None):
+    return kromatic(num_variables, vertices, edges, weights, 3)
+
+
+def min_oriented_kromatic_polynomial(num_variables, vertices, edges, weights=None):
+    return kromatic(num_variables, vertices, edges, weights, 3, symmetrize=False)
 
 
 def kromatic(num_variables, vertices, edges, weights=None, oriented=0, chromatic=False, symmetrize=True):

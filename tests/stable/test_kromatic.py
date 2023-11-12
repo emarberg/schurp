@@ -3,8 +3,10 @@ from stable.kromatic import (
     kmonomial,
     oriented_kromatic,
     oriented_kromatic_polynomial,
-    reoriented_kromatic,
-    reoriented_kromatic_polynomial,
+    max_oriented_kromatic,
+    max_oriented_kromatic_polynomial,
+    min_oriented_kromatic,
+    min_oriented_kromatic_polynomial,
     oriented_expander,
     strict_galois_number,
     posets,
@@ -247,6 +249,13 @@ def test_kpowersum_expansion(nvars=3, nverts=3, cutoff=7):
         # assert (not icf) or pos
 
 
+def test_max_min(nvars=3, nverts=3):
+    for v, e in graphs(nverts):
+        f = max_oriented_kromatic_polynomial(nvars, v, e)
+        g = min_oriented_kromatic_polynomial(nvars, v, e)
+        assert f == g
+
+
 def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
     # v1, e1 = [1, 2, 3, 4, 5], ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5))
     # v2, e2 = [1, 2, 3, 4, 5], ((1, 2), (1, 5), (2, 3), (3, 4), (4, 5))
@@ -258,11 +267,11 @@ def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
         if icg or not isc:
             continue
         try:
-            f = reoriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
+            f = max_oriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
         except:
             ind = {i + 1: 1 for i in range(nvars)}
 
-            f = reoriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
+            f = max_oriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
             f = f.set(0, 0).set(Y_INDEX, 0)
 
             coeffs = []
@@ -283,7 +292,7 @@ def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
         assert (not icf) or pos
 
 
-def test_G_reoriented_expansion(nvars=3, nverts=3):
+def test_G_max_oriented_expansion(nvars=3, nverts=3):
     # expected: only symmetric for claster graphs, then alays G-positive
     test_G_oriented_expansion(nvars, nverts, True)
 
@@ -292,7 +301,7 @@ def test_multifundamental_oriented_expansion(nvars=3, nverts=3, re=False):
     # fails for v, e = [1, 2, 3, 4], ((1, 2), (1, 3))
     # fails for v, e = [1, 2, 3, 4], ((1, 2), (1, 3), (1, 4))
     for v, e in graphs(nverts):
-        f = reoriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
+        f = max_oriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
         exp = Quasisymmetric.multifundamental_expansion(f)
         assert Quasisymmetric.from_expansion(nvars, exp, Quasisymmetric.multifundamental) == f
         icf = is_claw_free(v, e)
@@ -302,11 +311,11 @@ def test_multifundamental_oriented_expansion(nvars=3, nverts=3, re=False):
         assert pos
 
 
-def test_multifundamental_reoriented_expansion(nvars=3, nverts=3):
+def test_multifundamental_max_oriented_expansion(nvars=3, nverts=3):
     test_multifundamental_oriented_expansion(nvars, nverts, True)
 
 
-def test_G_reoriented_expansion_nui(nvars=3, n=5, r=5):
+def test_G_max_oriented_expansion_nui(nvars=3, n=5, r=5):
     # expected: only symmetric for claster graphs
     test_G_oriented_expansion_nui(nvars, n, r, True)
 
@@ -325,7 +334,7 @@ def test_G_oriented_expansion_nui(nvars=3, n=5, r=5, re=False):
             
             icf = is_claw_free(v, e)
             try:
-                f = reoriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
+                f = max_oriented_kromatic(nvars, v, e) if re else oriented_kromatic(nvars, v, e)
                 exp = oriented_expander(mn_G_expansion, f)
                 pos = exp.is_nonnegative()
                 print(v, e, 'claw-free:', icf, 'positive:', pos, 'cluster graph:', is_cluster_graph(e))
