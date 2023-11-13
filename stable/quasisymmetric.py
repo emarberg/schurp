@@ -12,6 +12,10 @@ MULTIFUNDAMENTAL_CACHE = {}
 class Quasisymmetric:
 
     @classmethod
+    def reverse(cls, f):
+        return f._instantiate({tuple(reversed(k)): f[k] for k in f})
+
+    @classmethod
     def monomial_expansion(cls, f):
         return cls.expansion(f, cls.monomial)
 
@@ -42,7 +46,7 @@ class Quasisymmetric:
             assert cls.coefficient(g, alpha) == 1
             ans += Vector({alpha: coeff}, sorter=sum)
             f = f - g * coeff
-        return Vector(sorter=sum)
+        return ans
 
     @classmethod
     def nvars(cls, f):
@@ -155,5 +159,5 @@ class Quasisymmetric:
             for a in seq:
                 for i in a:
                     term *= X(i)
-            ans += term * X(0)**(term.total_degree() - sum(alpha))
+            ans += term * (X(0)**0)**(term.total_degree() - sum(alpha))
         return ans

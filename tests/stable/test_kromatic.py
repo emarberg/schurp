@@ -249,11 +249,27 @@ def test_kpowersum_expansion(nvars=3, nverts=3, cutoff=7):
         # assert (not icf) or pos
 
 
+def split_by_y(p):
+    while p != 0:
+        q = p.set_variable(Y_INDEX, 0)
+        yield q
+        p = (p - q) * Y()**-1
+
+
 def test_max_min(nvars=3, nverts=3):
     for v, e in graphs(nverts):
         f = max_oriented_kromatic_polynomial(nvars, v, e)
         g = min_oriented_kromatic_polynomial(nvars, v, e)
-        assert f == g
+        h = g.set_variable(Y_INDEX, Y()**-1) * Y()**len(e)
+
+        print()
+        print()
+        print(v, e)
+        for i, pqr in enumerate(zip(split_by_y(f), split_by_y(g), split_by_y(h))):
+            p, q, r = map(Quasisymmetric.monomial_expansion, pqr)
+            print('y^%s:' % i, p)
+            print('y^%s:' % i, q)
+            assert Quasisymmetric.reverse(p) == q
 
 
 def test_G_oriented_expansion(nvars=3, nverts=3, re=False):

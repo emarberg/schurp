@@ -4,6 +4,37 @@ from stable.utils import (
     jp, decomposition_jp, 
 )
 from stable.polynomials import Polynomial, X
+from stable.vst import combine_str
+
+
+def test_primed_insert(n=5, mu=(3,2)):
+    from tableaux import Tableau as T
+    from words import decomposition_insert
+    for tab in T.get_semistandard_decomposition(n, mu, primed=False):
+        word = list(tab.row_reading_word())
+        print('unprimed word =', word)
+        print()
+        print(tab)
+        print()
+        for v in range(2**len(word)):
+            newword = word[:]
+            for i in range(len(word)):
+                newword[i] *= -1 if v % 2 else 1
+                v = v // 2
+            tabs = [decomposition_insert(*newword[:i + 1])[0] for i in range(len(word))]
+            label = [str(newword)]
+            label += (len(str(tab).split('\n')) - 1) * [' ' * len(label[-1])]
+            print(combine_str('\n'.join(label), *tabs))
+            print()
+            tabs = [decomposition_insert(*newword[:i + 1])[1] for i in range(len(word))]
+            label = [str(newword)]
+            label += (len(str(tab).split('\n')) - 1) * [' ' * len(label[-1])]
+            print(combine_str('\n'.join(label), *tabs))
+            print()
+            print()
+            print()
+            print()
+        input('')
 
 
 def marked_to_decomposition(tab):
