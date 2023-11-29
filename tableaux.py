@@ -17,7 +17,7 @@ SHIFTED_RPP_HORIZONTAL_STRIPS_CACHE = {}
 SHIFTED_RPP_VERTICAL_STRIPS_CACHE = {}
 
 # for French notation
-FRENCH = False
+FRENCH = True
 
 
 class Tableau:
@@ -692,12 +692,11 @@ class Tableau:
         for r in range(len(mu), 0, -1):
             row = mu[-1] * [r]
             for i in range(1, r):
-                row += (mu[r - i - 1] - mu[r - i]) * [r - i]
+                row += (mu[-i - 1] - mu[-i]) * [r - i]
             rows.append(row)
             if max(row) > max_entry:
                 return ans
         highest = Tableau.shifted_from_rows(rows)
-
 
         level = {highest}
         while level:
