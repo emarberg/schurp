@@ -425,6 +425,89 @@ class AbstractCrystalMixin:
         edges = list(edges)
         return cls(rank, vertices, edges, weights)
 
+    def is_stembridge(self):
+        n = self.rank
+        for i in range(1, n):
+            for j in range(1, n):
+                if i == j:
+                    continue
+
+                e_i = lambda x: self.e_operator(i, x)
+                e_j = lambda x: self.e_operator(j, x)
+                estr_i = lambda x: self.e_string(i, x)
+                estr_j = lambda x: self.e_string(j, x)
+
+                f_i = lambda x: self.f_operator(i, x)
+                f_j = lambda x: self.f_operator(j, x)
+                fstr_i = lambda x: self.f_string(i, x)
+                fstr_j = lambda x: self.f_string(j, x)
+
+                for x in self:
+                    # S0
+                    if e_i(x) is None and estr_i(x) != 0:
+                        print('S0'); return False
+
+                    # S1
+                    y = e_i(x)
+                    if y is not None:
+                        if estr_j(y) - estr_j(x) not in [0, 1]:
+                            print('S1a'); return False
+                        if abs(i - j) == 1 and estr_j(y) != estr_j(x):
+                            print('S1b'); return False
+
+                    # S2
+                    if estr_i(x) > 0 and estr_j(e_i(x)) != estr_j(x) > 0:
+                        if e_i(e_j(x)) is None or e_j(e_i(x)) is None:
+                            print('S2a'); return False
+                        if e_i(e_j(x)) != e_j(e_i(x)):
+                            print('S2b'); return False
+                        if fstr_i(e_j(x)) != fstr_i(x):
+                            print('S2c'); return False
+
+                    # S3
+                    if e_i(x) is not None and e_j(x) is not None and estr_j(e_i(x)) == estr_j(x) + 1 > 1 and estr_i(e_j(x)) == estr_i(x) + 1 > 1:
+                        if e_i(e_j(x)) is None or e_i(e_i(e_j(x))) is None or e_j(e_i(e_i(e_j(x)))) is None or e_j(e_i(x)) is None or e_j(e_j(e_i(x))) is None or e_i(e_j(e_j(e_i(x)))) is None:
+                            print('S3a'); return False
+                        if e_j(e_i(e_i(e_j(x)))) != e_i(e_j(e_j(e_i(x)))):
+                            print('S3b'); return False
+                        if fstr_i(e_j(x)) != fstr_i(e_j(e_j(e_i(x)))):
+                            print('S3c'); return False
+                        if fstr_j(e_i(x)) != fstr_j(e_i(e_i(e_j(x)))):
+                            print('S3d'); return False
+
+                    # S0'
+                    if f_i(x) is None and fstr_i(x) != 0:
+                        print('dS0'); return False
+
+                    # S1'
+                    y = f_i(x)
+                    if y is not None:
+                        if fstr_j(y) - fstr_j(x) not in [0, 1]:
+                            print('dS1a'); return False
+                        if abs(i - j) == 1 and fstr_j(y) != fstr_j(x):
+                            print('dS1b'); return False
+
+                    # S2'
+                    if fstr_i(x) > 0 and fstr_j(f_i(x)) != fstr_j(x) > 0:
+                        if f_i(f_j(x)) is None or f_j(f_i(x)) is None:
+                            print('dS2a'); return False
+                        if f_i(f_j(x)) != f_j(f_i(x)):
+                            print('dS2b'); return False
+                        if estr_i(f_j(x)) != estr_i(x):
+                            print('dS2c'); return False
+
+                    # S3'
+                    if f_i(x) is not None and f_j(x) is not None and fstr_j(f_i(x)) == fstr_j(x) + 1 > 1 and fstr_i(f_j(x)) == fstr_i(x) + 1 > 1:
+                        if f_i(f_j(x)) is None or f_i(f_i(f_j(x))) is None or f_j(f_i(f_i(f_j(x)))) is None or f_j(f_i(x)) is None or f_j(f_j(f_i(x))) is None or f_i(f_j(f_j(f_i(x)))) is None:
+                            print('dS3a'); return False
+                        if f_j(f_i(f_i(f_j(x)))) != f_i(f_j(f_j(f_i(x)))):
+                            print('dS3b'); return False
+                        if estr_i(f_j(x)) != estr_i(f_j(f_j(f_i(x)))):
+                            print('dS3c'); return False
+                        if estr_j(f_i(x)) != estr_j(f_i(f_i(f_j(x)))):
+                            print('dS3d'); return False
+        return True
+
 
 class AbstractGLCrystal(AbstractCrystalMixin):
 
@@ -442,7 +525,6 @@ class AbstractGLCrystal(AbstractCrystalMixin):
                 if u is not None:
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
-
 
     @classmethod
     def from_permutation(cls, z, n, increasing):

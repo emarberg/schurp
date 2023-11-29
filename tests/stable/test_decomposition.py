@@ -5,6 +5,19 @@ from stable.utils import (
 )
 from stable.polynomials import Polynomial, X
 from stable.vst import combine_str
+from crystals import AbstractGLCrystal, AbstractQCrystal
+
+
+def test_decomposition_stembridge(n=3, max_size=5):
+    for mu in Partition.all(max_size, strict=True):
+        c = AbstractQCrystal.decomposition_tableaux_from_strict_partition(mu, n)
+        print(n, mu, c.is_stembridge())
+
+
+def test_setvalued_decomposition_stembridge(n=3, max_size=5):
+    for mu in Partition.all(max_size, strict=True):
+        c = AbstractGLCrystal.setvalued_decomposition_tableaux_from_strict_partition(mu, n)
+        print(n, mu, c.is_stembridge())
 
 
 def test_primed_insert(n=5, mu=(3,2)):
