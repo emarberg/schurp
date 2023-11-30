@@ -403,9 +403,19 @@ class AbstractCrystalMixin:
         #         seen.add((x, y))
         # return True
 
+    def get_component(self, a):
+        rank = self.rank
+        indices = self.indices
+        e = lambda x, i: self.e_operator(i, x)
+        f = lambda x, i: self.f_operator(i, x)
+        wt = lambda x: self.weight(x)
+        return self.from_element(a, rank, indices, e, f, wt)
+
     @classmethod
-    def from_element(cls, a, rank, indices, e, f):
-        assert len(a) == rank
+    def from_element(cls, a, rank, indices, e, f, wt=None):
+        if wt is None:
+            assert len(a) == rank
+            wt = lambda x: tuple(len(_) for _ in x)
         vertices = []
         edges = set()
         weights = {}
@@ -414,7 +424,7 @@ class AbstractCrystalMixin:
             new_add = set()
             for a in add:
                 vertices.append(a)
-                weights[a] = tuple(len(_) for _ in a)
+                weights[a] = wt(a)
                 new_add |= {(a, i, e(a, i), False) for i in indices} | {(a, i, f(a, i), True) for i in indices}
             add = set()
             for a, i, b, fdir in new_add:
@@ -510,6 +520,21 @@ class AbstractCrystalMixin:
 
 
 class AbstractGLCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def semistandard_tableaux_from_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.semistandard(n, mu):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in range(1, n):
+                u = cls.f_operator_on_semistandard_tableaux(i, t)
+                if u is not None:
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
 
     @classmethod
     def setvalued_decomposition_tableaux_from_strict_partition(cls, mu, rank):

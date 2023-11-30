@@ -2,6 +2,8 @@ from stable.tableaux import Tableau, Partition
 from stable.utils import (
     GQ, GP,
     jp, decomposition_jp, 
+    schur_expansion,
+    SymmetricPolynomial
 )
 from stable.polynomials import Polynomial, X
 from stable.vst import combine_str
@@ -17,7 +19,14 @@ def test_decomposition_stembridge(n=3, max_size=5):
 def test_setvalued_decomposition_stembridge(n=3, max_size=5):
     for mu in Partition.all(max_size, strict=True):
         c = AbstractGLCrystal.setvalued_decomposition_tableaux_from_strict_partition(mu, n)
-        print(n, mu, c.is_stembridge())
+        b = c.is_stembridge()
+
+        ch = sum([Polynomial.from_tuple((0,) + a) for a in c.weights.values()])
+        ch = SymmetricPolynomial.from_polynomial(ch)
+        u = schur_expansion(ch).dictionary
+        v = {Partition.trim(mu): x for (mu, x) in c.get_highest_weight_multiplicities().items()}
+
+        print(n, mu, b, u == v)
 
 
 def test_primed_insert(n=5, mu=(3,2)):
