@@ -334,12 +334,22 @@ class Tableau:
         return len(self) < len(other) or (len(self) == len(other) and self._sorting_word < other._sorting_word)
 
     def tex(self):
-        s = defaultdict(list)
-        for box in sorted(self.boxes):
-            v = ','.join(map(str, self.boxes[box]))
-            s[box[0]] += [v]
-        s = '\n\\\\\n'.join([' & '.join(s[row]) for row in reversed(sorted(s))])
-        return '\\begin{ytableau}\n' + s + '\n\\end{ytableau}'
+        rows = []
+        for i in range(1, self.max_row() + 1):
+            row = []
+            for j in range(1, self.max_column() + 1):
+                v = self.get(i, j)
+                if type(v) == tuple:
+                    # if len(v) == 4:
+                    #     v = '\\barr{l}%s%s \\\\[-2pt] %s%s \\earr' % v
+                    # if len(v) == 3:
+                    #     v = '\\barr{l}%s%s \\\\[-2pt] %s \\earr' % v
+                    # else:
+                    #     v = ''.join(map(str, v))
+                    v = ''.join(map(str, v))
+                row += [('*(white) ' + str(v)) if v is not None else '\\none']
+            rows += [' & '.join(row)]
+        return '$\\colorbox{lightgray!50}{\\begin{ytableau}' + ' \\\\ '.join(reversed(rows)) + '\\end{ytableau}}$'
 
     def row_reading_word(self):
         return tuple(

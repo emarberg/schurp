@@ -1,3 +1,25 @@
+
+from crystals import *
+c = AbstractPrimedQCrystal.from_strict_partition((2,1), 3)
+a = AbstractPrimedQCrystal.decomposition_tableaux_from_strict_partition((2,1), 3)
+f = AbstractPrimedQCrystal.find_isomorphism(c, a)
+g = {x.tex(): y.tex() for (x, y) in f.items()}
+
+with open('/Users/emarberg/Downloads/base.tex', 'r') as file:
+    tex = file.read()
+    for (x, y) in g.items():
+        assert x in tex
+        tex = tex.replace(x, y)
+
+with open('/Users/emarberg/Downloads/conversion.tex', 'w') as file:
+    file.write(tex)
+
+
+from crystals import *
+c = AbstractGLCrystal.setvalued_decomposition_tableaux_from_strict_partition((3, 2), 4)
+b = c.is_stembridge(return_counterexample=True)
+b.draw(tex=True)
+
 from symmetric import *
 from partitions import *
 

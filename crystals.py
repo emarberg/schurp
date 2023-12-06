@@ -42,7 +42,7 @@ class AbstractCrystalMixin:
     def index_printer(self, i, primed=False):
         return str(i)
 
-    def draw(self, extended=(), highlighted_nodes=(), tex=False, exclude=False):
+    def draw(self, extended=(), highlighted_nodes=(), tex=False, exclude=False, node_width=0.0, node_height=0.0):
         if type(extended) == bool:
             extended_operators = self.extended_indices if extended else ()
         else:
@@ -64,9 +64,13 @@ class AbstractCrystalMixin:
             except:
                 return tex_tuple(n)
 
+        printmap = {}
+
         def printer(n):
             if tex:
-                return str(hash(self.printer(n)))
+                if n not in printmap:
+                    printmap[n] = str(len(printmap))
+                return printmap[n]
             return self.printer(n)
 
         s = ['digraph G {']
@@ -75,7 +79,8 @@ class AbstractCrystalMixin:
         if not tex:
             s += ['    node [shape=box; fontname="courier"; style=filled];']
         if tex:
-            s += ['    node [shape=box,style=filled,color=gray92];']
+            # s += ['    node [shape=box,style=filled,color=gray92];']
+            s += ['    node [shape=box];']
             for x in self:
                 if exclude and x not in highlighted_nodes:
                     continue
@@ -84,7 +89,7 @@ class AbstractCrystalMixin:
                 if x in highlighted_nodes:
                     ts = '$\\boxed{' + ts[1:-1] + '}$'
                     color = 'none'
-                s += ['    "%s" [color="%s",margin="0.0",width="0.0",height="0.0",texlbl="%s"];' % (printer(x), color, ts)]
+                s += ['    "%s" [color="%s",margin="0.0",width="%s",height="%s",texlbl="%s"];' % (printer(x), color, node_width, node_height, ts)]
         else:
             for x in self:
                 if exclude and x not in highlighted_nodes:
@@ -334,8 +339,13 @@ class AbstractCrystalMixin:
         return True
 
     @classmethod
-    def isomorphic_highest_weight_crystals(cls, crystal_a, highest_a, crystal_b, highest_b=None):
+    def find_isomorphism(cls, crystal_a, crystal_b, highest_a=None, highest_b=None):
         assert cls == crystal_a.__class__ == crystal_b.__class__ and crystal_a.rank == crystal_b.rank and crystal_a.extended_indices == crystal_b.extended_indices
+
+        if highest_a is None:
+            highest_a = [a for a in crystal_a if crystal_a.is_highest_weight(a)]
+            assert len(highest_a) == 1
+            highest_a = highest_a[0]
 
         if highest_b is None:
             highest_b = [b for b in crystal_b if crystal_b.is_highest_weight(b)]
@@ -343,7 +353,7 @@ class AbstractCrystalMixin:
             highest_b = highest_b[0]
 
         if crystal_a.weight(highest_a) != crystal_b.weight(highest_b):
-            return False
+            return None
 
         forward = {}
         queue = collections.deque([(highest_a, highest_b)])
@@ -351,7 +361,7 @@ class AbstractCrystalMixin:
             a, b = queue.popleft()
             if a in forward:
                 if forward[a] != b:
-                    return False
+                    return None
             else:
                 forward[a] = b
                 for i in crystal_a.extended_indices:
@@ -359,12 +369,18 @@ class AbstractCrystalMixin:
                     fb = crystal_b.f_operator(i, b)
                     if fa is None:
                         if fb is not None:
-                            return False
+                            return None
                     else:
                         if fb is None:
-                            return False
+                            return None
                         queue.append((fa, fb))
-        return len(forward) == len(crystal_b)
+        if len(forward) == len(crystal_b):
+            return forward
+
+
+    @classmethod
+    def isomorphic_highest_weight_crystals(cls, crystal_a, highest_a, crystal_b, highest_b=None):
+        return cls.find_isomorphism(crystal_a, crystal_b, highest_a, highest_b) is not None
 
         # a, b = highest_a, highest_b
         # if crystal_a.weight(a) != crystal_b.weight(b):
@@ -435,7 +451,10 @@ class AbstractCrystalMixin:
         edges = list(edges)
         return cls(rank, vertices, edges, weights)
 
-    def is_stembridge(self):
+    def is_stembridge(self, return_counterexample=False):
+        def retvalue(x):
+            return self.get_component(x) if return_counterexample else False
+
         n = self.rank
         for i in range(1, n):
             for j in range(1, n):
@@ -455,67 +474,67 @@ class AbstractCrystalMixin:
                 for x in self:
                     # S0
                     if e_i(x) is None and estr_i(x) != 0:
-                        print('S0'); return False
+                        print('S0'); return retvalue(x)
 
                     # S1
                     y = e_i(x)
                     if y is not None:
                         if estr_j(y) - estr_j(x) not in [0, 1]:
-                            print('S1a'); return False
+                            print('S1a'); return retvalue(x)
                         if abs(i - j) > 1 and estr_j(y) != estr_j(x):
-                            print('S1b'); return False
+                            print('S1b'); return retvalue(x)
 
                     # S2
                     if estr_i(x) > 0 and estr_j(e_i(x)) == estr_j(x) > 0:
                         if e_i(e_j(x)) is None or e_j(e_i(x)) is None:
-                            print('S2a'); return False
+                            print('S2a'); return retvalue(x)
                         if e_i(e_j(x)) != e_j(e_i(x)):
-                            print('S2b'); return False
+                            print('S2b'); return retvalue(x)
                         if fstr_i(e_j(x)) != fstr_i(x):
-                            print('S2c'); return False
+                            print('S2c'); return retvalue(x)
 
                     # S3
                     if e_i(x) is not None and e_j(x) is not None and estr_j(e_i(x)) == estr_j(x) + 1 > 1 and estr_i(e_j(x)) == estr_i(x) + 1 > 1:
                         if e_i(e_j(x)) is None or e_i(e_i(e_j(x))) is None or e_j(e_i(e_i(e_j(x)))) is None or e_j(e_i(x)) is None or e_j(e_j(e_i(x))) is None or e_i(e_j(e_j(e_i(x)))) is None:
-                            print('S3a'); return False
+                            print('S3a'); return retvalue(x)
                         if e_j(e_i(e_i(e_j(x)))) != e_i(e_j(e_j(e_i(x)))):
-                            print('S3b'); return False
+                            print('S3b'); return retvalue(x)
                         if fstr_i(x) != fstr_i(e_j(x)) or fstr_i(e_j(x)) != fstr_i(e_j(e_j(e_i(x)))):
-                            print('S3c'); return False
+                            print('S3c'); return retvalue(x)
                         if fstr_j(x) != fstr_j(e_i(x)) or fstr_j(e_i(x)) != fstr_j(e_i(e_i(e_j(x)))):
-                            print('S3d'); return False
+                            print('S3d'); return retvalue(x)
 
                     # S0'
                     if f_i(x) is None and fstr_i(x) != 0:
-                        print('dS0'); return False
+                        print('dS0'); return retvalue(x)
 
                     # S1'
                     y = f_i(x)
                     if y is not None:
                         if fstr_j(y) - fstr_j(x) not in [0, 1]:
-                            print('dS1a'); return False
+                            print('dS1a'); return retvalue(x)
                         if abs(i - j) > 1 and fstr_j(y) != fstr_j(x):
-                            print('dS1b'); return False
+                            print('dS1b'); return retvalue(x)
 
                     # S2'
                     if fstr_i(x) > 0 and fstr_j(f_i(x)) == fstr_j(x) > 0:
                         if f_i(f_j(x)) is None or f_j(f_i(x)) is None:
-                            print('dS2a'); return False
+                            print('dS2a'); return retvalue(x)
                         if f_i(f_j(x)) != f_j(f_i(x)):
-                            print('dS2b'); return False
+                            print('dS2b'); return retvalue(x)
                         if estr_i(f_j(x)) != estr_i(x):
-                            print('dS2c'); return False
+                            print('dS2c'); return retvalue(x)
 
                     # S3'
                     if f_i(x) is not None and f_j(x) is not None and fstr_j(f_i(x)) == fstr_j(x) + 1 > 1 and fstr_i(f_j(x)) == fstr_i(x) + 1 > 1:
                         if f_i(f_j(x)) is None or f_i(f_i(f_j(x))) is None or f_j(f_i(f_i(f_j(x)))) is None or f_j(f_i(x)) is None or f_j(f_j(f_i(x))) is None or f_i(f_j(f_j(f_i(x)))) is None:
-                            print('dS3a'); return False
+                            print('dS3a'); return retvalue(x)
                         if f_j(f_i(f_i(f_j(x)))) != f_i(f_j(f_j(f_i(x)))):
-                            print('dS3b'); return False
+                            print('dS3b'); return retvalue(x)
                         if estr_i(x) != estr_i(f_j(x)) or estr_i(f_j(x)) != estr_i(f_j(f_j(f_i(x)))):
-                            print('dS3c'); return False
+                            print('dS3c'); return retvalue(x)
                         if estr_j(x) != estr_j(f_i(x)) or estr_j(f_i(x)) != estr_j(f_i(f_i(f_j(x)))):
-                            print('dS3d'); return False
+                            print('dS3d'); return retvalue(x)
         return True
 
 
