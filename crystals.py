@@ -552,6 +552,23 @@ class AbstractGLCrystal(AbstractCrystalMixin):
             for i in range(1, n):
                 u = cls.f_operator_on_semistandard_tableaux(i, t)
                 if u is not None:
+                    assert u.e_operator_on_semistandard_tableaux(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
+    def setvalued_semistandard_tableaux_from_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.semistandard(n, mu, setvalued=True):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in range(1, n):
+                u = t.f_operator_on_setvalued_semistandard_tableaux(i)
+                if u is not None:
+                    assert u.e_operator_on_setvalued_semistandard_tableaux(i) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
@@ -567,6 +584,7 @@ class AbstractGLCrystal(AbstractCrystalMixin):
             for i in range(1, n):
                 u = t.f_operator_on_setvalued_decomposition_tableaux(i)
                 if u is not None:
+                    assert u.e_operator_on_setvalued_decomposition_tableaux(i) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 

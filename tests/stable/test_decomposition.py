@@ -29,6 +29,20 @@ def test_setvalued_decomposition_stembridge(n=3, max_size=5):
         print(n, mu, b, u == v)
 
 
+def test_setvalued_semistandard_stembridge(n=3, max_size=5):
+    for mu in Partition.all(max_size):
+        c = AbstractGLCrystal.setvalued_semistandard_tableaux_from_partition(mu, n)
+        b = c.is_stembridge()
+
+        ch = sum([Polynomial.from_tuple((0,) + a) for a in c.weights.values()])
+        ch = SymmetricPolynomial.from_polynomial(ch)
+        u = schur_expansion(ch).dictionary
+        v = {Partition.trim(mu): x for (mu, x) in c.get_highest_weight_multiplicities().items()}
+
+        print(n, mu, b, u == v)
+
+
+
 def test_primed_insert(n=5, mu=(3,2)):
     from tableaux import Tableau as T
     from words import decomposition_insert

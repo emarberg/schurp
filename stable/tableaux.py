@@ -113,10 +113,8 @@ class Tableau:
                 ans[i - 1].append(self.boxes[i, j])
         return ans
 
-
-    def e_operator_on_setvalued_decomposition_tableaux(self, index):
-        tab = self
-        boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
+    @classmethod
+    def signature(cls, tab, boxes, index):
         signature = []
         for i, b in enumerate(boxes):
             v = tab.get(*b, unpack=False)
@@ -139,6 +137,12 @@ class Tableau:
                         signature = signature[:i] + signature[i + 2:]
                         exit = len(signature) == 0
                         break
+        return signature
+
+    def e_operator_on_setvalued_decomposition_tableaux(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
+        signature = self.signature(self, boxes,index)
         signature = [(s, i) for (s, i) in signature if s == '(']
 
         if len(signature) == 0:
@@ -182,31 +186,11 @@ class Tableau:
         print('x =', x, 'y =', y)
         # raise Exception
 
+
     def f_operator_on_setvalued_decomposition_tableaux(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
-        signature = []
-        for i, b in enumerate(boxes):
-            v = tab.get(*b, unpack=False)
-            if index in v and index + 1 in v:
-                continue
-            elif index in v:
-                signature.append((')', i))
-            elif index + 1 in v:
-                signature.append(('(', i))
-
-        exit = len(signature) == 0
-        while not exit:
-            for i in range(len(signature)):
-                if i + 1 == len(signature):
-                    exit = True
-                else:
-                    s = signature[i][0]
-                    t = signature[i + 1][0]
-                    if s + t == '()':
-                        signature = signature[:i] + signature[i + 2:]
-                        exit = len(signature) == 0
-                        break
+        signature = self.signature(self, boxes, index)
         signature = [(s, i) for (s, i) in signature if s == ')']
 
         if len(signature) == 0:
@@ -234,6 +218,48 @@ class Tableau:
             z += 1
 
         raise Exception
+
+    def e_operator_on_setvalued_semistandard_tableaux(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1]))
+        signature = self.signature(self, boxes, index)
+        signature = [(s, i) for (s, i) in signature if s == '(']
+
+        if len(signature) == 0:
+            return None
+
+        i = signature[0][-1]
+        x, y = boxes[i]
+
+        simple = tab.remove(x, y, index + 1).add(x, y, index)
+        if simple.is_semistandard():
+            return simple
+
+        z = y - 1
+        assert index + 1 in tab.get(x, z, unpack=False)
+        assert index in tab.get(x, z, unpack=False)
+        return tab.remove(x, z, index + 1).add(x, y, index)
+
+    def f_operator_on_setvalued_semistandard_tableaux(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1]))
+        signature = self.signature(self, boxes, index)
+        signature = [(s, i) for (s, i) in signature if s == ')']
+
+        if len(signature) == 0:
+            return None
+
+        i = signature[-1][-1]
+        x, y = boxes[i]
+
+        simple = tab.remove(x, y, index).add(x, y, index + 1)
+        if simple.is_semistandard():
+            return simple
+
+        z = y + 1
+        assert index in tab.get(x, z, unpack=False)
+        assert index + 1 in tab.get(x, z, unpack=False)
+        return tab.remove(x, z, index).add(x, y, index + 1)
 
     def is_decomposition_tableau(self):
         return self._is_decomposition_tableau(primes_allowed=False)
