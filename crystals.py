@@ -130,7 +130,8 @@ class AbstractCrystalMixin:
         png_filename = BASE_DIRECTORY + 'abstract/' + 'png/' + '%s.png' % filename
         with open(dot_filename, 'w') as f:
             f.write(s)
-        subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
+        # subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
         subprocess.run(["open", png_filename])
 
         if tex:
@@ -539,6 +540,39 @@ class AbstractCrystalMixin:
 
 
 class AbstractGLCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def decomposition_semicrystal_from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.setvalued_decomposition_tableaux(n, mu):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in range(1, n):
+                u = t.half_decomposition_f_operator(i)
+                if u is not None:
+                    assert u.is_decomposition_tableau()
+                    assert u.half_decomposition_e_operator(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
+    def semicrystal_from_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.semistandard(n, mu, setvalued=True):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in range(1, n):
+                u = t.half_f_operator(i)
+                if u is not None:
+                    assert u.half_e_operator(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
 
     @classmethod
     def semistandard_tableaux_from_partition(cls, mu, rank):

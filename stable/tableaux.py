@@ -288,28 +288,101 @@ class Tableau:
                         break
         return signature
 
-    def half_f_operator(self, index):
-        tab = self
-        boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
-        signature = self.half_signature(self, boxes, index)
-        print(signature)
+    @classmethod
+    def half_signature_classes(cls, signature):
         classes = []
         i = 0
         while i < len(signature):
             s = signature[i]
             j = s[2]
-            print(i, j, s)
-            print()
-            for c in classes:
-                print('  ', c)
-            print()
             if classes and classes[-1][-1][0] == ')' and s[0] == '(' and classes[-1][-1][1] == s[1]:
                 classes[-1] += signature[i:j + 1]
             else:
                 classes.append(signature[i:j + 1])
             i = j + 1
 
-        return classes
+        null = [c for c in classes if c[0][0] != ')' and c[-1][0] != '(']
+        right = [c for c in classes if c[0][0] == ')' and c[-1][0] != '(']
+        left = [c for c in classes if c[0][0] != ')' and c[-1][0] == '(']
+        combined = [c for c in classes if c[0][0] == ')' and c[-1][0] == '(']
+        return null, right, left, combined
+
+    def half_e_operator(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
+        signature = self.half_signature(self, boxes, index)
+        null, right, left, combined = self.half_signature_classes(signature)
+
+        if combined:
+            form = combined[0]
+            i = form[-1][1]
+            x, y = boxes[i]
+            return tab.remove(x, y, index + 1)
+        elif left:
+            form = left[0]
+            i = form[0][1]
+            x, y = boxes[i]
+            return tab.add(x, y, index)
+        else:
+            return None
+
+    def half_f_operator(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
+        signature = self.half_signature(self, boxes, index)
+        null, right, left, combined = self.half_signature_classes(signature)
+
+        if combined:
+            form = combined[0]
+            i = form[0][1]
+            x, y = boxes[i]
+            return tab.remove(x, y, index)
+        elif right:
+            form = right[-1]
+            i = form[-1][1]
+            x, y = boxes[i]
+            return tab.add(x, y, index + 1)
+        else:
+            return None
+
+
+    def half_decomposition_e_operator(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1])) # rev row word
+        signature = self.half_signature(self, boxes, index)
+        null, right, left, combined = self.half_signature_classes(signature)
+
+        if combined:
+            form = combined[0]
+            i = form[-1][1]
+            x, y = boxes[i]
+            return tab.remove(x, y, index + 1)
+        elif left:
+            form = left[0]
+            i = form[0][1]
+            x, y = boxes[i]
+            return tab.add(x, y, index)
+        else:
+            return None
+
+    def half_decomposition_f_operator(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1])) # rev row word
+        signature = self.half_signature(self, boxes, index)
+        null, right, left, combined = self.half_signature_classes(signature)
+
+        if combined:
+            form = combined[0]
+            i = form[0][1]
+            x, y = boxes[i]
+            return tab.remove(x, y, index)
+        elif right:
+            form = right[-1]
+            i = form[-1][1]
+            x, y = boxes[i]
+            return tab.add(x, y, index + 1)
+        else:
+            return None
 
     def is_decomposition_tableau(self):
         return self._is_decomposition_tableau(primes_allowed=False)
