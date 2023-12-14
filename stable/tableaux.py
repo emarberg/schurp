@@ -184,7 +184,7 @@ class Tableau:
             z -= 1
 
         print('x =', x, 'y =', y)
-        # raise Exception
+        raise Exception
 
 
     def f_operator_on_setvalued_decomposition_tableaux(self, index):
@@ -260,6 +260,56 @@ class Tableau:
         assert index in tab.get(x, z, unpack=False)
         assert index + 1 in tab.get(x, z, unpack=False)
         return tab.remove(x, z, index).add(x, y, index + 1)
+
+    @classmethod
+    def half_signature(cls, tab, boxes, index):
+        signature = []
+        for i, b in enumerate(boxes):
+            v = sorted(tab.get(*b, unpack=False))
+            for j in v:
+                if index == j:
+                    signature.append([')', i, len(signature)])
+                elif index + 1 == j:
+                    signature.append(['(', i, len(signature)])
+
+        exit = len(signature) == 0
+        q = signature[:]
+        while not exit:
+            for i in range(len(q)):
+                if i + 1 == len(q):
+                    exit = True
+                else:
+                    s = q[i]
+                    t = q[i + 1]
+                    if s[0] + t[0] == '()':
+                        signature[s[2]][2], signature[t[2]][2] = t[2], s[2]
+                        q = q[:i] + q[i + 2:]
+                        exit = len(q) == 0
+                        break
+        return signature
+
+    def half_f_operator(self, index):
+        tab = self
+        boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
+        signature = self.half_signature(self, boxes, index)
+        print(signature)
+        classes = []
+        i = 0
+        while i < len(signature):
+            s = signature[i]
+            j = s[2]
+            print(i, j, s)
+            print()
+            for c in classes:
+                print('  ', c)
+            print()
+            if classes and classes[-1][-1][0] == ')' and s[0] == '(' and classes[-1][-1][1] == s[1]:
+                classes[-1] += signature[i:j + 1]
+            else:
+                classes.append(signature[i:j + 1])
+            i = j + 1
+
+        return classes
 
     def is_decomposition_tableau(self):
         return self._is_decomposition_tableau(primes_allowed=False)

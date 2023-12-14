@@ -2,6 +2,22 @@ from stable.tableaux import Tableau, MarkedReversePlanePartition
 from stable.partitions import Partition
 
 
+def test_half_signature_word():
+    t = Tableau({
+        (1, 1): 1, 
+        (1, 2): (1, 2),
+        (1, 3): 2,
+        (1, 4): 1,
+        (1, 5): (1, 2),
+        (1, 6): 1,
+        (1, 7): (1, 2),
+        (1, 8): 2,
+        (1, 9): (1, 2),
+    })
+    print(t)
+    print(t.half_f_operator(1))
+
+
 def test_from_string(m=4):
     for n in range(m):
         for mu in Partition.generate(n, strict=True):
