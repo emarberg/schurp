@@ -18,7 +18,7 @@ def test_decomposition_stembridge(n=3, max_size=5):
 
 def test_setvalued_decomposition_stembridge(n=3, max_size=5):
     for mu in Partition.all(max_size, strict=True):
-        c = AbstractGLCrystal.setvalued_decomposition_tableaux_from_strict_partition(mu, n)
+        c = AbstractQCrystal.setvalued_decomposition_tableaux_from_strict_partition(mu, n)
         b = c.is_stembridge()
 
         ch = sum([Polynomial.from_tuple((0,) + a) for a in c.weights.values()])
@@ -27,6 +27,8 @@ def test_setvalued_decomposition_stembridge(n=3, max_size=5):
         v = {Partition.trim(mu): x for (mu, x) in c.get_highest_weight_multiplicities().items()}
 
         print(n, mu, b, u == v)
+        c.draw()
+        input('')
 
 
 def test_setvalued_semistandard_stembridge(n=3, max_size=5):

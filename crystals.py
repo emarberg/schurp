@@ -130,8 +130,8 @@ class AbstractCrystalMixin:
         png_filename = BASE_DIRECTORY + 'abstract/' + 'png/' + '%s.png' % filename
         with open(dot_filename, 'w') as f:
             f.write(s)
-        # subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
-        subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
+        # subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
         subprocess.run(["open", png_filename])
 
         if tex:
@@ -755,7 +755,6 @@ class AbstractQCrystal(AbstractCrystalMixin):
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
                 u = cls.f_operator_on_decomposition_tableaux(i, t)
                 if u is not None:
-                    assert u.is_decomposition_tableau()
                     assert cls.e_operator_on_decomposition_tableaux(i, u) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)

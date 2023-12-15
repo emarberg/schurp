@@ -145,8 +145,8 @@ class Tableau:
 
         if index == -1:
             for x, y in boxes:
-                if index + 1 in tab.get(x, y, unpack=False) and index not in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, index + 1).add(x, y, index)
+                if 2 in tab.get(x, y, unpack=False) and 1 not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 2).add(x, y, 1)
                 else:
                     return None
 
@@ -201,8 +201,8 @@ class Tableau:
 
         if index == -1:
             for x, y in boxes:
-                if index in tab.get(x, y, unpack=False) and index + 1 not in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, index).add(x, y, index + 1)
+                if 1 in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 1).add(x, y, 2)
                 else:
                     return None
 
@@ -368,10 +368,10 @@ class Tableau:
 
         if index == -1:
             for x, y in boxes:
-                if index + 1 in tab.get(x, y, unpack=False) and index not in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, index + 1).add(x, y, index)
-                elif index + 1 in tab.get(x, y, unpack=False) and index in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, index + 1)
+                if 2 in tab.get(x, y, unpack=False) and 1 not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 2).add(x, y, 1)
+                elif 2 in tab.get(x, y, unpack=False) and 1 in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 2)
                 else:
                     return None
 
@@ -397,10 +397,10 @@ class Tableau:
 
         if index == -1:
             for x, y in boxes:
-                if index in tab.get(x, y, unpack=False) and index + 1 not in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, index).add(x, y, index + 1)
-                elif index in tab.get(x, y, unpack=False) and index + 1 in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, index)
+                if 1 in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 1).add(x, y, 2)
+                elif 1 in tab.get(x, y, unpack=False) and 2 in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 1)
                 else:
                     return None
 
