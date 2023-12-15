@@ -369,7 +369,7 @@ class Tableau:
         if index == -1:
             for x, y in boxes:
                 if 2 in tab.get(x, y, unpack=False) and 1 not in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, 2).add(x, y, 1)
+                    return tab.add(x, y, 1)
                 elif 2 in tab.get(x, y, unpack=False) and 1 in tab.get(x, y, unpack=False):
                     return tab.remove(x, y, 2)
                 else:
@@ -398,7 +398,7 @@ class Tableau:
         if index == -1:
             for x, y in boxes:
                 if 1 in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
-                    return tab.remove(x, y, 1).add(x, y, 2)
+                    return tab.add(x, y, 2)
                 elif 1 in tab.get(x, y, unpack=False) and 2 in tab.get(x, y, unpack=False):
                     return tab.remove(x, y, 1)
                 else:

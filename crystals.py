@@ -262,6 +262,9 @@ class AbstractCrystalMixin:
     def get_highest_weight_multiplicities(self):
         return {k: len(v) for k, v in self.group_highest_weights().items()}
 
+    def naive_highest_weights(self):
+        return [b for b in self if all(self.e_operator(i, b) is None for i in self.indices)]
+
     @classmethod
     def tensor_rank(cls, b, c):
         assert b.rank == c.rank
@@ -427,6 +430,9 @@ class AbstractCrystalMixin:
         f = lambda x, i: self.f_operator(i, x)
         wt = lambda x: self.weight(x)
         return self.from_element(a, rank, indices, e, f, wt)
+
+    def is_connected(self):
+        return len(self.get_component(next(iter(self)))) == len(self)
 
     @classmethod
     def from_element(cls, a, rank, indices, e, f, wt=None):
@@ -707,7 +713,7 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 
 
 class AbstractQCrystal(AbstractCrystalMixin):
-
+ 
     @classmethod
     def decomposition_semicrystal_from_strict_partition(cls, mu, rank):
         n = rank

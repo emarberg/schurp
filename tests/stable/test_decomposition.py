@@ -10,6 +10,16 @@ from stable.vst import combine_str
 from crystals import AbstractGLCrystal, AbstractQCrystal
 
 
+def test_decomposition_semicrystal(n=3, max_size=5):
+    for mu in Partition.all(max_size, strict=True):
+        c = AbstractQCrystal.decomposition_semicrystal_from_strict_partition(mu, n)
+        hw = c.naive_highest_weights()
+        print(n, mu, len(c), c.is_connected(), len(hw))
+        if not c.is_connected() or len(hw) > 1:
+            c.draw()
+            input('')
+
+
 def test_decomposition_stembridge(n=3, max_size=5):
     for mu in Partition.all(max_size, strict=True):
         c = AbstractQCrystal.decomposition_tableaux_from_strict_partition(mu, n)
@@ -27,8 +37,13 @@ def test_setvalued_decomposition_stembridge(n=3, max_size=5):
         v = {Partition.trim(mu): x for (mu, x) in c.get_highest_weight_multiplicities().items()}
 
         print(n, mu, b, u == v)
-        c.draw()
-        input('')
+        if not b:
+            b = c.is_stembridge(return_counterexample=True)
+            print()
+            print(len(b), len(c), len(b) == len(c))
+            print()
+            b.draw()
+            input('')
 
 
 def test_setvalued_semistandard_stembridge(n=3, max_size=5):
@@ -42,7 +57,6 @@ def test_setvalued_semistandard_stembridge(n=3, max_size=5):
         v = {Partition.trim(mu): x for (mu, x) in c.get_highest_weight_multiplicities().items()}
 
         print(n, mu, b, u == v)
-
 
 
 def test_primed_insert(n=5, mu=(3,2)):
