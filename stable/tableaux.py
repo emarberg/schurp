@@ -147,8 +147,11 @@ class Tableau:
             for x, y in boxes:
                 if 2 in tab.get(x, y, unpack=False) and 1 not in tab.get(x, y, unpack=False):
                     return tab.remove(x, y, 2).add(x, y, 1)
+                elif 1 not in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    continue
                 else:
                     return None
+            return None
 
         signature = self.signature(self, boxes,index)
         signature = [(s, i) for (s, i) in signature if s == '(']
@@ -203,8 +206,11 @@ class Tableau:
             for x, y in boxes:
                 if 1 in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
                     return tab.remove(x, y, 1).add(x, y, 2)
+                elif 1 not in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    continue
                 else:
                     return None
+            return None
 
         signature = self.signature(self, boxes, index)
         signature = [(s, i) for (s, i) in signature if s == ')']
@@ -372,8 +378,11 @@ class Tableau:
                     return tab.add(x, y, 1)
                 elif 2 in tab.get(x, y, unpack=False) and 1 in tab.get(x, y, unpack=False):
                     return tab.remove(x, y, 2)
+                elif 1 not in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    continue
                 else:
                     return None
+            return None
 
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)
@@ -401,8 +410,11 @@ class Tableau:
                     return tab.add(x, y, 2)
                 elif 1 in tab.get(x, y, unpack=False) and 2 in tab.get(x, y, unpack=False):
                     return tab.remove(x, y, 1)
+                elif 1 not in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    continue
                 else:
                     return None
+            return None
 
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)

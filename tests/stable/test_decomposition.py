@@ -13,9 +13,10 @@ from crystals import AbstractGLCrystal, AbstractQCrystal
 def test_decomposition_semicrystal(n=3, max_size=5):
     for mu in Partition.all(max_size, strict=True):
         c = AbstractQCrystal.decomposition_semicrystal_from_strict_partition(mu, n)
-        hw = c.naive_highest_weights()
-        print(n, mu, len(c), c.is_connected(), len(hw))
-        if not c.is_connected() or len(hw) > 1:
+        nhw = c.naive_highest_weights()
+        ahw = c.get_highest_weights()
+        print(n, mu, len(c), c.is_connected(), len(ahw), len(nhw))
+        if len(ahw) > 1:
             c.draw()
             input('')
 
