@@ -542,23 +542,6 @@ class AbstractCrystalMixin:
 class AbstractGLCrystal(AbstractCrystalMixin):
 
     @classmethod
-    def decomposition_semicrystal_from_strict_partition(cls, mu, rank):
-        n = rank
-        vertices = []
-        edges = []
-        weights = {}
-        for t in Tableau.setvalued_decomposition_tableaux(n, mu):
-            vertices += [t]
-            weights[t] = t.weight(n)
-            for i in range(1, n):
-                u = t.half_decomposition_f_operator(i)
-                if u is not None:
-                    assert u.is_decomposition_tableau()
-                    assert u.half_decomposition_e_operator(i) == t
-                    edges += [(i, t, u)]
-        return cls(rank, vertices, edges, weights)
-
-    @classmethod
     def semicrystal_from_partition(cls, mu, rank):
         n = rank
         vertices = []
@@ -603,22 +586,6 @@ class AbstractGLCrystal(AbstractCrystalMixin):
                 u = t.f_operator_on_setvalued_semistandard_tableaux(i)
                 if u is not None:
                     assert u.e_operator_on_setvalued_semistandard_tableaux(i) == t
-                    edges += [(i, t, u)]
-        return cls(rank, vertices, edges, weights)
-
-    @classmethod
-    def setvalued_decomposition_tableaux_from_strict_partition(cls, mu, rank):
-        n = rank
-        vertices = []
-        edges = []
-        weights = {}
-        for t in Tableau.setvalued_decomposition_tableaux(n, mu):
-            vertices += [t]
-            weights[t] = t.weight(n)
-            for i in range(1, n):
-                u = t.f_operator_on_setvalued_decomposition_tableaux(i)
-                if u is not None:
-                    assert u.e_operator_on_setvalued_decomposition_tableaux(i) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
@@ -742,6 +709,40 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 class AbstractQCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def decomposition_semicrystal_from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.setvalued_decomposition_tableaux(n, mu):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in ([-1] if n >= 2 else []) + list(range(1, n)):
+                u = t.half_decomposition_f_operator(i)
+                if u is not None:
+                    assert u.is_decomposition_tableau()
+                    assert u.half_decomposition_e_operator(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
+    def setvalued_decomposition_tableaux_from_strict_partition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.setvalued_decomposition_tableaux(n, mu):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in ([-1] if n >= 2 else []) + list(range(1, n)):
+                u = t.f_operator_on_setvalued_decomposition_tableaux(i)
+                if u is not None:
+                    assert u.is_decomposition_tableau()
+                    assert u.e_operator_on_setvalued_decomposition_tableaux(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def decomposition_tableaux_from_strict_partition(cls, mu, rank):
         n = rank
         vertices = []
@@ -754,6 +755,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
                 u = cls.f_operator_on_decomposition_tableaux(i, t)
                 if u is not None:
+                    assert u.is_decomposition_tableau()
+                    assert cls.e_operator_on_decomposition_tableaux(i, u) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 

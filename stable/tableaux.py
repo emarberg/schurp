@@ -142,6 +142,14 @@ class Tableau:
     def e_operator_on_setvalued_decomposition_tableaux(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
+
+        if index == -1:
+            for x, y in boxes:
+                if index + 1 in tab.get(x, y, unpack=False) and index not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, index + 1).add(x, y, index)
+                else:
+                    return None
+
         signature = self.signature(self, boxes,index)
         signature = [(s, i) for (s, i) in signature if s == '(']
 
@@ -190,6 +198,14 @@ class Tableau:
     def f_operator_on_setvalued_decomposition_tableaux(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1]))
+
+        if index == -1:
+            for x, y in boxes:
+                if index in tab.get(x, y, unpack=False) and index + 1 not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, index).add(x, y, index + 1)
+                else:
+                    return None
+
         signature = self.signature(self, boxes, index)
         signature = [(s, i) for (s, i) in signature if s == ')']
 
@@ -349,6 +365,16 @@ class Tableau:
     def half_decomposition_e_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1])) # rev row word
+
+        if index == -1:
+            for x, y in boxes:
+                if index + 1 in tab.get(x, y, unpack=False) and index not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, index + 1).add(x, y, index)
+                elif index + 1 in tab.get(x, y, unpack=False) and index in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, index + 1)
+                else:
+                    return None
+
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)
 
@@ -368,6 +394,16 @@ class Tableau:
     def half_decomposition_f_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1])) # rev row word
+
+        if index == -1:
+            for x, y in boxes:
+                if index in tab.get(x, y, unpack=False) and index + 1 not in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, index).add(x, y, index + 1)
+                elif index in tab.get(x, y, unpack=False) and index + 1 in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, index)
+                else:
+                    return None
+
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)
 
