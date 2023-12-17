@@ -17,7 +17,18 @@ def test_decomposition_semicrystal(n=3, max_size=5):
         ahw = c.get_highest_weights()
         print(n, mu, len(c), c.is_connected(), len(ahw), len(nhw))
         if len(ahw) > 1:
-            c.draw()
+            c.draw(extended=True)
+            input('')
+
+
+def test_sv_decomposition_crystal(n=3, max_size=5):
+    for mu in Partition.all(max_size, strict=True):
+        c = AbstractQCrystal.setvalued_decomposition_tableaux_from_strict_partition(mu, n)
+        nhw = c.naive_highest_weights()
+        ahw = c.get_highest_weights()
+        print(n, mu, len(c), c.is_connected(), len(ahw), len(nhw))
+        if len(ahw) > 1:
+            c.draw(extended=True)
             input('')
 
 
