@@ -38,6 +38,21 @@ FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
+def test_words_semicrystal(n=3, k=5):
+    for i in range(k):
+        print('n =', n, 'k =', i + 1)
+        b = AbstractGLCrystal.semicrystal_of_words(i + 1, n)
+        for w, mu in b.get_highest_weights():
+            mu = Partition.trim(mu)
+            c = b.get_component(w)
+            d = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+            print('  ', mu, ':', AbstractGLCrystal.find_isomorphism(c, d) is not None)
+            if not AbstractGLCrystal.find_isomorphism(c, d):
+                c.draw()
+                input('')
+                d.draw()
+            
+
 def test_normal_semicrystal(n=3, k=5):
     s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
     b = s.tensor(s)
@@ -45,11 +60,16 @@ def test_normal_semicrystal(n=3, k=5):
         print('n =', n, 'k =', _ + 1)
         for w, mu in b.get_highest_weights():
             mu = Partition.trim(mu)
-            print('  ', mu)
             c = b.get_component(w)
             d = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+            print()
+            print(mu, w, len(c), len(d))
+            print()
+            if len(c) != len(d):
+                c.draw()
+                input('')
+            print('  ', mu, ':', AbstractGLCrystal.find_isomorphism(c, d) is not None)
             if AbstractGLCrystal.find_isomorphism(c, d) is None:
-                print('?')
                 c.draw()
                 input('')
                 d.draw()

@@ -548,6 +548,22 @@ class AbstractCrystalMixin:
 class AbstractGLCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def semicrystal_of_words(cls, length, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.all(n, (length,), setvalued=True):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in range(1, n):
+                u = t.half_f_operator(i)
+                if u is not None:
+                    assert u.half_e_operator(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def semicrystal_from_partition(cls, mu, rank):
         n = rank
         vertices = []
