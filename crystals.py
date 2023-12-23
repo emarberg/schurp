@@ -732,6 +732,25 @@ class AbstractQCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
+    def squared_setvalued_decomposition(cls, mu, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.setvalued_decomposition_tableaux(n, mu):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in ([-1] if n >= 2 else []) + list(range(1, n)):
+                u = t.half_decomposition_f_operator(i)
+                if u is not None:
+                    u = u.half_decomposition_f_operator(i)
+                    if u is not None:
+                        assert u.is_decomposition_tableau()
+                        assert u.half_decomposition_e_operator(i).half_decomposition_e_operator(i) == t
+                        edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def setvalued_decomposition_tableaux_from_strict_partition(cls, mu, rank):
         n = rank
         vertices = []

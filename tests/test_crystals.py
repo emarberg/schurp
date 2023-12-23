@@ -38,6 +38,25 @@ FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
+def test_normal_semicrystal(n=3, k=5):
+    s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
+    b = s.tensor(s)
+    for _ in range(k):
+        print('n =', n, 'k =', _ + 1)
+        for w, mu in b.get_highest_weights():
+            mu = Partition.trim(mu)
+            print('  ', mu)
+            c = b.get_component(w)
+            d = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+            if AbstractGLCrystal.find_isomorphism(c, d) is None:
+                print('?')
+                c.draw()
+                input('')
+                d.draw()
+                input('')
+        b = s.tensor(b)
+
+
 def test_semistandard_tableau_crystal(nn=5, f=5):
     for n in range(1, nn + 1):
         c = AbstractGLCrystal.standard_object(n).tensor(AbstractGLCrystal.standard_object(n))

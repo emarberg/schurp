@@ -332,6 +332,7 @@ class Tableau:
     def half_e_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
+        # boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1])) # row word
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)
 
@@ -351,6 +352,7 @@ class Tableau:
     def half_f_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
+        # boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1])) # row word
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)
 
@@ -537,12 +539,12 @@ class Tableau:
             for j in range(1, self.max_column() + 1):
                 v = self.get(i, j)
                 if type(v) == tuple:
-                    # if len(v) == 4:
-                    #     v = '\\barr{l}%s%s \\\\[-2pt] %s%s \\earr' % v
-                    # if len(v) == 3:
-                    #     v = '\\barr{l}%s%s \\\\[-2pt] %s \\earr' % v
-                    # else:
-                    #     v = ''.join(map(str, v))
+                    if len(v) == 4:
+                        v = '\\barr{l}%s%s \\\\[-2pt] %s%s \\earr' % v
+                    if len(v) == 3:
+                        v = '\\barr{l}%s%s \\\\[-2pt] %s \\earr' % v
+                    else:
+                        v = ''.join(map(str, v))
                     v = ''.join(map(str, v))
                 row += [('*(white) ' + str(v)) if v is not None else '\\none']
             rows += [' & '.join(row)]
