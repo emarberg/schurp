@@ -77,6 +77,54 @@ def test_normal_semicrystal(n=3, k=5):
         b = s.tensor(b)
 
 
+def test_words_semicrystal_uhw(n=3, k=5):
+    for i in range(k):
+        print('n =', n, 'k =', i + 1)
+        b = AbstractGLCrystal.semicrystal_of_words(i + 1, n)
+        for w, mu in b.get_highest_weights():
+            mu = Partition.trim(mu)
+            c = b.get_component(w)
+            print('  ', mu, len(c), len(c.get_highest_weights()))
+            assert len(c.get_highest_weights()) == 1
+
+
+def test_normal_semicrystal_uhw(n=3, k=5):
+    s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
+    b = s.tensor(s)
+    for _ in range(k):
+        print('n =', n, 'k =', _ + 1)
+        for w, mu in b.get_highest_weights():
+            mu = Partition.trim(mu)
+            c = b.get_component(w)
+            print('  ', mu, len(c), len(c.get_highest_weights()))
+            assert len(c.get_highest_weights()) == 1
+        b = s.tensor(b)
+
+
+def test_normal_q_semicrystal_uhw(n=3, k=5):
+    s = AbstractQCrystal.semicrystal_from_strict_partition((1,), n)
+    b = s.tensor(s)
+    for _ in range(k):
+        print('n =', n, 'k =', _ + 1)
+        for w, mu in b.get_highest_weights():
+            mu = Partition.trim(mu)
+            c = b.get_component(w)
+            print('  ', mu, len(c), len(c.get_highest_weights()))
+            assert len(c.get_highest_weights()) == 1
+        b = s.tensor(b)
+
+
+def test_qtab_semicrystal_uhw(n=3, k=10):
+    for j in range(k + 1):
+        for mu in Partition.all(j, max_part=n):
+            mu = mu.transpose()
+            if mu.is_strict():
+                mu = mu.tuple()
+                c = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+                print(n, mu, len(c), len(c.get_highest_weights()))
+                assert len(c.get_highest_weights()) == 1
+
+
 def test_semistandard_tableau_crystal(nn=5, f=5):
     for n in range(1, nn + 1):
         c = AbstractGLCrystal.standard_object(n).tensor(AbstractGLCrystal.standard_object(n))

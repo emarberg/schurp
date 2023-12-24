@@ -729,7 +729,11 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 
 
 class AbstractQCrystal(AbstractCrystalMixin):
- 
+
+    @classmethod
+    def semicrystal_from_strict_partition(cls, mu, rank):
+        return cls.decomposition_semicrystal_from_strict_partition(mu, rank)
+
     @classmethod
     def decomposition_semicrystal_from_strict_partition(cls, mu, rank):
         n = rank

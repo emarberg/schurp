@@ -309,6 +309,9 @@ class Partition:
     def tuple(self):
         return tuple(self.parts)
 
+    def is_strict(self):
+        return self.is_strict_partition(self.parts)
+
     @classmethod
     def is_strict_partition(cls, mu):
         return all(mu[i - 1] > mu[i] for i in range(1, len(mu)))
