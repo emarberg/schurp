@@ -38,6 +38,20 @@ FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
+def test_sv_signature_rule(n=3, k=5):
+    def word(t, level):
+        return t if level == 1 else t[0] + word(t[1], level - 1)
+
+    for i in range(k):
+        level = i + 1
+        print('n =', n, 'k =', level)
+        b = AbstractGLCrystal.semicrystal_of_words(level, n)
+        c = AbstractGLCrystal.semicrystal_of_words(1, n)
+        for _ in range(i):
+            c = c.tensor(c)
+        for w in c:
+            print(w, word(w, level))
+
 def test_words_semicrystal(n=3, k=5):
     for i in range(k):
         print('n =', n, 'k =', i + 1)
