@@ -348,13 +348,20 @@ class AbstractCrystalMixin:
 
         if highest_a is None:
             highest_a = [a for a in crystal_a if crystal_a.is_highest_weight(a)]
-            assert len(highest_a) == 1
-            highest_a = highest_a[0]
+        else:
+            highest_a = [highest_a]
 
         if highest_b is None:
             highest_b = [b for b in crystal_b if crystal_b.is_highest_weight(b)]
-            assert len(highest_b) == 1
-            highest_b = highest_b[0]
+        else:
+            highest_b = [highest_b]
+
+        assert len(highest_a) == 1 or len(highest_b) == 1
+        if len(highest_a) != len(highest_b):
+            return None
+
+        highest_a = highest_a[0]
+        highest_b = highest_b[0]
 
         if crystal_a.weight(highest_a) != crystal_b.weight(highest_b):
             return None
@@ -546,6 +553,15 @@ class AbstractCrystalMixin:
 
 
 class AbstractGLCrystal(AbstractCrystalMixin):
+
+    def dual(self):
+        cls = type(self)
+        n = self.rank
+        vertices = self.vertices
+        edges = [(n - i, v, self.e_operator(i, v)) for i in range(1, n) for v in self if self.e_operator(i, v) is not None]
+        weights = {v: tuple(reversed(self.weights[v])) for v in self}
+        printer = self.printer
+        return cls(n, vertices, edges, weights, printer)
 
     @classmethod
     def semicrystal_of_words(cls, length, rank):

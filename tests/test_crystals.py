@@ -38,19 +38,36 @@ FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
-def test_sv_signature_rule(n=3, k=5):
-    def word(t, level):
-        return t if level == 1 else t[0] + word(t[1], level - 1)
+def word(t):
+    return (t.get(1, 1, unpack=False),) if type(t) != tuple else (t[0].get(1, 1, unpack=False),) + word(t[1])
 
-    for i in range(k):
-        level = i + 1
+
+def tabl(t):
+    if t is None:
+        return None
+    init = (t if type(t) != tuple else t[0]).__class__
+    w = word(t)
+    return init.from_rows((w,))
+
+
+def test_sv_signature_rule(n=3, k=2):
+    for level in range(1, k + 1):
         print('n =', n, 'k =', level)
-        b = AbstractGLCrystal.semicrystal_of_words(level, n)
-        c = AbstractGLCrystal.semicrystal_of_words(1, n)
-        for _ in range(i):
-            c = c.tensor(c)
+        s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
+        c = s
+        for _ in range(level - 1):
+            c = s.tensor(c)
         for w in c:
-            print(w, word(w, level))
+            t = tabl(w)
+            print()
+            print(' candidate =', str(t).replace('\n', ''))
+            for i in range(1, n):
+                fw = tabl(c.f_operator(i, w))
+                sfw = 'none' if fw is None else str(fw).replace('\n', '')
+                print('  i =', i, ':', sfw, fw == t.half_f_operator(i))
+                assert fw == t.half_f_operator(i)
+            print()
+
 
 def test_words_semicrystal(n=3, k=5):
     for i in range(k):
@@ -70,24 +87,33 @@ def test_words_semicrystal(n=3, k=5):
 def test_normal_semicrystal(n=3, k=5):
     s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
     b = s.tensor(s)
+    seen = {}
+    dual_seen = {}
     for _ in range(k):
-        print('n =', n, 'k =', _ + 1)
+        print('\n\nn =', n, 'k =', _ + 1)
         for w, mu in b.get_highest_weights():
             mu = Partition.trim(mu)
             c = b.get_component(w)
+            if not all(len(x) == 1 for x in word(w)):
+                continue
+            if len(c.get_highest_weights()) > 1:
+                continue
             d = AbstractGLCrystal.semicrystal_from_partition(mu, n)
             print()
-            print(mu, w, len(c), len(d))
+            print(mu, word(w), len(c), len(d))
             print()
-            if len(c) != len(d):
-                c.draw()
-                input('')
-            print('  ', mu, ':', AbstractGLCrystal.find_isomorphism(c, d) is not None)
-            if AbstractGLCrystal.find_isomorphism(c, d) is None:
-                c.draw()
-                input('')
-                d.draw()
-                input('')
+            f1 = AbstractGLCrystal.find_isomorphism(c, d) is not None
+            f2 = AbstractGLCrystal.find_isomorphism(c, d.dual()) is not None
+            seen[mu] = f1 or seen.get(mu, False)
+            dual_seen[mu] = f2 or dual_seen.get(mu, False)
+            print('  ', mu, ':', f1, f2)
+            #if not f1 and not f2:
+            #    c.draw()
+            #    input('')
+            #    d.draw()
+            #    input('')
+        assert all(seen.values())
+        assert all(dual_seen.values())
         b = s.tensor(b)
 
 
