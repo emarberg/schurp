@@ -15,6 +15,10 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
 class AbstractCrystalMixin:
 
+    def as_gl_crystal(self):
+        edges = {(i, v, self.f_operator(i, v)) for i in range(1, self.rank) for v in self if self.f_operator(i, v) is not None}
+        return AbstractGLCrystal(self.rank, self.vertices, edges, self.weights, self.printer)
+
     def __init__(self, rank, vertices, edges, weights, printer=str, provided_operators=None):
         self._rank = rank
         self._vertices = set(vertices)

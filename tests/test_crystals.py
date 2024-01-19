@@ -50,6 +50,123 @@ def tabl(t):
     return init.from_rows((w,))
 
 
+def test_grothexp_qtab_semicrystal(n=3, k=None):
+    from stable.utils import GP, G_expansion
+    k = n if k is None else k
+    partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
+    print(partitions)
+    for mu in partitions:
+        print('n =', n, 'mu =', mu)
+        expected = G_expansion(GP(n, mu)).set_variable(0,1).dictionary
+        b = AbstractQCrystal.semicrystal_from_strict_partition(mu, n).as_gl_crystal()
+        actual = {}
+        for w, lam in b.get_highest_weights():
+            lam = Partition.trim(lam)
+            actual[lam] = 1 + actual.get(lam, 0)
+            # c = b.get_component(w)
+            # d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
+            # f = AbstractGLCrystal.find_isomorphism(c, d) is not None
+            # print('  ', lam, ':', f)
+            #if not f:
+            #    c.draw()
+            #    input('')
+            #    d.draw()
+            #    input('')
+            # assert f
+        print(expected == actual)
+        print()
+        if expected != actual:
+            b.draw()
+            input('')
+        assert expected == actual
+
+
+def test_tensor_qtab_semicrystal(n=3, k=None):
+    from stable.utils import GP, GP_expansion
+    k = n if k is None else k
+    partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
+    print(partitions)
+    for mu in partitions:
+        for nu in partitions:
+            if not (mu <= nu):
+                continue
+            print('n =', n, mu, nu)
+            expected = GP_expansion(GP(n, mu) * GP(n, nu)).set_variable(0,1).dictionary
+            c1 = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+            c2 = AbstractQCrystal.semicrystal_from_strict_partition(nu, n)
+            b = c1.tensor(c2)
+            actual = {}
+            for w, lam in b.get_highest_weights():
+                lam = Partition.trim(lam)
+                actual[lam] = 1 + actual.get(lam, 0)
+                c = b.get_component(w)
+                d = AbstractQCrystal.semicrystal_from_strict_partition(lam, n)
+                f = AbstractQCrystal.find_isomorphism(c, d) is not None
+                print('  ', lam, ':', f)
+                #if not f:
+                #    c.draw()
+                #    input('')
+                #    d.draw()
+                #    input('')
+                # assert f
+            print(expected == actual) # fails for n=3, (2,), (2, 1)
+            print()
+            assert expected == actual
+
+
+def test_tensor_tab_semicrystal(n=3, k=None):
+    from stable.utils import G, G_expansion
+    k = n if k is None else k
+    partititons = {mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n)}
+    for mu in partititons:
+        for nu in partititons:
+            if not (mu <= nu):
+                continue
+            print('n =', n, mu, nu)
+            expected = G_expansion(G(n, mu) * G(n, nu)).set_variable(0,1).dictionary
+            c1 = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+            c2 = AbstractGLCrystal.semicrystal_from_partition(nu, n)
+            b = c1.tensor(c2)
+            actual = {}
+            for w, lam in b.get_highest_weights():
+                lam = Partition.trim(lam)
+                actual[lam] = 1 + actual.get(lam, 0)
+                c = b.get_component(w)
+                d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
+                f = AbstractGLCrystal.find_isomorphism(c, d) is not None
+                print('  ', lam, ':', f)
+                #if not f:
+                #    c.draw()
+                #    input('')
+                #    d.draw()
+                #    input('')
+                # assert f
+                # assert len(c.get_highest_weights()) == 1 # fails
+            print(expected == actual)
+            print()
+            assert expected == actual
+
+def test_selfdual_tab_semicrystal(n=3, k=None):
+    ans = []
+    k = n if k is None else k
+    for j in range(k + 1):
+        count = 0
+        for mu in Partition.all(j, max_part=n):
+            mu = mu.transpose().tuple()
+            f = []
+            for m in range(len(mu), n + 1):
+                b = AbstractGLCrystal.semicrystal_from_partition(mu, m)
+                c = b.dual()
+                f += [AbstractGLCrystal.find_isomorphism(b, c) is not None]
+            print('  ', n, mu, f)
+            count += int(all(f))
+        print()
+        print('n =', n, 'partitions of', j, ':', count)
+        print()
+        ans.append(count)
+    return ans
+
+
 def test_sv_signature_rule(n=3, k=2):
     for level in range(1, k + 1):
         print('n =', n, 'k =', level)
