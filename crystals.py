@@ -42,7 +42,7 @@ class AbstractCrystalMixin:
     def index_printer(self, i, primed=False):
         return str(i)
 
-    def draw(self, extended=(), highlighted_nodes=(), tex=False, exclude=False, node_width=0.0, node_height=0.0):
+    def draw(self, extended=(), highlighted_nodes=(), tex=False, exclude=False, node_width=0.0, node_height=0.0, neato=False):
         if type(extended) == bool:
             extended_operators = self.extended_indices if extended else ()
         else:
@@ -106,22 +106,24 @@ class AbstractCrystalMixin:
                     continue
                 if not exclude or (v in highlighted_nodes and w in highlighted_nodes):
                     if tex:
-                        cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal"
-                        style = "dotted" if i == 0 else "dashed" if i == -1 else "solid"
+                        cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal" if i == 3 else "black"
+                        style = "dotted" if i == 0 else "dashed" if i < 0 else "solid"
                         s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
                     else:
                         istr = self.index_printer(i)
                         s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
-                if i < 0 and extended:
-                    w = self.fprime_operator(i, v)
-                    if w is not None and (not exclude or (v in highlighted_nodes and w in highlighted_nodes)):
-                        if tex:
-                            cstr = "blue" if i == -1 else "red" if i == -2 else "teal"
-                            style = "dashed"
-                            s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
-                        else:
-                            istr = self.index_printer(i, primed=True)
-                            s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
+                #
+                # if i < 0 and extended:
+                #     w = self.fprime_operator(i, v)
+                #     if w is not None and (not exclude or (v in highlighted_nodes and w in highlighted_nodes)):
+                #         if tex:
+                #             cstr = "blue" if i == -1 else "red" if i == -2 else "teal"
+                #             style = "dashed"
+                #             s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
+                #         else:
+                #             istr = self.index_printer(i, primed=True)
+                #             s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
+                #
         s += ['}']
         s = '\n'.join(s)
         #
@@ -130,12 +132,11 @@ class AbstractCrystalMixin:
         png_filename = BASE_DIRECTORY + 'abstract/' + 'png/' + '%s.png' % filename
         with open(dot_filename, 'w') as f:
             f.write(s)
-        subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
-        # subprocess.run(["neato", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["neato" if neato else "dot", "-Tpng", dot_filename, "-o", png_filename])
         subprocess.run(["open", png_filename])
 
         if tex:
-            ps = subprocess.Popen("dot -Txdot " + dot_filename + " | dot2tex -tmath --nominsize --figonly --figpreamble=\"\\small\" > ~/Downloads/test.tex", stdin=subprocess.PIPE, shell=True)
+            ps = subprocess.Popen(("neato" if neato else "dot") + " -Txdot " + dot_filename + " | dot2tex -tmath --nominsize --figonly --figpreamble=\"\\small\" > ~/Downloads/test.tex", stdin=subprocess.PIPE, shell=True)
             ps.communicate()
 
     def e_string(self, i, v):
