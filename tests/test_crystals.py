@@ -38,7 +38,32 @@ FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
-def test_semicrystal_group_action(n=3, k=5):
+def test_semicrystal_group_action_on_tabs(n=3, k=5):
+    # fails for n=4, mu=(3,2)
+    partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n)})
+    print(partitions)
+    for mu in partitions:
+        print('n =', n, 'mu =', mu)
+        b = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+        for i in range(1, n):
+            for j in range(i + 1, n):
+                for w in b:
+                    one = b.s_operator(i, b.s_operator(i + 1, b.s_operator(i, w)))
+                    two = b.s_operator(i + 1, b.s_operator(i, b.s_operator(i + 1, w)))
+                    if one != two:
+                        c = b.get_component(w)
+                        print()
+                        print('i =', i, 'w =', w)
+                        print()
+                        print(one, '!=', two)
+                        print()
+                        input('')
+                        c.draw()
+                        input('\n')
+                    assert one == two
+
+
+def test_semicrystal_group_action_on_words(n=3, k=5):
     # fails for n=3 and k=4
     for kk in range(1, k + 1):
         print('n =', n, 'k =', kk)
