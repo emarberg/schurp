@@ -38,6 +38,29 @@ FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
+def test_semicrystal_group_action(n=3, k=5):
+    # fails for n=3 and k=4
+    for kk in range(1, k + 1):
+        print('n =', n, 'k =', kk)
+        b = AbstractGLCrystal.semicrystal_of_words(kk, n)
+        for i in range(1, n):
+            for j in range(i + 1, n):
+                for w in b:
+                    one = b.s_operator(i, b.s_operator(i + 1, b.s_operator(i, w)))
+                    two = b.s_operator(i + 1, b.s_operator(i, b.s_operator(i + 1, w)))
+                    if one != two:
+                        c = b.get_component(w)
+                        print()
+                        print('i =', i, 'w =', w)
+                        print()
+                        print(one, '!=', two)
+                        print()
+                        input('')
+                        c.draw()
+                        input('\n')
+                    assert one == two
+
+
 def word(t):
     return (t.get(1, 1, unpack=False),) if type(t) != tuple else (t[0].get(1, 1, unpack=False),) + word(t[1])
 
