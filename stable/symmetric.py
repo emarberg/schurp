@@ -643,6 +643,13 @@ class SymmetricPolynomial(Vector):
         return cls._expansion(f, cls.slow_transposed_dual_stable_grothendieck_s, cls._get_term_from_highest_degree)
 
     @classmethod
+    def GP_expansion_no_beta(cls, f):  # noqa
+        def p(n, mu, nu=(), d=None):
+            ans = cls.stable_grothendieck_p(n, mu, nu, d)
+            return ans.set_variable(0, 1)
+        return cls._expansion(f, p, cls._get_term_from_lowest_degree)
+
+    @classmethod
     def GP_expansion(cls, f):  # noqa
         return cls._expansion(f, cls.stable_grothendieck_p, cls._get_term_from_lowest_degree)
 

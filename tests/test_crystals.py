@@ -29,6 +29,7 @@ from schubert import X
 from words import Word, weak_eg_insert, eg_insert, fpf_insert, involution_insert
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
+from stable.utils import GP_expansion_no_beta, G_expansion, SymmetricPolynomial
 import random
 import time
 
@@ -36,6 +37,34 @@ import time
 PRINT_DIR = "/Users/emarberg/Downloads/"
 FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def test_qnormal_semicrystal_characters(n=3, k=5):
+    b = AbstractQCrystal.semicrystal_from_strict_partition((1,), n)
+    c = b
+    for kk in range(1, k + 1):
+        print('n =', n, 'k =', kk)
+        hw = c.get_highest_weights()
+        for u in hw:
+            d = c.get_component(u[0])
+            ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
+            print('  ', u[1], ':', ch)
+            assert min(ch.dictionary.values()) > 0
+        c = b.tensor(c)
+
+
+def test_normal_semicrystal_characters(n=3, k=5):
+    b = AbstractGLCrystal.semicrystal_of_words(1, n)
+    c = b
+    for kk in range(1, k + 1):
+        print('n =', n, 'k =', kk)
+        hw = c.get_highest_weights()
+        for u in hw:
+            d = c.get_component(u[0])
+            ch = G_expansion(SymmetricPolynomial.from_polynomial(d.character())).set_variable(0,1)
+            print('  ', u[1], ':', ch)
+            assert min(ch.dictionary.values()) > 0
+        c = b.tensor(c)
 
 
 def test_semicrystal_group_action_on_tabs(n=3, k=5):
@@ -320,14 +349,13 @@ def test_normal_q_semicrystal_uhw(n=3, k=5):
 
 
 def test_qtab_semicrystal_uhw(n=3, k=10):
-    for j in range(k + 1):
-        for mu in Partition.all(j, max_part=n):
-            mu = mu.transpose()
-            if mu.is_strict():
-                mu = mu.tuple()
-                c = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
-                print(n, mu, len(c), len(c.get_highest_weights()))
-                assert len(c.get_highest_weights()) == 1
+    partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
+    print(partitions)
+    print()
+    for mu in partitions:
+        c = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+        print(n, mu, len(c), len(c.get_highest_weights()))
+        assert len(c.get_highest_weights()) == 1
 
 
 def test_semistandard_tableau_crystal(nn=5, f=5):

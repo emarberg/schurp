@@ -196,6 +196,8 @@ jq_expansion = SymmetricPolynomial.jq_expansion
 js_expansion = SymmetricPolynomial.js_expansion
 
 GP_expansion = SymmetricPolynomial.GP_expansion
+GP_expansion_no_beta = SymmetricPolynomial.GP_expansion_no_beta
+
 GQ_expansion = SymmetricPolynomial.GQ_expansion
 GS_expansion = SymmetricPolynomial.GS_expansion
 

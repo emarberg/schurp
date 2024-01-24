@@ -15,6 +15,13 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
 class AbstractCrystalMixin:
 
+    def character(self):
+        from stable.polynomials import Polynomial
+        ans = Polynomial()
+        for b in self:
+            ans += Polynomial.from_tuple((0,) + self.weight(b))
+        return ans
+
     def as_gl_crystal(self):
         edges = {(i, v, self.f_operator(i, v)) for i in range(1, self.rank) for v in self if self.f_operator(i, v) is not None}
         return AbstractGLCrystal(self.rank, self.vertices, edges, self.weights, self.printer)
