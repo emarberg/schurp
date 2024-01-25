@@ -8,6 +8,8 @@ import itertools
 FRENCH = True
 
 SETVALUED_DECOMPOSITION_CACHE = {}
+SETVALUED_DECOMPOSITION_SLOW_CACHE = {}
+
 INNER_GROTHENDIECK_P = {}
 GROTHENDIECK_P = {}
 
@@ -1275,6 +1277,52 @@ class Tableau:
 
     @cached_value(SETVALUED_DECOMPOSITION_CACHE)
     def _setvalued_decomposition_tableaux(cls, max_entry, mu):
+        def svdt(n, boxes, ans=None):
+            ans = {} if ans is None else ans
+
+            if not boxes:
+                return [Tableau(ans)]
+
+            i, j = boxes[0]
+            boxes = boxes[1:]
+
+            allowed = set(range(1, n + 1))
+            if j > i + 1:
+                a = min(ans[i, j - 2])
+                b = max(ans[i, j - 1])
+                if a < b:
+                    allowed -= set(range(1, b + 1))
+
+            if i > 1:
+                a = min(ans[i - 1, i - 1])
+                allowed -= set(range(a, n + 1))
+                for t in range(i, j):
+                    a = min(ans[i - 1, t])
+                    c = max(ans[i, t])
+                    allowed -= set(range(a, c + 1))
+                z = max(ans[i - 1, j])
+                for t in range(i - 1, j):
+                    y = [y for y in ans[i - 1, t] if y < z]
+                    if y:
+                        y = max(y)
+                        allowed -= set(range(1, y))
+
+            result = []
+            for k in range(1, len(allowed) + 1):
+                for s in itertools.combinations(allowed, k):
+                    ans[i, j] = s
+                    result += svdt(n, boxes, ans)
+            return result
+
+        boxes = [(i + 1, i + j + 1) for i in range(len(mu)) for j in range(mu[i])]
+        return svdt(max_entry, boxes)
+
+    @classmethod
+    def setvalued_decomposition_tableaux_slow(cls, max_entry, mu):
+        return cls._setvalued_decomposition_tableaux_slow(max_entry, mu)
+
+    @cached_value(SETVALUED_DECOMPOSITION_SLOW_CACHE)
+    def _setvalued_decomposition_tableaux_slow(cls, max_entry, mu):
         ans = []
         for t in cls.all(max_entry, mu, shifted=True, marked=False, setvalued=True):
             if t.is_decomposition_tableau():

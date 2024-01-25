@@ -8,6 +8,23 @@ from stable.utils import (
 from stable.polynomials import Polynomial, X
 from stable.vst import combine_str
 from crystals import AbstractGLCrystal, AbstractQCrystal
+import time
+
+
+def test_sv_decomposition_generator(n=3, k=5):
+    for mu in Partition.all(k, strict=True):
+        t0 = time.time()
+        expected = set(Tableau.setvalued_decomposition_tableaux_slow(n, mu))
+        t1 = time.time()
+        received = set(Tableau.setvalued_decomposition_tableaux(n, mu))
+        t2 = time.time()
+        print('n =', n, 'mu =', mu, (t1 - t0) / (t2 - t1))
+        if expected != received:
+            print()
+            print(expected - received)
+            print(received - expected)
+            print()
+        assert expected == received
 
 
 def test_decomposition_semicrystal(n=3, max_size=5):
