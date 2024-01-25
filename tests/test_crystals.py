@@ -159,34 +159,42 @@ def test_grothexp_qtab_semicrystal(n=3, k=None):
 
 
 def test_tensor_qtab_semicrystal(n=3, k=None):
+    # fails for n=3, (2,), (2, 1) or (2,), (3,)
     from stable.utils import GP, GP_expansion
     k = n if k is None else k
     partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
     print(partitions)
+    print()
     for mu in partitions:
         for nu in partitions:
-            if not (mu <= nu):
-                continue
             print('n =', n, mu, nu)
             expected = GP_expansion(GP(n, mu) * GP(n, nu)).set_variable(0,1).dictionary
             c1 = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
             c2 = AbstractQCrystal.semicrystal_from_strict_partition(nu, n)
             b = c1.tensor(c2)
             actual = {}
+            seen = set()
             for w, lam in b.get_highest_weights():
-                lam = Partition.trim(lam)
-                actual[lam] = 1 + actual.get(lam, 0)
+                if w in seen:
+                    continue
+
+                # lam = Partition.trim(lam)
+                # actual[lam] = 1 + actual.get(lam, 0)
+
                 c = b.get_component(w)
+                seen |= set(c)
+
+                ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+                print('  ', ch)
+                assert len(ch) == 1
+                assert list(ch.values())[0] == 1
+                lam = list(ch)[0]
+                actual[lam] = 1 + actual.get(lam, 0)
+
                 d = AbstractQCrystal.semicrystal_from_strict_partition(lam, n)
                 f = AbstractQCrystal.find_isomorphism(c, d) is not None
                 print('  ', lam, ':', f)
-                #if not f:
-                #    c.draw()
-                #    input('')
-                #    d.draw()
-                #    input('')
-                # assert f
-            print(expected == actual) # fails for n=3, (2,), (2, 1)
+            print(expected == actual)
             print()
             assert expected == actual
 
@@ -194,11 +202,9 @@ def test_tensor_qtab_semicrystal(n=3, k=None):
 def test_tensor_tab_semicrystal(n=3, k=None):
     from stable.utils import G, G_expansion
     k = n if k is None else k
-    partititons = {mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n)}
+    partititons = {(2,), (5,)} # {mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n)}
     for mu in partititons:
         for nu in partititons:
-            if not (mu <= nu):
-                continue
             print('n =', n, mu, nu)
             expected = G_expansion(G(n, mu) * G(n, nu)).set_variable(0,1).dictionary
             c1 = AbstractGLCrystal.semicrystal_from_partition(mu, n)
@@ -211,7 +217,8 @@ def test_tensor_tab_semicrystal(n=3, k=None):
                 c = b.get_component(w)
                 d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
                 f = AbstractGLCrystal.find_isomorphism(c, d) is not None
-                print('  ', lam, ':', f)
+                g = G_expansion(SymmetricPolynomial.from_polynomial(c.character())).set_variable(0,1)
+                print('  ', lam, ':', f, g)
                 #if not f:
                 #    c.draw()
                 #    input('')
