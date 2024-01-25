@@ -174,6 +174,7 @@ decomposition_jp = SymmetricPolynomial.slow_decomposition_jp
 schur_expansion = SymmetricPolynomial.schur_expansion
 
 G_expansion = SymmetricPolynomial.grothendieck_expansion
+G_expansion_no_beta = SymmetricPolynomial.grothendieck_expansion_no_beta
 
 g_expansion = SymmetricPolynomial.dual_grothendieck_expansion
 j_expansion = SymmetricPolynomial.j_expansion
