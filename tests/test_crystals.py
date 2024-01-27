@@ -174,6 +174,15 @@ def test_tensor_qtab_semicrystal(n=3, k=None):
             for w, lam in b.get_highest_weights():
                 lam = Partition.trim(lam)
                 actual[lam] = 1 + actual.get(lam, 0)
+
+                # c = b.get_component(w)
+                # d = AbstractQCrystal.semicrystal_from_strict_partition(lam, n)
+                # f = AbstractQCrystal.find_isomorphism(c, d) is not None
+                # g = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+                # print('  ', lam, ':', f, g, len(c.get_highest_weights()))
+                # if not f:
+                #     input('')
+
             if expected != actual:
                 print()
                 print('expected =', expected)
@@ -200,11 +209,15 @@ def test_tensor_tab_semicrystal(n=3, k=None):
             for w, lam in b.get_highest_weights():
                 lam = Partition.trim(lam)
                 actual[lam] = 1 + actual.get(lam, 0)
-            #     c = b.get_component(w)
-            #     d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
-            #     f = AbstractGLCrystal.find_isomorphism(c, d) is not None
-            #     g = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
-            #     print('  ', lam, ':', f, g)
+
+                # c = b.get_component(w)
+                # d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
+                # f = AbstractGLCrystal.find_isomorphism(c, d) is not None
+                # g = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+                # print('  ', lam, ':', f, g, len(c.get_highest_weights()))
+                # if not f:
+                #     input('')
+
             #     #if not f:
             #     #    c.draw()
             #     #    input('')
@@ -270,6 +283,40 @@ def test_words_semicrystal(n=3, k=5):
                 d.draw()
             
 
+def test_qnormal_semicrystal(n=3, k=5):
+    s = AbstractQCrystal.semicrystal_from_strict_partition((1,), n)
+    b = s.tensor(s)
+    seen = {}
+    for _ in range(k):
+        print('\n\nn =', n, 'k =', _ + 1)
+        for w, mu in b.get_highest_weights():
+            mu = Partition.trim(mu)
+            c = b.get_component(w)
+            if not all(len(x) == 1 for x in word(w)):
+                continue
+            if len(c.get_highest_weights()) > 1:
+                continue
+            d = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+            print()
+            print(mu, word(w), len(c), len(d))
+            print()
+            f1 = AbstractQCrystal.find_isomorphism(c, d) is not None
+            seen[mu] = f1 or seen.get(mu, False)
+            print('  ', mu, ':', f1)
+            if not f1:
+                ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+                print('  ch =', ch)
+                print(c.get_highest_weights()[0])
+                input('')
+            #if not f1 and not f2:
+            #    c.draw()
+            #    input('')
+            #    d.draw()
+            #    input('')
+        assert all(seen.values())
+        b = s.tensor(b)
+
+
 def test_normal_semicrystal(n=3, k=5):
     s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
     b = s.tensor(s)
@@ -293,6 +340,11 @@ def test_normal_semicrystal(n=3, k=5):
             seen[mu] = f1 or seen.get(mu, False)
             dual_seen[mu] = f2 or dual_seen.get(mu, False)
             print('  ', mu, ':', f1, f2)
+            if not f1:
+                ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+                print('  ch =', ch)
+                print(c.get_highest_weights()[0])
+                input('')
             #if not f1 and not f2:
             #    c.draw()
             #    input('')
@@ -316,12 +368,15 @@ def test_words_semicrystal_uhw(n=3, k=5):
             if ell != 1:
                 ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
                 print('  ch =', ch)
+                print(' ell =', ell)
+                print(c.get_highest_weights())
                 c.draw()
                 input('')
             assert ell == 1
 
 
 def test_normal_semicrystal_uhw(n=3, k=5):
+    # fails n=3, k=4
     s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
     b = s.tensor(s)
     for _ in range(k):
@@ -329,12 +384,21 @@ def test_normal_semicrystal_uhw(n=3, k=5):
         for w, mu in b.get_highest_weights():
             mu = Partition.trim(mu)
             c = b.get_component(w)
-            print('  ', mu, len(c), len(c.get_highest_weights()))
-            assert len(c.get_highest_weights()) == 1
+            ell = len(c.get_highest_weights())
+            print('  ', mu, len(c), ell)
+            if ell != 1:
+                ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+                print('  ch =', ch)
+                print(' ell =', ell)
+                print(c.get_highest_weights())
+                c.draw()
+                input('')
+            assert ell == 1
         b = s.tensor(b)
 
 
 def test_normal_q_semicrystal_uhw(n=3, k=5):
+    # fails n=3, k=4
     s = AbstractQCrystal.semicrystal_from_strict_partition((1,), n)
     b = s.tensor(s)
     for _ in range(k):
@@ -342,8 +406,16 @@ def test_normal_q_semicrystal_uhw(n=3, k=5):
         for w, mu in b.get_highest_weights():
             mu = Partition.trim(mu)
             c = b.get_component(w)
-            print('  ', mu, len(c), len(c.get_highest_weights()))
-            assert len(c.get_highest_weights()) == 1
+            ell = len(c.get_highest_weights())
+            print('  ', mu, len(c), ell)
+            if ell != 1:
+                ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+                print('  ch =', ch)
+                print(' ell =', ell)
+                print(c.get_highest_weights())
+                c.draw(extended=True)
+                input('')
+            assert ell == 1
         b = s.tensor(b)
 
 
