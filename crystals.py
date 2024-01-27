@@ -15,12 +15,18 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
 class AbstractCrystalMixin:
 
+    def is_even(self, v):
+        return all(self.e_string(i, v) % 2 == 0 for i in self.indices)
     def character(self):
         from stable.polynomials import Polynomial
         ans = Polynomial()
         for b in self:
             ans += Polynomial.from_tuple((0,) + self.weight(b))
         return ans
+
+    def squared_crystal(self):
+        edges = {(i, v, self.f_operator(i, self.f_operator(i, v))) for i in self.indices for v in self if self.f_operator(i, v) is not None and self.f_operator(i, self.f_operator(i, v)) is not None}
+        return self.__class__(self.rank, self.vertices, edges, self.weights, self.printer)
 
     def as_gl_crystal(self):
         edges = {(i, v, self.f_operator(i, v)) for i in range(1, self.rank) for v in self if self.f_operator(i, v) is not None}
@@ -608,6 +614,10 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
+    def from_partition(cls, mu, rank):
+        return cls.semistandard_tableaux_from_partition(mu, rank)
+
+    @classmethod
     def semistandard_tableaux_from_partition(cls, mu, rank):
         n = rank
         vertices = []
@@ -619,7 +629,7 @@ class AbstractGLCrystal(AbstractCrystalMixin):
             for i in range(1, n):
                 u = cls.f_operator_on_semistandard_tableaux(i, t)
                 if u is not None:
-                    assert u.e_operator_on_semistandard_tableaux(i) == t
+                    assert cls.e_operator_on_semistandard_tableaux(i, u) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
