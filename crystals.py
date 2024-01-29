@@ -769,6 +769,22 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 class AbstractQCrystal(AbstractCrystalMixin):
 
     @classmethod
+    def semicrystal_of_words(cls, length, rank):
+        n = rank
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.all(n, (length,), setvalued=True):
+            vertices += [t]
+            weights[t] = t.weight(n)
+            for i in ([-1] if n >= 2 else [])  + list(range(1, n)):
+                u = t.half_f_operator(i)
+                if u is not None:
+                    assert u.half_e_operator(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def semicrystal_from_strict_partition(cls, mu, rank):
         return cls.decomposition_semicrystal_from_strict_partition(mu, rank)
 

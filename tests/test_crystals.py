@@ -40,31 +40,27 @@ INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
 def test_qnormal_semicrystal_characters(n=3, k=5):
-    b = AbstractQCrystal.semicrystal_from_strict_partition((1,), n)
-    c = b
-    for kk in range(1, k + 1):
-        print('n =', n, 'k =', kk)
-        hw = c.get_highest_weights()
-        for u in hw:
-            d = c.get_component(u[0])
-            ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
-            print('  ', u[1], ':', ch)
-            assert min(ch.dictionary.values()) > 0
-        c = b.tensor(c)
+    print('n =', n, 'k =', k)
+    c = AbstractQCrystal.semicrystal_of_words(k, n)
+    hw = c.get_highest_weights()
+    for u in hw:
+        d = c.get_component(u[0])
+        ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
+        if len(ch) > 1:
+            print('  ', (n, k), u[1], ':', ch)
+        assert min(ch.dictionary.values()) > 0
 
 
 def test_normal_semicrystal_characters(n=3, k=5):
-    b = AbstractGLCrystal.semicrystal_of_words(1, n)
-    c = b
-    for kk in range(1, k + 1):
-        print('n =', n, 'k =', kk)
-        hw = c.get_highest_weights()
-        for u in hw:
-            d = c.get_component(u[0])
-            ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
-            print('  ', u[1], ':', ch)
-            assert min(ch.dictionary.values()) > 0
-        c = b.tensor(c)
+    print('n =', n, 'k =', k)
+    c = AbstractGLCrystal.semicrystal_of_words(k, n)
+    hw = c.get_highest_weights()
+    for u in hw:
+        d = c.get_component(u[0])
+        ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
+        if len(ch) > 1:
+            print('  ', (n, k), u[1], ':', ch)
+        assert min(ch.dictionary.values()) > 0
 
 
 def test_semicrystal_group_action_on_tabs(n=3, k=5):
@@ -127,10 +123,10 @@ def tabl(t):
     return init.from_rows((w,))
 
 
-def test_grothexp_qtab_semicrystal(n=3, k=None):
-    k = n if k is None else k
-    partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
+def test_grothexp_qtab_semicrystal(n=3, k=5):
+    partitions = sorted({mu.transpose().tuple() for mu in Partition.all(k, max_part=n) if mu.transpose().is_strict()})
     print(partitions)
+    print()
     for mu in partitions:
         print('n =', n, 'mu =', mu)
         expected = G_expansion_no_beta(GP(n, mu).set_variable(0,1)).dictionary
@@ -149,8 +145,6 @@ def test_grothexp_qtab_semicrystal(n=3, k=None):
             #    d.draw()
             #    input('')
             # assert f
-        print(expected == actual)
-        print()
         if expected != actual:
             b.draw()
             input('')
@@ -195,7 +189,7 @@ def test_tensor_qtab_semicrystal(n=3, k=None):
 def test_tensor_tab_semicrystal(n=3, k=None):
     from stable.utils import G, G_expansion
     k = n if k is None else k
-    partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n)})
+    partitions = sorted({mu.transpose().tuple() for i in [k] for mu in Partition.all(i, max_part=n)})
     print(partitions)
     print()
     for mu in partitions:

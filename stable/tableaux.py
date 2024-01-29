@@ -335,6 +335,19 @@ class Tableau:
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
         # boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1])) # row word
+
+        if index == -1:
+            for x, y in boxes:
+                if 2 in tab.get(x, y, unpack=False) and 1 not in tab.get(x, y, unpack=False):
+                    return tab.add(x, y, 1)
+                elif 2 in tab.get(x, y, unpack=False) and 1 in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 2)
+                elif 1 not in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    continue
+                else:
+                    return None
+            return None
+
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)
 
@@ -355,6 +368,19 @@ class Tableau:
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
         # boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1])) # row word
+
+        if index == -1:
+            for x, y in boxes:
+                if 1 in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    return tab.add(x, y, 2)
+                elif 1 in tab.get(x, y, unpack=False) and 2 in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 1)
+                elif 1 not in tab.get(x, y, unpack=False) and 2 not in tab.get(x, y, unpack=False):
+                    continue
+                else:
+                    return None
+            return None
+
         signature = self.half_signature(self, boxes, index)
         null, right, left, combined = self.half_signature_classes(signature)
 
