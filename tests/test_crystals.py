@@ -138,7 +138,8 @@ def test_grothexp_qtab_semicrystal(n=3, k=5):
             # c = b.get_component(w)
             # d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
             # f = AbstractGLCrystal.find_isomorphism(c, d) is not None
-            # print('  ', lam, ':', f)
+            # ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
+            # print('  ', lam, ':', f, ch)
             #if not f:
             #    c.draw()
             #    input('')
@@ -236,14 +237,16 @@ def test_selfdual_tab_semicrystal(n=3, k=None):
                 f += [AbstractGLCrystal.find_isomorphism(b, c) is not None]
             print('  ', n, mu, f)
             count += int(all(f))
+            assert f[0] == (len(set(mu)) < 3)
+            assert len(f) == 1 or all(f[1:]) == (len(set(mu) - {0}) <= 1)
         print()
-        print('n =', n, 'partitions of', j, ':', count)
-        print()
+        # print('n =', n, 'partitions of', j, ':', count)
+        # print()
         ans.append(count)
     return ans
 
 
-def test_sv_signature_rule(n=3, k=2):
+def test_sv_signature_rule(n=3, k=5):
     for level in range(1, k + 1):
         print('n =', n, 'k =', level)
         s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
@@ -252,14 +255,14 @@ def test_sv_signature_rule(n=3, k=2):
             c = s.tensor(c)
         for w in c:
             t = tabl(w)
-            print()
-            print(' candidate =', str(t).replace('\n', ''))
+            # print()
+            # print(' candidate =', str(t).replace('\n', ''))
             for i in range(1, n):
                 fw = tabl(c.f_operator(i, w))
                 sfw = 'none' if fw is None else str(fw).replace('\n', '')
-                print('  i =', i, ':', sfw, fw == t.half_f_operator(i))
+                # print('  i =', i, ':', sfw, fw == t.half_f_operator(i))
                 assert fw == t.half_f_operator(i)
-            print()
+            # print()
 
 
 def test_words_semicrystal(n=3, k=5):
