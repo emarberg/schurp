@@ -2161,6 +2161,49 @@ class Tableau:
         rows.append([v])
         return Tableau.shifted_from_rows(rows)
 
+    def sk_insert(self, v):
+        def splitrow(r):
+            decr = []
+            for i, a in enumerate(r):
+                if i == 0 or abs(r[i - 1]) > abs(a):
+                    decr.append(a)
+                else:
+                    break
+            incr = r[len(decr):]
+            return decr, incr
+        v = v if type(v) is int else v.number
+        rows = self.get_rows()
+        for i in range(len(rows)):
+            decr, incr = splitrow(rows[i])
+            if (incr and abs(incr[-1]) <= abs(v)) or (not incr):
+                rows[i].append(v)
+                return Tableau.shifted_from_rows(rows)
+            else:
+                in_sign = -1 if v < 0 else 1
+                out_sign = -1 if decr[-1] < 0 else 1
+                for j, a in enumerate(incr):
+                    if abs(a) > abs(v):
+                        incr[j] = abs(v)
+                        v = abs(a)
+                        break
+                for j, a in enumerate(decr):
+                    if abs(a) <= abs(v):
+                        decr[j] = abs(v)
+                        v = abs(a)
+                        break
+                decr[-1] = abs(decr[-1])
+                if abs(decr[-1]) > abs(incr[0]):
+                    decr += [incr[0]]
+                    incr = incr[1:]
+                    decr[-1] *= in_sign
+                    v *= out_sign
+                else:
+                    decr[-1] *= out_sign
+                    v *= in_sign
+                rows[i] = decr + incr
+        rows.append([v])
+        return Tableau.shifted_from_rows(rows)
+
     @cached_value(HORIZONTAL_STRIPS_CACHE)
     def _horizontal_strips(cls, mu, lam):  # noqa
         if not Partition._contains(mu, lam):

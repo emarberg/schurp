@@ -1060,6 +1060,19 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
+    def sk_insert(self):
+        from tableaux import Tableau
+        p, q = Tableau(), Tableau()
+        for i, a in enumerate(self):
+            p = p.sk_insert(a)
+            v = MarkedNumber(i + 1)
+            for k, l in p.shape():
+                if (k, l) not in q.shape():
+                    q = q.set(k, l, v)
+                    break
+            assert p.shape() == q.shape()
+        return p, q
+
 
 def get_insertion_mapping(words):
     words = [Word(a) if type(a) == int else Word(*a) if type(a) != Word else a for a in words]
@@ -1161,6 +1174,11 @@ def rsk_insert(*w):
 def decomposition_insert(*w):
     word = w if type(w) == Word else Word(*w)
     return word.decomposition_insert()
+
+
+def sk_insert(*w):
+    word = w if type(w) == Word else Word(*w)
+    return word.sk_insert()
 
 
 REDUCED_WORDS = {(): {()}}

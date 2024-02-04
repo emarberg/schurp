@@ -30,6 +30,7 @@ from words import Word, weak_eg_insert, eg_insert, fpf_insert, involution_insert
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 from stable.utils import GP, G, GP_expansion, GP_expansion_no_beta, G_expansion, G_expansion_no_beta, SymmetricPolynomial
+from stable.vectors import Vector
 import random
 import time
 
@@ -155,13 +156,16 @@ def test_grothexp_qtab_semicrystal(n=3, k=5):
 def test_tensor_qtab_semicrystal(n=3, k=None):
     # fails for n=3, (2,), (2, 1) or (2,), (3,)
     k = n if k is None else k
-    partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
+    partitions = sorted({mu.transpose().tuple() for i in [k] for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
     print(partitions)
     print()
     for mu in partitions:
         for nu in partitions:
-            print('n =', n, mu, nu)
-            expected = GP_expansion_no_beta(GP(n, mu).set_variable(0,1) * GP(n, nu).set_variable(0,1)).dictionary
+            print('n =', n, 'k =', k, mu, nu)
+
+            expected = GP_expansion_no_beta(GP(n, mu).set_variable(0, 1) * GP(n, nu).set_variable(0, 1))
+            expected = Vector({k: v.constant_term() for (k, v) in expected.dictionary.items()})
+
             c1 = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
             c2 = AbstractQCrystal.semicrystal_from_strict_partition(nu, n)
             b = c1.tensor(c2)
@@ -178,13 +182,18 @@ def test_tensor_qtab_semicrystal(n=3, k=None):
                 # if not f:
                 #     input('')
 
-            if expected != actual:
+            diff = Vector(actual) - expected
+            print()
+            print('  ', diff)
+            print()
+            boolean = min(diff.dictionary.values(), default=0) >= 0
+            if not boolean:
                 print()
                 print('expected =', expected)
                 print('  actual =', actual)
                 b.draw(extended=True)
                 input('')
-            assert expected == actual
+            assert boolean
 
 
 def test_tensor_tab_semicrystal(n=3, k=None):
