@@ -47,8 +47,16 @@ def test_qnormal_semicrystal_characters(n=3, k=5):
         d = c.get_component(u[0])
         ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
         if len(ch) > 1:
-            print('  ', (n, k), u[1], ':', ch)
+            print('  ', 'n =', n, 'k =', k, u[1], ':', ch)
         assert min(ch.dictionary.values()) > 0
+
+        ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
+        expected = ch.dictionary
+        actual = {}
+        for w, lam in d.as_gl_crystal().get_highest_weights():
+            lam = Partition.trim(lam)
+            actual[lam] = 1 + actual.get(lam, 0)
+        assert actual == expected
 
 
 def test_normal_semicrystal_characters(n=3, k=5):
@@ -59,8 +67,15 @@ def test_normal_semicrystal_characters(n=3, k=5):
         d = c.get_component(u[0])
         ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(d.character()))
         if len(ch) > 1:
-            print('  ', (n, k), u[1], ':', ch)
+            print('  ', 'n =', n, 'k =', k, u[1], ':', ch)
         assert min(ch.dictionary.values()) > 0
+
+        expected = ch.dictionary
+        actual = {}
+        for w, lam in d.get_highest_weights():
+            lam = Partition.trim(lam)
+            actual[lam] = 1 + actual.get(lam, 0)
+        assert actual == expected
 
 
 def test_semicrystal_group_action_on_tabs(n=3, k=5):
