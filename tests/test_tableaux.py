@@ -1,7 +1,26 @@
 from tableaux import Tableau
 from marked import MarkedNumber
 from partitions import Partition, StrictPartition
-from words import Word, decomposition_insert
+from words import Word, decomposition_insert, sk_insert
+from crystals import AbstractQCrystal
+
+
+def decomposition_monoid_maps(n=3, k=10, mu=None):
+    partitions = [mu] if mu is not None else sorted({mu.transpose().tuple() for mu in Partition.all(k, max_part=n) if mu.transpose().is_strict()})
+    print(partitions)
+    print()
+
+    for mu in partitions:
+        b = AbstractQCrystal.decomposition_tableaux_from_strict_partition(mu, n)
+        print('n =', n, 'mu =', mu, ':', len(b))
+        for t in b:
+            u = sk_insert(tuple(reversed(t.row_reading_word())))[0]
+            v = decomposition_insert(tuple(reversed(u.row_reading_word())))[0]
+            print(t.tex())
+            print('& \\leftrightarrow ')
+            print(u.tex())
+            print('\\\\')
+            assert t == v
 
 
 def test_decomposition_insertion():
