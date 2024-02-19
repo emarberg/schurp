@@ -5,6 +5,50 @@ from vectors import Vector
 from tableaux import Tableau
 
 
+def test_faithful_lifting_lemma(n=8):
+    seen = set()
+    count = 0
+    for w in Permutation.all(n):
+        print('w =', w)
+        if max(w.inverse().code() + (0,)) > 3:
+            continue
+        for word in w.get_reduced_words():
+            t = eg_insert(word)[0]
+            if t in seen:
+                continue
+            seen.add(t)
+
+            rows = t.get_rows()
+            if len(rows) != 3:
+                continue
+            c, b, a = rows
+
+            x, y, z = a, b, c
+            if not Word.is_faithful_lift(x, y):
+                continue
+            x, y = Word.lift(x, y)
+            if not Word.is_faithful_lift(y, z):
+                continue
+            y, z = Word.lift(y, z)
+            if not Word.is_faithful_lift(x, y):
+                continue
+            x, y = Word.lift(x, y)
+
+            bool1 = Word.is_faithful_lift(b, c)
+            b, c = Word.lift(b, c)
+            bool2 = Word.is_faithful_lift(a, b)
+            a, b = Word.lift(a, b)
+
+            count += 1
+            print('\nINSTANCE', count)
+            print(t)
+            print(Tableau.from_rows([z, y, x]))
+            print(Tableau.from_rows([c, b, a]))
+            print()
+            assert bool1 and bool2
+            assert a == x
+
+
 def test_eg_inserts_new_row(n=6):
     # tests whether ...
     for pi in Permutation.all(n):

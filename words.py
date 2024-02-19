@@ -127,6 +127,15 @@ class Word:
         return ans
 
     @classmethod
+    def is_faithful_lift(cls, top, bot):
+        if len(top) >= len(bot):
+            return False
+        for i in range(len(top)):
+            if top[i] < bot[i + 1]:
+                return True
+        return False
+
+    @classmethod
     def lift(cls, top, bot=None):
         # error after Definition 4.2.6 in Assaf 1903.05802v1 (corrected in published version):
         # lifting first example in Fig. 12 does not give every in Fig. 10

@@ -200,6 +200,8 @@ GP_expansion = SymmetricPolynomial.GP_expansion
 GP_expansion_no_beta = SymmetricPolynomial.GP_expansion_no_beta
 
 GQ_expansion = SymmetricPolynomial.GQ_expansion
+GQ_expansion_no_beta = SymmetricPolynomial.GQ_expansion_no_beta
+
 GS_expansion = SymmetricPolynomial.GS_expansion
 
 P_expansion = SymmetricPolynomial.P_expansion

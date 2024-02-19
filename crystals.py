@@ -8,6 +8,7 @@ from stable.tableaux import Tableau
 import subprocess
 import time
 import collections
+import itertools
 
 
 BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
@@ -17,6 +18,7 @@ class AbstractCrystalMixin:
 
     def is_even(self, v):
         return all(self.e_string(i, v) % 2 == 0 for i in self.indices)
+
     def character(self):
         from stable.polynomials import Polynomial
         ans = Polynomial()
@@ -614,6 +616,24 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
+    def standard_semicrystal(cls, rank):
+        n = rank
+        ints = tuple(range(1, n + 1))
+        vertices = [t for k in range(1, n + 1) for t in itertools.combinations(ints, k)]
+        edges = []
+        weights = {}
+        for t in vertices:
+            weights[t] = tuple(1 if i in t else 0 for i in range(1, n +1))
+            for i in range(1, n):
+                if i in t and i + 1 not in t:
+                    u = tuple(sorted(t + (i + 1,)))
+                    edges += [(i, t, u)]
+                elif i in t and i + 1 in t:
+                    u = tuple(_ for _ in t if _ != i)
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
     def from_partition(cls, mu, rank):
         return cls.semistandard_tableaux_from_partition(mu, rank)
 
@@ -726,11 +746,15 @@ class AbstractGLCrystal(AbstractCrystalMixin):
 
     def e_operator(self, i, v):
         assert i in self.indices
+        if v is None:
+            return None
         assert v in self.vertices
         return self.e_operators.get((i, v), None)
 
     def f_operator(self, i, v):
         assert i in self.indices
+        if v is None:
+            return None
         assert v in self.vertices
         return self.f_operators.get((i, v), None)
 
@@ -787,6 +811,28 @@ class AbstractQCrystal(AbstractCrystalMixin):
     @classmethod
     def semicrystal_from_strict_partition(cls, mu, rank):
         return cls.decomposition_semicrystal_from_strict_partition(mu, rank)
+
+    @classmethod
+    def standard_semicrystal(cls, rank):
+        n = rank
+        ints = tuple(range(1, n + 1))
+        vertices = [t for k in range(1, n + 1) for t in itertools.combinations(ints, k)]
+        edges = []
+        weights = {}
+        for t in vertices:
+            weights[t] = tuple(1 if i in t else 0 for i in range(1, n +1))
+            for i in range(-1, n):
+                if i == 0:
+                    continue
+                j = i
+                i = abs(i)
+                if i in t and i + 1 not in t:
+                    u = tuple(sorted(t + (i + 1,)))
+                    edges += [(j, t, u)]
+                elif i in t and i + 1 in t:
+                    u = tuple(_ for _ in t if _ != i)
+                    edges += [(j, t, u)]
+        return cls(rank, vertices, edges, weights)
 
     @classmethod
     def decomposition_semicrystal_from_strict_partition(cls, mu, rank):
@@ -1053,6 +1099,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
     def e_operator(self, i, v):
         assert i in self.extended_indices
+        if v is None:
+            return None
         assert v in self.vertices
         if i in self.provided_operators or (i, v) in self.e_operators:
             return self.e_operators.get((i, v), None)
@@ -1065,6 +1113,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
     def f_operator(self, i, v):
         assert i in self.extended_indices
+        if v is None:
+            return None
         assert v in self.vertices
         if i in self.provided_operators or (i, v) in self.f_operators:
             return self.f_operators.get((i, v), None)
@@ -1108,6 +1158,54 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def standard_semicrystal(cls, rank):
+        n = rank
+        ints = set(range(-n, n + 1)) - {0}
+        vertices = [tuple(sorted(t)) for k in range(1, 2 * n + 1) for t in itertools.combinations(ints, k)]
+
+        gp_one = AbstractQCrystal.semicrystal_of_words(1, rank)
+        gp_two = AbstractQCrystal.semicrystal_of_words(2, rank)
+
+        edges = []
+        weights = {}
+        for t in vertices:
+            w = [0 for _ in range(n)]
+            for i in t:
+                w[abs(i) - 1] += 1
+            weights[t] = tuple(w)
+
+            if 1 in t and -1 not in t:
+                u = tuple(sorted(t + (-1,)))
+                edges += [(0, t, u)]
+            elif 1 in t and -1 in t:
+                u = tuple(_ for _ in t if _ != 1)
+                edges += [(0, t, u)]
+
+            a = tuple(-i for i in t if i < 0)
+            b = tuple(i for i in t if i > 0)
+
+            for i in range(-1, n):
+                if i == 0:
+                    continue
+
+                if a and not b:
+                    tab = Tableau.from_rows([[a]])
+                    uab = gp_one.f_operator(i, tab)
+                    u = tuple(sorted([-x for x in uab.get(1, 1, unpack=False)])) if uab else None
+                elif b and not a:
+                    tab = Tableau.from_rows([[b]])
+                    uab = gp_one.f_operator(i, tab)
+                    u = tuple(sorted([x for x in uab.get(1, 1, unpack=False)])) if uab else None
+                else:
+                    tab = Tableau.from_rows([[a, b]])
+                    uab = gp_two.f_operator(i, tab)
+                    u = tuple(sorted([-x for x in uab.get(1, 1, unpack=False)] + [x for x in uab.get(1, 2, unpack=False)])) if uab else None
+
+                if u:
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
 
     @classmethod
     def f_operator_on_decomposition_tableaux(cls, i, tab):
@@ -1337,6 +1435,8 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
     def e_operator(self, i, v):
         assert i in self.extended_indices
+        if v is None:
+            return None
         assert v in self.vertices
         if i in self.provided_operators or (i, v) in self.e_operators:
             return self.e_operators.get((i, v), None)
@@ -1355,6 +1455,8 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
     def f_operator(self, i, v):
         assert i in self.extended_indices
+        if v is None:
+            return None
         assert v in self.vertices
         if i in self.provided_operators or (i, v) in self.f_operators:
             return self.f_operators.get((i, v), None)
@@ -1387,23 +1489,48 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
                         edges.append((0, (x, y), (xx, y)))
 
             xweight = b.weight(x)
+            ex = b.e_operator(-1, x)
             fx = b.f_operator(-1, x)
+
+            ey = b.e_operator(0, y)
+            fy = b.f_operator(0, y)
+
+            ffx = b.f_operator(-1, b.f_operator(0, x))
+            effx = b.e_operator(0, ffx)
+            fffx = b.f_operator(0, ffx)
+
+            fex = b.f_operator(-1, b.e_operator(0, x))
+            efex = b.f_operator(0, fex)
+            ffex = b.f_operator(0, fex)
+
             for y in c:
-                if xweight[1] == xweight[2] == 0:
+                # if xweight[1] == xweight[2] == 0:
+                #     xx = x
+                #     yy = c.f_operator(-1, y)
+                # elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.f_string(0, x) == c.e_string(0, y):
+                #     xx = b.f_operator(-1, b.f_operator(0, x))
+                #     yy = c.e_operator(0, y)
+                # elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.e_string(0, x) == c.f_string(0, y):
+                #     xx = b.f_operator(-1, b.e_operator(0, x))
+                #     yy = c.f_operator(0, y)
+                # else:
+                #     xx = b.f_operator(-1, x)
+                #     yy = y
+                if ex is None and fx is None:
                     xx = x
                     yy = c.f_operator(-1, y)
-                elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.f_string(0, x) == c.e_string(0, y):
-                    xx = b.f_operator(-1, b.f_operator(0, x))
-                    yy = c.e_operator(0, y)
-                elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.e_string(0, x) == c.f_string(0, y):
-                    xx = b.f_operator(-1, b.e_operator(0, x))
-                    yy = c.f_operator(0, y)
+                elif ffx is not None and ey is not None and effx is None and fffx is None:
+                    xx = ffx
+                    yy = ey
+                elif fex is not None and fy is not None and efex is None and ffex is None:
+                    xx = fex
+                    yy = fy
                 else:
-                    xx = b.f_operator(-1, x)
+                    xx = fx
                     yy = y
 
                 if xx is not None and yy is not None:
-                    edges.append((-1, (x, y), (xx, yy)))
+                   edges.append((-1, (x, y), (xx, yy)))
 
         return edges
 
