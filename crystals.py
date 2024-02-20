@@ -1547,8 +1547,8 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
                     xx = fx
                     yy = y
 
-                #if xx is not None and yy is not None:
-                #   edges.append((-1, (x, y), (xx, yy)))
+                if xx is not None and yy is not None:
+                   edges.append((-1, (x, y), (xx, yy)))
 
         return edges
 
