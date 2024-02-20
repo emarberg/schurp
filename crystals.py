@@ -458,6 +458,21 @@ class AbstractCrystalMixin:
         wt = lambda x: self.weight(x)
         return self.from_element(a, rank, indices, e, f, wt)
 
+    def get_components(self):
+        rank = self.rank
+        indices = self.indices
+        e = lambda x, i: self.e_operator(i, x)
+        f = lambda x, i: self.f_operator(i, x)
+        wt = lambda x: self.weight(x)
+        
+        elements = set(self)
+        ans = []
+        while elements:
+            a = elements.pop()
+            ans.append(self.from_element(a, rank, indices, e, f, wt))
+            elements -= set(ans[-1])
+        return ans
+
     def is_connected(self):
         return len(self.get_component(next(iter(self)))) == len(self)
 
@@ -1492,9 +1507,6 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
             ex = b.e_operator(-1, x)
             fx = b.f_operator(-1, x)
 
-            ey = b.e_operator(0, y)
-            fy = b.f_operator(0, y)
-
             ffx = b.f_operator(-1, b.f_operator(0, x))
             effx = b.e_operator(0, ffx)
             fffx = b.f_operator(0, ffx)
@@ -1504,13 +1516,19 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
             ffex = b.f_operator(0, fex)
 
             for y in c:
+                ey = c.e_operator(0, y)
+                fy = c.f_operator(0, y)
+
                 # if xweight[1] == xweight[2] == 0:
+                #     assert ex is None and fx is None
                 #     xx = x
                 #     yy = c.f_operator(-1, y)
                 # elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.f_string(0, x) == c.e_string(0, y):
+                #     assert ffx is not None and ey is not None and effx is None and fffx is None
                 #     xx = b.f_operator(-1, b.f_operator(0, x))
                 #     yy = c.e_operator(0, y)
                 # elif fx is not None and b.e_string(0, fx) == b.f_string(0, fx) < b.e_string(0, x) == c.f_string(0, y):
+                #     assert fex is not None and fy is not None and efex is None and ffex is None
                 #     xx = b.f_operator(-1, b.e_operator(0, x))
                 #     yy = c.f_operator(0, y)
                 # else:
@@ -1529,8 +1547,8 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
                     xx = fx
                     yy = y
 
-                if xx is not None and yy is not None:
-                   edges.append((-1, (x, y), (xx, yy)))
+                #if xx is not None and yy is not None:
+                #   edges.append((-1, (x, y), (xx, yy)))
 
         return edges
 
@@ -1547,9 +1565,11 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
             [(0, 1, -1)]
         weights = {}
         for v in vertices:
-            wt = (rank + 1) * [0]
-            wt[0] = 2 if v > 0 else 1
-            wt[abs(v)] = 1
+            wt = rank * [0]
+            wt[abs(v) - 1] = 1
+            #wt = (rank + 1) * [0]
+            #wt[0] = 2 if v > 0 else 1
+            #wt[abs(v)] = 1
             weights[v] = tuple(wt)
         printer = lambda x: str(abs(x)) + ("'" if x < 0 else "")
         return cls(rank, vertices, edges, weights, printer)

@@ -29,7 +29,14 @@ from schubert import X
 from words import Word, weak_eg_insert, eg_insert, fpf_insert, involution_insert
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
-from stable.utils import GP, G, GP_expansion, GP_expansion_no_beta, G_expansion, G_expansion_no_beta, SymmetricPolynomial
+from stable.utils import (
+    schur_expansion,
+    GQ, GP, G, 
+    GP_expansion, GP_expansion_no_beta,
+    GQ_expansion, GQ_expansion_no_beta, 
+    G_expansion, G_expansion_no_beta, 
+    SymmetricPolynomial
+)
 from stable.vectors import Vector
 import random
 import time
@@ -38,6 +45,25 @@ import time
 PRINT_DIR = "/Users/emarberg/Downloads/"
 FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def test_qq_sv_tensor(n=2, k=2):
+    b = AbstractPrimedQCrystal.standard_semicrystal(n)
+    
+    c = b
+    for _ in range(1, k):
+        c = b.tensor(c)
+
+    for g in c.get_components():
+        # g.draw()
+        ch = SymmetricPolynomial.from_polynomial(g.character())
+        try:
+            exp = GQ_expansion_no_beta(ch)
+            print('GQ:', exp)
+        except:
+            exp = schur_expansion(ch)
+            print('schur:', exp)
+        # input('')
 
 
 def test_qnormal_semicrystal_characters(n=3, k=5):
