@@ -1512,7 +1512,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
             fffx = b.f_operator(0, ffx)
 
             fex = b.f_operator(-1, b.e_operator(0, x))
-            efex = b.f_operator(0, fex)
+            efex = b.e_operator(0, fex)
             ffex = b.f_operator(0, fex)
 
             for y in c:
