@@ -460,7 +460,7 @@ class AbstractCrystalMixin:
 
     def get_components(self):
         rank = self.rank
-        indices = self.indices
+        indices = self.provided_operators
         e = lambda x, i: self.e_operator(i, x)
         f = lambda x, i: self.f_operator(i, x)
         wt = lambda x: self.weight(x)
