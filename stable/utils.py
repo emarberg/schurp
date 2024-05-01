@@ -52,7 +52,8 @@ def shortest_expansion(f):
 
 
 def grothendieck(num_variables, mu, nu=(), degree_bound=None): # noqa
-    if type(mu) == Permutation:
+    if type(mu) != tuple:
+        mu = Permutation(*list(mu))
         assert nu == ()
         return mu.stable_grothendieck(num_variables, degree_bound=degree_bound)
     else:
