@@ -19,10 +19,19 @@ def test_grothendieck_transitions():
 
 
 def test_all(n):
-    t0 = time.time()
+    total = 1
+    for i in range(1, n + 1):
+        total *= i
+    t = total // 100
+    ###
+    t0 = t1 = time.time()
     w0 = tuple(i + 1 for i in range(n))
-    for w in itertools.permutations(w0):
+    for i, w in enumerate(itertools.permutations(w0)):
         for j in range(1, n + 2):
             grothendieck_transitions(w, j)
-    t1 = time.time()
-    print('n =', n, 'time =', t1 - t0)
+        ###
+        if n > 7 and (i + 1) % t == 0:
+            print('  ', (i + 1) // t, '%', time.time() - t1)
+            t1 = time.time()
+        ###
+    print('n =', n, 'time =', time.time() - t0)
