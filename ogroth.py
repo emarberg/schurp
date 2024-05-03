@@ -62,6 +62,17 @@ def grothendieck_transitions(w, j):
     return GROTHENDIECK_TRANSITIONS_CACHE[w, j]
 
 
+def grothendieck_double_transitions(w, i, j):
+    (i, j) = (j, i) if i > j else (i, j)
+    if (w, i, j) not in GROTHENDIECK_TRANSITIONS_CACHE:
+        ans = {}
+        for y, c in grothendieck_transitions(w, i):
+            for z, d in grothendieck_transitions(y, j):
+                ans[z] = ans.get(z, 0) + c * d
+        GROTHENDIECK_TRANSITIONS_CACHE[w, i, j] = ans
+    return GROTHENDIECK_TRANSITIONS_CACHE[w, i, j]
+
+
 def o_dominant_grothendieck_expansion(n):
     pass
 

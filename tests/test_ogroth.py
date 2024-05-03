@@ -1,4 +1,7 @@
-from ogroth import grothendieck_transitions
+from ogroth import (
+    grothendieck_transitions,
+    grothendieck_double_transitions,
+)
 import itertools
 import time
 
@@ -31,6 +34,26 @@ def test_all(n):
             grothendieck_transitions(w, j)
         ###
         if n > 7 and (i + 1) % t == 0:
+            print('  ', (i + 1) // t, '%', time.time() - t1)
+            t1 = time.time()
+        ###
+    print('n =', n, 'time =', time.time() - t0)
+
+
+def test_double_all(n):
+    total = 1
+    for i in range(1, n + 1):
+        total *= i
+    t = total // 100
+    ###
+    t0 = t1 = time.time()
+    w0 = tuple(i + 1 for i in range(n))
+    for i, w in enumerate(itertools.permutations(w0)):
+        for j in range(1, n + 2):
+            for k in range(j, n + 2):
+                grothendieck_double_transitions(w, j, k)
+        ###
+        if n > 6 and (i + 1) % t == 0:
             print('  ', (i + 1) // t, '%', time.time() - t1)
             t1 = time.time()
         ###
