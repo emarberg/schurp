@@ -24,7 +24,7 @@ def test_grothendieck_transitions():
     }
 
 
-def test_all(n=7):
+def test_all(n=7, verbose=False):
     total = 1
     for i in range(1, n + 1):
         total *= i
@@ -34,7 +34,15 @@ def test_all(n=7):
     w0 = tuple(i + 1 for i in range(n))
     for i, w in enumerate(itertools.permutations(w0)):
         for j in range(1, n + 2):
-            grothendieck_transitions(w, j)
+            ans = grothendieck_transitions(w, j)
+
+            if verbose:
+                print()
+                print('w =', w, 'j =', j)
+                print()
+                for y, c in ans:
+                    print('  ', c, '*', y)
+                print()
         ###
         if n > 7 and (i + 1) % t == 0:
             print('  ', (i + 1) // t, '%', time.time() - t1)
@@ -43,7 +51,7 @@ def test_all(n=7):
     print('n =', n, 'time =', time.time() - t0)
 
 
-def test_double_all(n=7):
+def test_double_all(n=7, verbose=False):
     total = 1
     for i in range(1, n + 1):
         total *= i
@@ -54,7 +62,16 @@ def test_double_all(n=7):
     for i, w in enumerate(itertools.permutations(w0)):
         for j in range(1, n + 2):
             for k in range(j, n + 2):
-                grothendieck_double_transitions(w, j, k)
+                ans = grothendieck_double_transitions(w, j, k)
+
+                if verbose:
+                    print()
+                    print('w =', w, 'j =', j, 'k =', k)
+                    print()
+                    for y, c in ans:
+                        print('  ', c, '*', y)
+                    print()
+
         ###
         if n > 6 and (i + 1) % t == 0:
             print('  ', (i + 1) // t, '%', time.time() - t1)
@@ -65,10 +82,9 @@ def test_double_all(n=7):
 
 GT_CACHE = {}
 
-def test_ogroth_expansion(n=6, gtcheck=True):
+def test_ogroth_expansion(n=6, gtcheck=True, verbose=False):
     delta = tuple(range(n - 1, 0, -2))
     mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
-    total = len(mus)
     ###
     t0 = t1 = time.time()
     for i, mu in enumerate(mus):
@@ -79,8 +95,16 @@ def test_ogroth_expansion(n=6, gtcheck=True):
                 bns = sorted([(tuple(x.oneline), bns.dictionary[x]) for x in bns.dictionary])
                 GT_CACHE[mu] = bns
             assert sorted(ans) == GT_CACHE[mu]
+        if verbose:
+            print()
+            print('mu =', mu)
+            print()
+            for z, c in sorted(ans):
+                print('   ', c, '*', z)
+            print()
         ###
-        print('  #', i + 1, 'of', total, 'mu =', mu, ':', time.time() - t1)
+        print('  #', i + 1, 'of', len(mus), 'mu =', mu, ':', time.time() - t1)
         t1 = time.time()
         ###
+    print()
     print('n =', n, 'time =', time.time() - t0)
