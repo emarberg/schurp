@@ -1,7 +1,10 @@
+from partitions import Partition
 from ogroth import (
     grothendieck_transitions,
     grothendieck_double_transitions,
+    ogroth_expansion,
 )
+from schubert import Grothendieck, InvGrothendieck, Permutation
 import itertools
 import time
 
@@ -21,7 +24,7 @@ def test_grothendieck_transitions():
     }
 
 
-def test_all(n):
+def test_all(n=7):
     total = 1
     for i in range(1, n + 1):
         total *= i
@@ -40,7 +43,7 @@ def test_all(n):
     print('n =', n, 'time =', time.time() - t0)
 
 
-def test_double_all(n):
+def test_double_all(n=7):
     total = 1
     for i in range(1, n + 1):
         total *= i
@@ -56,5 +59,28 @@ def test_double_all(n):
         if n > 6 and (i + 1) % t == 0:
             print('  ', (i + 1) // t, '%', time.time() - t1)
             t1 = time.time()
+        ###
+    print('n =', n, 'time =', time.time() - t0)
+
+
+GT_CACHE = {}
+
+def test_ogroth_expansion(n=6, gtcheck=True):
+    delta = tuple(range(n - 1, 0, -2))
+    mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
+    total = len(mus)
+    ###
+    t0 = t1 = time.time()
+    for i, mu in enumerate(mus):
+        ans = ogroth_expansion(mu)
+        if gtcheck:
+            if mu not in GT_CACHE:
+                bns = Grothendieck.decompose(InvGrothendieck.get(Permutation.from_involution_shape(*mu)))
+                bns = sorted([(tuple(x.oneline), bns.dictionary[x]) for x in bns.dictionary])
+                GT_CACHE[mu] = bns
+            assert sorted(ans) == GT_CACHE[mu]
+        ###
+        print('  #', i + 1, 'of', total, 'mu =', mu, ':', time.time() - t1)
+        t1 = time.time()
         ###
     print('n =', n, 'time =', time.time() - t0)

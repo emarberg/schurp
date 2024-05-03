@@ -1,7 +1,7 @@
 from collections import deque
 
 GROTHENDIECK_TRANSITIONS_CACHE = {}
-O_DOMINANT_CACHE = {}
+O_DOMINANT_CACHE = {(): [((), 1)]}
 
 
 def bruhat_cover(y, i, j):
@@ -65,14 +65,31 @@ def grothendieck_transitions(w, j):
 def grothendieck_double_transitions(w, i, j):
     (i, j) = (j, i) if i > j else (i, j)
     if (w, i, j) not in GROTHENDIECK_TRANSITIONS_CACHE:
-        ans = {}
+        ans = {w: -1}
         for y, c in grothendieck_transitions(w, i):
             for z, d in grothendieck_transitions(y, j):
                 ans[z] = ans.get(z, 0) + c * d
+        ans = [(y, ans[y]) for y in ans if ans[y]]
         GROTHENDIECK_TRANSITIONS_CACHE[w, i, j] = ans
     return GROTHENDIECK_TRANSITIONS_CACHE[w, i, j]
 
 
-def o_dominant_grothendieck_expansion(n):
-    pass
+def ogroth_expansion(mu):
+    if mu not in O_DOMINANT_CACHE:
+        j = len(mu)
+        i = mu[j - 1] + j - 1
+
+        nu = list(mu)
+        nu[-1] -= 1
+        if nu[-1] == 0:
+            nu = nu[:-1]
+        nu = tuple(nu)
+
+        ans = {}
+        for y, c in ogroth_expansion(nu):
+            for z, d in grothendieck_double_transitions(y, i, j):
+                ans[z] = ans.get(z, 0) + c * d
+        ans = [(y, ans[y]) for y in ans if ans[y]]
+        O_DOMINANT_CACHE[mu] = ans
+    return O_DOMINANT_CACHE[mu]
 
