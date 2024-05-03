@@ -1,6 +1,7 @@
 from collections import deque
 
 GROTHENDIECK_TRANSITIONS_CACHE = {}
+O_DOMINANT_CACHE = {}
 
 
 def bruhat_cover(y, i, j):
@@ -34,11 +35,10 @@ def grothendieck_transitions(w, j):
     """
     Yields pairs (z, sign) where
 
-        z = w(a_1,k)(a_2,k)···(a_p,k)(k,b_1)(k,b_2)···(k,b_q)
-        n = len(z) - len(w) - 1
+        z = w(a_1,j)(a_2,j)···(a_p,j)(j,b_1)(j,b_2)···(j,b_q)
         sign = (-1)**p
 
-    and a_p < ... < a_2 < a_1 < k < b_q < ... < b_2 < b_1, and the length
+    and a_p < ... < a_2 < a_1 < j < b_q < ... < b_2 < b_1, and the length
     increases by exactly one upon multiplication by each transposition.
     """
     if (w, j) not in GROTHENDIECK_TRANSITIONS_CACHE:
@@ -60,4 +60,8 @@ def grothendieck_transitions(w, j):
             queue.append((y, i - 1, q))
         GROTHENDIECK_TRANSITIONS_CACHE[w, j] = ans
     return GROTHENDIECK_TRANSITIONS_CACHE[w, j]
+
+
+def o_dominant_grothendieck_expansion(n):
+    pass
 

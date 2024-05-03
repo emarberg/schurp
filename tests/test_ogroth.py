@@ -1,4 +1,4 @@
-from transitions import grothendieck_transitions
+from ogroth import grothendieck_transitions
 import itertools
 import time
 
