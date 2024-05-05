@@ -9,6 +9,50 @@ import itertools
 import time
 
 
+def read_cplusplus_ogroth(mu):
+    DIRECTORY = "/Users/emarberg/examples/ogroth/"
+    file = DIRECTORY + "(" + "".join([str(a) + "," for a in mu])  + ").txt"
+    ans = []
+    with open(file, 'r') as f:
+        for line in f.readlines():
+            c, w = line.split(',', 1)
+            ans.append((eval(w), int(c)))
+    return sorted(ans)
+
+
+def test_cplusplus_ogroth(n=5, verbose=False):
+    delta = tuple(range(n - 1, 0, -2))
+    mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
+    t0 = t1 = time.time()
+    for i, mu in enumerate(mus):
+        ans = sorted(ogroth_expansion(mu))
+        bns = Grothendieck.decompose(InvGrothendieck.get(Permutation.from_involution_shape(*mu)))
+        bns = sorted([(tuple(x.oneline), bns.dictionary[x]) for x in bns.dictionary])
+        cns = read_cplusplus_ogroth(mu)
+
+        if verbose:
+            print()
+            print('mu =', mu)
+            print()
+            for z, c in ans:
+                print('   ', c, '*', z)
+            print()
+            for z, c in bns:
+                print('   ', c, '*', z)
+            print()
+            for z, c in cns:
+                print('   ', c, '*', z)
+            print()
+        assert ans == bns
+        assert ans == cns
+        ###
+        print('  #', i + 1, 'of', len(mus), 'mu =', mu, ':', time.time() - t1)
+        t1 = time.time()
+        ###
+    print()
+    print('n =', n, 'time =', time.time() - t0)
+
+
 def test_grothendieck_transitions():
     w = (1, 3, 4, 5, 2)
     j = 3

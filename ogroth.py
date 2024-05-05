@@ -92,4 +92,3 @@ def ogroth_expansion(mu):
         ans = [(y, ans[y]) for y in ans if ans[y]]
         O_DOMINANT_CACHE[mu] = ans
     return O_DOMINANT_CACHE[mu]
-
