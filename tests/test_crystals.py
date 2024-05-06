@@ -474,6 +474,7 @@ def test_qtab_semicrystal_uhw(n=3, k=10):
         c = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
         print(n, mu, len(c), len(c.get_highest_weights()))
         assert len(c.get_highest_weights()) == 1
+        assert len(c.get_components()) == 1
 
 
 def test_semistandard_tableau_crystal(nn=5, f=5):

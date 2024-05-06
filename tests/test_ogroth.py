@@ -4,13 +4,113 @@ from ogroth import (
     grothendieck_double_transitions,
     ogroth_expansion,
 )
-from schubert import Grothendieck, InvGrothendieck, Permutation
+from schubert import Grothendieck, InvGrothendieck, Permutation, X
 import itertools
 import time
+from collections import defaultdict
 
 
-def read_cplusplus_ogroth(mu):
-    DIRECTORY = "/Users/emarberg/examples/ogroth/"
+def chinese_class(w, n):
+    def span(w, seen):
+        if len(w) == n:
+            for i in range(n // 2, len(w)):
+                if max((0,) + w[i:]) <= n // 2:
+                    v = w[:i] + (n + 1,) + w[i:]
+                    if v not in seen:
+                        seen.add(v)
+                        yield v
+
+        if len(w) == n + 1:
+            v = tuple(i for i in w if i <= n)
+            if v not in seen:
+                seen.add(v)
+                yield v
+
+        for i in range(len(w) - 2):
+            c, a, b = w[i: i + 3]
+            if a < b < c and c != n + 1:
+                for v in [
+                    w[:i] + (b, c, a) + w[i + 3:],
+                    w[:i] + (c, b, a) + w[i + 3:],
+                ]:
+                    if v not in seen:
+                        seen.add(v)
+                        yield v
+
+            b, c, a = w[i: i + 3]
+            if a < b < c and c != n + 1:
+                for v in [
+                    w[:i] + (c, a, b) + w[i + 3:],
+                    w[:i] + (c, b, a) + w[i + 3:],
+                ]:
+                    if v not in seen:
+                        seen.add(v)
+                        yield v
+
+            c, b, a = w[i: i + 3]
+            if a < b < c and c != n + 1:
+                for v in [
+                    w[:i] + (b, c, a) + w[i + 3:],
+                    w[:i] + (c, a, b) + w[i + 3:],
+                ]:
+                    if v not in seen:
+                        seen.add(v)
+                        yield v
+
+    seen = {w}
+    add = {w}
+    while add:
+        nextadd = set()
+        for w in add:
+            yield w
+            nextadd |= set(span(w, seen))
+        add = nextadd
+
+
+def test_longest_grothendieck(n):
+    w0 = Permutation.longest_element(n)
+    s = InvGrothendieck.top(w0)
+    m = w0.involution_length()
+    d = Grothendieck.decompose(s)
+    f = {
+        tuple(w.inverse().oneline): c * X(0)**(w.length() - m) for w, c in d.dictionary.items()
+    }
+    a = set(f)
+    classes = []
+    for w in a:
+        if any(w in cl for cl in classes):
+            continue
+        c = set(chinese_class(w, n))
+        classes.append(c)
+        assert c.issubset(a)
+    assert len(classes) == 1
+    print()
+    d = defaultdict(int)
+    a = sorted(a, key=lambda x: (f[x].substitute(0, 1), f[x].degree(), f[x], x))
+    for w in a:
+        if len(w) > n:
+            continue
+        d[f[w]] += 1
+        print('  ', w, ':', f[w].set(0, 1))
+    print()
+    print(d)
+    print()
+    return a
+
+
+def test_longest_grothendieck_indices(n):
+    w = Permutation.longest_element(n)
+    mu = tuple(range(n - 1, 0, -2))
+    assert mu == w.involution_shape().tuple()
+    tup = tuple(w.get_min_atom().inverse().oneline)
+    ans = {tuple(Permutation(*w).inverse().oneline) for w in chinese_class(tup, n)}
+    bns = {w for w,_ in read_cplusplus_ogroth(mu)}
+    assert ans == bns
+
+
+def read_cplusplus(mu, directory):
+    assert directory in ['ogroth/', 'spgroth/']
+    DIRECTORY = "/Users/emarberg/examples/" + directory
     file = DIRECTORY + "(" + "".join([str(a) + "," for a in mu])  + ").txt"
     ans = []
     with open(file, 'r') as f:
@@ -18,6 +118,14 @@ def read_cplusplus_ogroth(mu):
             c, w = line.split(',', 1)
             ans.append((eval(w), int(c)))
     return sorted(ans)
+
+
+def read_cplusplus_ogroth(mu):
+    return read_cplusplus(mu, 'ogroth/')
+
+
+def read_cplusplus_spgroth(mu):
+    return read_cplusplus(mu, 'spgroth/')
 
 
 def test_cplusplus_ogroth(n=5, verbose=False):
@@ -45,6 +153,31 @@ def test_cplusplus_ogroth(n=5, verbose=False):
             print()
         assert ans == bns
         assert ans == cns
+        ###
+        print('  #', i + 1, 'of', len(mus), 'mu =', mu, ':', time.time() - t1)
+        t1 = time.time()
+        ###
+    print()
+    print('n =', n, 'time =', time.time() - t0)
+
+
+def test_cplusplus_spgroth(n=6, verbose=False):
+    delta = tuple(range(n - 2, 0, -2))
+    mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
+    t0 = t1 = time.time()
+    for i, mu in enumerate(mus):
+        z = Permutation.from_fpf_involution_shape(*mu)
+        ans = sorted([(tuple(w.oneline), 1) for w in z.get_symplectic_hecke_atoms()])
+        bns = read_cplusplus_spgroth(mu)
+
+        if verbose:
+            print()
+            print('mu =', mu)
+            print()
+            for z, c in ans:
+                print('   ', c, '*', z)
+            print()
+        assert ans == bns
         ###
         print('  #', i + 1, 'of', len(mus), 'mu =', mu, ':', time.time() - t1)
         t1 = time.time()
