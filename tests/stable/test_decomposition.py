@@ -11,6 +11,45 @@ from crystals import AbstractGLCrystal, AbstractQCrystal
 import time
 
 
+def test_primed_decomposition_insert_relation():
+    def span(w):
+        for i in range(len(w) - 1):
+            a, b = w[i], w[i + 1]
+            if abs(a) <= abs(b):
+                yield w[:i] + (a, -b) + w[i + 2:]
+            else:
+                yield w[:i] + (-a, b) + w[i + 2:]
+
+    def generate(w):
+        k = set()
+        add = {w}
+        while add:
+            k |= add
+            add = {x for v in add for x in span(v) if x not in k}
+        return k
+
+    from words import decomposition_insert
+    nums = [-4, -3, -2, -1, 1, 2, 3, 4]
+    seen = {}
+    for a in nums:
+        for b in nums:
+            for c in nums:
+                for d in nums:
+                    t = decomposition_insert(d, c, b, a)[0]
+                    if t not in seen:
+                        seen[t] = []
+                    seen[t].append((a, b, c, d))
+    for k in seen.values():
+        x = k[0]
+        y = [y for y in k if tuple(abs(_) for _ in y) != tuple(abs(_) for _ in x)]
+        y = y[0] if y else x
+        if generate(x) | generate(y) != set(k):
+            print(k)
+            print(generate(k[0]))
+        assert generate(x) | generate(y) == set(k)
+    return seen
+
+
 def test_sv_decomposition_generator(n=3, k=5):
     for mu in Partition.all(k, strict=True):
         t0 = time.time()

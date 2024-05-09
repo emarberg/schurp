@@ -606,7 +606,8 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.all(n, (length,), setvalued=True):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(1, n):
                 u = t.half_f_operator(i)
                 if u is not None:
@@ -622,7 +623,8 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.semistandard(n, mu, setvalued=True):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(1, n):
                 u = t.half_f_operator(i)
                 if u is not None:
@@ -660,7 +662,8 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.semistandard(n, mu):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(1, n):
                 u = cls.f_operator_on_semistandard_tableaux(i, t)
                 if u is not None:
@@ -676,7 +679,8 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.semistandard(n, mu, setvalued=True):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(1, n):
                 u = t.f_operator_on_setvalued_semistandard_tableaux(i)
                 if u is not None:
@@ -815,7 +819,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.all(n, (length,), setvalued=True):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else [])  + list(range(1, n)):
                 u = t.half_f_operator(i)
                 if u is not None:
@@ -857,7 +862,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.setvalued_decomposition_tableaux(n, mu):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
                 u = t.half_decomposition_f_operator(i)
                 if u is not None:
@@ -874,7 +880,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.setvalued_decomposition_tableaux(n, mu):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
                 u = t.half_decomposition_f_operator(i)
                 if u is not None:
@@ -893,7 +900,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         weights = {}
         for t in Tableau.setvalued_decomposition_tableaux(n, mu):
             vertices += [t]
-            weights[t] = t.weight(n)
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
                 u = t.f_operator_on_setvalued_decomposition_tableaux(i)
                 if u is not None:
@@ -911,7 +919,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         from tableaux import Tableau
         for t in Tableau.get_semistandard_decomposition(n, mu):
             vertices += [t]
-            weights[t] = t.weight()
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
                 u = cls.f_operator_on_decomposition_tableaux(i, t)
                 if u is not None:
@@ -928,7 +937,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         from tableaux import Tableau
         for t in Tableau.get_semistandard_shifted(mu, n, diagonal_primes=False):
             vertices += [t]
-            weights[t] = t.weight()
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
                 u = t.shifted_crystal_f(i)
                 if u is not None:
@@ -957,7 +967,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         c = cls.from_strict_partition(mu, n)
         for t in c.vertices:
             vertices += [unprime(t)]
-            weights[t] = t.weight()
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in provided_operators:
                 u = c.f_operator(i, t)
                 if u is not None:
@@ -1144,16 +1155,29 @@ class AbstractQCrystal(AbstractCrystalMixin):
     def tensor_edges(cls, b, c):
         edges = AbstractGLCrystal.tensor_edges(b, c)
         for x in b:
-            xweight = b.weight(x)
+            ex = b.e_operator(-1, x)
+            fx = b.f_operator(-1, x)
             for y in c:
-                if xweight[0] == xweight[1] == 0:
+                if ex is None and fx is None:
+                    xx = x
                     yy = c.f_operator(-1, y)
-                    if yy is not None:
-                        edges.append((-1, (x, y), (x, yy)))
                 else:
-                    xx = b.f_operator(-1, x)
-                    if xx is not None:
-                        edges.append((-1, (x, y), (xx, y)))
+                    xx = fx
+                    yy = y
+
+                if xx is not None and yy is not None:
+                   edges.append((-1, (x, y), (xx, yy)))
+
+            # xweight = b.weight(x)
+            # for y in c:
+            #     if xweight[0] == xweight[1] == 0:
+            #         yy = c.f_operator(-1, y)
+            #         if yy is not None:
+            #             edges.append((-1, (x, y), (x, yy)))
+            #     else:
+            #         xx = b.f_operator(-1, x)
+            #         if xx is not None:
+            #             edges.append((-1, (x, y), (xx, y)))
         return edges
 
     def filename(self, ts=None):
@@ -1243,7 +1267,8 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
         from tableaux import Tableau
         for t in Tableau.get_semistandard_decomposition(n, mu, primed=True):
             vertices += [t]
-            weights[t] = t.weight()
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(-1 if n >= 2 else 0, n):
                 u = cls.f_operator_on_decomposition_tableaux(i, t)
                 if u is not None:
@@ -1315,7 +1340,8 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
         from tableaux import Tableau
         for t in Tableau.get_semistandard_shifted(mu, n, diagonal_primes=True):
             vertices += [t]
-            weights[t] = t.weight()
+            wt = t.weight()
+            weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(-1 if n >= 2 else 0, n):
                 u = t.shifted_crystal_f(i)
                 if u is not None:
@@ -1503,7 +1529,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
                     if xx is not None:
                         edges.append((0, (x, y), (xx, y)))
 
-            xweight = b.weight(x)
+            # xweight = b.weight(x)
             ex = b.e_operator(-1, x)
             fx = b.f_operator(-1, x)
 
