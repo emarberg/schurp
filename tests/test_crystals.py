@@ -324,10 +324,10 @@ def test_words_semicrystal(n=3, k=5):
             c = b.get_component(w)
             d = AbstractGLCrystal.semicrystal_from_partition(mu, n)
             print('  ', mu, ':', AbstractGLCrystal.find_isomorphism(c, d) is not None)
-            if not AbstractGLCrystal.find_isomorphism(c, d):
-                c.draw()
-                input('')
-                d.draw()
+            # if not AbstractGLCrystal.find_isomorphism(c, d):
+                # c.draw()
+                # input('')
+                # d.draw()
             
 
 def test_qnormal_semicrystal(n=3, k=5):
@@ -354,7 +354,7 @@ def test_qnormal_semicrystal(n=3, k=5):
                 ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
                 print('  ch =', ch)
                 print(c.get_highest_weights()[0])
-                input('')
+                # input('')
             #if not f1 and not f2:
             #    c.draw()
             #    input('')
@@ -391,7 +391,7 @@ def test_normal_semicrystal(n=3, k=5):
                 ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
                 print('  ch =', ch)
                 print(c.get_highest_weights()[0])
-                input('')
+                # input('')
             #if not f1 and not f2:
             #    c.draw()
             #    input('')
