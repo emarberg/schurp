@@ -1,3 +1,4 @@
+from partitions import Partition
 from words import (
     involution_insert,
     fpf_insert,
@@ -588,6 +589,68 @@ class AbstractCrystalMixin:
 
 
 class AbstractGLCrystal(AbstractCrystalMixin):
+
+    @classmethod
+    def strict_polarizations(cls, mu, rank):
+        def col(s):
+            return tuple(i for (i, j) in s)
+
+        def f_operator(index, s):
+            iword = [(k, p[0]) for (k, p) in enumerate(s) if p[0] in [index, index + 1]]
+            stack = []
+            for k, i in iword:
+                if not stack or not (stack[-1][1] == index + 1 and i == index):
+                    stack.append((k, i))
+                elif stack[-1][1] == index + 1 and i == index:
+                    stack.pop()
+            stack = [(k, i) for (k, i) in stack if i == index]
+            if stack:
+                (k, i) = stack[-1]
+                j = s[k][1]
+                s = set(s)
+                if j == i + 1:
+                    s.remove((i, j))
+                    s.add((i + 1, i))
+                elif (j, i + 1) not in s:
+                    return
+                else:
+                    s.remove((i, j))
+                    s.remove((j, i + 1))
+                    s.add((j, i))
+                    s.add((i + 1, j))
+                return tuple(sorted(s, key=lambda p: (p[1], -p[0])))
+
+        if type(mu) != Partition:
+            mu = Partition(*mu)
+        assert mu.is_symmetric()
+        shape = mu.shape
+
+        n = rank
+        vertices = []
+        weights = {}
+
+        for v in range(2**len({(i, j) for (i, j) in shape if i > j})):
+            s = set()
+            for (i, j) in shape:
+                if i > j:
+                    s.add((i, j) if v % 2 else (j, i))
+                    v = v // 2
+            s = tuple(sorted(s, key=lambda p: (p[1], -p[0])))
+            vertices.append(s)
+            
+            w = n*[0]
+            for (i, j) in s:
+                w[i - 1] += 1
+            weights[s] = tuple(w)
+
+        edges = []
+        for s in vertices:
+            for i in range(1, n):
+                t = f_operator(i, s)
+                if t is not None:
+                    assert t in weights
+                    edges += [(i, s, t)]
+        return cls(rank, vertices, edges, weights)
 
     def dual(self):
         cls = type(self)

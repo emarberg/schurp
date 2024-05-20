@@ -26,7 +26,7 @@ from symmetric import (
 from tableaux import Tableau
 from permutations import Permutation
 from schubert import X
-from words import Word, weak_eg_insert, eg_insert, fpf_insert, involution_insert
+from words import Word, rsk_insert, weak_eg_insert, eg_insert, fpf_insert, involution_insert
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 from stable.utils import (
@@ -45,6 +45,25 @@ import time
 PRINT_DIR = "/Users/emarberg/Downloads/"
 FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def test_strict_polarizations(n=5, k=10):
+    k = n if k is None else k
+    partitions = sorted({mu.tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.is_symmetric()})
+    print(partitions)
+    print()
+    for mu in partitions:
+        print('n =', n, 'k =', k, mu)
+        b = AbstractGLCrystal.strict_polarizations(mu, n)
+        mapping = {}
+        for s in b:
+            t = rsk_insert(*[i for (i, j) in s])[0]
+            mapping[s] = t
+        for s in b:
+            for i in range(1, n):
+                fs = b.f_operator(i, s)
+                if fs is not None:
+                    assert mapping[fs] == AbstractGLCrystal.f_operator_on_semistandard_tableaux(i, mapping[s])
 
 
 def test_qq_sv_tensor(n=2, k=2):
