@@ -703,6 +703,9 @@ class Permutation:
         assert len(path) == n + 1
         return list(reversed(path))
 
+    def is_grassmannian(self):
+        return len(self.right_descent_set) <= 1
+
     def is_vexillary(self):
         n = self.rank
         for i in range(1, n + 1):

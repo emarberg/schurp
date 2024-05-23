@@ -4,10 +4,24 @@ from ogroth import (
     grothendieck_double_transitions,
     ogroth_expansion,
 )
-from schubert import Grothendieck, InvGrothendieck, Permutation, X
+from schubert import Grothendieck, AltInvGrothendieck, InvGrothendieck, Permutation, X
+from vectors import Vector
 import itertools
 import time
 from collections import defaultdict
+
+
+def test_alt_inv_grothendieck(n=5):
+    f = {
+        w: Vector({x:2**w.number_two_cycles() for x in w.get_involution_hecke_atoms()})
+        for w in Permutation.involutions(n)
+    }
+    g = {
+        w: Grothendieck.decompose(AltInvGrothendieck.get(w))
+        for w in Permutation.involutions(n)
+    }
+    assert True not in {x.is_vexillary() for x in f if f[x] != g[x]}
+    assert False not in {x.is_vexillary() for x in f if f[x] == g[x]}
 
 
 def chinese_class(w, n):

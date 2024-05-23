@@ -17,6 +17,7 @@ INV_SCHUBERT_CACHE = {}
 GROTHENDIECK_CACHE = {}
 FPF_GROTHENDIECK_CACHE = {}
 INV_GROTHENDIECK_CACHE = {}
+ALT_INV_GROTHENDIECK_CACHE = {}
 
 
 class AbstractSchubert(object):
@@ -332,10 +333,30 @@ class InvGrothendieck(InvSchubert):
     def product(cls, w):
         s = one()
         for i, j in w.involution_rothe_diagram():
-            s *= (x(i) + x(j) + cls.beta * x(i) * x(j))
+            s *= x(i) + x(j) + cls.beta * x(i) * x(j)
         return s
 
     @classmethod
     def divided_difference(cls, f, i):
         return (f * (1 + cls.beta * MPolynomial.monomial(i + 1))).divided_difference(i)
 
+    @classmethod
+    def diagonal_product(cls, n):
+        s = one()
+        for i in range(1, n + 1):
+            s *= (x(i) + x(i) + cls.beta * x(i) * x(i))
+        return s
+
+
+class AltInvGrothendieck(InvGrothendieck):
+
+    @classmethod
+    def cache(cls):
+        return ALT_INV_GROTHENDIECK_CACHE
+
+    @classmethod
+    def product(cls, w):
+        s = one()
+        for i, j in w.involution_rothe_diagram():
+            s *= (x(i) + x(j) + cls.beta * x(i) * x(j)) if i != j else (x(i) + x(j))
+        return s
