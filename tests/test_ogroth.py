@@ -6,9 +6,48 @@ from ogroth import (
 )
 from schubert import Grothendieck, AltInvGrothendieck, InvGrothendieck, Permutation, X
 from vectors import Vector
+from stable.tableaux import nchoosek
 import itertools
 import time
 from collections import defaultdict
+
+
+def test_k_pieri_chains(n=3):
+    delta = tuple(range(n - 1, 0, -2))
+    mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
+    
+    for mu in [delta]:#mus:
+        expected = {Permutation(*w).inverse(): c for w, c in read_cplusplus_ogroth(mu)}
+        k = len(mu)
+
+        mapping = {}
+        seen = set()
+        z = Permutation.from_involution_shape(*mu)
+        for v in z.get_involution_hecke_atoms():
+            v = v.inverse()
+            print(mu, v)
+            for w, forced, prohibited, path in v.inverse_k_pieri_chains(k, k):
+                length = len(path)
+                print('  ', w, length - forced - prohibited, forced, path)
+                d = length - forced - prohibited
+                seen.add(d)
+                mapping[w] = mapping.get(w, []) + [(forced, prohibited, length)]
+                assert w in expected
+            print()
+            print('  ', 'seen', seen)
+            print()
+
+        for w in sorted(mapping, key=lambda x: (x.rank, expected[x])):
+            coeff = []
+            for forced, prohibited, length in sorted(mapping[w], key=lambda x:-x[-1]):
+                d = length - forced - prohibited
+                f = forced
+                for p in range(f, min(k, d + f) + 1):
+                    coeff += [2**(k - p) * nchoosek(d, p - f) * (-1 if p >= 2 and p % 2 == 0 else 1)]
+            print(mu, (' ' if w.rank ==n else '') + str(w), coeff, '==', expected[w])
+            assert expected[w] == sum(coeff)
+        print()
+    print()
 
 
 def test_alt_inv_grothendieck(n=5):
@@ -124,7 +163,7 @@ def test_longest_grothendieck_indices(n):
 
 def read_cplusplus(mu, directory):
     assert directory in ['ogroth/', 'spgroth/']
-    DIRECTORY = "/Users/emarberg/examples/" + directory
+    DIRECTORY = "/Users/emarberg/examples/test/" + directory
     file = DIRECTORY + "(" + "".join([str(a) + "," for a in mu])  + ").txt"
     ans = []
     with open(file, 'r') as f:

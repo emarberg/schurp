@@ -4,6 +4,7 @@ from partitions import Partition
 from words import Word
 import operator
 import random
+from collections import deque
 
 REDUCED_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
@@ -14,7 +15,8 @@ TWISTED_INVOLUTION_WORDS_CACHE = {}
 TWISTED_PRIMED_INVOLUTION_WORDS_CACHE = {}
 FPF_ATOMS_CACHE = {}
 SYMPLECTIC_HECKE_ATOMS_CACHE = {}
-
+K_BRUHAT_COVERS = {}
+K_PIERI_CHAINS = {}
 
 class Permutation:
 
@@ -1375,3 +1377,55 @@ class Permutation:
         delta = tuple(range(rank - 2, 0, -2))
         for mu in Partition.subpartitions(delta, strict=True):
             yield cls.get_fpf_grassmannian(*mu)
+
+    def inverse_k_pieri_chains(self, k, p):
+        for v, forced, prohibited, length in self.inverse().k_pieri_chains(k, p):
+            yield v.inverse(), forced, prohibited, length
+
+    def k_pieri_chains(self, k, p):
+        if (self, k) not in K_PIERI_CHAINS:
+            yield self, 0, 0, ()
+            ans = [(self, 0, 0, ())]
+            
+            q = deque([
+                (self * self.t_ij(a, b), [(a, b)], 1, 0, {a: 1})
+                for a, b in self.k_bruhat_covers(k)
+            ]) 
+            while q:
+                v, path, forced, prohibited, a_counter = q.popleft()
+                if forced > p:
+                    continue
+                
+                yield v, forced, prohibited, path
+                ans.append((v, forced, prohibited, path))
+
+                a0, b0 = path[-1]
+                for a1, b1 in v.k_bruhat_covers(k):
+                    if b0 < b1:
+                        continue
+                    if a_counter[a0] > 1 and b0 == b1 and a0 >= a1:
+                        continue
+                    
+                    new_forced = forced + int(b0 == b1 and a0 >= a1)
+
+                    new_prohibited = prohibited + int(a1 in a_counter)
+
+                    new_a_counter = a_counter.copy()
+                    new_a_counter[a1] = new_a_counter.get(a1, 0) + 1
+
+                    new_path = v * v.t_ij(a1, b1), path + [(a1, b1)], new_forced, new_prohibited, new_a_counter
+                    q.append(new_path)
+            K_PIERI_CHAINS[self, k] = ans
+        else:
+            for a in K_PIERI_CHAINS[self, k]:
+                yield a
+
+    def k_bruhat_covers(self, k):
+        if (self, k) not in K_BRUHAT_COVERS:
+            ans = []
+            for a in range(1, k + 1):
+                for b in range(k + 1, self.rank + 2):
+                    if self(a) < self(b) and not any(self(a) < self(e) < self(b) for e in range(a + 1, b)):
+                        ans.append((a, b))
+            K_BRUHAT_COVERS[self, k] = ans
+        return K_BRUHAT_COVERS[self, k]
