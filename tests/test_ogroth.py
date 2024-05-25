@@ -42,9 +42,10 @@ def test_k_pieri_chains(n=3):
             for forced, prohibited, length in sorted(mapping[w], key=lambda x:-x[-1]):
                 d = length - forced - prohibited
                 f = forced
-                for p in range(f, min(k, d + f) + 1):
-                    coeff += [2**(k - p) * nchoosek(d, p - f) * (-1 if p >= 2 and p % 2 == 0 else 1)]
-            print(mu, (' ' if w.rank ==n else '') + str(w), coeff, '==', expected[w])
+                coeff += [2**(k - length + prohibited) * (-1 if f >= 2 and f % 2 == 0 else 1)]
+                # for p in range(f, min(k, d + f) + 1):
+                #     coeff += [2**(k - p) * nchoosek(d, p - f) * (-1 if p >= 2 and p % 2 == 0 else 1)]
+            print(mu, (' ' if w.rank ==n else '') + str(w), '= w :', length, forced, prohibited, ':', coeff, '==', expected[w])
             assert expected[w] == sum(coeff)
         print()
     print()
