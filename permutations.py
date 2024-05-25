@@ -1388,7 +1388,7 @@ class Permutation:
             ans = [(self, 0, 0, ())]
             
             q = deque([
-                (self * self.t_ij(a, b), [(a, b)], 1, 0, {a: 1})
+                (self * self.t_ij(a, b), ((a, b),), 1, 0, {a: 1})
                 for a, b in self.k_bruhat_covers(k)
             ]) 
             while q:
@@ -1413,7 +1413,7 @@ class Permutation:
                     new_a_counter = a_counter.copy()
                     new_a_counter[a1] = new_a_counter.get(a1, 0) + 1
 
-                    new_path = v * v.t_ij(a1, b1), path + [(a1, b1)], new_forced, new_prohibited, new_a_counter
+                    new_path = v * v.t_ij(a1, b1), path + ((a1, b1),), new_forced, new_prohibited, new_a_counter
                     q.append(new_path)
             K_PIERI_CHAINS[self, k] = ans
         else:

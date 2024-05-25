@@ -31,7 +31,7 @@ def test_k_pieri_chains(n=3):
                 print('  ', w, length - forced - prohibited, forced, path)
                 d = length - forced - prohibited
                 seen.add(d)
-                mapping[w] = mapping.get(w, []) + [(forced, prohibited, length)]
+                mapping[w] = mapping.get(w, []) + [(forced, prohibited, path)]
                 assert w in expected
             print()
             print('  ', 'seen', seen)
@@ -39,13 +39,21 @@ def test_k_pieri_chains(n=3):
 
         for w in sorted(mapping, key=lambda x: (x.rank, expected[x])):
             coeff = []
-            for forced, prohibited, length in sorted(mapping[w], key=lambda x:-x[-1]):
+            paths = []
+            for forced, prohibited, path in sorted(mapping[w], key=lambda x:x[-1]):
+                length = len(path)
                 d = length - forced - prohibited
                 f = forced
                 coeff += [2**(k - length + prohibited) * (-1 if f >= 2 and f % 2 == 0 else 1)]
+                paths.append((coeff[-1], tuple(reversed(path))))
                 # for p in range(f, min(k, d + f) + 1):
                 #     coeff += [2**(k - p) * nchoosek(d, p - f) * (-1 if p >= 2 and p % 2 == 0 else 1)]
-            print(mu, (' ' if w.rank ==n else '') + str(w), '= w :', length, forced, prohibited, ':', coeff, '==', expected[w])
+            if w.rank:
+                print(mu, (' ' if w.rank == n else '') + str(w), '= w :', length, forced, prohibited, ':', sorted(coeff), '==', expected[w])
+                print()
+                for c, path in sorted(paths, key=lambda p: p[1]):
+                    print('  ' if c > 0 else ' ', c, ':', path)
+                print()
             assert expected[w] == sum(coeff)
         print()
     print()
