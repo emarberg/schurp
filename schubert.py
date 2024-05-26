@@ -351,6 +351,17 @@ class InvGrothendieck(InvSchubert):
 class AltInvGrothendieck(InvGrothendieck):
 
     @classmethod
+    def get_ascent(cls, w):
+        n = len(w.oneline)
+        if w.is_dominant():
+            return w, None
+        for i in set(range(1, n)) - w.right_descent_set:
+            s = w.s_i(i)
+            ws = w * s if  s * w == w * s else s * w *s
+            return ws, i
+        return None, None
+
+    @classmethod
     def cache(cls):
         return ALT_INV_GROTHENDIECK_CACHE
 
