@@ -10,13 +10,40 @@ from stable.tableaux import nchoosek
 import itertools
 import time
 from collections import defaultdict
+import math
 
 
-def test_k_pieri_chains(n=3):
+def test_partial_ogroth(n=3):
+    delta = tuple(range(n - 1, 0, -2))
+    mus = [delta] # sorted(Partition.subpartitions(delta, strict=True), key=sum)
+    for mu in mus:
+        k = len(mu)
+        coeff = {}
+
+        start = AltInvGrothendieck.get(Permutation.from_involution_shape(*mu))
+        dec = Grothendieck.decompose(start)
+        for w in sorted(dec):
+            coeff[w] = [dec[w]]
+            print(mu, 'i =', 0, 'w =', (' ' if w.rank == n else '') + str(w.inverse()), ':', coeff[w])
+        print()
+
+        for i in range(1, k + 1):
+            start *= 2 + X(i)
+            dec = Grothendieck.decompose(start)
+            for w in sorted(dec, key=lambda x:(x.rank, len(x))):
+                coeff[w] = coeff.get(w, i * [0]) + [dec[w]]
+                print(mu, 'i =', i, 'w =', (' ' if w.rank == n else '') + str(w.inverse()), ':', coeff[w])
+                assert dec[w] > 0
+                # fails # assert [a for a in coeff[w] if a][0] == 1
+                assert all(coeff[w][i] - coeff[w][i - 1] > 0 for i in range(1, len(coeff[w])) if coeff[w][i] != 0 or coeff[w][i - 1] != 0)
+            print()
+
+
+def test_k_pieri_chains(n=3, verbose=False):
     delta = tuple(range(n - 1, 0, -2))
     mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
-    
-    for mu in [delta]:#mus:
+    unexpected = {}
+    for mu in [delta]: #mus:
         expected = {Permutation(*w).inverse(): c for w, c in read_cplusplus_ogroth(mu)}
         k = len(mu)
 
@@ -25,19 +52,20 @@ def test_k_pieri_chains(n=3):
         z = Permutation.from_involution_shape(*mu)
         for v in z.get_involution_hecke_atoms():
             v = v.inverse()
-            print(mu, v)
+            # print(mu, v)
             for w, forced, prohibited, path in v.inverse_k_pieri_chains(k, k):
                 length = len(path)
-                print('  ', w, length - forced - prohibited, forced, path)
+                # print('  ', w, length - forced - prohibited, forced, path)
                 d = length - forced - prohibited
                 seen.add(d)
                 mapping[w] = mapping.get(w, []) + [(forced, prohibited, path)]
-                assert w in expected
-            print()
-            print('  ', 'seen', seen)
-            print()
+                if w not in expected:
+                    unexpected[mu] = unexpected.get(mu, []) + [(v, w)]
+            # print()
+            # print('  ', 'seen', seen)
+            # print()
 
-        for w in sorted(mapping, key=lambda x: (x.rank, expected[x])):
+        for w in sorted(mapping, key=lambda x: (x.rank, expected.get(x, math.inf))):
             coeff = []
             paths = []
             for forced, prohibited, path in sorted(mapping[w], key=lambda x:x[-1]):
@@ -48,15 +76,16 @@ def test_k_pieri_chains(n=3):
                 paths.append((coeff[-1], tuple(reversed(path))))
                 # for p in range(f, min(k, d + f) + 1):
                 #     coeff += [2**(k - p) * nchoosek(d, p - f) * (-1 if p >= 2 and p % 2 == 0 else 1)]
-            if w.rank:
-                print(mu, (' ' if w.rank == n else '') + str(w), '= w :', length, forced, prohibited, ':', sorted(coeff), '==', expected[w])
-                print()
-                for c, path in sorted(paths, key=lambda p: p[1]):
-                    print('  ' if c > 0 else ' ', c, ':', path)
-                print()
-            assert expected[w] == sum(coeff)
-        print()
+            if w.rank == n:
+                print(mu, (' ' if w.rank == n else '') + str(w), '= w :', length, forced, prohibited, ':', expected.get(w, 0), '==', max(coeff), '+', sum([c for c in coeff if c > 0]) - max(coeff), '-', sum([-c for c in coeff if c < 0]))
+                if verbose:
+                    print()
+                    for c, path in sorted(paths, key=lambda p: p[1]):
+                        print('  ' if c > 0 else ' ', c, ':', path)
+                    print()
+            assert expected.get(w, 0) == sum(coeff)
     print()
+    print(unexpected)
 
 
 def test_alt_inv_grothendieck(n=5):

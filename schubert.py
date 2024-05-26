@@ -358,5 +358,5 @@ class AltInvGrothendieck(InvGrothendieck):
     def product(cls, w):
         s = one()
         for i, j in w.involution_rothe_diagram():
-            s *= (x(i) + x(j) + cls.beta * x(i) * x(j)) if i != j else (x(i) + x(j))
+            s *= (x(i) + x(j) + cls.beta * x(i) * x(j)) if i != j else x(i)
         return s
