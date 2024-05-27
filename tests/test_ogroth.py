@@ -90,15 +90,14 @@ def test_k_pieri_chains(n=3, verbose=False):
 
 def test_alt_inv_grothendieck(n=5):
     f = {
-        w: Vector({x:2**w.number_two_cycles() for x in w.get_involution_hecke_atoms()})
+        w: Vector({x:1 for x in w.get_involution_hecke_atoms()})
         for w in Permutation.involutions(n)
     }
     g = {
         w: Grothendieck.decompose(AltInvGrothendieck.get(w))
         for w in Permutation.involutions(n)
     }
-    assert True not in {x.is_vexillary() for x in f if f[x] != g[x]}
-    assert False not in {x.is_vexillary() for x in f if f[x] == g[x]}
+    assert f == g
 
 
 def chinese_class(w, n):
