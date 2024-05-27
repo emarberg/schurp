@@ -47,6 +47,63 @@ FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
 
 
+def test_primed_shifted_plactic():
+    def Pqq(*w):
+        return decomposition_insert(*reversed(w))[0]
+
+    letters = [1, 2 , 3, 4]
+    for a in letters:
+        for b in letters:
+            if a <= b:
+                assert Pqq(a, b)  == Pqq(a, -b)
+                assert Pqq(-a, b)  == Pqq(-a, -b)
+            if a < b:
+                assert Pqq(b, a)  == Pqq(-b, a)
+                assert Pqq(b, -a)  == Pqq(-b, -a)
+            for c in letters:
+                for d in letters:
+                    if a <= b <= c < d:
+                        assert Pqq(a, b, d, c) == Pqq(a, d, b, c)
+                        assert Pqq(-a, b, d, c) == Pqq(-a, d, b, c)
+                        assert Pqq(a, b, d, -c) == Pqq(a, d, -b, c)
+                        assert Pqq(-a, b, d, -c) == Pqq(-a, d, -b, c)
+                    if a <= b < c <= d:
+                        assert Pqq(a, c, d, b) == Pqq(a, c, b, d)
+                        assert Pqq(-a, c, d, b) == Pqq(-a, c, b, d)
+                        assert Pqq(a, c, d, -b) == Pqq(a, c, -b, d)
+                        assert Pqq(-a, c, d, -b) == Pqq(-a, c, -b, d)
+                    if a <= b < c < d:
+                        assert Pqq(d, a, c, b) == Pqq(a, d, c, b)
+                        assert Pqq(d, -a, c, b) == Pqq(-a, d, c, b)
+                        assert Pqq(d, a, c, -b) == Pqq(a, d, c, -b)
+                        assert Pqq(d, -a, c, -b) == Pqq(-a, d, c, -b)
+                    if a < b <= c < d:
+                        assert Pqq(b, a, d, c) == Pqq(b, d, a, c)
+                        assert Pqq(b, -a, d, c) == Pqq(b, d, -a, c)
+                        assert Pqq(b, a, d, -c) == Pqq(-b, d, a, c)
+                        assert Pqq(b, -a, d, -c) == Pqq(-b, d, -a, c)
+                    if a < b < c <= d:
+                        assert Pqq(c, b, d, a) == Pqq(c, d, b, a)
+                        assert Pqq(c, -b, d, a) == Pqq(-c, d, b, a)
+                        assert Pqq(c, b, d, -a) == Pqq(c, d, b, -a)
+                        assert Pqq(c, -b, d, -a) == Pqq(-c, d, b, -a)
+                    if a < b <= c < d:
+                        assert Pqq(d, b, c, a) == Pqq(b, d, c, a)
+                        assert Pqq(d, -b, c, a) == Pqq(-b, d, c, a)
+                        assert Pqq(d, b, c, -a) == Pqq(b, d, c, -a)
+                        assert Pqq(d, -b, c, -a) == Pqq(-b, d, c, -a)
+                    if a < b <= c <= d:
+                        assert Pqq(b, c, d, a) == Pqq(b, c, a, d)
+                        assert Pqq(-b, c, d, a) == Pqq(-b, c, a, d)
+                        assert Pqq(b, c, d, -a) == Pqq(b, c, -a, d)
+                        assert Pqq(-b, c, d,-a) == Pqq(-b, c, -a, d)
+                    if a <=b < c <= d:
+                        assert Pqq(c, a, d, b) == Pqq(c, d, a, b)
+                        assert Pqq(c, -a, d, b) == Pqq(c, d, -a, b)
+                        assert Pqq(c, a, d, -b) == Pqq(-c, d, a, b)
+                        assert Pqq(c, -a, d, -b) == Pqq(-c, d, -a, b)
+                        
+                        
 def test_strict_polarizations(n=5, k=10):
     k = n if k is None else k
     partitions = sorted({mu.tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n) if mu.is_symmetric()})
