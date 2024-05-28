@@ -1378,6 +1378,43 @@ class Permutation:
         for mu in Partition.subpartitions(delta, strict=True):
             yield cls.get_fpf_grassmannian(*mu)
 
+    def inverse_downward_k_pieri_tree(self, k):
+        v, e = self.downward_k_pieri_tree(k)
+        return {x.inverse() for x in v}, {(x.inverse(), y.inverse(), t) for (x, y, t) in e}
+
+    def downward_k_pieri_tree(self, k):
+        vertices = set()
+        edges = set()
+        q = deque([
+            (self, set(), None, k + 1)
+        ])
+        while q:
+            v, prohibited, last_a, last_b = q.popleft()
+            vertices.add(v)
+            for b in range(last_b, v.rank + 2):
+                e = min([v(a) for a in range(k + 1, b) if v(a) > v(b)], default=None)
+                for a in range(k, 0, -1):
+                    if v(a) < v(b):
+                        continue
+                    if a in prohibited:
+                        e = v(a) if e is None else min(e, v(a))
+                        continue
+                    if e is not None and v(a) > e:
+                        continue
+                    e = v(a)
+                    
+                    w = v * v.t_ij(a, b)
+                    assert len(w) == len(v) - 1
+                    
+                    new_prohibited = prohibited.copy()
+                    if last_a is not None and b == last_b and a > last_a:
+                        new_prohibited.add(a)
+
+                    q.append((w, new_prohibited, a, b))
+                    edges.add((w, v, (a, b)))
+        return vertices, edges
+
+
     def inverse_k_pieri_chains(self, k, p):
         for v, forced, prohibited, length in self.inverse().k_pieri_chains(k, p):
             yield v.inverse(), forced, prohibited, length

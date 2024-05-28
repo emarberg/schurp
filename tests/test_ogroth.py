@@ -9,8 +9,43 @@ from vectors import Vector
 from stable.tableaux import nchoosek
 import itertools
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 import math
+
+
+def get_paths(target, v, e):
+    edges = {}
+    for x, y, t in e:
+        edges[y] = edges.get(y, []) + [(x, t)]
+    q = deque([(target, ())])
+    while q:
+        (x, path) = q.popleft()
+        yield x, tuple(reversed(path))
+        for y, t in edges.get(x, []):
+            q.append((y, path + (t,)))
+
+
+def test_k_pieri_tree(n=3, verbose=False):
+    delta = tuple(range(n - 1, 0, -2))
+    mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
+    unexpected = {}
+    for mu in mus:
+        expected = {Permutation(*w): c for w, c in read_cplusplus_ogroth(mu)}
+
+        k = len(mu)
+        z = Permutation.from_involution_shape(*mu)
+        n = z.rank
+        
+        for w in Permutation.all(n + 1):
+            coeff = []
+            v, e = w.downward_k_pieri_tree(k)
+            for x, path in get_paths(w, v, e):
+                if x.inverse() % x != z:
+                    continue
+                a = {a for (a, b) in path}
+                des = [i for i in range(len(path) - 1) if path[i][0] > path[i + 1][0] and path[i][1] == path[i + 1][1]]
+                coeff.append(2**(k - len(a)) * (-1)**len(des))
+            assert sum(coeff) == expected.get(w, 0)
 
 
 def test_partial_ogroth(n=3):
