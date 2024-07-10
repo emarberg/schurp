@@ -141,7 +141,7 @@ class Word:
         # lifting first example in Fig. 12 does not give every in Fig. 10
 
         if bot is None:
-            rho = list(reversed(cls.run_decomposition(top)))
+            rho = list(reversed(cls.run_decomposition(top.row_reading_word())))
             for k in range(len(rho) - 1, -1, -1):
                 j = rho[k][0] - 1
                 indices = [i for i in range(1, j + 1) if cls.lift_sequence(rho, i, j) is not None]

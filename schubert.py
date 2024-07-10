@@ -347,6 +347,13 @@ class InvGrothendieck(InvSchubert):
             s *= (x(i) + x(i) + cls.beta * x(i) * x(i))
         return s
 
+    @classmethod
+    def diagonal_subproduct(cls, n):
+        s = one()
+        for i in range(1, n + 1):
+            s *= (2 + cls.beta * x(i))
+        return s
+
 
 class AltInvGrothendieck(InvGrothendieck):
 

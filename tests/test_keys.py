@@ -2808,6 +2808,22 @@ def test_inv_schubert(n=4, positive=True, multiple=True):
     return i, s, d, qvex, ivex
 
 
+def test_inv_schubert_q_key_terms_independent(n=4):
+    i, s, d, qvex, ivex = test_inv_schubert(n)
+    print(d)
+    print({a for w in d for a in d[w]})
+    terms = list({q_key(a) for w in d for a in d[w]})
+    assert Vector.is_linearly_independent_subset(terms)
+
+
+def test_fpf_schubert_p_key_terms_independent(n=4):
+    i, s, d, pvex, fvex = test_fpf_schubert(n)
+    print(d)
+    print({a for w in d for a in d[w]})
+    terms = list({p_key(a) for w in d for a in d[w]})
+    assert Vector.is_linearly_independent_subset(terms)
+
+
 def p_update(targets, exponents, halves, alphas, functional):
     for e in targets:
         for d in exponents:

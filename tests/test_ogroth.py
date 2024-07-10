@@ -25,10 +25,27 @@ def get_paths(target, v, e):
             q.append((y, path + (t,)))
 
 
-def test_k_pieri_tree(n=3, verbose=False):
+def test_upward_k_pieri_tree(n=3, verbose=True):
+    for w in Permutation.all(n):
+        k = (w.inverse() % w).number_two_cycles()
+        f = InvGrothendieck.diagonal_product(k)
+        for i in range(1, k + 1):
+            f *= X(i)**-1
+        expected = Grothendieck.get(w) * f
+
+        v, e = w.upward_k_pieri_tree()
+        result = sum([c * Grothendieck.get(x) for x, c in v])
+        if verbose:
+            print('w =', w)
+            print('  ', Grothendieck.decompose(expected))
+            print('  ', Grothendieck.decompose(result))
+            print('  ', Grothendieck.decompose(expected - result))
+        assert result == expected
+
+
+def test_downward_k_pieri_tree(n=3):
     delta = tuple(range(n - 1, 0, -2))
     mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
-    unexpected = {}
     for mu in mus:
         expected = {Permutation(*w): c for w, c in read_cplusplus_ogroth(mu)}
 
@@ -37,14 +54,8 @@ def test_k_pieri_tree(n=3, verbose=False):
         n = z.rank
         
         for w in Permutation.all(n + 1):
-            coeff = []
             v, e = w.downward_k_pieri_tree(k)
-            for x, path in get_paths(w, v, e):
-                if x.inverse() % x != z:
-                    continue
-                a = {a for (a, b) in path}
-                des = [i for i in range(len(path) - 1) if path[i][0] > path[i + 1][0] and path[i][1] == path[i + 1][1]]
-                coeff.append(2**(k - len(a)) * (-1)**len(des))
+            coeff = [c for x, c in v if x.inverse() % x == z]
             assert sum(coeff) == expected.get(w, 0)
 
 

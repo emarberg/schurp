@@ -1378,19 +1378,63 @@ class Permutation:
         for mu in Partition.subpartitions(delta, strict=True):
             yield cls.get_fpf_grassmannian(*mu)
 
+    def inverse_upward_k_pieri_tree(self, k=None):
+        v, e = self.upward_k_pieri_tree(k)
+        return {(xc[0].inverse(), xc[1]) for xc in v}, {((xc[0].inverse(), xc[1]), (yc[0].inverse(), yc[1]), t) for (xc, yc, t) in e}
+
+    def upward_k_pieri_tree(self, k=None):
+        k = (self.inverse() % self).number_two_cycles() if k is None else k
+        vertices = set()
+        edges = set()
+        q = deque([
+            ((self, 2**k), set(), {}, None, self.rank + 1)
+        ])
+        while q:
+            vc, seen_a, a_counter, last_a, last_b = q.popleft()
+            v, coeff = vc
+            vertices.add(vc)
+            for b in range(k + 1, last_b + 1):
+                e = max([v(a) for a in range(k + 1, b) if v(a) < v(b)], default=None)
+                for a in range(k, 0, -1):
+                    if v(a) > v(b):
+                        continue
+                    if e is not None and v(a) < e:
+                        continue
+                    e = v(a)
+                    if last_a is not None and b == last_b and last_a > a and a_counter[last_a] > 1:
+                        continue
+
+                    w = v * v.t_ij(a, b)
+                    assert len(w) == len(v) + 1
+                    
+                    new_seen_a = seen_a.copy() | {a}
+                    
+                    new_coeff = 2**(k - len(new_seen_a)) * abs(coeff) // coeff
+                    if last_a is not None and b == last_b and last_a > a:
+                        new_coeff *= -1
+
+                    new_a_counter = a_counter.copy()
+                    new_a_counter[a] = new_a_counter.get(a, 0) + 1
+
+                    wc = (w, new_coeff)
+                    q.append((wc, new_seen_a, new_a_counter, a, b))
+                    edges.add((vc, wc, (a, b)))
+        return vertices, edges
+
     def inverse_downward_k_pieri_tree(self, k):
         v, e = self.downward_k_pieri_tree(k)
-        return {x.inverse() for x in v}, {(x.inverse(), y.inverse(), t) for (x, y, t) in e}
+        return {(xc[0].inverse(), xc[1]) for xc in v}, {((xc[0].inverse(), xc[1]), (yc[0].inverse(), yc[1]), t) for (xc, yc, t) in e}
 
     def downward_k_pieri_tree(self, k):
         vertices = set()
         edges = set()
         q = deque([
-            (self, set(), None, k + 1)
+            ((self, 2**k), set(), set(), None, k + 1)
         ])
         while q:
-            v, prohibited, last_a, last_b = q.popleft()
-            vertices.add(v)
+            vc, prohibited, seen_a, last_a, last_b = q.popleft()
+            v, coeff = vc
+            vertices.add(vc)
             for b in range(last_b, v.rank + 2):
                 e = min([v(a) for a in range(k + 1, b) if v(a) > v(b)], default=None)
                 for a in range(k, 0, -1):
@@ -1406,14 +1450,17 @@ class Permutation:
                     w = v * v.t_ij(a, b)
                     assert len(w) == len(v) - 1
                     
+                    new_seen_a = seen_a.copy() | {a}
+                    new_coeff = 2**(k - len(new_seen_a)) * abs(coeff) // coeff
                     new_prohibited = prohibited.copy()
                     if last_a is not None and b == last_b and a > last_a:
                         new_prohibited.add(a)
+                        new_coeff *= -1
 
-                    q.append((w, new_prohibited, a, b))
-                    edges.add((w, v, (a, b)))
+                    wc = (w, new_coeff)
+                    q.append((wc, new_prohibited, new_seen_a, a, b))
+                    edges.add((wc, vc, (a, b)))
         return vertices, edges
-
 
     def inverse_k_pieri_chains(self, k, p):
         for v, forced, prohibited, length in self.inverse().k_pieri_chains(k, p):
