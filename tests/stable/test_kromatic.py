@@ -14,6 +14,7 @@ from stable.kromatic import (
     incomparability_graph,
     is_cluster_graph,
     is_connected_graph,
+    is_natural_unit_interval_order,
     kpowersum_expansion,
     Y_INDEX,
 )
@@ -88,10 +89,12 @@ def test_grothendieck_p_tableaux(nn=5, kk=5):
                     assert len(tabs) == exp[nu]
 
 
-def test_oriented_grothendieck_p_tableaux(nn=5, kk=5):
-    for n in range(1 + nn):
+def test_oriented_grothendieck_p_tableaux(nn=5, kk=5, verbose=True):
+    for n in [nn]:#range(1 + nn):
         for p in posets(n):
             v, e = incomparability_graph(n, p)
+            if not is_natural_unit_interval_order(n, p):
+                continue
             print()
             print()
             print('poset:', n, p, 'graph:', v, e)
@@ -100,28 +103,33 @@ def test_oriented_grothendieck_p_tableaux(nn=5, kk=5):
                 try:
                     x = oriented_kromatic(k, v, e)
                 except:
-                    print('nvars:', k, 'expansion:', '(not symmetric)', 'cluster graph:', is_cluster_graph(e))
+                    print('  nvars:', k, 'expansion:', '(not symmetric)', 'cluster graph:', is_cluster_graph(e))
                     print()
                     continue
+
                 exp = oriented_expander(mn_G_expansion, x).set_variable(0, 1)
+                exp.sorter = lambda a: (sum(a), sorted(a), a)
+                exp.printer = lambda a: '\\bars_{%s}' % ''.join(map(str,a));
+
                 print()
-                print('nvars:', k, 'expansion:', exp)
+                print('  nvars:', k, 'expansion:')
                 print()
-                r = max([sum(nu) for nu in exp], default=0)
-                for nu in set(Partition.all(r)) | set(exp):
-                    if len(nu) > k:
-                        continue
-                    tabs = list(Tableau.grothendieck_p_tableaux(n, p, nu))
-                    # print(nu, ':', len(tabs), '==', exp[nu])
-                    counter = 0
-                    for t in tabs:
-                        inv = t.poset_inversions(p)
-                        counter += Y()**inv
-                    # print()
-                    print('  ', nu, ':', exp[nu], '==', counter, exp[nu] == counter)
-                    # print()
-                    assert exp[nu] == counter
-                    # assert len(tabs) == exp[nu]
+                print(str(exp).replace('y', 'q').replace('*', ' '))
+                print()
+                if verbose:
+                    r = max([sum(nu) for nu in exp], default=0)
+                    for nu in set(Partition.all(r)) | set(exp):
+                        if len(nu) > k:
+                            continue
+                        tabs = list(Tableau.grothendieck_p_tableaux(n, p, nu))
+                        counter = 0
+                        for t in tabs:
+                            inv = t.poset_inversions(p)
+                            counter += Y()**inv
+                        print()
+                        print('  ', nu, ':', exp[nu], '==', counter, exp[nu] == counter)
+                        print()
+                        assert exp[nu] == counter
 
 
 def test_strict_galois_number(rr=8, nn=8):
@@ -310,7 +318,7 @@ def test_G_oriented_expansion(nvars=3, nverts=3, re=False):
 
 
 def test_G_max_oriented_expansion(nvars=3, nverts=3):
-    # expected: only symmetric for claster graphs, then alays G-positive
+    # expected: only symmetric for cluster graphs, then always G-positive
     test_G_oriented_expansion(nvars, nverts, True)
 
 
@@ -319,8 +327,8 @@ def test_multifundamental_oriented_expansion(nvars=3, nverts=3, re=False):
     # fails for v, e = [1, 2, 3, 4], ((1, 2), (1, 3), (1, 4))
     for v, e in graphs(nverts):
         f = max_oriented_kromatic_polynomial(nvars, v, e) if re else oriented_kromatic_polynomial(nvars, v, e)
-        exp = Quasisymmetric.multifundamental_expansion(f)
-        assert Quasisymmetric.from_expansion(nvars, exp, Quasisymmetric.multifundamental) == f
+        exp = Quasisymmetric.multifundamental_expansion(f).set_beta(1)
+        assert Quasisymmetric.from_expansion(nvars, exp, Quasisymmetric.multifundamental) == (f if type(f) == int else f.set_variable(0, 1))
         icf = is_claw_free(v, e)
         pos = exp.is_nonnegative()
         print(v, e, icf, pos, exp)

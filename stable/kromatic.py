@@ -10,6 +10,17 @@ import math
 Y_INDEX = Polynomial.MIN_INT
 
 
+def is_natural_unit_interval_order(n, e):
+    for x, z in e:
+        if x > z:
+            return False
+        for y in range(1, n + 1):
+            if (x, y) not in e and (y, x) not in e and (y, z) not in e and (z, y) not in e:
+                if not (x < y < z):
+                    return False
+    return True
+
+
 def is_connected_graph(v, e):
     if len(v) == 0:
         return True
