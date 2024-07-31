@@ -98,6 +98,7 @@ class AbstractCrystalMixin:
         s += ['    splines=true;']
         if not tex:
             s += ['    node [shape=box; fontname="courier"; style=filled];']
+            # s += ['    node [shape=point,width=0.15,color=gray];']
         if tex:
             # s += ['    node [shape=box,style=filled,color=gray92];']
             s += ['    node [shape=box];']
@@ -130,8 +131,10 @@ class AbstractCrystalMixin:
                         style = "dotted" if i == 0 else "dashed" if i < 0 else "solid"
                         s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
                     else:
+                        cstr = "black"
+                        # cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal" if i == 3 else "black"
                         istr = self.index_printer(i)
-                        s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
+                        s += ['    "%s" -> "%s" [label="%s",color="%s"];' % (printer(v), printer(w), istr, cstr)]
                 #
                 # if i < 0 and extended:
                 #     w = self.fprime_operator(i, v)
