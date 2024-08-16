@@ -85,11 +85,34 @@ def test_partial_ogroth(n=3):
             print()
 
 
+def test_unexpected_grothendieck_terms(n=3, verbose=False):
+    delta = tuple(range(n - 1, 0, -2))
+    mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
+    unexpected = {}
+    t = time.time()
+    for i, mu in enumerate(mus):
+        expected = {Permutation(*w).inverse() for w, c in read_cplusplus_ogroth(mu)}
+        k = len(mu)
+        z = Permutation.from_involution_shape(*mu)
+        for v in z.get_involution_hecke_atoms():
+            v = v.inverse()
+            for w, forced, prohibited, path in v.inverse_k_pieri_chains(k, k):
+                if w not in expected:
+                    unexpected[mu] = unexpected.get(mu, []) + [(v, w)]
+        print(i + 1, 'of', len(mus), ':', mu, time.time() - t)
+        if mu in unexpected:
+            print('  ', unexpected[mu])
+            print()
+        t = time.time()
+    print()
+    print(unexpected)
+
+
 def test_k_pieri_chains(n=3, verbose=False):
     delta = tuple(range(n - 1, 0, -2))
     mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)
     unexpected = {}
-    for mu in [delta]: #mus:
+    for mu in mus:
         expected = {Permutation(*w).inverse(): c for w, c in read_cplusplus_ogroth(mu)}
         k = len(mu)
 
