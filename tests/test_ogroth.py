@@ -85,6 +85,27 @@ def test_partial_ogroth(n=3):
             print()
 
 
+def test_bplus(n=3):
+    total = 0
+    equal = 0
+    for z in Permutation.involutions(n):
+        if z.is_vexillary():
+            total += 1
+            print('z =', z, '=', z.cycle_repr())
+            d = set(Grothendieck.decompose(InvGrothendieck.get(z)))
+            k = max([i for (i, j) in z.rothe_diagram() if i == j], default=1)
+            s = {w for v in z.get_involution_hecke_atoms() for w, _, _, _ in v.k_pieri_chains(k, k)}
+            b = d.issubset(s)
+            print('  ', 'k =', k, ':', b, d == s)
+            print()
+            equal += 1 if d == s else 0
+            #print()
+            #z.print_involution_rothe_diagram(sep='.')
+            #print()
+            assert b
+    print('equal:', equal, 'of', total)
+
+
 def test_unexpected_grothendieck_terms(n=3, verbose=False):
     delta = tuple(range(n - 1, 0, -2))
     mus = sorted(Partition.subpartitions(delta, strict=True), key=sum)

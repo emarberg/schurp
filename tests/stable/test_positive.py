@@ -1,6 +1,27 @@
 from stable.partitions import Partition
 from stable.utils import *
 import traceback
+import math
+
+
+def test_specialization(n=10, m=5):
+    for mu in Partition.all(n, strict=True):
+        for i in range(1, m + 1):
+            f = GP(i, mu).polynomial()
+            f = f.set_variable(0, -1)
+            for j in range(1, i + 1):
+                f = f.set_variable(j, 0.5)
+            print(mu, len(mu), ':', i, ': result =', f * math.factorial(sum(mu)) * 2**sum(mu))
+            # assert f == (1 if i >= len(mu) else 0)
+
+            f = GQ(i, mu).polynomial()
+            f = f.set_variable(0, -1)
+            for j in range(1, i + 1):
+                f = f.set_variable(j, 0.5)
+            print(mu, len(mu), ':', i, ': result =', f * math.factorial(sum(mu)) * 2**sum(mu))
+            # assert f == (1 if i >= len(mu) else 0)
+
+            print()
 
 
 def partition_iterator(rows):

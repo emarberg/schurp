@@ -124,7 +124,7 @@ class Polynomial:
         return cls.monomial(1, 0)
 
     def substitute(self, i, e):
-        ans = 0
+        ans = Polynomial.zero()
         for ind in self.coeffs:
             term = self.one() * self.coeffs[ind]
             for j in ind:
@@ -206,7 +206,7 @@ class Polynomial:
         return all(v > 0 for v in (self - other).coeffs.values())
 
     def __mul__(self, f):
-        if type(f) == int:
+        if type(f) in [int, float]:
             return self * Polynomial({HashableDict({}): f})
         if type(f) != Polynomial:
             return f.__rmul__(self)
@@ -224,7 +224,7 @@ class Polynomial:
         return Polynomial(newcoeffs)
 
     def __rmul__(self, other):
-        if type(other) not in [Polynomial, int]:
+        if type(other) not in [Polynomial, int, float]:
             return other.__mul__(self)
         else:
             return self.__mul__(other)
