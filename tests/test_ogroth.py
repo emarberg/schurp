@@ -89,15 +89,16 @@ def test_bplus(n=3):
     total = 0
     equal = 0
     good = set()
+    t = time.time()
     for z in Permutation.involutions(n):
         if z.is_vexillary():
             total += 1
-            print('z =', z, '=', z.cycle_repr())
             h = set(z.get_involution_hecke_atoms())
             d = set(Grothendieck.decompose(InvGrothendieck.get(z)))
             k = max([i for (i, j) in z.rothe_diagram() if i == j], default=1)
-            s = {w for v in h for w, _, _, _ in v.k_pieri_chains(k, k)}
+            s = set(z.get_extended_hecke_atoms())
             b = d.issubset(s)
+            print(total, ':', 'z =', z, '=', z.cycle_repr(), time.time() - t)
             print('  ', 'k =', k, ':', d == s)
             print()
             equal += 1 if d == s else 0
@@ -108,6 +109,7 @@ def test_bplus(n=3):
             #print()
             assert b
             assert h.issubset(d)
+            t = time.time()
     print('equal:', equal, 'of', total)
     print()
     return good

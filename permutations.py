@@ -14,7 +14,11 @@ TWISTED_ATOMS_CACHE = {}
 TWISTED_INVOLUTION_WORDS_CACHE = {}
 TWISTED_PRIMED_INVOLUTION_WORDS_CACHE = {}
 FPF_ATOMS_CACHE = {}
+
 SYMPLECTIC_HECKE_ATOMS_CACHE = {}
+INVOLUTION_HECKE_ATOMS_CACHE = {}
+EXTENDED_HECKE_ATOMS_CACHE = {}
+
 K_BRUHAT_COVERS = {}
 K_PIERI_CHAINS = {}
 
@@ -491,13 +495,47 @@ class Permutation:
             ans |= v.get_reduced_words()
         return ans
 
+    def get_extended_hecke_atoms(self):
+        if self not in EXTENDED_HECKE_ATOMS_CACHE:
+            h = set(self.get_involution_hecke_atoms())
+            # j = min([i for (i, j) in self.rothe_diagram() if i == j], default=1) - 1
+            k = max([i for (i, j) in self.rothe_diagram() if i == j], default=1)
+            s = {w for v in h for w, _, _, _ in v.k_pieri_chains(k, k)}
+            # for v in h:
+            #    for w, _, _, path in v.k_pieri_chains(k, k):
+            #        print(w.inverse(), '<--', v.inverse(), path)
+            EXTENDED_HECKE_ATOMS_CACHE[self] = list(s)
+        return EXTENDED_HECKE_ATOMS_CACHE[self]
+
     def get_involution_hecke_atoms(self):
-        ans = set()
-        n = self.rank
-        for v in self.all(n):
-            if v.inverse() % v == self:
-                ans.add(v)
-        return ans
+        if self not in INVOLUTION_HECKE_ATOMS_CACHE:
+            INVOLUTION_HECKE_ATOMS_CACHE[self] = list(self._get_involution_hecke_atoms())
+        return INVOLUTION_HECKE_ATOMS_CACHE[self]
+
+    def _get_involution_hecke_atoms(self):
+        def next(w):
+            for i in range(0, len(w) - 2):
+                c, b, a = w[i: i + 3]
+                if a < b < c:
+                    yield w[:i] + (b, c, a) + w[i + 3:]
+                    yield w[:i] + (c, a, b) + w[i + 3:]
+                b, c, a = w[i:i + 3]
+                if a < b < c:
+                    yield w[:i] + (c, b, a) + w[i + 3:]
+                    yield w[:i] + (c, a, b) + w[i + 3:]
+                c, a, b = w[i:i + 3]
+                if a < b < c:
+                    yield w[:i] + (c, b, a) + w[i + 3:]
+                    yield w[:i] + (b, c, a) + w[i + 3:]
+
+        minimum = tuple(self.get_min_atom().inverse().oneline)
+        add = {minimum}
+        seen = set()
+        while add:
+            for w in add:
+                seen.add(w)
+                yield Permutation(*w).inverse()
+            add = {new for w in add for new in next(w)} - seen
 
     def get_twisted_involution_hecke_words(self, n):
         ans = set()
@@ -1100,9 +1138,7 @@ class Permutation:
                 for i in range(len(c) - 1):
                     oneline[c[i] - 1] = c[i + 1]
         ans = Permutation()
-        ans.oneline = oneline
-        ans.cycles = cyc
-        return ans
+        return Permutation(*oneline)
 
     @classmethod
     def s_i(cls, i):
@@ -1466,8 +1502,8 @@ class Permutation:
         for v, forced, prohibited, length in self.inverse().k_pieri_chains(k, p):
             yield v.inverse(), forced, prohibited, length
 
-    def k_pieri_chains(self, k, p):
-        if (self, k) not in K_PIERI_CHAINS:
+    def k_pieri_chains(self, k, p, lowerbound=1):
+        if (self, k, lowerbound) not in K_PIERI_CHAINS:
             yield self, 0, 0, ()
             ans = [(self, 0, 0, ())]
             
@@ -1485,6 +1521,8 @@ class Permutation:
 
                 a0, b0 = path[-1]
                 for a1, b1 in v.k_bruhat_covers(k):
+                    if a1 < lowerbound:
+                        continue
                     if b0 < b1:
                         continue
                     if a_counter[a0] > 1 and b0 == b1 and a0 >= a1:
@@ -1499,9 +1537,9 @@ class Permutation:
 
                     new_path = v * v.t_ij(a1, b1), path + ((a1, b1),), new_forced, new_prohibited, new_a_counter
                     q.append(new_path)
-            K_PIERI_CHAINS[self, k] = ans
+            K_PIERI_CHAINS[self, k, lowerbound] = ans
         else:
-            for a in K_PIERI_CHAINS[self, k]:
+            for a in K_PIERI_CHAINS[self, k, lowerbound]:
                 yield a
 
     def k_bruhat_covers(self, k):
