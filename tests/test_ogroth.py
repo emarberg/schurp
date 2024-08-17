@@ -88,22 +88,29 @@ def test_partial_ogroth(n=3):
 def test_bplus(n=3):
     total = 0
     equal = 0
+    good = set()
     for z in Permutation.involutions(n):
         if z.is_vexillary():
             total += 1
             print('z =', z, '=', z.cycle_repr())
+            h = set(z.get_involution_hecke_atoms())
             d = set(Grothendieck.decompose(InvGrothendieck.get(z)))
             k = max([i for (i, j) in z.rothe_diagram() if i == j], default=1)
-            s = {w for v in z.get_involution_hecke_atoms() for w, _, _, _ in v.k_pieri_chains(k, k)}
+            s = {w for v in h for w, _, _, _ in v.k_pieri_chains(k, k)}
             b = d.issubset(s)
-            print('  ', 'k =', k, ':', b, d == s)
+            print('  ', 'k =', k, ':', d == s)
             print()
             equal += 1 if d == s else 0
+            if d == s:
+                good.add(z)
             #print()
             #z.print_involution_rothe_diagram(sep='.')
             #print()
             assert b
+            assert h.issubset(d)
     print('equal:', equal, 'of', total)
+    print()
+    return good
 
 
 def test_unexpected_grothendieck_terms(n=3, verbose=False):
