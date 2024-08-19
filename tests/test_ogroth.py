@@ -89,7 +89,7 @@ def test_ranked_graph_edges(n):
             print('[', i + 1, 'of', len(invol), ']', w, ':', b1, len(ogroth), len(v), 'vex:', w.is_vexillary()) #, ': up has all', c, ': down has all', d)
         assert a
         assert b2
-
+        assert set(ogroth).issubset(set(v))
 
 def jk_bruhat_cover(x, y, j, k):
     if len(y) != len(x) + 1:
