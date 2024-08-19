@@ -498,12 +498,9 @@ class Permutation:
     def get_extended_hecke_atoms(self):
         if self not in EXTENDED_HECKE_ATOMS_CACHE:
             h = set(self.get_involution_hecke_atoms())
-            # j = min([i for (i, j) in self.rothe_diagram() if i == j], default=1) - 1
+            j = min([i for (i, j) in self.rothe_diagram() if i == j], default=1) - 1
             k = max([i for (i, j) in self.rothe_diagram() if i == j], default=1)
-            s = {w for v in h for w, _, _, _ in v.k_pieri_chains(k, k)}
-            # for v in h:
-            #    for w, _, _, path in v.k_pieri_chains(k, k):
-            #        print(w.inverse(), '<--', v.inverse(), path)
+            s = {w for v in h for w, _, _, _ in v.k_pieri_chains(k, k, lowerbound=j)}
             EXTENDED_HECKE_ATOMS_CACHE[self] = list(s)
         return EXTENDED_HECKE_ATOMS_CACHE[self]
 

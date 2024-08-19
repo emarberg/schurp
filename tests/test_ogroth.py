@@ -11,6 +11,149 @@ import itertools
 import time
 from collections import defaultdict, deque
 import math
+import subprocess
+
+
+OGROTH_HECKE_ATOMS_CACHE = {}
+
+
+def kbruhat_extended_hecke_graph(w):
+    u = set(w.get_extended_hecke_atoms())
+    n = w.rank + 1
+
+    j = min([i for (i, j) in w.rothe_diagram() if i == j], default=1) - 1
+    k = max([i for (i, j) in w.rothe_diagram() if i == j], default=1)
+
+    e = {
+        (x, y, jk_bruhat_cover(x, y, j, k))
+        for x in u for y in u
+        if jk_bruhat_cover(x, y, j, k) is not None
+    }
+    return (u, e)
+
+
+def ranked_extended_hecke_graph(w):
+    u = set(w.get_extended_hecke_atoms())
+    n = w.rank + 1
+    e = set()
+    for i in range(1, n + 1):
+        for x in u:
+            y = Permutation.s_i(i) * x
+            if len(y) == len(x) + 1 and y in u:
+                e.add((x, y, i))
+    return (u, e)
+
+
+def is_connected(v, e):
+    if len(v) == 0:
+        return True
+    component = {next(iter(v))}
+    size = len(component)
+    while True:
+        component |= {b for (a, b, i) in e if a in component} | {a for (a, b, i) in e if b in component}
+        if len(component) == size:
+            break
+        size = len(component)
+    return len(component) == len(v)
+
+
+def test_ranked_graph_edges(n):
+    invol = [w for w in Permutation.involutions(n)]
+    for i, w in enumerate(invol):
+        left = [a for a in range(1, n + 1) if a < w(a)]
+        right = [a for a in range(1, n + 1) if a > w(a)]
+
+        v, e = ranked_extended_hecke_graph(w)
+        ogroth = ogroth_hecke_atoms(w)
+
+        j = min([i for (i, j) in w.rothe_diagram() if i == j], default=1) - 1
+
+        a = is_connected(v, e)
+        b1 = all(x.inverse()(i + 1) in right or x.inverse()(i) in left for (x, y, i) in e)
+        b2 = all(x.inverse()(i + 1) in right or x.inverse()(i) in left for (x, y, i) in e if x in ogroth and y in ogroth)
+        # for (x, y, i) in e:
+        #    print('..', x,y,i,':',x.inverse()(i + 1) in right, x.inverse()(i) in left)
+        c = all(
+            (x, x.s_i(i) * x, i) in e
+            for x in v
+            for i in range(max(1, j), w.rank + 1)
+            if x.inverse()(i) < x.inverse()(i + 1) and (x.inverse()(i) in left or x.inverse()(i+1) in right)
+        )
+        d = all(
+            (y.s_i(i) * y, y, i) in e
+            for y in v
+            for i in range(max(1, j), w.rank + 1)
+            if y.inverse()(i) > y.inverse()(i + 1) and (y.inverse()(i+1) in left or y.inverse()(i) in right) and w(y.inverse()(i)) != y.inverse()(i+1)
+        )
+        if c or len(ogroth) == len(v):
+            print('[', i + 1, 'of', len(invol), ']', w, ':', b1, len(ogroth), len(v), 'vex:', w.is_vexillary()) #, ': up has all', c, ': down has all', d)
+        assert a
+        assert b2
+
+
+def jk_bruhat_cover(x, y, j, k):
+    if len(y) != len(x) + 1:
+        return None
+    for a in range(max(1, j), k + 1):
+        for b in range(k + 1, x.rank + 2):
+            if y == x * x.transposition(a, b):
+                return (a, b)
+
+
+def draw_ranked_extended_hecke_graph(w, neato=False, extended=True):
+    vertices, edges = ranked_extended_hecke_graph(w)
+    ogroth = ogroth_hecke_atoms(w)
+    draw_graph(vertices, edges, ogroth, neato, extended)
+
+
+def draw_kbruhat_extended_hecke_graph(w, neato=False, extended=True):
+    vertices, edges = kbruhat_extended_hecke_graph(w)
+    ogroth = ogroth_hecke_atoms(w)
+    draw_graph(vertices, edges, ogroth, neato, extended)
+
+
+def draw_graph(vertices, edges, ogroth, neato, extended):
+    if not extended:
+        vertices = ogroth
+
+    s = ['digraph G {']
+    s += ['    overlap=false;']
+    s += ['    splines=true;']
+    s += ['    node [shape=box; style=filled];']
+
+    def prt(x):
+        ans = ''.join(map(str, x.inverse().oneline))
+        ans += ' : ' + str(ogroth[x]) if x in ogroth else ''
+        return ans
+
+    for x in vertices:
+        s += ['    "%s" [fillcolor=%s];' % (prt(x), 'white' if x in ogroth else 'grey')]
+
+    for x, y, label in edges:
+        if x in vertices and y in vertices:
+            s += ['    "%s" -> "%s" [label="%s"];' % (prt(x), prt(y), label)]
+
+    s += ['}']
+    s = '\n'.join(s)
+
+    filename = 'tmp' + str(len(vertices))
+    BASE_DIRECTORY = '/Users/emarberg/examples/test/'
+    dot_filename = BASE_DIRECTORY + 'graphs/dot/' + '%s.dot' % filename
+    png_filename = BASE_DIRECTORY + 'graphs/png/' + '%s.png' % filename
+    with open(dot_filename, 'w') as f:
+        f.write(s)
+    subprocess.run(["neato" if neato else "dot", "-Tpng", dot_filename, "-o", png_filename])
+    subprocess.run(["open", png_filename])
+
+
+def extended_hecke_atoms(w):
+    return w.get_extended_hecke_atoms()
+
+
+def ogroth_hecke_atoms(w):
+    if w not in OGROTH_HECKE_ATOMS_CACHE:
+        OGROTH_HECKE_ATOMS_CACHE[w] = {w: c for (w, c) in Grothendieck.decompose(InvGrothendieck.get(w)).items()}
+    return OGROTH_HECKE_ATOMS_CACHE[w]
 
 
 def get_paths(target, v, e):
