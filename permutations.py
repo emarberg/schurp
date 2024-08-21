@@ -496,11 +496,12 @@ class Permutation:
         return ans
 
     def get_extended_hecke_atoms(self):
+        assert self.is_involution()
         if self not in EXTENDED_HECKE_ATOMS_CACHE:
             h = set(self.get_involution_hecke_atoms())
             j = min([i for (i, j) in self.rothe_diagram() if i == j], default=1) - 1
             k = max([i for (i, j) in self.rothe_diagram() if i == j], default=1)
-            s = {w for v in h for w, _, _, _ in v.k_pieri_chains(k, k, lowerbound=j)}
+            s = {w for v in h for w, _, _, _ in v.k_pieri_chains(k, k, lowerbound=j, z=self)}
             EXTENDED_HECKE_ATOMS_CACHE[self] = list(s)
         return EXTENDED_HECKE_ATOMS_CACHE[self]
 
@@ -1499,7 +1500,7 @@ class Permutation:
         for v, forced, prohibited, length in self.inverse().k_pieri_chains(k, p):
             yield v.inverse(), forced, prohibited, length
 
-    def k_pieri_chains(self, k, p, lowerbound=1):
+    def k_pieri_chains(self, k, p, lowerbound=1, z=None):
         if (self, k, lowerbound) not in K_PIERI_CHAINS:
             yield self, 0, 0, ()
             ans = [(self, 0, 0, ())]
@@ -1510,23 +1511,25 @@ class Permutation:
             ]) 
             while q:
                 v, path, forced, prohibited, a_counter = q.popleft()
+                a0, b0 = path[-1]
+
                 if forced > p:
+                    continue
+                if a0 < lowerbound:
+                    continue
+                if z is not None and a0 >= z(a0) and b0 <= z(b0):
                     continue
                 
                 yield v, forced, prohibited, path
                 ans.append((v, forced, prohibited, path))
 
-                a0, b0 = path[-1]
                 for a1, b1 in v.k_bruhat_covers(k):
-                    if a1 < lowerbound:
-                        continue
                     if b0 < b1:
                         continue
                     if a_counter[a0] > 1 and b0 == b1 and a0 >= a1:
                         continue
                     
                     new_forced = forced + int(b0 == b1 and a0 >= a1)
-
                     new_prohibited = prohibited + int(a1 in a_counter)
 
                     new_a_counter = a_counter.copy()

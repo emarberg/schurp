@@ -24,11 +24,14 @@ def kbruhat_extended_hecke_graph(w):
     j = min([i for (i, j) in w.rothe_diagram() if i == j], default=1) - 1
     k = max([i for (i, j) in w.rothe_diagram() if i == j], default=1)
 
-    e = {
-        (x, y, jk_bruhat_cover(x, y, j, k))
-        for x in u for y in u
-        if jk_bruhat_cover(x, y, j, k) is not None
-    }
+    e = set()
+    for x in u:
+        for y in u:
+            ab =  jk_bruhat_cover(x, y, j, k)
+            if ab is not None:
+                a, b = ab
+                if a < w(a) or b > w(b):
+                    e.add((x, y, ab))
     return (u, e)
 
 
@@ -44,13 +47,60 @@ def ranked_extended_hecke_graph(w):
     return (u, e)
 
 
+def subword_extended_hecke_graph(w):
+    n = w.rank + 1
+
+    def undo(x):
+        return Permutation(*([1] + [i for i in x.inverse().oneline if i not in [1, n]] + [n])).inverse()
+    
+    u = set(w.get_extended_hecke_atoms())
+    h = set(w.get_involution_hecke_atoms())
+    e = set()
+    for i in range(1, n + 1):
+        # for x in h:
+        #     y = Permutation.s_i(i) * x
+        #     if len(y) == len(x) + 1 and y in h:
+        #         e.add((x, y, i))
+        for y in u - h:
+            x = undo(y)
+            if x in h:
+                e.add((x, y, 0))
+    return (u, e)
+
+
+def test_reverse_extended_hecke(n):
+    assert n > 2
+    w = Permutation.longest_element(n - 1).shift(1)
+    
+
+    u = set(w.get_extended_hecke_atoms())
+    h = set(w.get_involution_hecke_atoms())
+
+    p = 1 + n // 2
+    q = (1 + n // 2) if n % 2 == 0 else (2 + n // 2)
+
+    m = w.rank + 1
+    expected = set()
+    for x in h:
+        s = list(x.inverse().oneline)[1:]
+        for i in range(m):
+            for j in range(i + 1, m):
+                a = s[:i]
+                b = s[j - 1:]
+                if all(t > p for t in a) and all(t < q for t in b):
+                    ss = a + [1] + s[i:j - 1] + [m] + b
+                    # print(s, i, j, ss)
+                    expected.add(Permutation(*ss).inverse())
+    assert expected == u
+
+
 def is_connected(v, e):
     if len(v) == 0:
         return True
     component = {next(iter(v))}
     size = len(component)
     while True:
-        component |= {b for (a, b, i) in e if a in component} | {a for (a, b, i) in e if b in component}
+        component |= {b for (a, b, i) in e if a in component and b in v} | {a for (a, b, i) in e if b in component and a in v}
         if len(component) == size:
             break
         size = len(component)
@@ -58,8 +108,21 @@ def is_connected(v, e):
 
 
 def test_ranked_graph_edges(n):
+    dominant_equal = 0
+    dominant_total = 0
+    dominant_set = set()
+    
+    vexillary_equal = 0
+    vexillary_total = 0
+    
+    overcount = 0
+    totalcount = 0
+
     invol = [w for w in Permutation.involutions(n)]
     for i, w in enumerate(invol):
+        dominant_total += int(w.is_dominant())
+        vexillary_total += int(w.is_vexillary())
+
         left = [a for a in range(1, n + 1) if a < w(a)]
         right = [a for a in range(1, n + 1) if a > w(a)]
 
@@ -68,7 +131,8 @@ def test_ranked_graph_edges(n):
 
         j = min([i for (i, j) in w.rothe_diagram() if i == j], default=1) - 1
 
-        a = is_connected(v, e)
+        a1 = is_connected(v, e)
+        a2 = is_connected(ogroth, e)
         b1 = all(x.inverse()(i + 1) in right or x.inverse()(i) in left for (x, y, i) in e)
         b2 = all(x.inverse()(i + 1) in right or x.inverse()(i) in left for (x, y, i) in e if x in ogroth and y in ogroth)
         # for (x, y, i) in e:
@@ -85,11 +149,30 @@ def test_ranked_graph_edges(n):
             for i in range(max(1, j), w.rank + 1)
             if y.inverse()(i) > y.inverse()(i + 1) and (y.inverse()(i+1) in left or y.inverse()(i) in right) and w(y.inverse()(i)) != y.inverse()(i+1)
         )
-        if c or len(ogroth) == len(v):
-            print('[', i + 1, 'of', len(invol), ']', w, ':', b1, len(ogroth), len(v), 'vex:', w.is_vexillary()) #, ': up has all', c, ': down has all', d)
-        assert a
+        print('[', i + 1, 'of', len(invol), ']', w.cycle_repr(), ':', c, d, len(ogroth), len(v), 'vex:', w.is_vexillary()) #, ': up has all', c, ': down has all', d)
+        assert a1
+        assert a2
+        assert b1
         assert b2
-        assert set(ogroth).issubset(set(v))
+        if w.is_vexillary():
+            assert set(ogroth).issubset(set(v))
+            assert set(w.get_involution_hecke_atoms()).issubset(set(ogroth))
+        
+        if w.is_dominant():
+            if len(ogroth) == len(v):
+                dominant_equal += 1
+            else:
+                dominant_set |= {w.shape()}
+        vexillary_equal += int(w.is_vexillary() and len(ogroth) == len(v))
+        if w.is_vexillary():
+            overcount += len(v) - len(ogroth)
+            totalcount += len(ogroth)
+        
+    print()
+    print('vexillary:', vexillary_equal, 'of', vexillary_total)
+    print(' dominant:', dominant_equal, 'of', dominant_total, dominant_set)
+    print('overcount:', overcount, 'of', totalcount)
+
 
 def jk_bruhat_cover(x, y, j, k):
     if len(y) != len(x) + 1:
@@ -100,19 +183,29 @@ def jk_bruhat_cover(x, y, j, k):
                 return (a, b)
 
 
-def draw_ranked_extended_hecke_graph(w, neato=False, extended=True):
+def draw_subword_extended_hecke_graph(n, neato=False, extended=True, labels=True):
+    w = Permutation.longest_element(n - 1).shift(1)
+    vertices, edges = subword_extended_hecke_graph(w)
+    ogroth = ogroth_hecke_atoms(w)
+    hecke = w.get_involution_hecke_atoms()
+    draw_graph(vertices, edges, ogroth, hecke, neato, extended, labels)
+
+
+def draw_ranked_extended_hecke_graph(w, neato=False, extended=True, labels=True):
     vertices, edges = ranked_extended_hecke_graph(w)
     ogroth = ogroth_hecke_atoms(w)
-    draw_graph(vertices, edges, ogroth, neato, extended)
+    hecke = w.get_involution_hecke_atoms()
+    draw_graph(vertices, edges, ogroth, hecke, neato, extended, labels)
 
 
-def draw_kbruhat_extended_hecke_graph(w, neato=False, extended=True):
+def draw_kbruhat_extended_hecke_graph(w, neato=False, extended=True, labels=True):
     vertices, edges = kbruhat_extended_hecke_graph(w)
     ogroth = ogroth_hecke_atoms(w)
-    draw_graph(vertices, edges, ogroth, neato, extended)
+    hecke = w.get_involution_hecke_atoms()
+    draw_graph(vertices, edges, ogroth, hecke, neato, extended, labels)
 
 
-def draw_graph(vertices, edges, ogroth, neato, extended):
+def draw_graph(vertices, edges, ogroth, hecke, neato, extended, labels):
     if not extended:
         vertices = ogroth
 
@@ -122,16 +215,21 @@ def draw_graph(vertices, edges, ogroth, neato, extended):
     s += ['    node [shape=box; style=filled];']
 
     def prt(x):
-        ans = ''.join(map(str, x.inverse().oneline))
-        ans += ' : ' + str(ogroth[x]) if x in ogroth else ''
+        # ans = x.cycle_repr()
+        # ans = ''.join(map(str, x.oneline))
+        ans = ''.join(map(str, x.inverse().oneline)) + '⁻¹'
+        ans += ' : ' + (str(ogroth[x]) if x in ogroth else '0')
         return ans
 
     for x in vertices:
-        s += ['    "%s" [fillcolor=%s];' % (prt(x), 'white' if x in ogroth else 'grey')]
+        s += ['    "%s" [fillcolor=%s];' % (prt(x), 'lightskyblue1' if x in hecke else 'white' if x in ogroth else 'grey85')]
 
     for x, y, label in edges:
         if x in vertices and y in vertices:
-            s += ['    "%s" -> "%s" [label="%s"];' % (prt(x), prt(y), label)]
+            if labels:
+                s += ['    "%s" -> "%s" [label="%s"];' % (prt(x), prt(y), label)]
+            else:
+                s += ['    "%s" -> "%s";' % (prt(x), prt(y))]
 
     s += ['}']
     s = '\n'.join(s)
