@@ -81,6 +81,14 @@ def get_shiftable(w):
         else:
             segments[-1].append(a)
 
+    crossing_pairs = []
+    for seg in segments if w(1) == 1 else segments[1:]:
+        for i, b in enumerate(seg):
+            a = [a for a in seg[:i] if w(a) < w(b)]
+            if a:
+                a = a[-1]
+                crossing_pairs.append((a, b))
+
     def get_cycle(s):
         ans = Permutation()
         for seg in segments[1:] if 1 < w(1) else segments:
@@ -92,7 +100,7 @@ def get_shiftable(w):
         ans = X(0)**0
         for seg in segments:
             for i, a in enumerate(seg):
-                if a in s and any(b in s and w(a) < w(b) for b in seg[i + 1:]):
+                if any(b in s for (x, b) in crossing_pairs if x == a):
                     ans *= -1
                 elif a not in s:
                     ans *= 2 + X(a)
@@ -104,7 +112,7 @@ def get_shiftable(w):
 
     for k in range(len(mobile) + 1):
         for s in itertools.combinations(mobile, k):
-            if all(b not in s for seg in segments for (i, a) in enumerate(seg) for b in seg[i + 1:] if a not in s and w(a) < w(b)):
+            if not any(a not in s and b in s for (a, b) in crossing_pairs):
                 sigma = get_cycle(s)
                 coeff = get_coefficient(s)
                 yield s, sigma, coeff
@@ -115,9 +123,9 @@ def _test_ogroth_expand(w, ans):
     for s, sigma, f in get_shiftable(w):
         v = sigma.inverse() * w * sigma
         expected[v] = f
-    for v, f in expected.items():
-        print('  ', v.cycle_repr(), ':', print_factors(f))
-    print()
+    # for v, f in expected.items():
+    #     print('  ', v.cycle_repr(), ':', print_factors(f))
+    # print()
     assert ans == Vector(expected)
 
 
