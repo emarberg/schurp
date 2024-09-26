@@ -15,6 +15,84 @@ import subprocess
 
 
 OGROTH_HECKE_ATOMS_CACHE = {}
+OGROTH_EXPAND_CACHE = {}
+
+
+def attempt_factor(p, roots=(1,2)):
+    ans = []
+    for i in p.variables():
+        for c in roots:
+            if p.set(i, -c) == 0:
+                ans.append(X(i) + c)
+                p = p.divide_linear(i, c)
+    assert p == p.one() or -p == p.one()
+    if p != p.one():
+        ans.append(p)
+    return ans
+
+
+def print_factors(p):
+    return ''.join(map(lambda x: '(' + str(x) + ')', attempt_factor(p)))
+
+
+def ogroth_expand(w):
+    D = lambda i: lambda f: (f * (1 + X(i + 1))).divided_difference(i)
+    swap = lambda i: lambda f: f.substitute(i, X(-1)).substitute(i + 1, X(i)).substitute(-1, X(i + 1))
+
+    assert w.is_involution()
+    assert w.is_vexillary()
+    
+    if w in OGROTH_EXPAND_CACHE:
+        return OGROTH_EXPAND_CACHE[w]
+    
+    if w.is_dominant():
+        k = w.number_two_cycles()
+        f = X(0)**0
+        for i in range(1, k + 1):
+            f *= (2 + X(i))
+        OGROTH_EXPAND_CACHE[w] = Vector({w: f})
+    else:
+        n = w.rank
+        for i in range(1, n):
+            s = Permutation.s_i(i)
+            z = s * w * s
+            if len(z) == len(w) + 2 and z.is_vexillary():
+                bns = ogroth_expand(z)
+                ans = {}
+                for v, f in bns.items():
+                    df = D(i)(f)
+                    ans[v] = ans.get(v, 0) + df
+                    if v(i) > v(i + 1):
+                        sf = swap(i)(f)
+                        ans[v] += sf
+                        sv = s * v if s * v == v * s else s * v * s
+                        assert s * v != v * s
+                        ans[sv] = ans.get(sv, 0) + sf
+                OGROTH_EXPAND_CACHE[w] = Vector(ans)
+                break
+    return ogroth_expand(w)
+
+
+def print_ogroth_expand(w):
+    ans = ogroth_expand(w)
+    print('z =', w.cycle_repr(), 'is dominant:', w.is_dominant())
+    print()
+    for v, f in ans.items():
+        print('  ', v.cycle_repr(), ':', print_factors(f))
+    print()
+
+
+def print_all_ogroth_expand(n, k=None):
+    count = 1 
+    for w in Permutation.involutions(n):
+        w = w.shift(1)
+        if k and w.number_two_cycles() != k:
+            continue
+        if w.is_vexillary():
+            print('c =', count)
+            print_ogroth_expand(w)
+            count += 1
+
 
 
 def kbruhat_extended_hecke_graph(w):
