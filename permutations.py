@@ -825,10 +825,7 @@ class Permutation:
 
     @classmethod
     def from_cycles(cls, *c):
-        ans = Permutation()
-        for a, b in c:
-            ans *= Permutation.transposition(a, b)
-        return ans
+        return cls.cycles(c)
 
     @classmethod
     def from_code(cls, *code):
@@ -1118,15 +1115,15 @@ class Permutation:
         return self.oneline.__iter__()
 
     # Input is [i_1, i_2, ... , i_k], returns permutation (i_1 i_2 ... i_k)
-    @staticmethod
-    def cycle(cyc):
-        return Permutation.cycles([cyc])
+    @classmethod
+    def cycle(cls, cyc):
+        return cls.cycles([cyc])
 
-    @staticmethod
-    def cycles(cyc, oneline=None):
+    @classmethod
+    def cycles(cls, cyc, oneline=None):
 
         if len(cyc) == 0:
-            return Permutation()
+            return cls()
 
         if oneline is None:
             n = max(map(max, cyc))
@@ -1135,8 +1132,8 @@ class Permutation:
                 oneline[c[len(c) - 1] - 1] = c[0]
                 for i in range(len(c) - 1):
                     oneline[c[i] - 1] = c[i + 1]
-        ans = Permutation()
-        return Permutation(*oneline)
+        ans = cls()
+        return cls(*oneline)
 
     @classmethod
     def s_i(cls, i):

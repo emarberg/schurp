@@ -72,6 +72,54 @@ def ogroth_expand(w):
                 break
     return ogroth_expand(w)
 
+def get_shiftable(w):
+    left = [a for a in range(1, w.rank + 1) if a < w(a)]
+    segments = []
+    for a in left:
+        if not segments or a > segments[-1][-1] + 1:
+            segments.append([a])
+        else:
+            segments[-1].append(a)
+
+    def get_cycle(s):
+        ans = Permutation()
+        for seg in segments[1:] if 1 < w(1) else segments:
+            cycle = [seg[0] - 1] + [c for c in seg if c in s]
+            ans *= Permutation.from_cycles(cycle)
+        return ans
+
+    def get_coefficient(s):
+        ans = X(0)**0
+        for seg in segments:
+            for i, a in enumerate(seg):
+                if a in s and any(b in s and w(a) < w(b) for b in seg[i + 1:]):
+                    ans *= -1
+                elif a not in s:
+                    ans *= 2 + X(a)
+                else:
+                    ans *= 1 + X(a)
+        return ans
+
+    mobile = (set(left) - set(segments[0])) if 1 < w(1) else set(left)
+
+    for k in range(len(mobile) + 1):
+        for s in itertools.combinations(mobile, k):
+            if all(b not in s for seg in segments for (i, a) in enumerate(seg) for b in seg[i + 1:] if a not in s and w(a) < w(b)):
+                sigma = get_cycle(s)
+                coeff = get_coefficient(s)
+                yield s, sigma, coeff
+
+
+def _test_ogroth_expand(w, ans):
+    expected = {}
+    for s, sigma, f in get_shiftable(w):
+        v = sigma.inverse() * w * sigma
+        expected[v] = f
+    for v, f in expected.items():
+        print('  ', v.cycle_repr(), ':', print_factors(f))
+    print()
+    assert ans == Vector(expected)
+
 
 def print_ogroth_expand(w):
     ans = ogroth_expand(w)
@@ -80,6 +128,7 @@ def print_ogroth_expand(w):
     for v, f in ans.items():
         print('  ', v.cycle_repr(), ':', print_factors(f))
     print()
+    _test_ogroth_expand(w, ans)
 
 
 def print_all_ogroth_expand(n, k=None):
