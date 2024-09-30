@@ -131,10 +131,15 @@ def _test_ogroth_expand(w, ans):
 
 def print_ogroth_expand(w):
     ans = ogroth_expand(w)
-    print('z =', w.cycle_repr(), 'is dominant:', w.is_dominant())
+    print('z =', w.cycle_repr(), 'is dominant:', w.is_dominant(), w.involution_shape())
+    print()
+    w.print_rothe_diagram(sep='.')
+    print()
+    w.print_involution_rothe_diagram(sep='.')
     print()
     for v, f in ans.items():
-        print('  ', v.cycle_repr(), ':', print_factors(f))
+        s = {a for a in range(1, w.rank + 1) if a < w(a) != v(a)}
+        print('  ', v.cycle_repr(), ':', print_factors(f), s, v.involution_shape())
     print()
     _test_ogroth_expand(w, ans)
 
