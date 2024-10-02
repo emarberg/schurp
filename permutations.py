@@ -596,6 +596,14 @@ class Permutation:
             level = new
 
     @classmethod
+    def partial_involutions(cls, n, macaulay_output=False):
+        for w in cls.involutions(2 * n):
+            if max(w.right_descent_set, default=0) <= n:
+                yield w
+                if macaulay_output:
+                    print('{', ', '.join([str(w(i + 1)) for i in range(w.rank)] + [str(n)]), '}')
+
+    @classmethod
     def involutions(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
             w = Permutation(args)
