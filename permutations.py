@@ -597,11 +597,29 @@ class Permutation:
 
     @classmethod
     def partial_involutions(cls, n, macaulay_output=False):
-        for w in cls.involutions(2 * n):
-            if max(w.right_descent_set, default=0) <= n:
-                yield w
-                if macaulay_output:
-                    print('{', ', '.join([str(w(i + 1)) for i in range(w.rank)] + [str(n)]), '}')
+        if n == 0:
+            ans = [Permutation()]
+        elif n == 1:
+            ans = [Permutation(1, 2), Permutation(2, 1)]
+        else:
+            ans = []
+            c = Permutation.cycle(list(range(n, 2 * n)))
+            d = Permutation.cycle(list(range(n - 1, 2 * n + 1)))**2
+            for w in cls.partial_involutions(n - 1, False):
+                w = c * w * c**-1
+                ans.append(w)
+                m = max([n + 1] + [w(i) + 1 for i in range(1, n)])
+                ans.append(w * w.t_ij(n, m))
+            for w in cls.partial_involutions(n - 2, False):
+                w = d * w * d**-1
+                for k in range(1, n):
+                    e = Permutation.cycle(list(range(k, n)))
+                    ans.append(e * w * e**-1 * w.t_ij(k, n))
+        if macaulay_output:
+            s = '{' + ', '.join(['{ ' +  ', '.join([str(w(i + 1)) for i in range(max(n, w.rank))] + [str(n)]) + ' }' for w in ans]) + '};'
+            import pyperclip
+            pyperclip.copy(s)
+        return ans
 
     @classmethod
     def involutions(cls, n):
@@ -944,18 +962,18 @@ class Permutation:
     def involution_rothe_diagram(self, fpf=False):
         return [(i, j) for (i, j) in self.rothe_diagram() if i > j or (not fpf and i == j)]
 
-    def print_essential_set(self, french=False, sep=' '):
+    def print_essential_set(self, french=False, sep='.'):
         rothe = self.rothe_diagram()
         ess = [(i, j) for (i, j) in rothe if (i + 1, j) not in rothe and (i, j + 1) not in rothe]
         print(self.print_diagram(ess, french=french, sep=sep))
 
-    def print_rothe_diagram(self, french=False, sep=' '):
+    def print_rothe_diagram(self, french=False, sep='.'):
         print(self.print_diagram(self.rothe_diagram(), french=french, sep=sep))
 
-    def print_fpf_rothe_diagram(self, french=False, sep=' '):
+    def print_fpf_rothe_diagram(self, french=False, sep='.'):
         print(self.print_diagram(self.involution_rothe_diagram(True), french=french, sep=sep))
 
-    def print_involution_rothe_diagram(self, french=False, sep=' '):
+    def print_involution_rothe_diagram(self, french=False, sep='.'):
         print(self.print_diagram(self.involution_rothe_diagram(False), french=french, sep=sep))
 
     @classmethod
