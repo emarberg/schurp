@@ -763,6 +763,15 @@ class Permutation:
                             return False
         return True
 
+    def is_quasi_dominant(self):
+        if not self.is_vexillary():
+            return False
+        n = len(self.oneline)
+        for a in range(1, n + 1):
+            if a < self(a) and not all(b < self(b) for b in range(1, a)):
+                return False
+        return True
+
     def is_dominant(self):
         n = len(self.oneline)
         for i in range(1, n - 1):
