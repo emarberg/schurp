@@ -208,11 +208,10 @@ def subword_extended_hecke_graph(w):
     return (u, e)
 
 
-def test_reverse_extended_hecke(n):
+def test_reverse_extended_hecke(n=3):
     assert n > 2
     w = Permutation.longest_element(n - 1).shift(1)
     
-
     u = set(w.get_extended_hecke_atoms())
     h = set(w.get_involution_hecke_atoms())
 
@@ -247,7 +246,7 @@ def is_connected(v, e):
     return len(component) == len(v)
 
 
-def test_ranked_graph_edges(n):
+def test_ranked_graph_edges(n=3):
     dominant_equal = 0
     dominant_total = 0
     dominant_set = set()
@@ -637,7 +636,7 @@ def chinese_class(w, n):
         add = nextadd
 
 
-def test_longest_grothendieck(n):
+def test_longest_grothendieck(n=3):
     w0 = Permutation.longest_element(n)
     s = InvGrothendieck.top(w0)
     m = w0.involution_length()
@@ -668,7 +667,7 @@ def test_longest_grothendieck(n):
     return a
 
 
-def test_longest_grothendieck_indices(n):
+def test_longest_grothendieck_indices(n=3):
     w = Permutation.longest_element(n)
     mu = tuple(range(n - 1, 0, -2))
     assert mu == w.involution_shape().tuple()

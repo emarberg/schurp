@@ -57,10 +57,12 @@ def grothendieck(num_variables, mu, nu=(), degree_bound=None): # noqa
         assert nu == ()
         return mu.stable_grothendieck(num_variables, degree_bound=degree_bound)
     else:
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return SymmetricPolynomial.stable_grothendieck(num_variables, mu, nu, degree_bound=degree_bound)
 
 
 def grothendieck_Q(num_variables, mu, nu=(), degree_bound=None): # noqa
+    mu, nu = Partition.trim(mu), Partition.trim(nu)
     return SymmetricPolynomial.stable_grothendieck_q(num_variables, mu, nu, degree_bound=degree_bound)
 
 
@@ -69,6 +71,7 @@ def grothendieck_P(num_variables, mu, nu=(), degree_bound=None): # noqa
         assert nu == ()
         return mu.symplectic_stable_grothendieck(num_variables, degree_bound)
     else:
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return SymmetricPolynomial.stable_grothendieck_p(num_variables, mu, nu, degree_bound)
 
 def grothendieck_S(num_variables, mu, nu=(), degree_bound=None): # noqa
@@ -76,6 +79,7 @@ def grothendieck_S(num_variables, mu, nu=(), degree_bound=None): # noqa
         assert nu == ()
         return mu.signed_involution_stable_grothendieck(num_variables, degree_bound)
     else:
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return SymmetricPolynomial.stable_grothendieck_s(num_variables, mu, nu, degree_bound)
 
 

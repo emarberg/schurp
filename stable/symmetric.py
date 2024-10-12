@@ -418,6 +418,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._stable_grothendieck(num_variables, mu, nu, degree_bound)
 
     @cached_value(STABLE_GROTHENDIECK_CACHE)
@@ -432,30 +433,37 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def mp_dual_stable_grothendieck(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls.negate_beta(cls.dual_stable_grothendieck(num_variables, mu, nu))
 
     @classmethod
     def mp_dual_stable_grothendieck_p(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls.negate_beta(cls.dual_stable_grothendieck_p(num_variables, mu, nu))
 
     @classmethod
     def mp_dual_stable_grothendieck_q(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls.negate_beta(cls.dual_stable_grothendieck_q(num_variables, mu, nu))
 
     @classmethod
     def mn_stable_grothendieck(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls.negate_beta(cls.stable_grothendieck(num_variables, mu, nu))
 
     @classmethod
     def mn_stable_grothendieck_p(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls.negate_beta(cls.stable_grothendieck_p(num_variables, mu, nu))
 
     @classmethod
     def mn_stable_grothendieck_q(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls.negate_beta(cls.stable_grothendieck_q(num_variables, mu, nu))
 
     @classmethod
     def dual_stable_grothendieck(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._dual_stable_grothendieck(num_variables, mu, nu)
 
     @cached_value(DUAL_STABLE_GROTHENDIECK_CACHE)
@@ -465,6 +473,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def dual_stable_grothendieck_p(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._dual_stable_grothendieck_p(num_variables, mu, nu)
 
     @cached_value(DUAL_STABLE_GROTHENDIECK_P_CACHE)
@@ -474,12 +483,13 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def dual_stable_grothendieck_q(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._dual_stable_grothendieck_q(num_variables, mu, nu)
 
     @classmethod
     def dual_stable_grothendieck_s(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         n = len(mu)
-        assert n == 0 or mu[n - 1] > 0
         new_mu = tuple(mu[i] + n - i for i in range(n))
         new_nu = tuple((nu[i] if i < len(nu) else 0) + n - i for i in range(n))
         return cls._dual_stable_grothendieck_q(num_variables, new_mu, new_nu)
@@ -710,14 +720,17 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_schur(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._slow_vectorize(num_variables, Tableau.semistandard(num_variables, mu, nu))
 
     @classmethod
     def _slow_schur_s(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._slow_vectorize(num_variables, Tableau.semistandard_marked(num_variables, mu, nu))
 
     @classmethod
     def _slow_schur_q(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_shifted_marked(num_variables, mu, nu)
@@ -725,6 +738,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_schur_p(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_shifted_marked(num_variables, mu, nu, diagonal_primes=False)
@@ -732,6 +746,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_stable_grothendieck_s(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return BETA**(sum(nu) - sum(mu)) * cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_marked_setvalued(num_variables, mu, nu),
@@ -740,6 +755,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_stable_grothendieck_q(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return BETA**(sum(nu) - sum(mu)) * cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_shifted_marked_setvalued(num_variables, mu, nu),
@@ -748,6 +764,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_stable_grothendieck_p(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return BETA**(sum(nu) - sum(mu)) * cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_shifted_marked_setvalued(num_variables, mu, nu, diagonal_primes=False),
@@ -756,6 +773,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_stable_grothendieck(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return BETA**(sum(nu) - sum(mu)) * cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_setvalued(num_variables, mu, nu),
@@ -764,6 +782,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_dual_stable_grothendieck(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return (-BETA)**(sum(mu) - sum(nu)) * cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_rpp(num_variables, mu, nu),
@@ -772,6 +791,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_dual_stable_grothendieck_p(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return (-BETA)**(sum(mu) - sum(nu)) * cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_marked_rpp(num_variables, mu, nu, diagonal_nonprimes=False),
@@ -780,6 +800,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_dual_stable_grothendieck_q(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return (-BETA)**(sum(mu) - sum(nu)) * cls._slow_vectorize(
             num_variables,
             Tableau.semistandard_marked_rpp(num_variables, mu, nu, diagonal_nonprimes=True),
@@ -788,6 +809,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def slow_transposed_dual_stable_grothendieck(cls, num_variables, mu, nu=(), beta=-BETA):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._slow_transposed_dual_stable_grothendieck(num_variables, mu, nu, beta)
 
     @cached_value(TRANSPOSED_DUAL_STABLE_GROTHENDIECK_CACHE)
@@ -815,6 +837,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def slow_decomposition_jp(cls, num_variables, mu, eta=BETA):
+        mu = Partition.trim(mu)
         p = Polynomial.zero()
         for tab in ValuedSetTableau.all_decomposition_vst(num_variables, mu):
             w = tab.weight(num_variables)
@@ -826,6 +849,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def slow_transposed_dual_stable_grothendieck_p(cls, num_variables, mu, nu=(), beta=-BETA):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._slow_transposed_dual_stable_grothendieck_p(num_variables, mu, nu, beta)
 
     @cached_value(TRANSPOSED_DUAL_STABLE_GROTHENDIECK_P_CACHE)
@@ -854,12 +878,13 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def slow_transposed_dual_stable_grothendieck_q(cls, num_variables, mu, nu=(), beta=-BETA):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._slow_transposed_dual_stable_grothendieck_q(num_variables, mu, nu, beta)
 
     @classmethod
     def slow_transposed_dual_stable_grothendieck_s(cls, num_variables, mu, nu=(), beta=-BETA):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         n = len(mu)
-        assert n == 0 or mu[n - 1] > 0
         new_mu = tuple(mu[i] + n - i for i in range(n))
         new_nu = tuple((nu[i] if i < len(nu) else 0) + n - i for i in range(n))
         return cls._slow_transposed_dual_stable_grothendieck_q(num_variables, new_mu, new_nu, beta)
@@ -899,6 +924,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_refined_dual_stable_grothendieck_p(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         dictionary = defaultdict(list)
         for t in Tableau.semistandard_marked_rpp(num_variables, mu, nu, diagonal_nonprimes=False):
             dictionary[cls._diag_vector(t)].append(t)
@@ -914,6 +940,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def _slow_refined_dual_stable_grothendieck_q(cls, num_variables, mu, nu=()):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         dictionary = defaultdict(list)
         for t in Tableau.semistandard_marked_rpp(num_variables, mu, nu, diagonal_nonprimes=True):
             dictionary[cls._diag_vector(t)].append(t)
