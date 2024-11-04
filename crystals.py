@@ -159,7 +159,7 @@ class AbstractCrystalMixin:
         subprocess.run(["open", png_filename])
 
         if tex:
-            ps = subprocess.Popen(("neato" if neato else "dot") + " -Txdot " + dot_filename + " | dot2tex -tmath --nominsize --figonly --figpreamble=\"\\small\" > ~/Downloads/test.tex", stdin=subprocess.PIPE, shell=True)
+            ps = subprocess.Popen(("neato" if neato else "dot") + " -Txdot " + dot_filename + " | dot2tex -tmath --nominsize --figonly --figpreamble=\"\\small\" > ~/test.tex", stdin=subprocess.PIPE, shell=True)
             ps.communicate()
 
     def e_string(self, i, v):
@@ -220,6 +220,16 @@ class AbstractCrystalMixin:
                     ans = self.e_operator(i, ans)
             self.s_operators[(i, b)] = ans
         return self.s_operators[(i, b)]
+
+    def eplus_operator(self, i, v):
+        while self.e_operator(i, v) is not None:
+            v = self.e_operator(i, v)
+        return v
+
+    def fplus_operator(self, i, v):
+        while self.f_operator(i, v) is not None:
+            v = self.f_operator(i, v)
+        return v
 
     def star_operator(self, b):
         if b is None:

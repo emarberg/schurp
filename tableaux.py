@@ -17,7 +17,7 @@ SHIFTED_RPP_HORIZONTAL_STRIPS_CACHE = {}
 SHIFTED_RPP_VERTICAL_STRIPS_CACHE = {}
 
 # for French notation
-FRENCH = True
+FRENCH = False
 
 
 class Tableau:

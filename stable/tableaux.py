@@ -5,7 +5,7 @@ from collections import defaultdict
 from operator import itemgetter
 import itertools
 
-FRENCH = True
+FRENCH = False
 
 SETVALUED_DECOMPOSITION_CACHE = {}
 SETVALUED_DECOMPOSITION_SLOW_CACHE = {}
@@ -576,7 +576,7 @@ class Tableau:
                     v = ''.join(map(str, v))
                 row += [('*(white) ' + str(v)) if v is not None else '\\none']
             rows += [' & '.join(row)]
-        return '$\\colorbox{lightgray!50}{\\begin{ytableau}' + ' \\\\ '.join(reversed(rows)) + '\\end{ytableau}}$'
+        return '$\\colorbox{lightgray!50}{\\begin{ytableau}' + ' \\\\ '.join(reversed(rows) if FRENCH else rows) + '\\end{ytableau}}$'
 
     def row_reading_word(self):
         return tuple(

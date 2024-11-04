@@ -210,7 +210,7 @@ def test_semicrystal_group_action_on_words(n=3, k=5):
     # fails for n=3 and k=4, also fails for squared crystal, for even elements
     for kk in range(1, k + 1):
         print('n =', n, 'k =', kk)
-        b = AbstractGLCrystal.semicrystal_of_words(kk, n).squared_crystal()
+        b = AbstractGLCrystal.semicrystal_of_words(kk, n)
         for i in range(1, n):
             for j in range(i + 1, n):
                 for w in b:
@@ -227,6 +227,22 @@ def test_semicrystal_group_action_on_words(n=3, k=5):
                         c.draw()
                         input('\n')
                     assert one == two
+
+
+def test_word_semicrystal_highest(n=3, k=5):
+    for kk in range(1, k + 1):
+        print('n =', n, 'k =', kk)
+        b = AbstractGLCrystal.semicrystal_of_words(kk, n)
+        for v in b:
+            w = v
+            for j in range(1, n):
+                for i in range(j, 0, -1):
+                    w = b.eplus_operator(i, w)
+            if not b.is_highest_weight(w):
+                print(v)
+                b.draw()
+                return (b, v)
+            assert b.is_highest_weight(w)
 
 
 def word(t):
