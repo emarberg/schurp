@@ -469,9 +469,10 @@ def test_bplus(n=3):
     total = 0
     equal = 0
     good = set()
+    bad = set()
     t = time.time()
     for z in Permutation.involutions(n):
-        if z.is_vexillary():
+        if z.is_dominant():
             total += 1
             h = set(z.get_involution_hecke_atoms())
             d = set(Grothendieck.decompose(InvGrothendieck.get(z)))
@@ -484,6 +485,8 @@ def test_bplus(n=3):
             equal += 1 if d == s else 0
             if d == s:
                 good.add(z)
+            else:
+                bad.add(z)
             #print()
             #z.print_involution_rothe_diagram(sep='.')
             #print()
@@ -492,7 +495,7 @@ def test_bplus(n=3):
             t = time.time()
     print('equal:', equal, 'of', total)
     print()
-    return good
+    return good, bad
 
 
 def test_unexpected_grothendieck_terms(n=3, verbose=False):

@@ -337,7 +337,36 @@ class Permutation:
         return tuple(n - a for a in phi)
 
     def is_grassmannian(self):
-        return self.get_grassmannian(*self.shape()) == self
+        return len(self.right_descent_set) <= 1
+
+    def is_vexillary(self):
+        n = self.rank
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1):
+                for k in range(j + 1, n + 1):
+                    for l in range(k + 1, n + 1):
+                        b, a, d, c = self(i), self(j), self(k), self(l)
+                        if a < b < c < d:
+                            return False
+        return True
+
+    def is_quasi_dominant(self):
+        if not self.is_vexillary():
+            return False
+        n = len(self.oneline)
+        for a in range(1, n + 1):
+            if a < self(a) and not all(b < self(b) for b in range(1, a)):
+                return False
+        return True
+
+    def is_dominant(self):
+        n = len(self.oneline)
+        for i in range(1, n - 1):
+            for j in range(i + 1, n + 1):
+                for k in range(j + 1, n + 1):
+                    if self(i) < self(k) < self(j):
+                        return False
+        return True
 
     def is_inv_grassmannian(self):
         return self.get_inv_grassmannian(*self.involution_shape()) == self

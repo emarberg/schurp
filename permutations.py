@@ -596,8 +596,10 @@ class Permutation:
             level = new
 
     @classmethod
-    def partial_involutions(cls, n, macaulay_output=False):
-        if n == 0:
+    def partial_involutions(cls, n, macaulay_output=False, partial=True):
+        if not partial:
+            ans = list(cls.involutions(n))
+        elif n == 0:
             ans = [Permutation()]
         elif n == 1:
             ans = [Permutation(1, 2), Permutation(2, 1)]
