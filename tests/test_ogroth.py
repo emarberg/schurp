@@ -18,6 +18,81 @@ OGROTH_HECKE_ATOMS_CACHE = {}
 OGROTH_EXPAND_CACHE = {}
 
 
+def dom_asc(z):
+    assert z.is_dominant()
+    mu = z.involution_shape().tuple()
+    if mu:
+        n = max(z.oneline) - 1
+        i = 0
+        while i < len(mu) and mu[i] == n - 2 * i:
+            i += 1
+        if i < len(mu):
+            return z(i + 1)
+
+
+def alt_asc(z):
+    c = z.code()
+    ans = [(a, -i) for (i, a) in enumerate(c) if i > 0 and a > c[i - 1]]
+    if ans :
+        return -max(ans)[-1]
+
+
+def vex_asc(z):
+    if z.is_dominant():
+        return
+    c = z.code()
+    i = [i for (i, a) in enumerate(c) if a == max(c)][0]
+    if i == 0:
+        m = z(1)
+        oneline = [j - 1 if j < m else j - 2 for j in z.oneline if j not in [1, m]]
+        v = Permutation(*oneline)
+        ans = vex_asc(v)
+        return ans if ans is None else 1 + ans
+    else:
+        return i
+
+
+def test_vexillary(n=6):
+    vex = [w for w in Permutation.involutions(n) if w.is_vexillary() and not w.is_dominant()]
+    for z in vex:
+        print('z =', z.cycle_repr())
+        z.print_rothe_diagram()
+        print()
+        while not z.is_dominant():
+            i = vex_asc(z)
+            j = alt_asc(z)
+            s = Permutation.s_i(i)
+            print('i =', i)
+            print('j =', j)
+            print('z =', z)
+            z = s * z * s
+            z.print_rothe_diagram()
+            print()
+            assert z.is_vexillary()
+            assert z != s * z * s
+            assert i == j
+        z.print_rothe_diagram()
+        print()
+        print(z.cycle_repr(), '=', z.involution_shape())
+        print()
+        while dom_asc(z) is not None:
+            i = dom_asc(z)
+            s = Permutation.s_i(i)
+            diff = set((s * z * s).rothe_diagram()) - set(z.rothe_diagram())
+            exp = {(i, z(i)), (z(i), i)}
+            assert i != z(i)
+            q = max(z.oneline)
+            assert i <= q - z(i)
+            z = s * z * s 
+            z.print_rothe_diagram()
+            print()
+            assert z.is_dominant()
+            assert z != s * z * s
+            assert diff == exp
+        print(z.cycle_repr(), '=', z.involution_shape())
+        print()
+
+
 def attempt_factor(p, roots=(1,2)):
     ans = []
     for i in p.variables():
