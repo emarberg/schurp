@@ -1695,9 +1695,17 @@ class Tableau:
         tab = self.replace_row(j, row, shifted=False)
         return tab.rsk_insert(p, j)
 
+    def column_hecke_insert(self, p, suppress=True):
+        t = self.transpose()
+        ans = t.hecke_insert(p)
+        a, b = ans[0], ans[1].transpose()
+        return b if suppress else (a, b)
+
     def hecke_insert(self, p, j=0):
         if p is None:
             return (j, self)
+        if type(p) == int:
+            p = MarkedNumber(p)
 
         def hecke_bump(a, tup):
             if len(tup) == 0 or a > tup[-1]:
