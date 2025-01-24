@@ -162,6 +162,26 @@ def test_qnormal_semicrystal_characters(n=3, k=5):
         assert actual == expected
 
 
+def test_incr(nn=3, kk=5):
+    for n in range(1, nn + 1):
+        for k in range(1, kk + 1):
+            print('n =', n, 'k =', k)
+
+            sq_words = AbstractGLCrystal.semicrystal_of_words(k, n)
+            for b in sq_words:
+                t = Tableau.tableau_from_svword(b)
+                try:
+                    assert (t.is_increasing() and t.is_partition_shaped()) == sq_words.is_highest_weight(b)
+                except:
+                    sq_words.get_component(b).draw()
+                    print(b)
+                    print(t)
+                    print(t.is_increasing(), sq_words.is_highest_weight(b))
+                    print()
+                    assert False
+
+
+
 def test_rectify(nn=3, kk=5):
     for n in range(1, nn + 1):
         for k in range(1, kk + 1):

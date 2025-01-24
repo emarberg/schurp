@@ -1330,6 +1330,14 @@ class Tableau:
                 return False
         return True
 
+    def is_partition_shaped(self):
+        for i, j in self.cells():
+            if i > 1 and (i - 1, j) not in self.cells():
+                return False
+            if j > 1 and (i, j - 1) not in self.cells():
+                return False
+        return True
+
     def is_increasing(self):
         for i, j in self.cells():
             u = self.entry(i, j)
@@ -2477,3 +2485,16 @@ class Tableau:
         while n > len(bns):
             bns.append(set())
         return tuple(len(ans[i]) + len(bns[i]) for i in range(n))
+
+    @classmethod
+    def tableau_from_svword(cls, svword):
+        # the svword is inputted as a one-row svtableau
+        s = [_ for i, j, _ in list(svword)]
+        m = len(s)
+        rows = []
+        n = max([0] + [x for subset in s for x in subset])
+        for i in range(1, n + 1):
+            row = [m + 1 - j for j in range(m, 0, -1) if i in s[j - 1]]
+            rows.append(row)
+        return Tableau.from_rows(rows)
+
