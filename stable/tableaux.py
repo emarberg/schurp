@@ -578,11 +578,17 @@ class Tableau:
             rows += [' & '.join(row)]
         return '$\\colorbox{lightgray!50}{\\begin{ytableau}' + ' \\\\ '.join(reversed(rows) if FRENCH else rows) + '\\end{ytableau}}$'
 
-    def row_reading_word(self):
-        return tuple(
-            a for key in sorted(self.boxes, key=lambda x: (-x[0], x[1]))
-            for a in self.boxes[key]
-        )
+    def reverse_row_reading_word(self, setwise=False):
+        return tuple(reversed(self.row_reading_word(setwise=setwise)))
+
+    def row_reading_word(self, setwise=False):
+        if setwise:
+            return tuple(self.boxes[key] for key in sorted(self.boxes, key=lambda x: (-x[0], x[1])))
+        else:
+            return tuple(
+                a for key in sorted(self.boxes, key=lambda x: (-x[0], x[1]))
+                for a in self.boxes[key]
+            )
 
     @classmethod
     def from_row_reading_word(cls, word):

@@ -162,6 +162,39 @@ def test_qnormal_semicrystal_characters(n=3, k=5):
         assert actual == expected
 
 
+def svdecomp_incr_crystal(n, mu):
+    rank = n
+    vertices = []
+    edges = []
+    weights = {}
+
+    b = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+    b.draw(extended=True)
+    input('')
+    for w in b:
+        if any(b.e_operator(i, w) is not None for i in range(1, n)):
+            continue
+        t = Tableau.from_svword(w.reverse_row_reading_word(setwise=True))
+        vertices.append(t)
+        weights[t] = b.weight(w)
+        for i in range(1, n):
+            ew = b.e_operator(-i, w)
+            if ew is not None:
+                u = Tableau.from_svword(b.rectify(ew).reverse_row_reading_word(setwise=True))
+                edges.append((i, u, t))
+
+    return AbstractGLCrystal(rank, vertices, edges, weights)
+
+
+def test_svdecomp_incr(n=3, k=5):
+    partitions = sorted({mu.transpose().tuple() for mu in Partition.all(k, max_part=n) if mu.transpose().is_strict()})
+    for mu in partitions:
+        print('n =', n, 'mu =', mu)
+        c = svdecomp_incr_crystal(n, mu)
+        c.draw()
+        input('')
+
+
 def test_incr(nn=3, kk=5):
     for n in range(1, nn + 1):
         for k in range(1, kk + 1):
@@ -169,7 +202,7 @@ def test_incr(nn=3, kk=5):
 
             sq_words = AbstractGLCrystal.semicrystal_of_words(k, n)
             for b in sq_words:
-                t = Tableau.tableau_from_svword(b)
+                t = Tableau.from_svword(b.row_reading_word(setwise=True))
                 try:
                     assert (t.is_increasing() and t.is_partition_shaped()) == sq_words.is_highest_weight(b)
                 except:

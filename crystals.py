@@ -187,10 +187,7 @@ class AbstractCrystalMixin:
         return self.f_strings[(i, v)]
 
     def capital_e_operator(self, i, v):
-        assert i in self.extended_indices
-        assert v in self.vertices
-        w = self.e_operator(i, v)
-        return v if w is None else self.capital_e_operator(i, w)
+        return self.eplus_operator(i, v)
 
     def rectify(self, v):
         assert v in self.vertices
@@ -237,11 +234,15 @@ class AbstractCrystalMixin:
         return self.s_operators[(i, b)]
 
     def eplus_operator(self, i, v):
+        assert i in self.extended_indices
+        assert v in self.vertices
         while self.e_operator(i, v) is not None:
             v = self.e_operator(i, v)
         return v
 
     def fplus_operator(self, i, v):
+        assert i in self.extended_indices
+        assert v in self.vertices
         while self.f_operator(i, v) is not None:
             v = self.f_operator(i, v)
         return v

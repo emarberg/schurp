@@ -1614,6 +1614,9 @@ class Tableau:
             ans[j - 1].append(n)
         return ans
 
+    def reverse_row_reading_word(self):
+        return tuple(reversed(self.row_reading_word()))
+
     def row_reading_word(self):
         return tuple(
             self.mapping[key].number for key in sorted(self.mapping, key=lambda x: (-x[0], x[1]))
@@ -2487,9 +2490,8 @@ class Tableau:
         return tuple(len(ans[i]) + len(bns[i]) for i in range(n))
 
     @classmethod
-    def tableau_from_svword(cls, svword):
+    def from_svword(cls, s):
         # the svword is inputted as a one-row svtableau
-        s = [_ for i, j, _ in list(svword)]
         m = len(s)
         rows = []
         n = max([0] + [x for subset in s for x in subset])
