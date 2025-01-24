@@ -186,6 +186,21 @@ class AbstractCrystalMixin:
             self.f_strings[(i, v)] = k
         return self.f_strings[(i, v)]
 
+    def capital_e_operator(self, i, v):
+        assert i in self.extended_indices
+        assert v in self.vertices
+        w = self.e_operator(i, v)
+        return v if w is None else self.capital_e_operator(i, w)
+
+    def rectify(self, v):
+        assert v in self.vertices
+        n = self.rank
+        ans = v
+        for j in range(1, n):
+            for i in range(j, 0, -1):
+                ans = self.capital_e_operator(i, ans)
+        return ans
+
     def e_operator(self, i, v):
         raise NotImplementedError
 

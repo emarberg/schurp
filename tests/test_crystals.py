@@ -162,6 +162,28 @@ def test_qnormal_semicrystal_characters(n=3, k=5):
         assert actual == expected
 
 
+def test_rectify(nn=3, kk=5):
+    for n in range(1, nn + 1):
+        for k in range(1, kk + 1):
+            print('n =', n, 'k =', k)
+
+            b = AbstractGLCrystal.standard_object(n)
+            words = b
+            for j in range(k - 1):
+                words = words.tensor(b)
+
+            sq_words = AbstractGLCrystal.semicrystal_of_words(k, n)
+
+            for b in words:
+                hw = words.rectify(b)
+                assert words.is_highest_weight(hw)
+
+            for b in sq_words:
+                hw = sq_words.rectify(b)
+                assert sq_words.is_highest_weight(hw)
+
+
+
 def test_normal_semicrystal_characters(n=3, k=5):
     print('n =', n, 'k =', k)
     c = AbstractGLCrystal.semicrystal_of_words(k, n)
