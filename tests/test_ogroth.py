@@ -18,6 +18,37 @@ OGROTH_HECKE_ATOMS_CACHE = {}
 OGROTH_EXPAND_CACHE = {}
 
 
+def test_sign_reversal(k=2, n=5):
+    inds = [2, 3, 4, 5]
+    for cmb in itertools.combinations(inds, k):
+        pi = 1
+        pi_plus = 1
+        for j in cmb:
+            pi *= 1 + Grothendieck.beta * X(j)
+            pi_plus *= 1 + Grothendieck.beta * X(j + 1)
+        for i, w in enumerate(Permutation.all(n)):
+            w = w.shift(1)
+            print(i, 'w =', w)
+            print(' ', cmb)
+            print()
+            one = Grothendieck.decompose(pi * Grothendieck.get(w))
+            two = Grothendieck.decompose(pi_plus * Grothendieck.get(w.shift(1)))
+            print('one:')
+            for f, c in one.items():
+                print('  ', f, c)
+            print('two:')
+            for f, c in two.items():
+                print('  ', f, c)
+            print()
+            for u in one:
+                v = Permutation.s_i(1) * u.shift(1)
+                # print(u, v)
+                if u(1) != 1:
+                    assert one[u] + two[v] == 0
+                else:
+                    assert v not in two
+
+
 def dom_asc(z):
     assert z.is_dominant()
     mu = z.involution_shape().tuple()

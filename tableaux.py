@@ -1614,8 +1614,11 @@ class Tableau:
             ans[j - 1].append(n)
         return ans
 
-    def reverse_row_reading_word(self):
-        return tuple(reversed(self.row_reading_word()))
+    def reverse_row_reading_word(self, setwise=False):
+        if setwise:
+            return tuple((x,) for x in reversed(self.row_reading_word()))
+        else:
+            return tuple(reversed(self.row_reading_word()))
 
     def row_reading_word(self):
         return tuple(

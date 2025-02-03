@@ -2,6 +2,7 @@ from crystals import(
     AbstractGLCrystal,
     AbstractQCrystal,
     AbstractPrimedQCrystal,
+    BASE_DIRECTORY
 )
 from keys import (
     sorting_permutation,
@@ -40,6 +41,7 @@ from stable.utils import (
 from stable.vectors import Vector
 import random
 import time
+import subprocess
 
 
 PRINT_DIR = "/Users/emarberg/Downloads/"
@@ -162,36 +164,80 @@ def test_qnormal_semicrystal_characters(n=3, k=5):
         assert actual == expected
 
 
-def svdecomp_incr_crystal(n, mu):
+def draw_graph(vertices, edges, neato=False):
+    s = ['digraph G {']
+    s += ['    overlap=false;']
+    s += ['    splines=true;']
+    s += ['    node [shape=box; fontname="courier"; style=filled];']
+
+    for x in vertices:
+        s += ['    "%s";' % str(x)]
+
+    for i, x, y in edges:
+        s += ['    "%s" -> "%s" [label="%s"];' % (str(x), str(y), str(i))]
+
+    s += ['}']
+    s = '\n'.join(s)
+
+    filename = "crystal.%s" % len(vertices)
+    dot_filename = BASE_DIRECTORY + 'abstract/' + 'dot/' + '%s.dot' % filename
+    png_filename = BASE_DIRECTORY + 'abstract/' + 'png/' + '%s.png' % filename
+    with open(dot_filename, 'w') as f:
+        f.write(s)
+    subprocess.run(["neato" if neato else "dot", "-Tpng", dot_filename, "-o", png_filename])
+    subprocess.run(["open", png_filename])
+
+
+def svdecomp_crystal_excess_ranked(n, mu):
     rank = n
     vertices = []
     edges = []
     weights = {}
 
     b = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
-    b.draw(extended=True)
-    input('')
     for w in b:
-        if any(b.e_operator(i, w) is not None for i in range(1, n)):
-            continue
-        t = Tableau.from_svword(w.reverse_row_reading_word(setwise=True))
-        vertices.append(t)
-        weights[t] = b.weight(w)
-        for i in range(1, n):
-            ew = b.e_operator(-i, w)
+        vertices.append(w)
+        weights[w] = b.weight(w)
+        for i in [-1] + list(range(1, n)):
+            fw = b.f_operator(i, w)
+            if fw is not None:
+                if len(fw) > len(w):
+                    edges.append((i, w, fw))
+                else:
+                    edges.append((i, fw, w))
+    return AbstractQCrystal(rank, vertices, edges, weights)
+
+
+def svdecomp_incr_crystal(n, mu, sqrt=True):
+    rank = n
+    vertices = []
+    edges = []
+    weights = {}
+
+    if sqrt:
+        b = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+    else:
+        b = AbstractQCrystal.decomposition_tableaux_from_strict_partition(mu, n)
+    for w in b:
+        t = Tableau.from_svword(b.rectify(w).reverse_row_reading_word(setwise=True))
+        if t not in vertices:
+            vertices.append(t)
+            weights[t] = b.weight(w)
+        for i in [-1]:
+            ew = b.e_operator(i, w)
             if ew is not None:
                 u = Tableau.from_svword(b.rectify(ew).reverse_row_reading_word(setwise=True))
-                edges.append((i, u, t))
+                if t != u and (i, u, t) not in edges:
+                    edges.append((i, u, t))
 
-    return AbstractGLCrystal(rank, vertices, edges, weights)
+    return draw_graph(vertices, edges)
 
 
 def test_svdecomp_incr(n=3, k=5):
     partitions = sorted({mu.transpose().tuple() for mu in Partition.all(k, max_part=n) if mu.transpose().is_strict()})
     for mu in partitions:
         print('n =', n, 'mu =', mu)
-        c = svdecomp_incr_crystal(n, mu)
-        c.draw()
+        svdecomp_incr_crystal(n, mu)
         input('')
 
 
@@ -214,23 +260,22 @@ def test_incr(nn=3, kk=5):
                     assert False
 
 
-
-def test_rectify(nn=3, kk=5):
-    for n in range(1, nn + 1):
+def test_rectify(nn=3, kk=5, cls=AbstractGLCrystal):
+    # fails for AbstractQCrystal
+    for n in range(2, nn + 1):
         for k in range(1, kk + 1):
             print('n =', n, 'k =', k)
 
-            b = AbstractGLCrystal.standard_object(n)
+            b = cls.standard_object(n)
             words = b
             for j in range(k - 1):
                 words = words.tensor(b)
-
-            sq_words = AbstractGLCrystal.semicrystal_of_words(k, n)
 
             for b in words:
                 hw = words.rectify(b)
                 assert words.is_highest_weight(hw)
 
+            sq_words = cls.semicrystal_of_words(k, n)
             for b in sq_words:
                 hw = sq_words.rectify(b)
                 assert sq_words.is_highest_weight(hw)
