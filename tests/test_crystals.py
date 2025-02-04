@@ -1,5 +1,6 @@
 from crystals import(
     AbstractGLCrystal,
+    AbstractCCrystal,
     AbstractQCrystal,
     AbstractPrimedQCrystal,
     BASE_DIRECTORY
@@ -47,6 +48,22 @@ import subprocess
 PRINT_DIR = "/Users/emarberg/Downloads/"
 FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def test_sqrt_type_c(n=2):
+    a = AbstractGLCrystal.sqrtcrystal_from_partition((1,), 2*n)
+    b = AbstractGLCrystal.sqrtcrystal_from_partition((2 * n - 1) * (1,), 2*n)
+
+    hw_a = a.get_highest_weights()[0][0]
+    hw_b = b.get_highest_weights()[0][0]
+
+    c = a.tensor(b)
+    d = c.get_component((hw_a,hw_b))
+    e = d.virtual_type_c().get_component((hw_a,hw_b))
+
+    print(len(e))
+    e.draw(neato=True)
+    return e
 
 
 def test_primed_shifted_plactic():
@@ -144,9 +161,9 @@ def test_qq_sv_tensor(n=2, k=2):
         # input('')
 
 
-def test_qnormal_semicrystal_characters(n=3, k=5):
+def test_qnormal_sqrtcrystal_characters(n=3, k=5):
     print('n =', n, 'k =', k)
-    c = AbstractQCrystal.semicrystal_of_words(k, n)
+    c = AbstractQCrystal.sqrtcrystal_of_words(k, n)
     hw = c.get_highest_weights()
     for u in hw:
         d = c.get_component(u[0])
@@ -194,7 +211,7 @@ def svdecomp_crystal_excess_ranked(n, mu):
     edges = []
     weights = {}
 
-    b = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+    b = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
     for w in b:
         vertices.append(w)
         weights[w] = b.weight(w)
@@ -215,7 +232,7 @@ def svdecomp_incr_crystal(n, mu, sqrt=True):
     weights = {}
 
     if sqrt:
-        b = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+        b = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
     else:
         b = AbstractQCrystal.decomposition_tableaux_from_strict_partition(mu, n)
     for w in b:
@@ -246,7 +263,7 @@ def test_incr(nn=3, kk=5):
         for k in range(1, kk + 1):
             print('n =', n, 'k =', k)
 
-            sq_words = AbstractGLCrystal.semicrystal_of_words(k, n)
+            sq_words = AbstractGLCrystal.sqrtcrystal_of_words(k, n)
             for b in sq_words:
                 t = Tableau.from_svword(b.row_reading_word(setwise=True))
                 try:
@@ -275,16 +292,16 @@ def test_rectify(nn=3, kk=5, cls=AbstractGLCrystal):
                 hw = words.rectify(b)
                 assert words.is_highest_weight(hw)
 
-            sq_words = cls.semicrystal_of_words(k, n)
+            sq_words = cls.sqrtcrystal_of_words(k, n)
             for b in sq_words:
                 hw = sq_words.rectify(b)
                 assert sq_words.is_highest_weight(hw)
 
 
 
-def test_normal_semicrystal_characters(n=3, k=5):
+def test_normal_sqrtcrystal_characters(n=3, k=5):
     print('n =', n, 'k =', k)
-    c = AbstractGLCrystal.semicrystal_of_words(k, n)
+    c = AbstractGLCrystal.sqrtcrystal_of_words(k, n)
     hw = c.get_highest_weights()
     for u in hw:
         d = c.get_component(u[0])
@@ -301,13 +318,13 @@ def test_normal_semicrystal_characters(n=3, k=5):
         assert actual == expected
 
 
-def test_semicrystal_group_action_on_tabs(n=3, k=5):
+def test_sqrtcrystal_group_action_on_tabs(n=3, k=5):
     # fails for n=4, mu=(3,2)
     partitions = sorted({mu.transpose().tuple() for i in range(k + 1) for mu in Partition.all(i, max_part=n)})
     print(partitions)
     for mu in partitions:
         print('n =', n, 'mu =', mu)
-        b = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+        b = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
         for i in range(1, n):
             for j in range(i + 1, n):
                 for w in b:
@@ -326,11 +343,11 @@ def test_semicrystal_group_action_on_tabs(n=3, k=5):
                     assert one == two
 
 
-def test_semicrystal_group_action_on_words(n=3, k=5):
+def test_sqrtcrystal_group_action_on_words(n=3, k=5):
     # fails for n=3 and k=4, also fails for squared crystal, for even elements
     for kk in range(1, k + 1):
         print('n =', n, 'k =', kk)
-        b = AbstractGLCrystal.semicrystal_of_words(kk, n)
+        b = AbstractGLCrystal.sqrtcrystal_of_words(kk, n)
         for i in range(1, n):
             for j in range(i + 1, n):
                 for w in b:
@@ -349,10 +366,10 @@ def test_semicrystal_group_action_on_words(n=3, k=5):
                     assert one == two
 
 
-def test_word_semicrystal_highest(n=3, k=5):
+def test_word_sqrtcrystal_highest(n=3, k=5):
     for kk in range(1, k + 1):
         print('n =', n, 'k =', kk)
-        b = AbstractGLCrystal.semicrystal_of_words(kk, n)
+        b = AbstractGLCrystal.sqrtcrystal_of_words(kk, n)
         for v in b:
             w = v
             for j in range(1, n):
@@ -384,13 +401,13 @@ def test_grothexp_qtab_semicrystal(n=3, k=5):
     for mu in partitions:
         print('n =', n, 'mu =', mu)
         expected = G_expansion_no_beta(GP(n, mu).set_variable(0,1)).dictionary
-        b = AbstractQCrystal.semicrystal_from_strict_partition(mu, n).as_gl_crystal()
+        b = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n).as_gl_crystal()
         actual = {}
         for w, lam in b.get_highest_weights():
             lam = Partition.trim(lam)
             actual[lam] = 1 + actual.get(lam, 0)
             # c = b.get_component(w)
-            # d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
+            # d = AbstractGLCrystal.sqrtcrystal_from_partition(lam, n)
             # f = AbstractGLCrystal.find_isomorphism(c, d) is not None
             # ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
             # print('  ', lam, ':', f, ch)
@@ -419,8 +436,8 @@ def test_tensor_qtab_semicrystal(n=3, k=None):
             expected = GP_expansion_no_beta(GP(n, mu).set_variable(0, 1) * GP(n, nu).set_variable(0, 1))
             expected = Vector({k: v.constant_term() for (k, v) in expected.dictionary.items()})
 
-            c1 = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
-            c2 = AbstractQCrystal.semicrystal_from_strict_partition(nu, n)
+            c1 = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
+            c2 = AbstractQCrystal.sqrtcrystal_from_strict_partition(nu, n)
             b = c1.tensor(c2)
             actual = {}
             for w, lam in b.get_highest_weights():
@@ -428,7 +445,7 @@ def test_tensor_qtab_semicrystal(n=3, k=None):
                 actual[lam] = 1 + actual.get(lam, 0)
 
                 # c = b.get_component(w)
-                # d = AbstractQCrystal.semicrystal_from_strict_partition(lam, n)
+                # d = AbstractQCrystal.sqrtcrystal_from_strict_partition(lam, n)
                 # f = AbstractQCrystal.find_isomorphism(c, d) is not None
                 # g = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
                 # print('  ', lam, ':', f, g, len(c.get_highest_weights()))
@@ -459,8 +476,8 @@ def test_tensor_tab_semicrystal(n=3, k=None):
         for nu in partitions:
             print('n =', n, mu, nu)
             expected = G_expansion_no_beta(G(n, mu).set_variable(0,1) * G(n, nu).set_variable(0,1)).dictionary
-            c1 = AbstractGLCrystal.semicrystal_from_partition(mu, n)
-            c2 = AbstractGLCrystal.semicrystal_from_partition(nu, n)
+            c1 = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
+            c2 = AbstractGLCrystal.sqrtcrystal_from_partition(nu, n)
             b = c1.tensor(c2)
             actual = {}
             for w, lam in b.get_highest_weights():
@@ -468,7 +485,7 @@ def test_tensor_tab_semicrystal(n=3, k=None):
                 actual[lam] = 1 + actual.get(lam, 0)
 
                 # c = b.get_component(w)
-                # d = AbstractGLCrystal.semicrystal_from_partition(lam, n)
+                # d = AbstractGLCrystal.sqrtcrystal_from_partition(lam, n)
                 # f = AbstractGLCrystal.find_isomorphism(c, d) is not None
                 # g = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(c.character()))
                 # print('  ', lam, ':', f, g, len(c.get_highest_weights()))
@@ -494,7 +511,7 @@ def test_selfdual_tab_semicrystal(n=3, k=None):
             mu = mu.transpose().tuple()
             f = []
             for m in range(len(mu), n + 1):
-                b = AbstractGLCrystal.semicrystal_from_partition(mu, m)
+                b = AbstractGLCrystal.sqrtcrystal_from_partition(mu, m)
                 c = b.dual()
                 f += [AbstractGLCrystal.find_isomorphism(b, c) is not None]
             print('  ', n, mu, f)
@@ -511,7 +528,7 @@ def test_selfdual_tab_semicrystal(n=3, k=None):
 def test_sv_signature_rule(n=3, k=5):
     for level in range(1, k + 1):
         print('n =', n, 'k =', level)
-        s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
+        s = AbstractGLCrystal.sqrtcrystal_from_partition((1,), n)
         c = s
         for _ in range(level - 1):
             c = s.tensor(c)
@@ -530,11 +547,11 @@ def test_sv_signature_rule(n=3, k=5):
 def test_words_semicrystal(n=3, k=5):
     for i in range(k):
         print('n =', n, 'k =', i + 1)
-        b = AbstractGLCrystal.semicrystal_of_words(i + 1, n)
+        b = AbstractGLCrystal.sqrtcrystal_of_words(i + 1, n)
         for w, mu in b.get_highest_weights():
             mu = Partition.trim(mu)
             c = b.get_component(w)
-            d = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+            d = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
             print('  ', mu, ':', AbstractGLCrystal.find_isomorphism(c, d) is not None)
             # if not AbstractGLCrystal.find_isomorphism(c, d):
                 # c.draw()
@@ -543,7 +560,7 @@ def test_words_semicrystal(n=3, k=5):
             
 
 def test_qnormal_semicrystal(n=3, k=5):
-    s = AbstractQCrystal.semicrystal_from_strict_partition((1,), n)
+    s = AbstractQCrystal.sqrtcrystal_from_strict_partition((1,), n)
     b = s.tensor(s)
     seen = {}
     for _ in range(k):
@@ -555,7 +572,7 @@ def test_qnormal_semicrystal(n=3, k=5):
                 continue
             if len(c.get_highest_weights()) > 1:
                 continue
-            d = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+            d = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
             print()
             print(mu, word(w), len(c), len(d))
             print()
@@ -577,7 +594,7 @@ def test_qnormal_semicrystal(n=3, k=5):
 
 
 def test_normal_semicrystal(n=3, k=5):
-    s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
+    s = AbstractGLCrystal.sqrtcrystal_from_partition((1,), n)
     b = s.tensor(s)
     seen = {}
     dual_seen = {}
@@ -590,7 +607,7 @@ def test_normal_semicrystal(n=3, k=5):
                 continue
             if len(c.get_highest_weights()) > 1:
                 continue
-            d = AbstractGLCrystal.semicrystal_from_partition(mu, n)
+            d = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
             print()
             print(mu, word(w), len(c), len(d))
             print()
@@ -614,11 +631,11 @@ def test_normal_semicrystal(n=3, k=5):
         b = s.tensor(b)
 
 
-def test_words_semicrystal_uhw(n=3, k=5):
+def test_words_sqrtcrystal_uhw(n=3, k=5):
     # fails n=3, k=4
     for i in range(k):
         print('n =', n, 'k =', i + 1)
-        b = AbstractGLCrystal.semicrystal_of_words(i + 1, n)
+        b = AbstractGLCrystal.sqrtcrystal_of_words(i + 1, n)
         for w, mu in b.get_highest_weights():
             mu = Partition.trim(mu)
             c = b.get_component(w)
@@ -634,9 +651,9 @@ def test_words_semicrystal_uhw(n=3, k=5):
             assert ell == 1
 
 
-def test_normal_semicrystal_uhw(n=3, k=5):
+def test_normal_sqrtcrystal_uhw(n=3, k=5):
     # fails n=3, k=4
-    s = AbstractGLCrystal.semicrystal_from_partition((1,), n)
+    s = AbstractGLCrystal.sqrtcrystal_from_partition((1,), n)
     b = s.tensor(s)
     for _ in range(k):
         print('n =', n, 'k =', _ + 1)
@@ -656,9 +673,9 @@ def test_normal_semicrystal_uhw(n=3, k=5):
         b = s.tensor(b)
 
 
-def test_normal_q_semicrystal_uhw(n=3, k=5):
+def test_normal_q_sqrtcrystal_uhw(n=3, k=5):
     # fails n=3, k=4
-    s = AbstractQCrystal.semicrystal_from_strict_partition((1,), n)
+    s = AbstractQCrystal.sqrtcrystal_from_strict_partition((1,), n)
     b = s.tensor(s)
     for _ in range(k):
         print('n =', n, 'k =', _ + 1)
@@ -678,12 +695,12 @@ def test_normal_q_semicrystal_uhw(n=3, k=5):
         b = s.tensor(b)
 
 
-def test_qtab_semicrystal_uhw(n=3, k=10):
+def test_qtab_sqrtcrystal_uhw(n=3, k=10):
     partitions = sorted({mu.transpose().tuple() for mu in Partition.all(k, max_part=n) if mu.transpose().is_strict()}, key=sum)
     print(partitions)
     print()
     for mu in partitions:
-        c = AbstractQCrystal.semicrystal_from_strict_partition(mu, n)
+        c = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
         print(n, mu, len(c), len(c.get_highest_weights()))
         assert len(c.get_highest_weights()) == 1
         assert len(c.get_components()) == 1

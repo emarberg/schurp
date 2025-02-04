@@ -199,10 +199,18 @@ class AbstractCrystalMixin:
         return ans
 
     def e_operator(self, i, v):
-        raise NotImplementedError
+        assert i in self.indices
+        if v is None:
+            return None
+        assert v in self.vertices
+        return self.e_operators.get((i, v), None)
 
     def f_operator(self, i, v):
-        raise NotImplementedError
+        assert i in self.indices
+        if v is None:
+            return None
+        assert v in self.vertices
+        return self.f_operators.get((i, v), None)
 
     def eprime_operator(self, i, v):
         if i >= 0:
@@ -340,7 +348,19 @@ class AbstractCrystalMixin:
 
     @classmethod
     def tensor_edges(cls, b, c):
-        raise NotImplementedError
+        edges = []
+        for x in b:
+            for y in c:
+                for i in b.indices:
+                    if b.e_string(i, x) < c.f_string(i, y):
+                        yy = c.f_operator(i, y)
+                        if yy is not None:
+                            edges.append((i, (x, y), (x, yy)))
+                    else:
+                        xx = b.f_operator(i, x)
+                        if xx is not None:
+                            edges.append((i, (x, y), (xx, y)))
+        return edges
 
     def tensor(self, c):
         b = self
@@ -619,6 +639,26 @@ class AbstractCrystalMixin:
 
 class AbstractGLCrystal(AbstractCrystalMixin):
 
+    def virtual_type_c(self):
+        assert self.rank % 2 == 0
+        n = (self.rank + 1) // 2
+        vertices = self.vertices
+        edges = []
+        weights = self.weights
+        for b in vertices:
+            for i in range(1, n):
+                fb = self.f_operator(i, b)
+                fb = None if fb is None else self.f_operator(self.rank - i, fb)
+                if fb is not None:
+                    edges.append((i, b, fb))
+
+            fb = self.f_operator(n, b)
+            fb = None if fb is None else self.f_operator(n, fb)
+            if fb is not None:
+                edges.append((n, b, fb))
+
+        return AbstractCCrystal(n, vertices, edges, weights)
+
     @classmethod
     def strict_polarizations(cls, mu, rank):
         def col(s):
@@ -690,8 +730,15 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         printer = self.printer
         return cls(n, vertices, edges, weights, printer)
 
+    def reversal(self):
+        n = self.rank
+        vertices = self.vertices
+        edges = [(i, self.f_operator(i, v), v) for i in range(1, n) for v in vertices if self.f_operator(i, v) is not None]
+        weights = {v: tuple(-w for w in self.weight(v)) for v in vertices}
+        return self.__class__(n, vertices, edges, weights)
+
     @classmethod
-    def semicrystal_of_words(cls, length, rank):
+    def sqrtcrystal_of_words(cls, length, rank):
         n = rank
         vertices = []
         edges = []
@@ -708,7 +755,7 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
-    def semicrystal_from_partition(cls, mu, rank):
+    def sqrtcrystal_from_partition(cls, mu, rank):
         n = rank
         vertices = []
         edges = []
@@ -855,37 +902,6 @@ class AbstractGLCrystal(AbstractCrystalMixin):
     def extended_indices(self):
         return self.indices
 
-    def e_operator(self, i, v):
-        assert i in self.indices
-        if v is None:
-            return None
-        assert v in self.vertices
-        return self.e_operators.get((i, v), None)
-
-    def f_operator(self, i, v):
-        assert i in self.indices
-        if v is None:
-            return None
-        assert v in self.vertices
-        return self.f_operators.get((i, v), None)
-
-    @classmethod
-    def tensor_edges(cls, b, c):
-        assert b.rank == c.rank
-        edges = []
-        for x in b:
-            for y in c:
-                for i in range(1, b.rank):
-                    if b.e_string(i, x) < c.f_string(i, y):
-                        yy = c.f_operator(i, y)
-                        if yy is not None:
-                            edges.append((i, (x, y), (x, yy)))
-                    else:
-                        xx = b.f_operator(i, x)
-                        if xx is not None:
-                            edges.append((i, (x, y), (xx, y)))
-        return edges
-
     def filename(self, ts=None):
         return "gl%s_crystal.%s" % (self.rank, len(self))
 
@@ -901,10 +917,122 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
 
+class AbstractCCrystal(AbstractCrystalMixin):
+
+    @property
+    def indices(self):
+        return list(range(1, self.rank + 1))
+
+    @property
+    def extended_indices(self):
+        return self.indices
+
+    def filename(self, ts=None):
+        return "c%s_crystal.%s" % (self.rank, len(self))
+
+    @classmethod
+    def standard_object(cls, rank):
+        vertices = [i + 1 for i in range(rank)] + [-(rank - i) for i in range(rank)]
+        edges = [(i, i, i + 1) for i in range(1, rank)] + [(rank, rank, -rank)] + [(rank - 1 - i, -(rank - i), -(rank - i) + 1) for i in range(rank - 1)]
+        weights = {}
+        for v in vertices:
+            wt = rank * [0]
+            wt[abs(v) - 1] = 1 if v > 0 else -1
+            weights[v] = tuple(wt)
+        return cls(rank, vertices, edges, weights)
+
+
+class SuperGLCrystal(AbstractCrystalMixin):
+
+    @property
+    def rank_m(self):
+        return self.rank[0]
+
+    @property
+    def rank_n(self):
+        return self.rank[1]
+
+    @property
+    def indices(self):
+        return list(range(1 - self.rank_m, self.rank_n))
+
+    @property
+    def extended_indices(self):
+        return self.indices
+
+    def filename(self, ts=None):
+        return "gl%s|%s_crystal.%s" % (self.rank_m, self.rank_n, len(self))
+
+    @classmethod
+    def standard_object(cls, rank_m, rank_n):
+        rank = (rank_m, rank_n)
+        vertices = [i for i in range(-rank_m, rank_n + 1) if i != 0]
+        edges = [(-i, -i - 1, -i) for i in range(1, rank_m)]
+        edges += [(i, i, i + 1) for i in range(1, rank_n)]
+        edges += [(0, -1, 1)]
+        weights = {}
+        for v in vertices:
+            wt = (rank_m + rank_n) * [0]
+            if v > 0:
+                wt[rank_m + v - 1] = 1
+            else:
+                wt[rank_m + v] = 1
+            weights[v] = tuple(wt)
+        return cls(rank, vertices, edges, weights)
+
+    def character(self):
+        from stable.polynomials import Polynomial, X, Y
+        ans = Polynomial()
+        for b in self:
+            w = self.weight(b)
+            mon = X(0)**0
+            for i in range(1, self.rank_m + 1):
+                mon *= Y(-i)**w[self.rank_m - i]
+            for i in range(1, self.rank_n + 1):
+                mon *= X(i)**w[self.rank_m + i - 1]
+            ans += mon
+        return ans
+
+    @classmethod
+    def tensor_edges(cls, b, c):
+        edges = []
+        for x in b:
+            for y in c:
+                for i in b.indices:
+                    if i < 0:
+                        if b.f_string(i, x) > c.e_string(i, y):
+                            xx = b.f_operator(i, x)
+                            if xx is not None:
+                                edges.append((i, (x, y), (xx, y)))
+                        else:
+                            yy = c.f_operator(i, y)
+                            if yy is not None:
+                                edges.append((i, (x, y), (x, yy)))
+                    elif i > 0:
+                        if b.e_string(i, x) < c.f_string(i, y):
+                            yy = c.f_operator(i, y)
+                            if yy is not None:
+                                edges.append((i, (x, y), (x, yy)))
+                        else:
+                            xx = b.f_operator(i, x)
+                            if xx is not None:
+                                edges.append((i, (x, y), (xx, y)))
+                    elif i == 0:
+                        if b.weight(x)[b.rank_m - 1] == b.weight(x)[b.rank_m] == 0:
+                            xx = b.f_operator(i, x)
+                            if xx is not None:
+                                edges.append((i, (x, y), (xx, y)))
+                        else:
+                            yy = c.f_operator(i, y)
+                            if yy is not None:
+                                edges.append((i, (x, y), (x, yy)))
+        return edges
+
+
 class AbstractQCrystal(AbstractCrystalMixin):
 
     @classmethod
-    def semicrystal_of_words(cls, length, rank):
+    def sqrtcrystal_of_words(cls, length, rank):
         n = rank
         vertices = []
         edges = []
@@ -921,8 +1049,8 @@ class AbstractQCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
-    def semicrystal_from_strict_partition(cls, mu, rank):
-        return cls.decomposition_semicrystal_from_strict_partition(mu, rank)
+    def sqrtcrystal_from_strict_partition(cls, mu, rank):
+        return cls.decomposition_sqrtcrystal_from_strict_partition(mu, rank)
 
     @classmethod
     def standard_semicrystal(cls, rank):
@@ -947,7 +1075,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
-    def decomposition_semicrystal_from_strict_partition(cls, mu, rank):
+    def decomposition_sqrtcrystal_from_strict_partition(cls, mu, rank):
         n = rank
         vertices = []
         edges = []
@@ -1245,7 +1373,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
     @classmethod
     def tensor_edges(cls, b, c):
-        edges = AbstractGLCrystal.tensor_edges(b, c)
+        edges = AbstractCrystalMixin.tensor_edges(b, c)
         for x in b:
             ex = b.e_operator(-1, x)
             fx = b.f_operator(-1, x)
@@ -1296,8 +1424,8 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
         ints = set(range(-n, n + 1)) - {0}
         vertices = [tuple(sorted(t)) for k in range(1, 2 * n + 1) for t in itertools.combinations(ints, k)]
 
-        gp_one = AbstractQCrystal.semicrystal_of_words(1, rank)
-        gp_two = AbstractQCrystal.semicrystal_of_words(2, rank)
+        gp_one = AbstractQCrystal.sqrtcrystal_of_words(1, rank)
+        gp_two = AbstractQCrystal.sqrtcrystal_of_words(2, rank)
 
         edges = []
         weights = {}
@@ -1608,7 +1736,7 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
     @classmethod
     def tensor_edges(cls, b, c):
-        edges = AbstractGLCrystal.tensor_edges(b, c)
+        edges = AbstractCrystalMixin.tensor_edges(b, c)
         for x in b:
             if b.e_string(0, x) + b.f_string(0, x) == 0:
                 for y in c:

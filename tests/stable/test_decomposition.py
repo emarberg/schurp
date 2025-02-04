@@ -70,7 +70,7 @@ def test_decomposition_semicrystal(n=3, max_size=5):
     for mu in Partition.all(max_size, strict=True):
         if len(mu) > n:
             continue
-        c = AbstractQCrystal.decomposition_semicrystal_from_strict_partition(mu, n)
+        c = AbstractQCrystal.decomposition_sqrtcrystal_from_strict_partition(mu, n)
         print(n, mu, len(c))
         nhw = c.naive_highest_weights()
         ahw = c.get_highest_weights()
