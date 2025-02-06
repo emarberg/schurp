@@ -41,6 +41,8 @@ class AbstractCrystalMixin:
         self.f_operators = {}
         self.e_operators = {}
         for (i, v, w) in edges:
+            assert (i, v) not in self.f_operators
+            assert (i, w) not in self.e_operators
             self.f_operators[(i, v)] = w
             self.e_operators[(i, w)] = v
         self.weights = {v: weights[v] for v in self._vertices}
@@ -351,7 +353,7 @@ class AbstractCrystalMixin:
         edges = []
         for x in b:
             for y in c:
-                for i in b.indices:
+                for i in range(1, b.rank):
                     if b.e_string(i, x) < c.f_string(i, y):
                         yy = c.f_operator(i, y)
                         if yy is not None:
@@ -519,7 +521,8 @@ class AbstractCrystalMixin:
         ans = []
         while elements:
             a = elements.pop()
-            ans.append(self.from_element(a, rank, indices, e, f, wt))
+            comp = self.from_element(a, rank, indices, e, f, wt)
+            ans.append(comp)
             elements -= set(ans[-1])
         return ans
 
@@ -546,7 +549,8 @@ class AbstractCrystalMixin:
                 if b is not None:
                     if b not in weights:
                         add.add(b)
-                    edges.add((i, a, b) if fdir else (i, b, a))
+                    new_edge = (i, a, b) if fdir else (i, b, a)
+                    edges.add(new_edge)
         edges = list(edges)
         return cls(rank, vertices, edges, weights)
 
@@ -772,7 +776,7 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         return cls(rank, vertices, edges, weights)
 
     @classmethod
-    def standard_semicrystal(cls, rank):
+    def standard_sqrtcrystal(cls, rank):
         n = rank
         ints = tuple(range(1, n + 1))
         vertices = [t for k in range(1, n + 1) for t in itertools.combinations(ints, k)]
@@ -892,7 +896,6 @@ class AbstractGLCrystal(AbstractCrystalMixin):
         word = tuple(tab.row_reading_word())
         ans = cls.e_operator_on_words(i, word)
         return None if ans is None else tab.from_row_reading_word(tuple(ans))
-
 
     @property
     def indices(self):
@@ -1053,7 +1056,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
         return cls.decomposition_sqrtcrystal_from_strict_partition(mu, rank)
 
     @classmethod
-    def standard_semicrystal(cls, rank):
+    def standard_sqrtcrystal(cls, rank):
         n = rank
         ints = tuple(range(1, n + 1))
         vertices = [t for k in range(1, n + 1) for t in itertools.combinations(ints, k)]
@@ -1387,7 +1390,6 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
                 if xx is not None and yy is not None:
                    edges.append((-1, (x, y), (xx, yy)))
-
             # xweight = b.weight(x)
             # for y in c:
             #     if xweight[0] == xweight[1] == 0:
@@ -1419,7 +1421,7 @@ class AbstractQCrystal(AbstractCrystalMixin):
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
     @classmethod
-    def standard_semicrystal(cls, rank):
+    def standard_sqrtcrystal(cls, rank):
         n = rank
         ints = set(range(-n, n + 1)) - {0}
         vertices = [tuple(sorted(t)) for k in range(1, 2 * n + 1) for t in itertools.combinations(ints, k)]

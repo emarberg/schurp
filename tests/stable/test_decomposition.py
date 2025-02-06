@@ -66,7 +66,7 @@ def test_sv_decomposition_generator(n=3, k=5):
         assert expected == received
 
 
-def test_decomposition_semicrystal(n=3, max_size=5):
+def test_decomposition_sqrtcrystal(n=3, max_size=5):
     for mu in Partition.all(max_size, strict=True):
         if len(mu) > n:
             continue

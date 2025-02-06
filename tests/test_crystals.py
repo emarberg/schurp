@@ -66,6 +66,22 @@ def test_sqrt_type_c(n=2):
     return e
 
 
+def test_get_components(n=2):
+    a = AbstractQCrystal.sqrtcrystal_from_strict_partition((2,), n)
+    b = AbstractQCrystal.sqrtcrystal_from_strict_partition((1,), n)
+    ab = a.tensor(b)
+    for c in [a, b, ab]:
+        for x in c:
+            for i in c.provided_operators:
+                fx = c.f_operator(i, x)
+                ex = c.e_operator(i, x)
+                if fx is not None:
+                    assert c.e_operator(i, fx) == x
+                if ex is not None:
+                    assert c.f_operator(i, ex) == x
+    assert len(ab.get_components()) == 3
+
+    
 def test_primed_shifted_plactic():
     def Pqq(*w):
         return decomposition_insert(*reversed(w))[0]
@@ -143,7 +159,7 @@ def test_strict_polarizations(n=5, k=10):
 
 
 def test_qq_sv_tensor(n=2, k=2):
-    b = AbstractPrimedQCrystal.standard_semicrystal(n)
+    b = AbstractPrimedQCrystal.standard_sqrtcrystal(n)
     
     c = b
     for _ in range(1, k):
@@ -394,7 +410,7 @@ def tabl(t):
     return init.from_rows((w,))
 
 
-def test_grothexp_qtab_semicrystal(n=3, k=5):
+def test_grothexp_qtab_sqrtcrystal(n=3, k=5):
     partitions = sorted({mu.transpose().tuple() for mu in Partition.all(k, max_part=n) if mu.transpose().is_strict()})
     print(partitions)
     print()
@@ -423,7 +439,7 @@ def test_grothexp_qtab_semicrystal(n=3, k=5):
         assert expected == actual
 
 
-def test_tensor_qtab_semicrystal(n=3, k=None):
+def test_tensor_qtab_sqrtcrystal(n=3, k=None):
     # fails for n=3, (2,), (2, 1) or (2,), (3,)
     k = n if k is None else k
     partitions = sorted({mu.transpose().tuple() for i in [k] for mu in Partition.all(i, max_part=n) if mu.transpose().is_strict()})
@@ -466,7 +482,7 @@ def test_tensor_qtab_semicrystal(n=3, k=None):
             assert boolean
 
 
-def test_tensor_tab_semicrystal(n=3, k=None):
+def test_tensor_tab_sqrtcrystal(n=3, k=None):
     from stable.utils import G, G_expansion
     k = n if k is None else k
     partitions = sorted({mu.transpose().tuple() for i in [k] for mu in Partition.all(i, max_part=n)})
@@ -502,7 +518,7 @@ def test_tensor_tab_semicrystal(n=3, k=None):
             assert expected == actual
 
 
-def test_selfdual_tab_semicrystal(n=3, k=None):
+def test_selfdual_tab_sqrtcrystal(n=3, k=None):
     ans = []
     k = n if k is None else k
     for j in range(k + 1):
@@ -544,7 +560,7 @@ def test_sv_signature_rule(n=3, k=5):
             # print()
 
 
-def test_words_semicrystal(n=3, k=5):
+def test_words_sqrtcrystal(n=3, k=5):
     for i in range(k):
         print('n =', n, 'k =', i + 1)
         b = AbstractGLCrystal.sqrtcrystal_of_words(i + 1, n)
@@ -559,7 +575,7 @@ def test_words_semicrystal(n=3, k=5):
                 # d.draw()
             
 
-def test_qnormal_semicrystal(n=3, k=5):
+def test_qnormal_sqrtcrystal(n=3, k=5):
     s = AbstractQCrystal.sqrtcrystal_from_strict_partition((1,), n)
     b = s.tensor(s)
     seen = {}
@@ -593,7 +609,7 @@ def test_qnormal_semicrystal(n=3, k=5):
         b = s.tensor(b)
 
 
-def test_normal_semicrystal(n=3, k=5):
+def test_normal_sqrtcrystal(n=3, k=5):
     s = AbstractGLCrystal.sqrtcrystal_from_partition((1,), n)
     b = s.tensor(s)
     seen = {}
