@@ -251,17 +251,26 @@ def svdecomp_incr_crystal(n, mu, sqrt=True):
         b = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
     else:
         b = AbstractQCrystal.decomposition_tableaux_from_strict_partition(mu, n)
+    
     for w in b:
-        t = Tableau.from_svword(b.rectify(w).reverse_row_reading_word(setwise=True))
-        if t not in vertices:
-            vertices.append(t)
-            weights[t] = b.weight(w)
-        for i in [-1]:
-            ew = b.e_operator(i, w)
-            if ew is not None:
-                u = Tableau.from_svword(b.rectify(ew).reverse_row_reading_word(setwise=True))
-                if t != u and (i, u, t) not in edges:
-                    edges.append((i, u, t))
+        vertices.append(w)
+        weights[w] = b.weight(w)
+        for i in b.indices:
+            fw = b.f_operator(i, w)
+            if fw is not None:
+                edges.append((i, fw, w) if len(fw) < len(w) else (i, w, fw))
+    
+    # for w in b:
+    #     t = Tableau.from_svword(b.rectify(w).reverse_row_reading_word(setwise=True))
+    #     if t not in vertices:
+    #         vertices.append(t)
+    #         weights[t] = b.weight(w)
+    #     for i in [-1]:
+    #         ew = b.e_operator(i, w)
+    #         if ew is not None:
+    #             u = Tableau.from_svword(b.rectify(ew).reverse_row_reading_word(setwise=True))
+    #             if t != u and (i, u, t) not in edges:
+    #                 edges.append((i, u, t))
 
     return draw_graph(vertices, edges)
 
@@ -297,21 +306,26 @@ def test_rectify(nn=3, kk=5, cls=AbstractGLCrystal):
     # fails for AbstractQCrystal
     for n in range(2, nn + 1):
         for k in range(1, kk + 1):
+            print()
             print('n =', n, 'k =', k)
-
+            print()
             b = cls.standard_object(n)
             words = b
             for j in range(k - 1):
                 words = words.tensor(b)
 
-            for b in words:
-                hw = words.rectify(b)
-                assert words.is_highest_weight(hw)
+            w0 = Permutation.longest_element(n)
+            for i in w0.get_reduced_words():
+                for b in words:
+                    hw = words.rectify(b, i)
+                    assert words.is_highest_weight(hw)
 
-            sq_words = cls.sqrtcrystal_of_words(k, n)
-            for b in sq_words:
-                hw = sq_words.rectify(b)
-                assert sq_words.is_highest_weight(hw)
+                boolean = True
+                sq_words = cls.sqrtcrystal_of_words(k, n)
+                for b in sq_words:
+                    hw = sq_words.rectify(b, i)
+                    boolean &= sq_words.is_highest_weight(hw)
+                print('  i =', i, boolean)
 
 
 

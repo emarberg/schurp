@@ -191,13 +191,14 @@ class AbstractCrystalMixin:
     def capital_e_operator(self, i, v):
         return self.eplus_operator(i, v)
 
-    def rectify(self, v):
+    def rectify(self, v, reduced_word=None):
         assert v in self.vertices
         n = self.rank
+        if reduced_word is None:
+            reduced_word = [i for j in range(1, n) for i in range(j, 0, -1)]
         ans = v
-        for j in range(1, n):
-            for i in range(j, 0, -1):
-                ans = self.capital_e_operator(i, ans)
+        for i in reduced_word:
+            ans = self.capital_e_operator(i, ans)
         return ans
 
     def e_operator(self, i, v):
@@ -981,6 +982,48 @@ class SuperGLCrystal(AbstractCrystalMixin):
             else:
                 wt[rank_m + v] = 1
             weights[v] = tuple(wt)
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
+    def standard_sqrtcrystal(cls, rank_m, rank_n):
+        def unadjust(s):
+            return tuple(x if x > 0 else x + 1 for x in s)
+
+        def adjust(s):
+            return tuple(x if x > 0 else x - 1 for x in s)
+
+        rank = (rank_m, rank_n)
+        ints = tuple(range(-rank_m + 1, rank_n + 1))
+        vertices = [adjust(t) for k in range(1, rank_m + rank_n + 1) for t in itertools.combinations(ints, k)]
+        edges = []
+        weights = {}
+        for t in vertices:
+            wt = (rank_m + rank_n) * [0,]
+            for i in unadjust(t):
+                wt[i + rank_m - 1] = 1
+            weights[t] = tuple(wt)
+            for i in range(-rank_m + 1, rank_n):
+                if i < 0:
+                    if i - 1 in t and i not in t:
+                        u = tuple(sorted(t + (i,)))
+                        edges += [(i, t, u)]
+                    elif i - 1 in t and i in t:
+                        u = tuple(_ for _ in t if _ != i - 1)
+                        edges += [(i, t, u)]
+                elif i > 0:
+                    if i in t and i + 1 not in t:
+                        u = tuple(sorted(t + (i + 1,)))
+                        edges += [(i, t, u)]
+                    elif i in t and i + 1 in t:
+                        u = tuple(_ for _ in t if _ != i)
+                        edges += [(i, t, u)]
+                elif i == 0:
+                    if -1 in t and 1 not in t:
+                        u = tuple(sorted(t + (1,)))
+                        edges += [(0, t, u)]
+                    elif -1 in t and 1 in t:
+                        u = tuple(_ for _ in t if _ != -1)
+                        edges += [(0, t, u)]
         return cls(rank, vertices, edges, weights)
 
     def character(self):
