@@ -27,6 +27,7 @@ SEMISTANDARD_RPP_CACHE = {}
 SEMISTANDARD_MARKED_RPP_CACHE = {}
 SEMISTANDARD_MARKED_CACHE = {}
 SEMISTANDARD_SHIFTED_MARKED_CACHE = {}
+SEMISTANDARD_SUPER_CACHE = {}
 
 HORIZONTAL_STRIPS_CACHE = {}
 SHIFTED_HORIZONTAL_STRIPS_CACHE = {}
@@ -582,11 +583,12 @@ class Tableau:
         return tuple(reversed(self.row_reading_word(setwise=setwise)))
 
     def row_reading_word(self, setwise=False):
+        key = lambda x: (-x[0], x[1])
         if setwise:
-            return tuple(self.boxes[key] for key in sorted(self.boxes, key=lambda x: (-x[0], x[1])))
+            return tuple(self.boxes[key] for key in sorted(self.boxes, key=key))
         else:
             return tuple(
-                a for key in sorted(self.boxes, key=lambda x: (-x[0], x[1]))
+                a for key in sorted(self.boxes, key=key)
                 for a in self.boxes[key]
             )
 
@@ -604,11 +606,18 @@ class Tableau:
                 mapping[(i + 1, j + 1)] = entry
         return Tableau(mapping)
 
-    def column_reading_word(self):
-        return tuple(
-            a for key in sorted(self.boxes, key=lambda x: (x[1], -x[0]))
-            for a in self.boxes[key]
-        )
+    def reverse_column_reading_word(self, setwise=False):
+        return tuple(reversed(self.column_reading_word(setwise=setwise)))
+
+    def column_reading_word(self, setwise=False):
+        key = lambda x: (x[1], -x[0])
+        if setwise:
+            return tuple(self.boxes[key] for key in sorted(self.boxes, key=key))
+        else:
+            return tuple(
+                a for key in sorted(self.boxes, key=key)
+                for a in self.boxes[key]
+            )
 
     def shifted_reading_word(self):
         x = tuple(-a for a in reversed(self.column_reading_word()) if a < 0)
@@ -1443,6 +1452,32 @@ class Tableau:
                         for (i, j) in aug:
                             tab = tab.add(i, j, max_entry)
                         ans.add(tab)
+        return ans
+
+    @classmethod
+    def semistandard_super(cls, m, n, mu, nu=(), setvalued=False):  # noqa
+        return cls._semistandard_super(m, n, mu, nu, setvalued)
+
+    @cached_value(SEMISTANDARD_SUPER_CACHE)
+    def _semistandard_super(cls, m, n, mu, nu, setvalued):  # noqa
+        def shift(val):
+            return tuple(v - m - 1 for v in val)
+
+        def combine(a, b):
+            mapping = {box: shift(val) for box, val in a.boxes.items()}
+            for box, val in b.boxes.items():
+                assert box not in mapping
+                mapping[box] = val
+            return Tableau(mapping)
+
+        ans = set()
+        mu_t = Partition.transpose(mu)
+        for lam in Partition.subpartitions(mu, nu):
+            lam_t = Partition.transpose(lam)
+            for inn in cls.semistandard(m, lam, nu):
+                for out_t in cls.semistandard(n, mu_t, lam_t):
+                    out = out_t.transpose()
+                    ans.add(combine(inn, out))
         return ans
 
     @classmethod
