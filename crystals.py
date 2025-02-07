@@ -968,7 +968,47 @@ class SuperGLCrystal(AbstractCrystalMixin):
         return "gl%s|%s_crystal.%s" % (self.rank_m, self.rank_n, len(self))
 
     @classmethod
-    def standard_object(cls, rank_m, rank_n):
+    def f_operator_on_words(cls, i, word):
+        reverse = lambda w: None if w is None else tuple(reversed(w))
+        if i > 0:
+            return AbstractGLCrystal.f_operator_on_words(i, word)
+        elif i < 0:
+            return reverse(AbstractGLCrystal.f_operator_on_words(i - 1, reverse(word)))
+        elif i == 0:
+            cl, word = type(word), list(word)
+            ones = [j for j in range(len(word)) if word[j] == -1]
+            twos = [j for j in range(len(word)) if word[j] == 1]
+            if not ones or (ones and twos and twos[0] < ones[0]):
+                return None
+            else:
+                word[ones[0]] = 1
+                return cl(word)
+        raise Exception
+
+    @classmethod
+    def e_operator_on_words(cls, i, word):
+        reverse = lambda w: None if w is None else tuple(reversed(w))
+        if i > 0:
+            return AbstractGLCrystal.e_operator_on_words(i, word)
+        elif i < 0:
+            return reverse(AbstractGLCrystal.e_operator_on_words(i - 1, reverse(word)))
+        elif i == 0:
+            cl, word = type(word), list(word)
+            ones = [j for j in range(len(word)) if word[j] == -1]
+            twos = [j for j in range(len(word)) if word[j] == 1]
+            if not twos or (ones and twos and ones[0] < twos[0]):
+                return None
+            else:
+                word[twos[0]] = -1
+                return cl(word)
+        raise Exception
+
+    @classmethod
+    def standard_object(cls, rank_m, rank_n=None):
+        if rank_n is None and type(rank_m) in [tuple, list] and len(rank_m) == 2:
+            rank_m, rank_n = rank_m
+        else:
+            raise Exception
         rank = (rank_m, rank_n)
         vertices = [i for i in range(-rank_m, rank_n + 1) if i != 0]
         edges = [(-i, -i - 1, -i) for i in range(1, rank_m)]
@@ -1065,13 +1105,13 @@ class SuperGLCrystal(AbstractCrystalMixin):
                                 edges.append((i, (x, y), (xx, y)))
                     elif i == 0:
                         if b.weight(x)[b.rank_m - 1] == b.weight(x)[b.rank_m] == 0:
-                            xx = b.f_operator(i, x)
-                            if xx is not None:
-                                edges.append((i, (x, y), (xx, y)))
-                        else:
                             yy = c.f_operator(i, y)
                             if yy is not None:
                                 edges.append((i, (x, y), (x, yy)))
+                        else:
+                            xx = b.f_operator(i, x)
+                            if xx is not None:
+                                edges.append((i, (x, y), (xx, y)))
         return edges
 
 

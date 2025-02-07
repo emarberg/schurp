@@ -3,6 +3,7 @@ from crystals import(
     AbstractCCrystal,
     AbstractQCrystal,
     AbstractPrimedQCrystal,
+    SuperGLCrystal,
     BASE_DIRECTORY
 )
 from keys import (
@@ -2199,6 +2200,11 @@ def _test_operators_on_words(crystal, rank, factors):
             for i in u.indices:
                 target = u.f_operator(i, vertex)
                 target_word = crystal.f_operator_on_words(i, flat)
+
+                # print('  f', i, vertex, target)
+                # print('  f', i, flat, target_word)
+                # print()
+
                 if target:
                     assert flatten(target) == target_word
                 else:
@@ -2233,6 +2239,12 @@ def test_q_operators_on_words(rank=4, factors=4):
 def test_primed_q_operators_on_words(rank=4, factors=4):
     for rank in range(2, rank + 1):
         _test_operators_on_words(AbstractPrimedQCrystal, rank, factors)
+
+
+def test_super_operators_on_words(rank=3, factors=4):
+    for rank_m in range(1, rank + 1):
+        for rank_n in range(1, rank + 1):
+            _test_operators_on_words(SuperGLCrystal, (rank_m, rank_n), factors)
 
 
 def all_primed_words(max_letter, length):
