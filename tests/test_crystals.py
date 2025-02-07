@@ -565,14 +565,10 @@ def test_sv_signature_rule(n=3, k=5):
             c = s.tensor(c)
         for w in c:
             t = tabl(w)
-            # print()
-            # print(' candidate =', str(t).replace('\n', ''))
             for i in range(1, n):
                 fw = tabl(c.f_operator(i, w))
                 sfw = 'none' if fw is None else str(fw).replace('\n', '')
-                # print('  i =', i, ':', sfw, fw == t.half_f_operator(i))
-                assert fw == t.half_f_operator(i)
-            # print()
+                assert fw == t.sqrt_f_operator(i)
 
 
 def test_words_sqrtcrystal(n=3, k=5):

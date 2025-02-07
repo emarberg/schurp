@@ -332,7 +332,7 @@ class Tableau:
         combined = [c for c in classes if c[0][0] == ')' and c[-1][0] == '(']
         return null, right, left, combined
 
-    def half_e_operator(self, index):
+    def sqrt_e_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
         # boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1])) # row word
@@ -365,7 +365,7 @@ class Tableau:
         else:
             return None
 
-    def half_f_operator(self, index):
+    def sqrt_f_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
         # boxes = sorted(tab.boxes, key=lambda b:(-b[0], b[1])) # row word

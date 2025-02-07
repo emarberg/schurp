@@ -753,9 +753,9 @@ class AbstractGLCrystal(AbstractCrystalMixin):
             wt = t.weight()
             weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(1, n):
-                u = t.half_f_operator(i)
+                u = t.sqrt_f_operator(i)
                 if u is not None:
-                    assert u.half_e_operator(i) == t
+                    assert u.sqrt_e_operator(i) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
@@ -770,9 +770,9 @@ class AbstractGLCrystal(AbstractCrystalMixin):
             wt = t.weight()
             weights[t] = wt + (n - len(wt)) * (0,)
             for i in range(1, n):
-                u = t.half_f_operator(i)
+                u = t.sqrt_f_operator(i)
                 if u is not None:
-                    assert u.half_e_operator(i) == t
+                    assert u.sqrt_e_operator(i) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
@@ -1128,9 +1128,9 @@ class AbstractQCrystal(AbstractCrystalMixin):
             wt = t.weight()
             weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else [])  + list(range(1, n)):
-                u = t.half_f_operator(i)
+                u = t.sqrt_f_operator(i)
                 if u is not None:
-                    assert u.half_e_operator(i) == t
+                    assert u.sqrt_e_operator(i) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 

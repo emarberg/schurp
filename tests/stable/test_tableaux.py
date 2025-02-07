@@ -15,7 +15,7 @@ def test_half_signature_word():
         (1, 9): (1, 2),
     })
     print(t)
-    print(t.half_f_operator(1))
+    print(t.sqrt_f_operator(1))
 
 
 def test_from_string(m=4):
