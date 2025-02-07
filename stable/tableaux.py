@@ -332,6 +332,74 @@ class Tableau:
         combined = [c for c in classes if c[0][0] == ')' and c[-1][0] == '(']
         return null, right, left, combined
 
+    def sqrt_super_e_operator(self, index):
+        tab = self
+        reverse = (index >= 0)
+        boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0]), reverse=reverse) # (reverse) column word
+
+        if index == 0:
+            for x, y in boxes:
+                if 1 in tab.get(x, y, unpack=False) and -1 not in tab.get(x, y, unpack=False):
+                    return tab.add(x, y, -1)
+                elif 1 in tab.get(x, y, unpack=False) and -1 in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, 1)
+                elif 1 not in tab.get(x, y, unpack=False) and -1 not in tab.get(x, y, unpack=False):
+                    continue
+                else:
+                    return None
+            count_semistandard_super None
+
+        index = index if index > 0 else (index - 1)
+        signature = self.sqrt_signature(self, boxes, index)
+        null, right, left, combined = self.sqrt_signature_classes(signature)
+
+        if combined:
+            form = combined[0]
+            i = form[-1][1]
+            x, y = boxes[i]
+            return tab.remove(x, y, index + 1)
+        elif left:
+            form = left[0]
+            i = form[0][1]
+            x, y = boxes[i]
+            return tab.add(x, y, index)
+        else:
+            return None
+
+    def sqrt_super_f_operator(self, index):
+        tab = self
+        reverse = (index >= 0)
+        boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0]), reverse=reverse) # (reverse) column word
+
+        if index == 0:
+            for x, y in boxes:
+                if -1 in tab.get(x, y, unpack=False) and 1 not in tab.get(x, y, unpack=False):
+                    return tab.add(x, y, 1)
+                elif -1 in tab.get(x, y, unpack=False) and 1 in tab.get(x, y, unpack=False):
+                    return tab.remove(x, y, -1)
+                elif -1 not in tab.get(x, y, unpack=False) and 1 not in tab.get(x, y, unpack=False):
+                    continue
+                else:
+                    return None
+            return None
+
+        index = index if index > 0 else (index - 1)
+        signature = self.sqrt_signature(self, boxes, index)
+        null, right, left, combined = self.sqrt_signature_classes(signature)
+
+        if combined:
+            form = combined[0]
+            i = form[0][1]
+            x, y = boxes[i]
+            return tab.remove(x, y, index)
+        elif right:
+            form = right[-1]
+            i = form[-1][1]
+            x, y = boxes[i]
+            return tab.add(x, y, index + 1)
+        else:
+            return None
+
     def sqrt_e_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[1], -b[0])) # column word
@@ -397,7 +465,6 @@ class Tableau:
             return tab.add(x, y, index + 1)
         else:
             return None
-
 
     def sqrt_decomposition_e_operator(self, index):
         tab = self
@@ -903,7 +970,7 @@ class Tableau:
             boxes = {
                 k: ','.join([
                     str(-x) + '\'' if x < 0 else str(x)
-                    for x in sorted(v, key=lambda x:(abs(x), x))
+                    for x in sorted(v, key=lambda x: x)
                 ]) for k, v in self.boxes.items()}
 
             allmax = max([2] + [len(str(boxes[b])) for b in boxes])
@@ -936,6 +1003,13 @@ class Tableau:
             for x in v:
                 ans[x] = ans.get(x, 0) + 1
         return ans
+
+    def superweight(self, m, n):
+        ans = (m + n) * [0]
+        for i, j, v in self:
+            for x in v:
+                ans[(m + x - 1) if x > 0 else (m + x)] += 1
+        return tuple(ans)
 
     def weight(self, n=None):
         if n is None:
@@ -1466,18 +1540,19 @@ class Tableau:
         def combine(a, b):
             mapping = {box: shift(val) for box, val in a.boxes.items()}
             for box, val in b.boxes.items():
-                assert box not in mapping
-                mapping[box] = val
+                assert len(set(mapping.get(box, set())) & set(val)) == 0
+                mapping[box] = tuple(sorted(mapping.get(box, ()) + val))
             return Tableau(mapping)
 
         ans = set()
         mu_t = Partition.transpose(mu)
         for lam in Partition.subpartitions(mu, nu):
-            lam_t = Partition.transpose(lam)
-            for inn in cls.semistandard(m, lam, nu):
-                for out_t in cls.semistandard(n, mu_t, lam_t):
-                    out = out_t.transpose()
-                    ans.add(combine(inn, out))
+            for inn in cls.semistandard(m, lam, nu, setvalued):
+                for kappa in [lam] if not setvalued else Partition.remove_inner_corners(lam):
+                    lam_t = Partition.transpose(kappa)
+                    for out_t in cls.semistandard(n, mu_t, lam_t, setvalued):
+                        out = out_t.transpose()
+                        ans.add(combine(inn, out))
         return ans
 
     @classmethod

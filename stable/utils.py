@@ -151,6 +151,9 @@ GP = grothendieck_P
 GQ = SymmetricPolynomial.stable_grothendieck_q
 GS = grothendieck_S
 
+# hs = SymmetricPolynomial.hook_schur
+# HG = SymmetricPolynomial.hook_grothendieck
+
 mn_G = SymmetricPolynomial.mn_stable_grothendieck
 mn_GP = SymmetricPolynomial.mn_stable_grothendieck_p
 mn_GQ = SymmetricPolynomial.mn_stable_grothendieck_q

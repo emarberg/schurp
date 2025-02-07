@@ -1007,9 +1007,9 @@ class SuperGLCrystal(AbstractCrystalMixin):
     def standard_object(cls, rank_m, rank_n=None):
         if rank_n is None and type(rank_m) in [tuple, list] and len(rank_m) == 2:
             rank_m, rank_n = rank_m
-        else:
-            raise Exception
+        assert rank_n is not None
         rank = (rank_m, rank_n)
+
         vertices = [i for i in range(-rank_m, rank_n + 1) if i != 0]
         edges = [(-i, -i - 1, -i) for i in range(1, rank_m)]
         edges += [(i, i, i + 1) for i in range(1, rank_n)]
@@ -1022,6 +1022,26 @@ class SuperGLCrystal(AbstractCrystalMixin):
             else:
                 wt[rank_m + v] = 1
             weights[v] = tuple(wt)
+        return cls(rank, vertices, edges, weights)
+
+    @classmethod
+    def sqrtcrystal_from_partition(cls, mu, rank_m, rank_n=None):
+        if rank_n is None and type(rank_m) in [tuple, list] and len(rank_m) == 2:
+            rank_m, rank_n = rank_m
+        assert rank_n is not None
+        rank = (rank_m, rank_n)
+
+        vertices = []
+        edges = []
+        weights = {}
+        for t in Tableau.semistandard_super(rank_m, rank_n, mu, setvalued=True):
+            vertices.append(t)
+            weights[t] = t.superweight(rank_m, rank_n)
+            for i in range(-rank_m + 1, rank_n):
+                u = t.sqrt_super_f_operator(i)
+                if u is not None:
+                    assert u.sqrt_super_e_operator(i) == t
+                    edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
     @classmethod
@@ -1085,33 +1105,27 @@ class SuperGLCrystal(AbstractCrystalMixin):
         for x in b:
             for y in c:
                 for i in b.indices:
+                    xx = x
+                    yy = y
                     if i < 0:
                         if b.f_string(i, x) > c.e_string(i, y):
                             xx = b.f_operator(i, x)
-                            if xx is not None:
-                                edges.append((i, (x, y), (xx, y)))
                         else:
                             yy = c.f_operator(i, y)
-                            if yy is not None:
-                                edges.append((i, (x, y), (x, yy)))
                     elif i > 0:
                         if b.e_string(i, x) < c.f_string(i, y):
                             yy = c.f_operator(i, y)
-                            if yy is not None:
-                                edges.append((i, (x, y), (x, yy)))
                         else:
                             xx = b.f_operator(i, x)
-                            if xx is not None:
-                                edges.append((i, (x, y), (xx, y)))
                     elif i == 0:
                         if b.weight(x)[b.rank_m - 1] == b.weight(x)[b.rank_m] == 0:
                             yy = c.f_operator(i, y)
-                            if yy is not None:
-                                edges.append((i, (x, y), (x, yy)))
                         else:
                             xx = b.f_operator(i, x)
-                            if xx is not None:
-                                edges.append((i, (x, y), (xx, y)))
+                    else:
+                        raise Exception
+                    if xx is not None and yy is not None:
+                        edges.append((i, (x, y), (xx, yy)))
         return edges
 
 
