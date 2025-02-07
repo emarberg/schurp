@@ -565,9 +565,8 @@ def test_sv_signature_rule(n=3, k=5):
             c = s.tensor(c)
         for w in c:
             t = tabl(w)
-            for i in range(1, n):
+            for i in c.indices:
                 fw = tabl(c.f_operator(i, w))
-                sfw = 'none' if fw is None else str(fw).replace('\n', '')
                 assert fw == t.sqrt_f_operator(i)
 
 

@@ -287,7 +287,7 @@ class Tableau:
         return tab.remove(x, z, index).add(x, y, index + 1)
 
     @classmethod
-    def half_signature(cls, tab, boxes, index):
+    def sqrt_signature(cls, tab, boxes, index):
         signature = []
         for i, b in enumerate(boxes):
             v = sorted(tab.get(*b, unpack=False))
@@ -314,7 +314,7 @@ class Tableau:
         return signature
 
     @classmethod
-    def half_signature_classes(cls, signature):
+    def sqrt_signature_classes(cls, signature):
         classes = []
         i = 0
         while i < len(signature):
@@ -349,8 +349,8 @@ class Tableau:
                     return None
             return None
 
-        signature = self.half_signature(self, boxes, index)
-        null, right, left, combined = self.half_signature_classes(signature)
+        signature = self.sqrt_signature(self, boxes, index)
+        null, right, left, combined = self.sqrt_signature_classes(signature)
 
         if combined:
             form = combined[0]
@@ -382,8 +382,8 @@ class Tableau:
                     return None
             return None
 
-        signature = self.half_signature(self, boxes, index)
-        null, right, left, combined = self.half_signature_classes(signature)
+        signature = self.sqrt_signature(self, boxes, index)
+        null, right, left, combined = self.sqrt_signature_classes(signature)
 
         if combined:
             form = combined[0]
@@ -399,7 +399,7 @@ class Tableau:
             return None
 
 
-    def half_decomposition_e_operator(self, index):
+    def sqrt_decomposition_e_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1])) # rev row word
 
@@ -415,8 +415,8 @@ class Tableau:
                     return None
             return None
 
-        signature = self.half_signature(self, boxes, index)
-        null, right, left, combined = self.half_signature_classes(signature)
+        signature = self.sqrt_signature(self, boxes, index)
+        null, right, left, combined = self.sqrt_signature_classes(signature)
 
         if combined:
             form = combined[0]
@@ -431,7 +431,7 @@ class Tableau:
         else:
             return None
 
-    def half_decomposition_f_operator(self, index):
+    def sqrt_decomposition_f_operator(self, index):
         tab = self
         boxes = sorted(tab.boxes, key=lambda b:(b[0], -b[1])) # rev row word
 
@@ -447,8 +447,8 @@ class Tableau:
                     return None
             return None
 
-        signature = self.half_signature(self, boxes, index)
-        null, right, left, combined = self.half_signature_classes(signature)
+        signature = self.sqrt_signature(self, boxes, index)
+        null, right, left, combined = self.sqrt_signature_classes(signature)
 
         if combined:
             form = combined[0]

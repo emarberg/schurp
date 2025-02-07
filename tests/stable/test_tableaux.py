@@ -2,7 +2,7 @@ from stable.tableaux import Tableau, MarkedReversePlanePartition
 from stable.partitions import Partition
 
 
-def test_half_signature_word():
+def test_sqrt_signature_word():
     t = Tableau({
         (1, 1): 1, 
         (1, 2): (1, 2),

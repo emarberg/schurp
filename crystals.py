@@ -1171,10 +1171,10 @@ class AbstractQCrystal(AbstractCrystalMixin):
             wt = t.weight()
             weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
-                u = t.half_decomposition_f_operator(i)
+                u = t.sqrt_decomposition_f_operator(i)
                 if u is not None:
                     assert u.is_decomposition_tableau()
-                    assert u.half_decomposition_e_operator(i) == t
+                    assert u.sqrt_decomposition_e_operator(i) == t
                     edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
@@ -1189,12 +1189,12 @@ class AbstractQCrystal(AbstractCrystalMixin):
             wt = t.weight()
             weights[t] = wt + (n - len(wt)) * (0,)
             for i in ([-1] if n >= 2 else []) + list(range(1, n)):
-                u = t.half_decomposition_f_operator(i)
+                u = t.sqrt_decomposition_f_operator(i)
                 if u is not None:
-                    u = u.half_decomposition_f_operator(i)
+                    u = u.sqrt_decomposition_f_operator(i)
                     if u is not None:
                         assert u.is_decomposition_tableau()
-                        assert u.half_decomposition_e_operator(i).half_decomposition_e_operator(i) == t
+                        assert u.sqrt_decomposition_e_operator(i).sqrt_decomposition_e_operator(i) == t
                         edges += [(i, t, u)]
         return cls(rank, vertices, edges, weights)
 
