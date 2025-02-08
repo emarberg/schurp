@@ -1,4 +1,4 @@
-from .symmetric import SymmetricPolynomial
+from .symmetric import SymmetricPolynomial, superprinter
 from .permutations import Permutation
 from .polynomials import beta, X, Y, Polynomial # noqa
 from .partitions import Partition
@@ -132,6 +132,34 @@ def p_expansion(f):
     return ans
 
 
+def hook_schur(m, n, mu, nu=()):
+    ans = SymmetricPolynomial()
+    for lam in Partition.subpartitions(mu, nu):
+        inn = SymmetricPolynomial.schur(m, lam, nu)
+        out = SymmetricPolynomial.schur(n, mu, lam)
+        dictionary = {}
+        for key, val in out.dictionary.items():
+            newval = inn * val
+            newval.printer=superprinter
+            dictionary[key] = newval
+        out = SymmetricPolynomial(dictionary)
+        ans += out
+    return ans
+
+
+def supersymmetric_schur(num_variables, mu, nu=()):
+    return hook_schur(num_variables, mu, nu)
+
+
+def hook_grothendieck(num_variables, mu, nu=(), degree_bound=None):
+    pass
+
+
+def supersymmetric_grothendieck(num_variables, mu, nu=(), degree_bound=None):
+    return hook_grothendieck(num_variables, mu, nu, degree_bound)
+
+
+
 e = SymmetricPolynomial.e
 e_expansion = SymmetricPolynomial.e_expansion
 
@@ -151,8 +179,8 @@ GP = grothendieck_P
 GQ = SymmetricPolynomial.stable_grothendieck_q
 GS = grothendieck_S
 
-# hs = SymmetricPolynomial.hook_schur
-# HG = SymmetricPolynomial.hook_grothendieck
+hs = hook_schur
+HG = hook_grothendieck
 
 mn_G = SymmetricPolynomial.mn_stable_grothendieck
 mn_GP = SymmetricPolynomial.mn_stable_grothendieck_p

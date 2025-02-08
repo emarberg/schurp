@@ -37,6 +37,13 @@ E_CACHE = {}
 KTHEORETIC_E_CACHE = {}
 
 
+def superprinter(symmon):
+    if symmon:
+        return 'm[%s;%s|Y]' % (','.join(map(str, symmon.mu)), symmon.n)
+    else:
+        return '1'
+
+
 class SymmetricMonomial:
 
     def __init__(self, n, mu=()):
@@ -182,6 +189,7 @@ class SymmetricMonomial:
 
 
 class SymmetricPolynomial(Vector):
+
     def __init__(self, dictionary={}, printer=None, multiplier=None, sorter=None):
         self.dictionary = {key: value for key, value in dictionary.items() if value}
         self.printer = printer
@@ -205,17 +213,44 @@ class SymmetricPolynomial(Vector):
         return ans
 
     @classmethod
-    def from_polynomial(cls, f):
+    def from_int(cls, num_variables, k):
+        return k * cls.monomial(num_variables, ())
+
+    @classmethod
+    def from_super_polynomial(cls, f):
+        ans = cls.from_polynomial(f)
+
+        nvars = 0
+        for f in ans.dictionary.values():
+            for hd in f:
+                nvars = max(nvars, -min(hd, default=0))
+
+        dictionary = {}
+        for key, val in ans.dictionary.items():
+            newval = cls.from_polynomial(val.swap_xy(), nvars=nvars)
+            newval.printer = superprinter
+            dictionary[key] = newval
+        ans.dictionary = dictionary
+        return ans
+
+    @classmethod
+    def from_polynomial(cls, f, nvars=None):
+        if type(f) == int:
+            if nvars is None:
+                nvars = 0
+            return cls.from_int(nvars, f)
+
         ans = 0
         if f == 0:
             return ans
         
-        nvars = 0
-        for hd in f:
-            nvars = max(nvars, max(hd, default=0))
+        if nvars is None:
+            nvars = 0
+            for hd in f:
+                nvars = max(nvars, max(hd, default=0))
         
         for hd in f:
-            coeff = f[hd]
+            coeff = f[hd] * Polynomial.one()
             mu = []
             for i in hd:
                 if i <= 0:

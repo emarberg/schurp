@@ -136,6 +136,11 @@ class Polynomial:
             ans = ans + term
         return ans
 
+    def swap_xy(self):
+        return Polynomial({HashableDict({
+            -i: e for i, e in coeff.items()
+        }): val for coeff, val in self.coeffs.items()})
+
     def set_variable(self, i, e):
         return self.substitute(i, e)
 
