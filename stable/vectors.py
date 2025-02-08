@@ -163,7 +163,15 @@ class Vector:
             return self
         if type(other) == type(self):
             keys = self.keys() | other.keys()
-            return self._instantiate({key: self[key] - other[key] for key in keys}, other)
+            dictionary = {}
+            for key in keys:
+                if key in self.keys() and key in other.keys():
+                    dictionary[key] = self[key] - other[key]
+                elif key in self.keys():
+                    dictionary[key] = self[key]
+                else:
+                    dictionary[key] = -other[key]
+            return self._instantiate(dictionary, other)
         else:
             return other.__rsub__(self)
 

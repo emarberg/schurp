@@ -140,23 +140,35 @@ def hook_schur(m, n, mu, nu=()):
         dictionary = {}
         for key, val in out.dictionary.items():
             newval = inn * val
-            newval.printer=superprinter
+            newval.printer = superprinter
             dictionary[key] = newval
         out = SymmetricPolynomial(dictionary)
         ans += out
     return ans
 
 
-def supersymmetric_schur(num_variables, mu, nu=()):
-    return hook_schur(num_variables, mu, nu)
+def supersymmetric_schur(m, b, mu, nu=()):
+    return hook_schur(m, n, mu, nu)
 
 
-def hook_grothendieck(num_variables, mu, nu=(), degree_bound=None):
-    pass
+def hook_grothendieck(m, n, mu, nu=(), degree_bound=None):
+    ans = SymmetricPolynomial()
+    for biglam in Partition.subpartitions(mu, nu):
+        inn = SymmetricPolynomial.stable_grothendieck(m, biglam, nu).set_variable(0, 1)
+        for lam in Partition.remove_inner_corners(biglam):
+            out = SymmetricPolynomial.stable_grothendieck(n, mu, lam).set_variable(0, 1)
+            dictionary = {}
+            for key, val in out.dictionary.items():
+                newval = inn * val
+                newval.printer = superprinter
+                dictionary[key] = newval
+            out = SymmetricPolynomial(dictionary)
+            ans += out
+    return ans
 
 
-def supersymmetric_grothendieck(num_variables, mu, nu=(), degree_bound=None):
-    return hook_grothendieck(num_variables, mu, nu, degree_bound)
+def supersymmetric_grothendieck(m, n, mu, nu=(), degree_bound=None):
+    return hook_grothendieck(m, n, mu, nu, degree_bound)
 
 
 

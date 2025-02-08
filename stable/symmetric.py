@@ -297,6 +297,12 @@ class SymmetricPolynomial(Vector):
             ans += mon.polynomial(variable) * coeff
         return ans
 
+    def superpolynomial(self):
+        ans = Polynomial()
+        for mon, coeff in self.items():
+            ans += mon.polynomial('x') * coeff.polynomial('y')
+        return ans
+
     def truncate(self, degree_bound):
         return SymmetricPolynomial({
             mon: coeff

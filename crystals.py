@@ -429,8 +429,11 @@ class AbstractCrystalMixin:
         else:
             highest_b = [highest_b]
 
-        assert len(highest_a) == 1 or len(highest_b) == 1
         if len(highest_a) != len(highest_b):
+            return None
+
+        # could do better here
+        if len(highest_a) > 1 and len(highest_b) > 1:
             return None
 
         highest_a = highest_a[0]
