@@ -347,7 +347,7 @@ class Tableau:
                     continue
                 else:
                     return None
-            count_semistandard_super None
+            return None
 
         index = index if index > 0 else (index - 1)
         signature = self.sqrt_signature(self, boxes, index)

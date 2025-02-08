@@ -87,7 +87,7 @@ class SymmetricMonomial:
         return ans
 
     def symmetric_polynomial(self, coefficient=1):
-        return SymmetricPolynomial({self: coefficient}, printer=lambda x: str(x) if x else '')
+        return SymmetricPolynomial({self: coefficient}, printer=lambda x: str(x) if x else '1')
 
     def __pow__(self, other):
         assert type(other) == int and other >= 0
