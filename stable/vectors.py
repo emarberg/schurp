@@ -173,7 +173,7 @@ class Vector:
                     dictionary[key] = -other[key]
             return self._instantiate(dictionary, other)
         else:
-            return other.__rsub__(self)
+            raise Exception
 
     def __mul__(self, other):
         if type(other) in [int, Polynomial]:

@@ -15,8 +15,8 @@ SCHUR_S_CACHE = {}
 SCHUR_Q_CACHE = {}
 SCHUR_P_CACHE = {}
 
-# HOOK_SCHUR_CACHE = {}
-# HOOK_GROTHENDIECK_CACHE = {}
+HOOK_SCHUR_CACHE = {}
+HOOK_GROTHENDIECK_CACHE = {}
 
 STABLE_GROTHENDIECK_CACHE = {}
 STABLE_GROTHENDIECK_S_CACHE = {}
@@ -361,6 +361,27 @@ class SymmetricPolynomial(Vector):
         return cls._vectorize(num_variables, tableaux)
 
     @classmethod
+    def hook_schur(cls, m, n, mu, nu=()):  # noqa
+        return cls._hook_schur(m, n, mu, nu)
+
+    @cached_value(HOOK_SCHUR_CACHE)
+    def _hook_schur(cls, m, n, mu, nu=()):
+        ans = cls()
+        mu_t = Partition.transpose(mu)
+        for lam in Partition.subpartitions(mu, nu):
+            lam_t = Partition.transpose(lam)
+            inn = cls.schur(m, lam, nu)
+            out = cls.schur(n, mu_t, lam_t)
+            dictionary = {}
+            for key, val in out.dictionary.items():
+                newval = inn * val
+                newval.printer = superprinter
+                dictionary[key] = newval
+            out = cls(dictionary)
+            ans += out
+        return ans
+
+    @classmethod
     def schur_s(cls, num_variables, mu, nu=()):  # noqa
         return cls._schur_s(num_variables, mu, nu)
 
@@ -469,6 +490,29 @@ class SymmetricPolynomial(Vector):
     def _stable_grothendieck(cls, num_variables, mu, nu, degree_bound):  # noqa
         tableaux = Tableau.count_semistandard_setvalued(num_variables, mu, nu)
         return BETA**(sum(nu) - sum(mu)) * cls._vectorize(num_variables, tableaux, BETA, degree_bound)
+
+    @classmethod
+    def hook_grothendieck(cls, m, n, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
+        return cls._hook_grothendieck(m, n, mu, nu, degree_bound)
+
+    @cached_value(HOOK_GROTHENDIECK_CACHE)
+    def _hook_grothendieck(cls, m, n, mu, nu=(), degree_bound=None):
+        mu_t = Partition.transpose(mu)
+        ans = cls()
+        for biglam in Partition.subpartitions(mu, nu):
+            inn = cls.stable_grothendieck(m, biglam, nu).set_variable(0, 1)
+            for lam in Partition.remove_inner_corners(biglam):
+                lam_t = Partition.transpose(lam)
+                out = cls.stable_grothendieck(n, mu_t, lam_t).set_variable(0, 1)
+                dictionary = {}
+                for key, val in out.dictionary.items():
+                    newval = inn * val
+                    newval.printer = superprinter
+                    dictionary[key] = newval
+                out = cls(dictionary)
+                ans += out
+        return ans
 
     @classmethod
     def negate_beta(cls, ans):
@@ -607,12 +651,62 @@ class SymmetricPolynomial(Vector):
     @classmethod
     def _get_term_from_highest_degree(cls, f):
         return max(f.highest_degree_terms())
-        c = f[t]
-        return t, c
 
     @classmethod
     def schur_expansion(cls, f):
         return cls._expansion(f, cls.schur, cls._get_term_from_lowest_degree)
+
+    @classmethod
+    def _super_expansion(cls, f, function):
+        def get_rank(t):
+            tmp = t[max(t)].lowest_degree_terms()
+            m = max(tmp).n
+            c = tmp[max(tmp)]
+            n = max(t).n
+            return (m, n, c)
+
+        def get_index(t):
+            nu = Partition.transpose(max(t).mu)
+            mu = max(t[max(t)].lowest_degree_terms()).mu
+            return tuple(sorted(nu + mu, reverse=True))
+
+        if f:
+            t = f.lowest_degree_terms()
+            m, n, c = get_rank(t)
+            mu = get_index(t)
+            
+            g = function(m, n, mu)
+            assert get_rank(g.lowest_degree_terms()) == (m, n, 1)
+            ans = cls._super_expansion(f - c * g, function)
+            ans += Vector({mu: c})
+
+            try:
+                expected = sum(map(lambda xy: function(m, n, xy[0]) * xy[1], ans.items()))
+                assert expected == f
+            except:
+                print(traceback.format_exc())
+                print(function.__name__)
+                print()
+                print('f =', f)
+                print()
+                print('expected =', expected)
+                print()
+                print('ans =', ans)
+                input('\n\n')
+                raise Exception
+
+            ans.sorter = lambda tup: (sum(tup), tup)
+            return ans
+        else:
+            return Vector()
+
+    @classmethod
+    def hook_schur_expansion(cls, f):
+        return cls._super_expansion(f, cls.hook_schur)
+
+    @classmethod
+    def hook_grothendieck_expansion(cls, f):
+        return cls._super_expansion(f, cls.hook_grothendieck)
 
     @classmethod
     def omega_schur_expansion(cls, f):

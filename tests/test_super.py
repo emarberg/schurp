@@ -3,7 +3,61 @@ from crystals import(
     SuperGLCrystal,
 )
 from stable.symmetric import SymmetricPolynomial
-from stable.utils import hs, HG
+from stable.utils import hs, HG, hs_expansion, HG_expansion
+from stable.vectors import Vector
+
+
+def test_sqrt_super_crystals(m=3, n=3, k=3):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            b = SuperGLCrystal.standard_sqrtcrystal(i, j)
+            for l in range(1, k + 1):
+                for comp in b.get_components():
+                    ch = SymmetricPolynomial.from_super_polynomial(comp.character())
+                    expand = HG_expansion(ch)
+                    print('m =', i, 'n =', j, 'k =', l, ': ch( component of len', len(comp), ') =', expand)
+                    assert min(expand.values()) > 0
+                if l < k:
+                    b = b.tensor(b)
+            print()
+
+
+def test_super_crystals(m=3, n=3, k=3):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            b = SuperGLCrystal.standard_object(i, j)
+            for l in range(1, k + 1):
+                for comp in b.get_components():
+                    ch = SymmetricPolynomial.from_super_polynomial(comp.character())
+                    expand = hs_expansion(ch)
+                    print('m =', i, 'n =', j, 'k =', l, ': ch( component of len', len(comp), ') =', expand)
+                    assert min(expand.values()) > 0
+                    assert len(expand) == 1
+                    assert list(expand.values()) == [1]
+                if l < k:
+                    b = b.tensor(b)
+            print()
+
+
+
+def test_hook_schur_expansion(m=4, n=4):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            print('m =', i, 'n =', j)
+            one = hs(i, j, (1,))
+            two = hs(i, j, (1, 1)) + hs(i, j, (2,))
+            hs_expansion(one) == Vector({(1,): 1})
+            hs_expansion(two) == Vector({(1,1): 1, (2,): 1})
+
+
+def test_hook_grothendieck_expansion(m=4, n=4):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            print('m =', i, 'n =', j)
+            one = HG(i, j, (1,))
+            two = HG(i, j, (1, 1)) + HG(i, j, (2,))
+            HG_expansion(one) == Vector({(1,): 1})
+            HG_expansion(two) == Vector({(1,1): 1, (2,): 1, (2, 1): 1})
 
 
 def test_hook_schur(m=4, n=4):

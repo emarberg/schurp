@@ -4,6 +4,9 @@ class HashableDict(dict):
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
 
+    def __lt__(self, other):
+        return tuple(sorted(self.items())) < tuple(sorted(other.items()))
+
     def degree(self):
         d = 0
         for i in self:
