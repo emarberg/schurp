@@ -64,11 +64,13 @@ class AbstractCrystalMixin:
     def index_printer(self, i, primed=False):
         return str(i)
 
-    def draw(self, extended=(), highlighted_nodes=(), tex=False, exclude=False, node_width=0.0, node_height=0.0, neato=False):
+    def draw(self, extended=None, highlighted_nodes=(), tex=False, exclude=False, node_width=0.0, node_height=0.0, neato=False):
         if type(extended) == bool:
-            extended_operators = self.extended_indices if extended else ()
+            operators = set(self.provided_operators) | set(self.extended_indices if extended else ())
+        elif extended is None:
+            operators = self.provided_operators
         else:
-            extended_operators = extended
+            operators = extended
 
         def tex_tuple(n):
             parts = []
@@ -123,10 +125,12 @@ class AbstractCrystalMixin:
                     s += ['    "%s";' % printer(x)]
         #
         for v in self:
-            for i in set(self.provided_operators) | set(extended_operators):
+            for i in set(operators):
                 w = self.f_operator(i, v)
                 if w is None:
                     continue
+                # if i < 0 and not self.is_highest_weight(w, range(1, -i)):
+                #    continue
                 if not exclude or (v in highlighted_nodes and w in highlighted_nodes):
                     if tex:
                         cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal" if i == 3 else "black"
@@ -137,18 +141,6 @@ class AbstractCrystalMixin:
                         # cstr = "blue" if i in [-1, 1] else "red" if i == 2 else "teal" if i == 3 else "black"
                         istr = self.index_printer(i)
                         s += ['    "%s" -> "%s" [label="%s",color="%s"];' % (printer(v), printer(w), istr, cstr)]
-                #
-                # if i < 0 and extended:
-                #     w = self.fprime_operator(i, v)
-                #     if w is not None and (not exclude or (v in highlighted_nodes and w in highlighted_nodes)):
-                #         if tex:
-                #             cstr = "blue" if i == -1 else "red" if i == -2 else "teal"
-                #             style = "dashed"
-                #             s += ['    "%s" -> "%s" [style="%s",color="%s"];' % (printer(v), printer(w), style, cstr)]
-                #         else:
-                #             istr = self.index_printer(i, primed=True)
-                #             s += ['    "%s" -> "%s" [label="%s"];' % (printer(v), printer(w), istr)]
-                #
         s += ['}']
         s = '\n'.join(s)
         #
@@ -308,11 +300,12 @@ class AbstractCrystalMixin:
     def get_lowest_weight_multiplicities(self):
         return {k: len(v) for k, v in self.group_lowest_weights().items()}
 
-    def is_highest_weight(self, v):
-        return all(self.e_operator(i, v) is None for i in self.extended_indices)
+    def is_highest_weight(self, v, indices=None):
+        indices = self.extended_indices if indices is None else indices
+        return all(self.e_operator(i, v) is None for i in indices)
 
-    def get_highest_weights(self):
-        return [(v, self.weight(v)) for v in self if self.is_highest_weight(v)]
+    def get_highest_weights(self, indices=None):
+        return [(v, self.weight(v)) for v in self if self.is_highest_weight(v, indices)]
 
     def group_highest_weights(self):
         ans = {}
