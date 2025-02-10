@@ -1089,9 +1089,9 @@ class SuperGLCrystal(AbstractCrystalMixin):
             w = self.weight(b)
             mon = X(0)**0
             for i in range(1, self.rank_m + 1):
-                mon *= Y(-i)**w[self.rank_m - i]
+                mon *= X(i)**w[self.rank_m - i]
             for i in range(1, self.rank_n + 1):
-                mon *= X(i)**w[self.rank_m + i - 1]
+                mon *= Y(-i)**w[self.rank_m + i - 1]
             ans += mon
         return ans
 

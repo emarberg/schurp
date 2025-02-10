@@ -373,12 +373,11 @@ class SymmetricPolynomial(Vector):
             inn = cls.schur(m, lam, nu)
             out = cls.schur(n, mu_t, lam_t)
             dictionary = {}
-            for key, val in out.dictionary.items():
-                newval = inn * val
+            for key, val in inn.dictionary.items():
+                newval = out * val
                 newval.printer = superprinter
                 dictionary[key] = newval
-            out = cls(dictionary)
-            ans += out
+            ans += cls(dictionary)
         return ans
 
     @classmethod
@@ -506,12 +505,11 @@ class SymmetricPolynomial(Vector):
                 lam_t = Partition.transpose(lam)
                 out = cls.stable_grothendieck(n, mu_t, lam_t).set_variable(0, 1)
                 dictionary = {}
-                for key, val in out.dictionary.items():
-                    newval = inn * val
+                for key, val in inn.dictionary.items():
+                    newval = out * val
                     newval.printer = superprinter
                     dictionary[key] = newval
-                out = cls(dictionary)
-                ans += out
+                ans += cls(dictionary)
         return ans
 
     @classmethod
@@ -660,15 +658,15 @@ class SymmetricPolynomial(Vector):
     def _super_expansion(cls, f, function):
         def get_rank(t):
             tmp = t[max(t)].lowest_degree_terms()
-            m = max(tmp).n
+            n = max(tmp).n
             c = tmp[max(tmp)]
-            n = max(t).n
+            m = max(t).n
             return (m, n, c)
 
         def get_index(t):
             nu = Partition.transpose(max(t).mu)
             mu = max(t[max(t)].lowest_degree_terms()).mu
-            return tuple(sorted(nu + mu, reverse=True))
+            return Partition.transpose(sorted(nu + mu, reverse=True))
 
         if f:
             t = f.lowest_degree_terms()

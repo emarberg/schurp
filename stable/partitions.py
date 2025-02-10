@@ -11,7 +11,7 @@ DECOMPOSE_VSTRIP_CACHE = {}
 
 class Partition:
 
-    FRENCH = True
+    FRENCH = False
 
     @classmethod
     def stabilizer_order(cls, mu):

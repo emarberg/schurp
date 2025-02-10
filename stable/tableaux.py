@@ -5,7 +5,7 @@ from collections import defaultdict
 from operator import itemgetter
 import itertools
 
-FRENCH = True
+FRENCH = False
 
 SETVALUED_DECOMPOSITION_CACHE = {}
 SETVALUED_DECOMPOSITION_SLOW_CACHE = {}

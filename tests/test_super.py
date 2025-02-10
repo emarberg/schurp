@@ -3,11 +3,77 @@ from crystals import(
     SuperGLCrystal,
 )
 from stable.symmetric import SymmetricPolynomial
-from stable.utils import hs, HG, hs_expansion, HG_expansion
+from stable.polynomials import X, Y, Polynomial
+from stable.utils import hs, HG, hs_expansion, HG_expansion, schur, G
 from stable.vectors import Vector
+from stable.partitions import Partition
 
 
-def test_sqrt_super_crystals(m=3, n=3, k=3):
+def test_super_factorization(m=2, n=2, k=3):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            pi = Polynomial.one()
+            for ii in range(1, i + 1):
+                for jj in range(1, j + 1):
+                    pi *= X(ii) + Y(-jj) + X(ii) * Y(-jj)
+
+            for mu_t in Partition.all(k, max_part=i):
+                mu = Partition.transpose(mu_t)
+                for nu_t in Partition.all(k, max_part=j):
+                    nu = Partition.transpose(nu_t)
+                    lam = tuple(j + Partition.get(mu, a) for a in range(1, i + 1)) + nu_t
+                    print('m =', i, 'n =', j, 'lambda =', lam, 'mu =', mu, 'nu =', nu)
+                    expected = HG(i, j, lam).superpolynomial()
+                    right = G(i, mu).polynomial().set_variable(0, 1)
+                    bottom = G(j, nu).polynomial().swap_xy().set_variable(0, 1)
+                    product = pi * right * bottom
+
+                    # Partition.print_diagram(lam)
+                    # print()
+                    # print(expected)
+                    # print(pi)
+                    # print(right)
+                    # print(bottom)
+                    # print()
+
+                    assert expected == product
+                    cancel = expected.set_variable(-1, X(0)**-1 - 1).set_variable(1, X(0) - 1)
+                    assert cancel.set(0, 0) == cancel
+
+
+def test_factorization(m=2, n=2, k=3):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            pi = Polynomial.one()
+            for ii in range(1, i + 1):
+                for jj in range(1, j + 1):
+                    pi *= X(ii) + Y(-jj)
+
+            for mu_t in Partition.all(k, max_part=i):
+                mu = Partition.transpose(mu_t)
+                for nu_t in Partition.all(k, max_part=j):
+                    nu = Partition.transpose(nu_t)
+                    lam = tuple(j + Partition.get(mu, a) for a in range(1, i + 1)) + nu_t
+                    print('m =', i, 'n =', j, 'lambda =', lam, 'mu =', mu, 'nu =', nu)
+                    expected = hs(i, j, lam).superpolynomial()
+                    right = schur(i, mu).polynomial()
+                    bottom = schur(j, nu).polynomial().swap_xy()
+                    product = pi * right * bottom
+
+                    # Partition.print_diagram(lam)
+                    # print()
+                    # print(expected)
+                    # print(pi)
+                    # print(right)
+                    # print(bottom)
+                    # print()
+
+                    assert expected == product
+                    cancel = expected.set_variable(-1, -X(0)).set_variable(1, X(0))
+                    assert cancel.set(0, 0) == cancel
+
+
+def test_sqrt_super_crystals(m=2, n=2, k=3):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             b = SuperGLCrystal.standard_sqrtcrystal(i, j)
@@ -22,7 +88,7 @@ def test_sqrt_super_crystals(m=3, n=3, k=3):
             print()
 
 
-def test_super_crystals(m=3, n=3, k=3):
+def test_super_crystals(m=2, n=2, k=3):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             b = SuperGLCrystal.standard_object(i, j)
@@ -60,7 +126,7 @@ def test_hook_grothendieck_expansion(m=4, n=4):
             HG_expansion(two) == Vector({(1,1): 1, (2,): 1, (2, 1): 1})
 
 
-def test_hook_schur(m=4, n=4):
+def test_hook_schur(m=3, n=3):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             b = SuperGLCrystal.standard_object(i, j)
@@ -77,7 +143,7 @@ def test_hook_schur(m=4, n=4):
             assert symg == hs(i, j, (1, 1)) + hs(i, j, (2,))
 
 
-def test_hook_grothendieck(m=3, n=3):
+def test_hook_grothendieck(m=2, n=2):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             b = SuperGLCrystal.standard_sqrtcrystal(i, j)

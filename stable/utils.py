@@ -147,6 +147,7 @@ GE_expansion = SymmetricPolynomial.ktheoretic_e_expansion
 m = SymmetricPolynomial.monomial
 p = SymmetricPolynomial.powersum
 
+schur = SymmetricPolynomial.schur
 s = SymmetricPolynomial.schur
 P = SymmetricPolynomial.schur_p
 Q = SymmetricPolynomial.schur_q
