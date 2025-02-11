@@ -7,15 +7,118 @@ from stable.polynomials import X, Y, Polynomial
 from stable.utils import hs, HG, hs_expansion, HG_expansion, schur, G
 from stable.vectors import Vector
 from stable.partitions import Partition
+from stable.permutations import Permutation
+
+
+def test_super_sergeev_pragacz(m=2, n=2, k=3):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+
+            D = Polynomial.one()
+            for a in range(1, i):
+                for b in range(a + 1, i + 1):
+                    D *= X(a) - X(b)
+            for a in range(1, j):
+                for b in range(a + 1, j + 1):
+                    D *= Y(-a) - Y(-b)
+
+            for kappa in Partition.subpartitions(i * (j,)):
+                kappa_t = Partition.transpose(kappa)
+
+                pi = Polynomial.one()
+                for (a,b) in Partition.shape(kappa):
+                    pi *= X(a) + Y(-b) + X(a) * Y(-b)
+
+                for mu_t in Partition.all(k, max_part=len([a for a in kappa if a == j])):
+                    mu = Partition.transpose(mu_t)
+                    for nu_t in Partition.all(k, max_part=len([a for a in kappa_t if a == i])):
+                        nu = Partition.transpose(nu_t)
+                        lam = tuple(Partition.get(kappa, a) + Partition.get(mu, a) for a in range(1, i + 1)) + nu_t
+                        print('m =', i, 'n =', j, 'lambda =', lam, 'kappa =', kappa, 'mu =', mu, 'nu =', nu)
+
+                        expected = HG(i, j, lam).superpolynomial() * D
+
+                        one = Polynomial.from_tuple([0] + [i - t + Partition.get(mu, t) for t in range(1, i + 1)])
+                        for a in range(1, i + 1):
+                            one *= (1 + X(a))**(a-1)
+
+                        two = Polynomial.from_tuple([0] + [j - t + Partition.get(nu, t) for t in range(1, j + 1)]).swap_xy()
+                        for b in range(1, j + 1):
+                            one *= (1 + Y(-b))**(b-1)
+
+                        product = pi * one * two
+
+                        summation = Polynomial.zero()
+                        for v in Permutation.all(i):
+                            for w in Permutation.all(j):
+                                summation += (-1)**(len(v) + len(w)) * product.permute_x(v).permute_y(w)
+
+                        Partition.print_diagram(lam)
+                        if expected != summation:
+                            print()
+                            print(expected)
+                            print()
+                            print(summation)
+                        print()
+
+                        assert expected == summation
+
+
+def test_sergeev_pragacz(m=2, n=2, k=3):
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+
+            D = Polynomial.one()
+            for a in range(1, i):
+                for b in range(a + 1, i + 1):
+                    D *= X(a) - X(b)
+            for a in range(1, j):
+                for b in range(a + 1, j + 1):
+                    D *= Y(-a) - Y(-b)
+
+            for kappa in Partition.subpartitions(i * (j,)):
+                kappa_t = Partition.transpose(kappa)
+
+                pi = Polynomial.one()
+                for (a,b) in Partition.shape(kappa):
+                    pi *= X(a) + Y(-b)
+
+                for mu_t in Partition.all(k, max_part=len([a for a in kappa if a == j])):
+                    mu = Partition.transpose(mu_t)
+                    for nu_t in Partition.all(k, max_part=len([a for a in kappa_t if a == i])):
+                        nu = Partition.transpose(nu_t)
+                        lam = tuple(Partition.get(kappa, a) + Partition.get(mu, a) for a in range(1, i + 1)) + nu_t
+                        print('m =', i, 'n =', j, 'lambda =', lam, 'kappa =', kappa, 'mu =', mu, 'nu =', nu)
+
+                        expected = hs(i, j, lam).superpolynomial() * D
+
+                        one = Polynomial.from_tuple([0] + [i - t + Partition.get(mu, t) for t in range(1, i + 1)])
+                        two = Polynomial.from_tuple([0] + [j - t + Partition.get(nu, t) for t in range(1, j + 1)]).swap_xy()
+                        product = pi * one * two
+
+                        summation = Polynomial.zero()
+                        for v in Permutation.all(i):
+                            for w in Permutation.all(j):
+                                summation += (-1)**(len(v) + len(w)) * product.permute_x(v).permute_y(w)
+
+                        Partition.print_diagram(lam)
+                        if expected != summation:
+                            print()
+                            print(expected)
+                            print()
+                            print(summation)
+                        print()
+
+                        assert expected == summation
 
 
 def test_super_factorization(m=2, n=2, k=3):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             pi = Polynomial.one()
-            for ii in range(1, i + 1):
-                for jj in range(1, j + 1):
-                    pi *= X(ii) + Y(-jj) + X(ii) * Y(-jj)
+            for a in range(1, i + 1):
+                for b in range(1, j + 1):
+                    pi *= X(a) + Y(-b) + X(a) * Y(-b)
 
             for mu_t in Partition.all(k, max_part=i):
                 mu = Partition.transpose(mu_t)
