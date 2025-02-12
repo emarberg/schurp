@@ -1348,8 +1348,8 @@ class Permutation:
     def __repr__(self):
         sep = '' if len(self.oneline) < 10 else ','
         ans = sep.join([str(i) for i in self.oneline])
-        return ans if ans else '()'
-        # return self.cycle_repr()
+        #return ans if ans else '()'
+        return self.cycle_repr()
 
     def oneline_repr(self, n):
         assert n >= len(self.oneline)

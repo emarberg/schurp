@@ -106,7 +106,7 @@ class Vector:
         return Vector(dictionary={k: v // c for k, v in self.items()}, printer=self.printer)
 
     def is_scalar(self, other):
-        return type(other) == int or str(type(other)) == 'MPolynomial'
+        return type(other) == int or type(other).__name__ == 'MPolynomial'
 
     def is_zero(self):
         return len(self) == 0

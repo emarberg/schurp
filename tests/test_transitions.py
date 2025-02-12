@@ -30,6 +30,8 @@ X(0)**3 * Grothendieck.get(Permutation(3,4,2,5,1)) + \
 X(0)**4 * Grothendieck.get(Permutation(3,4,5,2,1))
 """
 
+beta = X(0)
+
 
 def grothendieck_transition_terms(w, j):
     """
@@ -42,7 +44,6 @@ def grothendieck_transition_terms(w, j):
     and a_p < ... < a_2<a_1 < k < b_q < ... < b_2 < b_1, and the length
     increases by exactly one upon multiplication by each transposition.
     """
-    beta = X(0)
     n = max(j, len(w.oneline))
     yield w, beta**0
     queue = [(w, j - 1, 0)]
@@ -87,7 +88,6 @@ def fpf_transition_upper_terms(w, j):
             return trim(z * Permutation.s_i(m - 1))
         return z
 
-    beta = X(0)
     n = len(w.oneline)
     yield trim(w), beta**0
 
@@ -108,13 +108,44 @@ def fpf_transition_upper_terms(w, j):
         queue.append((y, k - 1))
 
 
-def fpf_transition_lower_terms(w, j):
-    assert j < w(j)
-
-    beta = X(0)
+def inv_transition_upper_terms(w, j, n=None):
+    seen = {w}
+    
+    if n is None:
+        n = max(j, len(w.oneline))
     yield w, beta**0
 
+    queue = [(w, n + 2)]
+    while queue:
+        y, k = queue[0]
+        queue = queue[1:]
+
+        if k <= j:
+            continue
+
+        z = y.tau_ij(j, k)
+        repeats = (y(j) == j < y(k) < k and z == y.tau_ij(j, y(k)))
+        
+        if not repeats and z.involution_length() == y.involution_length() + 1:    
+            assert z not in seen
+            seen.add(z)
+
+            yield z, beta ** (z.involution_length() - w.involution_length())
+            queue.append((z, k - 1))
+
+            if z.number_two_cycles() < y.number_two_cycles():
+                print('RHS *', repeats, y, j, k, z)
+                # queue.append((z, y(k), k - 1))
+            
+        queue.append((y, k - 1))
+
+
+def fpf_transition_lower_terms(w, j):
+    assert j < w(j)
+    
+    yield w, beta**0
     queue = [(w, 1)]
+
     while queue:
         y, k = queue[0]
         queue = queue[1:]
@@ -130,6 +161,33 @@ def fpf_transition_lower_terms(w, j):
         queue.append((y, k + 1))
 
 
+def inv_transition_lower_terms(w, j):
+    seen = {w}
+
+    yield w, beta**0
+    queue = [(w, 1)]
+
+    while queue:
+        y, k = queue[0]
+        queue = queue[1:]
+
+        if k >= j:
+            continue
+
+        z = y.tau_ij(k, j)
+        repeats = (y(j) == j > y(k) > k and z == y.tau_ij(y(k), j))
+
+        if not repeats and z.involution_length() == y.involution_length() + 1:
+            if z.number_two_cycles() < y.number_two_cycles():
+                print('LHS *', y, y.cycle_repr(), k, j, z, z.cycle_repr())
+            assert z not in seen
+            seen.add(z)
+            
+            yield z, beta ** (z.involution_length() - w.involution_length())
+            queue.append((z, k + 1))
+        queue.append((y, k + 1))
+
+
 def multiply_via_grothendieck_transitions(w, j):
     if type(w) == Permutation:
         w = Vector({w: X(0)**0})
@@ -141,8 +199,21 @@ def multiply_via_grothendieck_transitions(w, j):
     return ans
 
 
+def fpfgroth(y):
+    f = Vector()
+    for w in y.get_symplectic_hecke_atoms():
+        f += Vector({w: beta ** (len(w) - y.fpf_involution_length())})
+    return f
+
+
+def invgroth(y):
+    f = Vector()
+    for w in y.get_involution_hecke_atoms():
+        f += Vector({w: beta ** (len(w) - y.involution_length())})
+    return f
+
+
 def test_fpf_transitions(n=4):
-    beta = X(0)
     for z in Permutation.fpf_involutions(n):
         for j, k in z.cycles:
             print('n =', n)
@@ -153,19 +224,70 @@ def test_fpf_transitions(n=4):
 
             f = Vector()
             for y, c in fpf_transition_lower_terms(z, j):
-                for w in y.get_symplectic_hecke_atoms():
-                    f += Vector({w: c * beta ** (len(w) - y.fpf_involution_length())})
+                f += fpfgroth(y) * c
             f = multiply_via_grothendieck_transitions(f, j)
             f = multiply_via_grothendieck_transitions(f, k)
             print('LHS =', f)
 
             g = Vector()
             for y, c in fpf_transition_upper_terms(z, k):
-                for w in y.get_symplectic_hecke_atoms():
-                    g += Vector({w: c * beta ** (len(w) - y.fpf_involution_length())})
+                g += fpfgroth(y) * c
             print('RHS =', g)
             print()
 
             print()
             assert f == g
+
+
+def decomposeinv(vec):
+    ans = Vector()
+    if vec:
+        wl = [(w.involution_length(), w) for w in vec]
+        w = sorted(wl)[0][1]
+        z = w.inverse() % w
+        ans = Vector({z: vec[w]})
+        vec -= invgroth(z) * vec[w]
+        ans += decomposeinv(vec)
+    return ans
+
+
+def test_inv_transitions(n=4):
+    for z in [Permutation(2,1,7,6,5,4,3)]: #Permutation.involutions(n):
+        cyc = [(j, k) for j, k in z.get_two_cycles()] + [(j, j) for j in z.fixed(n + 1)]
+        for j, k in cyc:
+            print('n =', n, 'z =', z, 'j =', j, 'k =', k)
+
+            f = Vector()
+            for y, c in inv_transition_lower_terms(z, j):
+                f += invgroth(y) * c
+            f = multiply_via_grothendieck_transitions(f, j)
+            if j < k:
+                f = multiply_via_grothendieck_transitions(f, k)
+            try:
+                decomposeinv(f)
+            except:
+                raise Exception
+
+            g = Vector()
+            for y, c in inv_transition_upper_terms(z, k):
+                g += invgroth(y) * c
+            
+            if f != g:
+                print()
+                # print('LHS =', f)
+                # print()
+                # print('RHS =', g)
+                # print()
+                try:
+                    dec = decomposeinv(f - g)
+                    for w, coeff in sorted(dec.items(), key=lambda a: a[0].involution_length()):
+                        print('  ', w, coeff)
+                except:
+                    print('diff =', f - g)
+                    return f - g
+                print()
+                input('?')
+            print()
+
+            #assert f == g
 
