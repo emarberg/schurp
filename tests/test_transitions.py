@@ -108,38 +108,6 @@ def fpf_transition_upper_terms(w, j):
         queue.append((y, k - 1))
 
 
-def inv_transition_upper_terms(w, j, n=None):
-    seen = {w}
-    
-    if n is None:
-        n = max(j, len(w.oneline))
-    yield w, beta**0
-
-    queue = [(w, n + 2)]
-    while queue:
-        y, k = queue[0]
-        queue = queue[1:]
-
-        if k <= j:
-            continue
-
-        z = y.tau_ij(j, k)
-        repeats = (y(j) == j < y(k) < k and z == y.tau_ij(j, y(k)))
-        
-        if not repeats and z.involution_length() == y.involution_length() + 1:    
-            assert z not in seen
-            seen.add(z)
-
-            yield z, beta ** (z.involution_length() - w.involution_length())
-            queue.append((z, k - 1))
-
-            if z.number_two_cycles() < y.number_two_cycles():
-                print('RHS *', repeats, y, j, k, z)
-                # queue.append((z, y(k), k - 1))
-            
-        queue.append((y, k - 1))
-
-
 def fpf_transition_lower_terms(w, j):
     assert j < w(j)
     
@@ -161,12 +129,45 @@ def fpf_transition_lower_terms(w, j):
         queue.append((y, k + 1))
 
 
-def inv_transition_lower_terms(w, j):
-    seen = {w}
+def inv_transition_upper_terms(w, j, n=None, forbidden=()):
+    if n is None:
+        n = max(j, len(w.oneline)) + 1
+        yield w, beta**0
 
-    yield w, beta**0
-    queue = [(w, 1)]
+    queue = [(w, n)]
+    while queue:
+        y, k = queue[0]
+        queue = queue[1:]
 
+        if k <= j:
+            continue
+
+        z = y.tau_ij(j, k)
+        repeats = (y(j) == j < y(k) < k and z == y.tau_ij(j, y(k)))
+        
+        if k not in forbidden and not repeats and z.involution_length() == y.involution_length() + 1:    
+            yield z, beta ** (z.involution_length() - w.involution_length())
+            queue.append((z, k - 1))
+
+            if z.number_two_cycles() < y.number_two_cycles():
+                extra = tuple(a for a in range(y(k) + 1, k) if y(a) > k)
+                if extra:
+                    print('RHS *', repeats, y, j, k, z, 'forbid =', forbidden + extra)
+                for u, _ in inv_transition_upper_terms(z, y(k), k, forbidden + extra):
+                    if extra:
+                        print('RHS new term:', u)
+                    yield u, beta ** (u.involution_length() - w.involution_length())
+                    queue.append((u, k - 1))
+            
+        queue.append((y, k - 1))
+
+
+def inv_transition_lower_terms(w, j, n=None, forbidden=()):
+    if n is None:
+        yield w, beta**0
+        n = 1
+    
+    queue = [(w, n)]
     while queue:
         y, k = queue[0]
         queue = queue[1:]
@@ -177,14 +178,20 @@ def inv_transition_lower_terms(w, j):
         z = y.tau_ij(k, j)
         repeats = (y(j) == j > y(k) > k and z == y.tau_ij(y(k), j))
 
-        if not repeats and z.involution_length() == y.involution_length() + 1:
-            if z.number_two_cycles() < y.number_two_cycles():
-                print('LHS *', y, y.cycle_repr(), k, j, z, z.cycle_repr())
-            assert z not in seen
-            seen.add(z)
-            
+        if k not in forbidden and not repeats and z.involution_length() == y.involution_length() + 1:
             yield z, beta ** (z.involution_length() - w.involution_length())
             queue.append((z, k + 1))
+
+            if z.number_two_cycles() < y.number_two_cycles():
+                extra = tuple(a for a in range(k + 1, y(k)) if y(a) < k)
+                if extra:
+                    print('LHS *', y, k, j, z, 'forbid =', forbidden + extra)
+                for u, _ in inv_transition_lower_terms(z, y(k), k, forbidden + extra):
+                    if extra:
+                        print('LHS new term:', u)
+                    yield u, beta ** (u.involution_length() - w.involution_length())
+                    queue.append((u, k + 1))
+
         queue.append((y, k + 1))
 
 
@@ -252,7 +259,7 @@ def decomposeinv(vec):
 
 
 def test_inv_transitions(n=4):
-    for z in [Permutation(2,1,7,6,5,4,3)]: #Permutation.involutions(n):
+    for z in Permutation.involutions(n): #[Permutation(2,1,6,8,7,3,5,4)]: #
         cyc = [(j, k) for j, k in z.get_two_cycles()] + [(j, j) for j in z.fixed(n + 1)]
         for j, k in cyc:
             print('n =', n, 'z =', z, 'j =', j, 'k =', k)
