@@ -144,6 +144,16 @@ class Polynomial:
             -i: e for i, e in coeff.items()
         }): val for coeff, val in self.coeffs.items()})
 
+    def permute_x(self, w):
+        return Polynomial({HashableDict({
+            w(i) if i > 0 else i: e for i, e in coeff.items()
+        }): val for coeff, val in self.coeffs.items()})
+
+    def permute_y(self, w):
+        return Polynomial({HashableDict({
+            w(i) if i < 0 else i: e for i, e in coeff.items()
+        }): val for coeff, val in self.coeffs.items()})
+
     def set_variable(self, i, e):
         return self.substitute(i, e)
 
