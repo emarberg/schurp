@@ -65,7 +65,7 @@ def shifted_hecke_words(s):
     m = len(s)
     n = max([0] + [v for val in s for v in val])
     return [
-        tuple(m + 1 - j for j in range(1, m + 1) if i in s[j - 1])
+        tuple(j - m - 1 for j in range(1, m + 1) if i in s[j - 1])
         for i in range(1, n + 1)
     ]
 
@@ -76,6 +76,7 @@ def shifted_hecke(s):
 
 
 def test_svwords_shifted_hecke(m=3, n=3):
+    small = list(range(1, n))
     words = AbstractQCrystal.sqrtcrystal_of_words(m, n)
     for b in words.get_components():
         print()
@@ -90,15 +91,15 @@ def test_svwords_shifted_hecke(m=3, n=3):
             qs.append((s, q))
         for s, q in qs:
             # print(q)
-            if all(set(v) == ({i} if i == j else {-i}) for (i, j, v) in q):
-                print('special s:', b.is_highest_weight(s), s)
+            if all(set(v) == {i} for (i, j, v) in q):
+                print('special s:', b.is_highest_weight(s), b.is_highest_weight(s, small), s)
                 print(shifted_hecke_words(s))
                 print(q)
                 special.add((s, q))
             if b.is_highest_weight(s):
-                #print('highest s:', s)
-                #print(shifted_hecke_words(s))
-                #print(q)
+                print('highest s:', s)
+                print(shifted_hecke_words(s))
+                print(q)
                 highest.add(s)
         print()
         print('***')
@@ -110,11 +111,11 @@ def test_svwords_shifted_hecke(m=3, n=3):
         ch = GP_expansion_no_beta(ch)
         print('ch =', ch)
         expected = Vector()
-        #for p in ps:
-        #    expected += Vector({p.shape(): 1})
-        for s, q in special:
-            if b.is_highest_weight(s):
-                expected += Vector({q.shape(): 1})
+        for p in ps:
+            expected += Vector({p.shape(): 1})
+        #for s, q in special:
+        #    if b.is_highest_weight(s, small):
+        #        expected += Vector({q.shape(): 1})
         if expected != ch:
             input('?')
 
