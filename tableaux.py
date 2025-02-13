@@ -2410,7 +2410,6 @@ class Tableau:
 
     @classmethod
     def from_svword(cls, s):
-        # the svword is inputted as a one-row svtableau
         m = len(s)
         rows = []
         n = max([0] + [x for subset in s for x in subset])

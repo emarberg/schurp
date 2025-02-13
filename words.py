@@ -856,20 +856,14 @@ class Word:
             mapping[(i, j)] = v
         return Tableau(mapping), q
 
-    def shifted_hecke_insert(self, verbose=False):
+    def shifted_hecke_insert(self, index=None):
         from stable.tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
-            i = i_zerobased + 1
-            j, column_dir, p = p.shifted_hecke_insert(MarkedNumber(a), verbose=verbose)
-
-            if column_dir:
-                v = MarkedNumber(-i)
-            else:
-                v = MarkedNumber(i)
-            for k, l in p.shape():
-                if (k, l) not in q.shape():
-                    q = q.set(k, l, v)
+            i = (i_zerobased + 1) if index is None else index[i_zerobased]
+            p, (x, y, sgn) = p.shifted_hecke_insert(a)
+            q = q.add(x, y, i * sgn)
+            assert x <= y
             assert p.shape() == q.shape()
         return p, q
 
@@ -1095,11 +1089,9 @@ def row_hecke_insert(*words):
 
 
 def shifted_hecke_insert(*words):
-    from stable.tableaux import Tableau
-    w, mapping = get_insertion_mapping(words)
-    p, q = w.shifted_hecke_insert(verbose=False)
-    return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})
-
+    w = [a for i in range(len(words)) for a in words[i]]
+    i = [i + 1 for i in range(len(words)) for _ in words[i]]
+    return Word(*w).shifted_hecke_insert(i)
 
 def primed_sw_insert(*words):
     from tableaux import Tableau

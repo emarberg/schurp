@@ -85,7 +85,6 @@ class Tableau:
         )
         self._string_array = None
 
-
     @classmethod
     def from_rows(cls, rows, shifted=False):
         mapping = {}
@@ -93,6 +92,16 @@ class Tableau:
             for j in range(len(rows[i])):
                 mapping[(i + 1, j + 1 + (i if shifted else 0))] = rows[i][j]
         return Tableau(mapping)
+
+    @classmethod
+    def from_svword(cls, s):
+        m = len(s)
+        rows = []
+        n = max([0] + [x for subset in s for x in subset])
+        for i in range(1, n + 1):
+            row = [m + 1 - j for j in range(m, 0, -1) if i in s[j - 1]]
+            rows.append(row)
+        return cls.from_rows(rows)
 
     def distribute(self):
         if self.size() == 0:
@@ -2016,39 +2025,67 @@ class Tableau:
                     j += 1
                 return Tableau(boxes), (i, j)
 
-    def shifted_hecke_insert(self, p, j=0, column_dir=False, verbose=True):
-        if p is None:
-            return (j, column_dir, self)
+    def shifted_hecke_insert(self, p):
+        if type(p) in [list, tuple]:
+            ans = self
+            for a in p:
+                ans, end = ans.shifted_hecke_insert(a)
+            return ans, end
 
-        j += 1
-        row, col = self.get_row(j), self.get_column(j)
+        assert all(len(v) == 1 for v in self.boxes.values())
+        boxes = {b: max(v) for (b, v) in self.boxes.items()}
 
-        if verbose:
-            if column_dir:
-                print('Inserting %s into column %s of \n%s\n' % (
-                    str(p),
-                    str(j),
-                    self
-                ))
+        row = 1
+        while True:
+            col = row
+            while (row, col) in boxes and boxes[row, col] <= p:
+                col += 1
+            if (row, col) in boxes:
+                y = boxes[row, col]
+                if boxes.get((row, col - 1), p - 1) < p and boxes.get((row - 1, col), p - 1) < p:
+                    boxes[row, col] = p
+                if row == col or (col == row + 1 and p == boxes[row, row]):
+                    p = y
+                    col = row + 1
+                    break
+                else:
+                    p = y
+                    row += 1
+            elif boxes.get((row, col - 1), p - 1) < p and boxes.get((row - 1, col), p - 1) < p:
+                boxes[row, col] = p
+                return Tableau(boxes), (row, col, 1)
+            elif col == row:
+                i = row - 1
+                j = col
+                while (i, j + 1) in boxes:
+                    j += 1
+                return Tableau(boxes), (i, j, -1)
             else:
-                print('Inserting %s into row %s of \n%s\n' % (
-                    str(p),
-                    str(j),
-                    self
-                ))
+                j = col - 1
+                i = row
+                while (i + 1, j) in boxes:
+                    i += 1
+                return Tableau(boxes), (i, j, 1)
 
-        if column_dir:
-            p, column_dir, col = self.bump(p, column_dir, col)
-            tab = self.replace_column(j, col)
-        else:
-            p, column_dir, row = self.bump(p, column_dir, row)
-            tab = self.replace_row(j, row, shifted=True)
-
-        if tab.is_increasing():
-            return tab.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
-        else:
-            return self.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
-
+        while True:
+            row = 1
+            while (row, col) in boxes and boxes[row, col] <= p:
+                row += 1
+            if (row, col) in boxes:
+                y = boxes[row, col]
+                if boxes.get((row, col - 1), p - 1) < p and boxes.get((row - 1, col), p - 1) < p:
+                    boxes[row, col] = p
+                p = y
+                col += 1
+            elif boxes.get((row, col - 1), p - 1) < p and boxes.get((row - 1, col), p - 1) < p:
+                boxes[row, col] = p
+                return Tableau(boxes), (row, col, -1)
+            else:
+                i = row - 1
+                j = col
+                while (i, j + 1) in boxes:
+                    j += 1
+                return Tableau(boxes), (i, j, -1)
 
 
 class ReversePlanePartition(Tableau):

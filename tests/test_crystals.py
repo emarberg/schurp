@@ -18,7 +18,6 @@ from keys import (
     skew_symmetric_double,
     symmetric_double,
 )
-from words import decomposition_insert, rsk_insert
 from tests.test_keys import try_to_decompose_p, try_to_decompose_q, decompose_p, decompose_q
 from partitions import Partition
 from symmetric import (
@@ -29,7 +28,17 @@ from symmetric import (
 from tableaux import Tableau
 from permutations import Permutation
 from schubert import X
-from words import Word, rsk_insert, weak_eg_insert, eg_insert, fpf_insert, involution_insert
+from words import (
+    Word,
+    rsk_insert,
+    decomposition_insert,
+    weak_eg_insert,
+    eg_insert,
+    fpf_insert,
+    involution_insert,
+    column_hecke_insert,
+    shifted_hecke_insert,
+)
 from keys import decompose_into_keys
 from tests.test_keys import try_to_decompose_q, try_to_decompose_p
 from stable.utils import (
@@ -49,6 +58,88 @@ import subprocess
 PRINT_DIR = "/Users/emarberg/Downloads/"
 FPF_DEMAZURE_TABLEAU_CACHE = {}
 INV_DEMAZURE_TABLEAU_CACHE = {}
+
+
+def shifted_hecke_words(s):
+    s = s.row_reading_word(setwise=True)
+    m = len(s)
+    n = max([0] + [v for val in s for v in val])
+    return [
+        tuple(m + 1 - j for j in range(1, m + 1) if i in s[j - 1])
+        for i in range(1, n + 1)
+    ]
+
+
+def shifted_hecke(s):
+    words = shifted_hecke_words(s)
+    return shifted_hecke_insert(*words)
+
+
+def test_svwords_shifted_hecke(m=3, n=3):
+    words = AbstractQCrystal.sqrtcrystal_of_words(m, n)
+    for b in words.get_components():
+        print()
+        print('component of size', len(b))
+        ps = set()
+        qs = []
+        highest = set()
+        special = set()
+        for s in b:
+            p, q = shifted_hecke(s)
+            ps.add(p)
+            qs.append((s, q))
+        for s, q in qs:
+            # print(q)
+            if all(set(v) == ({i} if i == j else {-i}) for (i, j, v) in q):
+                print('special s:', b.is_highest_weight(s), s)
+                print(shifted_hecke_words(s))
+                print(q)
+                special.add((s, q))
+            if b.is_highest_weight(s):
+                #print('highest s:', s)
+                #print(shifted_hecke_words(s))
+                #print(q)
+                highest.add(s)
+        print()
+        print('***')
+        print()
+        for p in ps:
+            print(p)
+        print()
+        ch = SymmetricPolynomial.from_polynomial(b.character())
+        ch = GP_expansion_no_beta(ch)
+        print('ch =', ch)
+        expected = Vector()
+        #for p in ps:
+        #    expected += Vector({p.shape(): 1})
+        for s, q in special:
+            if b.is_highest_weight(s):
+                expected += Vector({q.shape(): 1})
+        if expected != ch:
+            input('?')
+
+
+def test_svwords_hecke(m=3, n=3):
+    def hecke(s):
+        s = s.row_reading_word(setwise=True)
+        words = [
+            tuple(m + 1 - j for j in range(1, m + 1) if i in s[j - 1])
+            for i in range(1, n + 1)
+        ]
+        return column_hecke_insert(*words)
+
+    words = AbstractGLCrystal.sqrtcrystal_of_words(m, n)
+    for s in words:
+        p, q = hecke(s)
+        assert p == p.from_svword(words.rectify(s).row_reading_word(setwise=True))
+        if words.is_highest_weight(s):
+            print(s)
+            print(p)
+            print(q)
+            print()
+            print('***')
+            print()
+            assert all(v == i for (i, j, vset) in q for v in vset)
 
 
 def test_sqrt_type_c(n=2):
