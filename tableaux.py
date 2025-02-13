@@ -2253,18 +2253,6 @@ class Tableau:
         return ans
 
     @classmethod
-    def _subsets(cls, diff, corners, setvalued):
-        if setvalued:
-            for v in range(2**len(corners)):
-                thisdiff = diff
-                for i in range(len(corners)):
-                    thisdiff = thisdiff if v % 2 == 0 else thisdiff | {corners[i]}
-                    v = v // 2
-                yield thisdiff
-        else:
-            yield diff
-
-    @classmethod
     def shifted_k_flagged(cls, k, mu):  # noqa
         max_entry = max(len(mu), mu[0] if mu else 0) + k
         return {t for t in cls.get_semistandard_shifted(mu, max_entry) if t.is_shifted_k_flagged(k)}
@@ -2275,21 +2263,20 @@ class Tableau:
         return {t for t in cls.semistandard(max_entry, mu) if t.is_k_flagged(k)}
 
     @classmethod
-    def semistandard(cls, max_entry, mu, nu=(), setvalued=False):  # noqa
-        return cls._semistandard(max_entry, mu, nu, setvalued)
+    def semistandard(cls, max_entry, mu, nu=()):  # noqa
+        return cls._semistandard(max_entry, mu, nu)
 
     @cached_value(SEMISTANDARD_CACHE)
-    def _semistandard(cls, max_entry, mu, lam, setvalued):  # noqa
+    def _semistandard(cls, max_entry, mu, lam):  # noqa
         ans = set()
         if mu == lam:
             ans = {Tableau()}
         elif Partition._contains(mu, lam) and max_entry > 0:
             for nu, diff, corners in cls._horizontal_strips(mu, lam):
-                for aug in cls._subsets(diff, corners, setvalued):
-                    for tab in cls._semistandard(max_entry - 1, nu, lam, setvalued):
-                        for (i, j) in aug:
-                            tab = tab.add(i, j, max_entry)
-                        ans.add(tab)
+                for tab in cls._semistandard(max_entry - 1, nu, lam, setvalued):
+                    for (i, j) in diff:
+                        tab = tab.add(i, j, max_entry)
+                    ans.add(tab)
         return ans
 
     @classmethod
