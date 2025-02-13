@@ -780,20 +780,6 @@ class Word:
                         newadd.add(Word(*tup, subset=w.subset))
             add = newadd - seen
 
-    def modified_hecke_insert(self, verbose=False):
-        from tableaux import Tableau
-        p, q = Tableau(), Tableau()
-        for i_zerobased, a in enumerate(self):
-            i = i_zerobased + 1
-            j, p = p.modified_hecke_insert(MarkedNumber(a), verbose=verbose)
-
-            v = MarkedNumber(i)
-            for k, l in p.shape():
-                if (k, l) not in q.shape():
-                    q = q.set(k, l, v)
-            assert p.shape() == q.shape()
-        return p, q
-
     def rsk_insert(self):
         from tableaux import Tableau
         p, q = Tableau(), Tableau()
@@ -807,19 +793,19 @@ class Word:
             assert p.shape() == q.shape()
         return p, q
 
-    def hecke_insert(self):
-        from tableaux import Tableau
+    def column_hecke_insert(self, index=None):
+        from stable.tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
-            i = i_zerobased + 1
-            j, p = p.hecke_insert(MarkedNumber(a))
-
-            v = MarkedNumber(i)
-            for k, l in p.shape():
-                if (k, l) not in q.shape():
-                    q = q.set(k, l, v)
+            i = (i_zerobased + 1) if index is None else index[i_zerobased]
+            p, (x, y) = p.column_hecke_insert(a)
+            q = q.add(x, y, i)
             assert p.shape() == q.shape()
         return p, q
+
+    def row_hecke_insert(self, index=None):
+        p, q = self.column_hecke_insert(index)
+        return p.transpose(), q.transpose()
 
     def sp_mixed_insert(self, verbose=False):
         from tableaux import Tableau
@@ -871,7 +857,7 @@ class Word:
         return Tableau(mapping), q
 
     def shifted_hecke_insert(self, verbose=False):
-        from tableaux import Tableau
+        from stable.tableaux import Tableau
         p, q = Tableau(), Tableau()
         for i_zerobased, a in enumerate(self):
             i = i_zerobased + 1
@@ -1096,8 +1082,20 @@ def get_insertion_mapping(words):
     return Word(*elements), mapping
 
 
+def column_hecke_insert(*words):
+    w = [a for i in range(len(words)) for a in words[i]]
+    i = [i + 1 for i in range(len(words)) for _ in words[i]]
+    return Word(*w).column_hecke_insert(i)
+
+
+def row_hecke_insert(*words):
+    w = [a for i in range(len(words)) for a in words[i]]
+    i = [i for i in range(len(words)) for _ in words[i]]
+    return Word(*w).row_hecke_insert(i)
+
+
 def shifted_hecke_insert(*words):
-    from tableaux import Tableau
+    from stable.tableaux import Tableau
     w, mapping = get_insertion_mapping(words)
     p, q = w.shifted_hecke_insert(verbose=False)
     return p, Tableau({(i, j): mapping[q.entry(i, j)] for (i, j) in q})

@@ -877,9 +877,9 @@ class Tableau:
         assert i > 0 and j > 0
         mapping = self.boxes.copy()
         if (i, j) not in self:
-            mapping[(i, j)] = v
+            mapping[i, j] = v
             return self.__class__(mapping)
-        mapping[(i, j)] = tuple(sorted(mapping[(i, j)] + (v,)))
+        mapping[i, j] = tuple(sorted(mapping[(i, j)] + (v,)))
         return self.__class__(mapping)
 
     def remove(self, i, j, v=None):
@@ -1975,6 +1975,80 @@ class Tableau:
                             ans.append(tab)
             cache[key] = ans
         return cache[key]
+
+    def is_increasing(self):
+        for i, j in self.cells():
+            u = self.entry(i, j)
+            v = self.entry(i, j + 1)
+            w = self.entry(i + 1, j)
+            if (v and v <= u) or (w and w <= u):
+                return False
+        return True
+
+    def column_hecke_insert(self, p):
+        if type(p) in [list, tuple]:
+            ans = self
+            for a in p:
+                ans = ans.column_hecke_insert(a)[0]
+            return ans
+
+        assert all(len(v) == 1 for v in self.boxes.values())
+        boxes = {b: max(v) for (b, v) in self.boxes.items()}
+
+        col = 1
+        while True:
+            row = 1
+            while (row, col) in boxes and boxes[row, col] <= p:
+                row += 1
+            if (row, col) in boxes:
+                y = boxes[row, col]
+                if boxes.get((row, col - 1), p - 1) < p and boxes.get((row - 1, col), p - 1) < p:
+                    boxes[row, col] = p
+                p = y
+                col += 1
+            elif boxes.get((row, col - 1), p - 1) < p and boxes.get((row - 1, col), p - 1) < p:
+                boxes[row, col] = p
+                return Tableau(boxes), (row, col)
+            else:
+                i = row - 1
+                j = col
+                while (i, j + 1) in boxes:
+                    j += 1
+                return Tableau(boxes), (i, j)
+
+    def shifted_hecke_insert(self, p, j=0, column_dir=False, verbose=True):
+        if p is None:
+            return (j, column_dir, self)
+
+        j += 1
+        row, col = self.get_row(j), self.get_column(j)
+
+        if verbose:
+            if column_dir:
+                print('Inserting %s into column %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+            else:
+                print('Inserting %s into row %s of \n%s\n' % (
+                    str(p),
+                    str(j),
+                    self
+                ))
+
+        if column_dir:
+            p, column_dir, col = self.bump(p, column_dir, col)
+            tab = self.replace_column(j, col)
+        else:
+            p, column_dir, row = self.bump(p, column_dir, row)
+            tab = self.replace_row(j, row, shifted=True)
+
+        if tab.is_increasing():
+            return tab.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
+        else:
+            return self.shifted_hecke_insert(p, j, column_dir, verbose=verbose)
+
 
 
 class ReversePlanePartition(Tableau):

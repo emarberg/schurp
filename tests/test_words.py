@@ -1,8 +1,15 @@
 from partitions import Partition
 from permutations import Permutation
-from words import Word, eg_insert, weak_eg_insert
+from words import Word, eg_insert, weak_eg_insert, column_hecke_insert
 from vectors import Vector
 from tableaux import Tableau
+
+
+def test_column_hecke_insert():
+    from stable.tableaux import Tableau
+    p = Tableau.from_rows([[1, 2, 4], [3]])
+    q = Tableau.from_rows([[1, (1, 2), (2,3)], [2]])
+    assert column_hecke_insert((4, 2), (4, 3, 1), (1,)) == (p, q)
 
 
 def test_faithful_lifting_lemma(n=8):
