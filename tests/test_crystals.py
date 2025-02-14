@@ -65,7 +65,7 @@ def shifted_hecke_words(s):
     m = len(s)
     n = max([0] + [v for val in s for v in val])
     return [
-        tuple(j - m - 1 for j in range(1, m + 1) if i in s[j - 1])
+        tuple(j for j in range(1, m + 1) if i in s[j - 1])
         for i in range(1, n + 1)
     ]
 
@@ -75,19 +75,35 @@ def shifted_hecke(s):
     return shifted_hecke_insert(*words)
 
 
+def hecke_words(s):
+    s = s.row_reading_word(setwise=True)
+    m = len(s)
+    n = max([0] + [v for val in s for v in val])
+    return [
+        tuple(m + 1 - j for j in range(1, m + 1) if i in s[j - 1])
+        for i in range(1, n + 1)
+    ]
+
+
+def hecke(s):
+    words = hecke_words(s)
+    return column_hecke_insert(*words)
+
+
 def test_svwords_shifted_hecke(m=3, n=3):
+    ans = []
     small = list(range(1, n))
     words = AbstractQCrystal.sqrtcrystal_of_words(m, n)
     for b in words.get_components():
         print()
         print('component of size', len(b))
-        ps = set()
+        ps = {}
         qs = []
         highest = set()
         special = set()
         for s in b:
             p, q = shifted_hecke(s)
-            ps.add(p)
+            ps[p] = ps.get(p, []) + [s]
             qs.append((s, q))
         for s, q in qs:
             # print(q)
@@ -107,8 +123,7 @@ def test_svwords_shifted_hecke(m=3, n=3):
         for p in ps:
             print(p)
         print()
-        ch = SymmetricPolynomial.from_polynomial(b.character())
-        ch = GP_expansion_no_beta(ch)
+        ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(b.character()))
         print('ch =', ch)
         expected = Vector()
         for p in ps:
@@ -117,7 +132,9 @@ def test_svwords_shifted_hecke(m=3, n=3):
         #    if b.is_highest_weight(s, small):
         #        expected += Vector({q.shape(): 1})
         if expected != ch:
-            input('?')
+            # input('?')
+            ans.append((b, ps))
+    return ans
 
 
 def test_svwords_hecke(m=3, n=3):
