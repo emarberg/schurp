@@ -349,9 +349,9 @@ def aop(v, j, S):
         queue.append((g, c * beta, t + 1))
 
 
-def bop(v, j, S):
-    klist = sorted([k for k in S if lessdot(v, j, k)], reverse=True)
-    queue = [(v, 1, 0)]
+def bop(z, j, S):
+    klist = sorted([k for k in S if lessdot(z, j, k)], reverse=True)
+    queue = [(z, 1, 0)]
     while queue:
         v, c, t = queue[0]
         queue = queue[1:]
@@ -377,7 +377,7 @@ def A(z, a, b):
             continue
 
         g = gamma(v, i, j)
-        R = [r for r in range(i + 1, v(i)) if v(r) > i]
+        R = [r for r in range(i + 1, v(i)) if i < v(r) <= r]
 
         if i < j and v == g:
             queue.append((v, c, i + 1, j))
@@ -401,7 +401,7 @@ def B(z, a, b):
             continue
 
         g = gamma(v, j, k)
-        S = [s for s in range(v(k) + 1, k) if v(s) < k]
+        S = [s for s in range(v(k) + 1, k) if s <= v(s) < k]
 
         if j < k and v == g:
             queue.append((v, c, j, k - 1))
@@ -415,7 +415,7 @@ def B(z, a, b):
 
 
 def test_reformulation(n=4):
-    for z in [Permutation(2,1,6,5,4,3)]: #Permutation.involutions(n):
+    for z in Permutation.involutions(n):
         cyc = [(j, k) for j, k in z.get_two_cycles()] + [(j, j) for j in z.fixed(n + 1)]
         for j, k in cyc:
             print('n =', n, 'z =', z, 'j =', j, 'k =', k)
