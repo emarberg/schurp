@@ -298,3 +298,151 @@ def test_inv_transitions(n=4):
 
             #assert f == g
 
+
+def lessdot(z, i, j):
+    return z(i) < z(j) and not any(z(i) < z(e) < z(j) for e in range(i + 1, j))
+
+
+def kappa(z):
+    return z.number_two_cycles()
+
+
+def gamma(z, i, j):
+    if lessdot(z, i, j):
+        t = z.transposition(i, j)
+        if z(i) == i and z(j) == j:
+            return z * t
+
+        if z(i) <= i < j <= z(j) or i < j < z(i) < z(j) or z(i) < z(j) < i < j:
+            return t * z * t
+
+        if i < z(i) < j < z(j):
+            return t * z * t * z.transposition(z(i), j)
+
+        if z(i) < i < z(j) < j:
+            return t * z * t * z.transposition(i, z(j))
+    return z
+        
+
+def uop(v, i, j):
+    t = v.transposition(i, j)
+    if v * t == t * v:
+        return v * t
+    else:
+        return t * v * t
+
+
+def aop(v, j, S):
+    ilist = sorted([i for i in S if lessdot(v, i, j)])
+    queue = [(v, 1, 0)]
+    while queue:
+        v, c, t = queue[0]
+        queue = queue[1:]
+
+        if t == len(ilist):
+            yield (v, c)
+            continue
+
+        queue.append((v, c, t + 1))
+        i = ilist[t]
+        g = uop(v, i, j)
+        queue.append((g, c * beta, t + 1))
+
+
+def bop(v, j, S):
+    klist = sorted([k for k in S if lessdot(v, j, k)], reverse=True)
+    queue = [(v, 1, 0)]
+    while queue:
+        v, c, t = queue[0]
+        queue = queue[1:]
+
+        if t == len(klist):
+            yield (v, c)
+            continue
+
+        queue.append((v, c, t + 1))
+        k = klist[t]
+        g = uop(v, j, k)
+        queue.append((g, c * beta, t + 1))
+
+
+def A(z, a, b):
+    queue = [(z, 1, a, b)]
+    while queue:
+        v, c, i, j = queue[0]
+        queue = queue[1:]
+
+        if i == j:
+            yield (v, c)
+            continue
+
+        g = gamma(v, i, j)
+        R = [r for r in range(i + 1, v(i)) if v(r) > i]
+
+        if i < j and v == g:
+            queue.append((v, c, i + 1, j))
+        elif i < j and kappa(v) > kappa(g):
+            queue.append((v, c, i + 1, j))
+            for (w, d) in aop(g, v(i), R):
+                queue.append((w, c * d * beta, i + 1, j))
+        else:
+            queue.append((v, c, i + 1, j))
+            queue.append((g, c * beta, i + 1, j))
+
+
+def B(z, a, b):
+    queue = [(z, 1, a, b)]
+    while queue:
+        v, c, j, k = queue[0]
+        queue = queue[1:]
+
+        if j == k:
+            yield (v, c)
+            continue
+
+        g = gamma(v, j, k)
+        S = [s for s in range(v(k) + 1, k) if v(s) < k]
+
+        if j < k and v == g:
+            queue.append((v, c, j, k - 1))
+        elif j < k and kappa(v) > kappa(g):
+            queue.append((v, c, j, k - 1))
+            for (w, d) in bop(g, v(k), S):
+                queue.append((w, c * d * beta, j, k - 1))
+        else:
+            queue.append((v, c, j, k - 1))
+            queue.append((g, c * beta, j, k - 1))
+
+
+def test_reformulation(n=4):
+    for z in [Permutation(2,1,6,5,4,3)]: #Permutation.involutions(n):
+        cyc = [(j, k) for j, k in z.get_two_cycles()] + [(j, j) for j in z.fixed(n + 1)]
+        for j, k in cyc:
+            print('n =', n, 'z =', z, 'j =', j, 'k =', k)
+
+            f = Vector()
+            for y, c in A(z, 1, j):
+                f += invgroth(y) * c
+            f = multiply_via_grothendieck_transitions(f, j)
+            if j < k:
+                f = multiply_via_grothendieck_transitions(f, k)
+            try:
+                decomposeinv(f)
+            except:
+                raise Exception
+
+            g = Vector()
+            for y, c in B(z, k, n + 2):
+                g += invgroth(y) * c
+            
+            if f != g:
+                try:
+                    dec = decomposeinv(f - g)
+                    for w, coeff in sorted(dec.items(), key=lambda a: a[0].involution_length()):
+                        print('  ', w, coeff)
+                except:
+                    print('diff =', f - g)
+                    return f - g
+                print()
+                input('?')
+            print()

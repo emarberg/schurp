@@ -11,7 +11,7 @@ DECOMPOSE_VSTRIP_CACHE = {}
 
 class Partition:
 
-    FRENCH = False
+    FRENCH = True
 
     @classmethod
     def stabilizer_order(cls, mu):
@@ -24,6 +24,13 @@ class Partition:
             else:
                 end = i
         return m
+
+    @classmethod
+    def combine(cls, mu, nu):
+        n = max(len(mu), len(nu))
+        ans = [cls.get(mu, i) + cls.get(nu, i) for i in range(1, n + 1)]
+        return Partition.trim(ans)
+
     @classmethod
     def add(cls, mu, row):
         if row <= len(mu):

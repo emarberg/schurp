@@ -5,7 +5,7 @@ from collections import defaultdict
 from operator import itemgetter
 import itertools
 
-FRENCH = False
+FRENCH = Partition.FRENCH
 
 SETVALUED_DECOMPOSITION_CACHE = {}
 SETVALUED_DECOMPOSITION_SLOW_CACHE = {}
