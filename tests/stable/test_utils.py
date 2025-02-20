@@ -1,5 +1,15 @@
-from stable.utils import G, GP, GS
+from stable.utils import G, GP, GS, involution_GP
 from stable.permutations import Permutation
+
+
+def test_involution_GP_vexillary(n=6, deg=5):
+    from permutations import Permutation
+    v = [w for w in Permutation.involutions(n) if w.is_vexillary()]
+    for k in range(1, deg + 1):
+        for w in v:
+            print(k,w)
+            assert involution_GP(k, w) == GP(k, w.involution_shape().tuple())
+        print()
 
 
 def test_grothendieck():
