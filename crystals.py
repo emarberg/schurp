@@ -300,6 +300,35 @@ class AbstractCrystalMixin:
     def get_lowest_weight_multiplicities(self):
         return {k: len(v) for k, v in self.group_lowest_weights().items()}
 
+    def is_weight_highest(self, v):
+        if not self.is_highest_weight(v, self.indices):
+            return False
+
+        def expand(x):
+            while x:
+                y = x[0]
+                yield y
+                x = list(x[1:])
+                assert x or (y == 0)
+                if x:
+                    x[0] += y
+
+        a = self.weight(v)
+        c = self.get_component(v)
+        for w in c:
+            b = self.weight(w)
+            diff = [a[i] - b[i] for i in range(len(a))]
+            if sum(diff) > 0:
+                return False
+            if sum(diff) < 0:
+                continue
+            if any(x < 0 for x in expand(diff)):
+                return False
+        return True
+
+    def get_weights_highest(self):
+        return [(v, self.weight(v)) for v in self if self.is_weight_highest(v)]
+
     def is_highest_weight(self, v, indices=None):
         indices = self.extended_indices if indices is None else indices
         return all(self.e_operator(i, v) is None for i in indices)
