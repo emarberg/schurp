@@ -116,6 +116,54 @@ class Partition:
             (i + 1, j + 1) for i in range(len(self.parts)) for j in range(self.parts[i])
         })
 
+    def outer_corners(self):
+        ans = []
+        for i in range(len(self)):
+            if i == 0 or self.parts[i] < self.parts[i - 1]:
+                ans.append((i + 1, self.parts[i] + 1))
+        ans += [(len(self) + 1, 1)]
+        return ans
+
+    def is_balanced(self, slope=None):
+        oc = self.outer_corners()
+        for i in range(2, len(oc)):
+            x1, y1 = oc[i - 2]
+            x2, y2 = oc[i - 1]
+            x3, y3 = oc[i]
+            
+            dx1 = x2 - x1
+            dx2 = x3 - x2
+            
+            dy1 = y2 - y1
+            dy2 = y3 - y2
+
+            if dx1 * dy2 != dx2 * dy1:
+                return False
+
+        if slope is not None:
+            for i in range(1, len(oc)):
+                x1, y1 = oc[i - 1]
+                x2, y2 = oc[i]
+
+                dx = x2 - x1
+                dy = y2 - y1
+
+                if dy != slope * dx:
+                    return False
+        return True
+
+    def is_shifted_balanced(self):
+        assert self.is_strict()
+        n = len(self)
+        if n > 0 and self.parts[-1] == 1:
+            mu = [self.parts[i] - n + i for i in range(n)]
+        else:
+            mu = [self.parts[i] - n + i + 1 for i in range(n)]
+        return Partition(*mu).is_balanced(slope=-1)
+
+    def is_trapezoidal(self):
+        return all(self.parts[i - 1] - self.parts[i] == 2 for i in range(1, len(self)))
+
     def add_box_to_row(self, row):
         p = self
         parts = [p(i) + (1 if i == row else 0) for i in range(1, max(len(p), row) + 1)]

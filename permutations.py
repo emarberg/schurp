@@ -7,6 +7,7 @@ import random
 from collections import deque
 
 REDUCED_WORDS = {(): {()}}
+INVOLUTION_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
 ATOMS_CACHE = {}
@@ -469,9 +470,18 @@ class Permutation:
 
     def get_involution_words(self):
         assert self.inverse() == self
-        for a in self.get_atoms():
-            for word in a.get_reduced_words():
-                yield word
+        oneline = tuple(self.oneline)
+        if oneline not in INVOLUTION_WORDS:
+            words = set()
+            for i in self.right_descent_set:
+                s = Permutation.s_i(i)
+                w = self
+                ws = w * s
+                if s * ws != w:
+                    ws = s * ws
+                words |= {e + (i,) for e in ws.get_involution_words()}
+            INVOLUTION_WORDS[oneline] = words
+        return INVOLUTION_WORDS[oneline]
 
     def get_primed_involution_words(self):
         assert self.inverse() == self
@@ -744,6 +754,7 @@ class Permutation:
         
     def is_sp_vexillary(self):
         assert self.is_fpf_involution()
+        raise Exception
     
     def get_essential_path(self):
         assert self.is_involution()
@@ -771,6 +782,9 @@ class Permutation:
 
     def is_grassmannian(self):
         return len(self.right_descent_set) <= 1
+
+    def is_inv_grassmannian(self):
+        return len(self.get_descentset_visible()) <= 1
 
     def is_vexillary(self):
         n = self.rank
