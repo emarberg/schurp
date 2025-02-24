@@ -1,13 +1,78 @@
 from stable.partitions import Partition
 from stable.utils import *
+from stable.polynomials import Polynomial
 import traceback
 import math
 
 
+def test_onevar_GP(n=20):
+    for mu in Partition.all(n, strict=True):
+        print(sum(mu), 'mu =', mu)
+        for nu in Partition.subpartitions(mu, strict=True):
+            sh = Partition.shifted_shape(mu, nu)
+            if any((i + 1, j + 1) in sh for (i, j) in sh):
+                expected = Polynomial.zero()
+            else:
+                mush = Partition.shifted_shape(mu)
+                nush = Partition.shifted_shape(nu)
+                corners = {(i, j) for (i, j) in nush if (i + 1, j) not in nush and (i, j + 1) not in nush and (i + 1, j + 1) not in sh}
+
+                begs = {(i, j) for (i, j) in sh if (i + 1, j) not in sh and (i, j - 1) not in sh and i != j}
+                gaps = {(i, j) for (i, j) in corners if (i == j or (i + 1, j) in sh) and (i, j + 1) in sh}
+                exts = {(i, j) for (i, j) in corners if (i + 1, j) in sh or (i, j + 1) in sh or i == j} - gaps
+                iles = corners - gaps - exts
+
+                a = len(gaps)
+                b = sum(mu) - sum(nu)
+                c = 2 * len(corners) - len(exts) - len(gaps)
+                d = len(begs) - len(gaps)
+
+                expected = 2**a * X(1)**b * (1 + X(0) * X(1))**c * (2 + X(0) * X(1))**d
+
+            actual = GP_doublebar(1, mu, nu).polynomial()
+            if actual != expected:
+                print()
+                print(actual, '==', expected)
+                Partition.print_shifted(mu, nu)
+                print('mu =', mu, 'nu =', nu, 'begs =', begs, 'gaps =', gaps, 'exts =', exts, 'iles =', iles)
+            assert actual == expected
+
+
+def test_onevar_GQ(n=20):
+    for mu in Partition.all(n, strict=True):
+        print(sum(mu), 'mu =', mu)
+        for nu in Partition.subpartitions(mu, strict=True):
+            sh = Partition.shifted_shape(mu, nu)
+            if any((i + 1, j + 1) in sh for (i, j) in sh):
+                expected = Polynomial.zero()
+            else:
+                mush = Partition.shifted_shape(mu)
+                nush = Partition.shifted_shape(nu)
+                corners = {(i, j) for (i, j) in nush if (i + 1, j) not in nush and (i, j + 1) not in nush and (i + 1, j + 1) not in sh}
+
+                begs = {(i, j) for (i, j) in sh if (i + 1, j) not in sh and (i, j - 1) not in sh}
+                gaps = {(i, j) for (i, j) in corners if (i + 1, j) in sh and (i, j + 1) in sh}
+                exts = {(i, j) for (i, j) in corners if (i + 1, j) in sh or (i, j + 1) in sh} - gaps
+
+                a = len(gaps)
+                b = sum(mu) - sum(nu)
+                c = 2 * len(corners) - len(exts) - len(gaps)
+                d = len(begs) - len(gaps)
+
+                expected = 2**a * X(1)**b * (1 + X(0) * X(1))**c * (2 + X(0) * X(1))**d
+
+            actual = GQ_doublebar(1, mu, nu).polynomial()
+            if actual != expected:
+                print()
+                print(actual, '==', expected)
+                Partition.print_shifted(mu, nu)
+                print('mu =', mu, 'nu =', nu, 'begs =', begs, 'gaps =', gaps, 'exts =', exts, 'iles =', iles)
+            assert actual == expected
+
+
 def test_specialization(n=10, m=5):
-    strict = False
-    for mu in Partition.all(n, strict=strict):
-        for nu in Partition.subpartitions(mu, strict=strict):
+    for mu in Partition.all(n, strict=True):
+        for nu in Partition.subpartitions(mu, strict=True):
             for i in range(1, m + 1):
                 f = GP(i, mu, nu).polynomial()
                 f = f.set_variable(0, -1)
