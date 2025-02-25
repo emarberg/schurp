@@ -72,20 +72,19 @@ def test_specialization(n=10, m=5):
     for mu in Partition.all(n, strict=True):
         for nu in Partition.subpartitions(mu, strict=True):
             for i in range(1, m + 1):
-                f = GP(i, mu, nu).polynomial()
+                f = GP_doublebar(i, mu, nu).polynomial()
                 f = f.set_variable(0, -1)
                 for j in range(1, i + 1):
                     f = f.set_variable(j, 1)
-                if f == 0:
-                    print('GP', mu, '/', nu, len(mu), ':', i, ': result =', f)
+                print('GP', mu, '//', nu, len(mu), ':', i, ': result =', f)
                 assert f in [0, 1]
                 #assert f == (1 if i >= len(mu) else 0)
 
-                f = GQ(i, mu, nu).polynomial()
+                f = GQ_doublebar(i, mu, nu).polynomial()
                 f = f.set_variable(0, -1)
                 for j in range(1, i + 1):
                     f = f.set_variable(j, 1)
-                print('GQ', mu, '/', nu, len(mu), ':', i, ': result =', f)
+                print('GQ', mu, '//', nu, len(mu), ':', i, ': result =', f)
                 assert f in [0, 1]
                 #assert f == (1 if i >= len(mu) else 0)
 

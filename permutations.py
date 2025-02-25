@@ -8,6 +8,7 @@ from collections import deque
 
 REDUCED_WORDS = {(): {()}}
 INVOLUTION_WORDS = {(): {()}}
+FPF_INVOLUTION_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
 ATOMS_CACHE = {}
@@ -404,9 +405,18 @@ class Permutation:
 
     def get_fpf_involution_words(self):
         assert self.is_fpf_involution()
-        for a in self.get_fpf_atoms():
-            for word in a.get_reduced_words():
-                yield word
+        oneline = tuple(self.fpf_trim().oneline)
+        if oneline not in FPF_INVOLUTION_WORDS:
+            words = set()
+            for i in self.right_descent_set:
+                if self(i) == i + 1:
+                    continue
+                s = Permutation.s_i(i)
+                w = self
+                sws = s * w * s
+                words |= {e + (i,) for e in sws.get_fpf_involution_words()}
+            FPF_INVOLUTION_WORDS[oneline] = words
+        return FPF_INVOLUTION_WORDS[oneline]
 
     def get_fpf_atoms(self):
         if self not in FPF_ATOMS_CACHE:
@@ -753,6 +763,14 @@ class Permutation:
         return Permutation(*oneline)
         
     def is_sp_vexillary(self):
+        assert self.is_fpf_involution()
+        raise Exception
+
+    def is_fpf_vexillary(self):
+        assert self.is_fpf_involution()
+        raise Exception
+
+    def is_fpf_grassmannian(self):
         assert self.is_fpf_involution()
         raise Exception
     

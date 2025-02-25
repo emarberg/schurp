@@ -1,6 +1,10 @@
 from permutations import Permutation
 
 
+def fpfdes(w):
+    return len([i for i in w.right_descent_set if w(i) != i + 1])
+
+
 def ides(w):
     return len(w.right_descent_set)
     # ans = set()
@@ -11,6 +15,29 @@ def ides(w):
     #         ws = s * ws
     #     ans.add(ws)
     # return len(ans)
+
+
+def fpf_weak_order_intervals(n):
+    assert n % 2 == 0
+    g = [Permutation.s_i(i) for i in range(1, n)]
+    e = Permutation()
+    for i in range(1, n, 2):
+        e *= g[i - 1]
+    lower = {e: {e}}
+    level = {e}
+    while level:
+        newlevel = set() 
+        for w in level:
+            for i in range(1, n):
+                if w(i) < w(i + 1):
+                    s = g[i - 1]
+                    sws = s * w * s
+                    if sws not in lower:
+                        lower[sws] = {sws}
+                    lower[sws] |= lower[w]
+                    newlevel.add(sws)
+        level = newlevel
+    return lower
 
 
 def inv_weak_order_intervals(n):
@@ -33,6 +60,30 @@ def inv_weak_order_intervals(n):
                     newlevel.add(ws)
         level = newlevel
     return lower
+
+
+def fpfexpectx(n):
+    ans = {}
+    lower = fpf_weak_order_intervals(n)
+    for w in lower:
+        e = 0
+        for u in lower[w]:
+            e += fpfdes(u)
+        ans[w] = (e, len(lower[w]))
+    return ans
+
+
+def fpfexpecty(n):
+    ans = {}
+    for w in Permutation.fpf_involutions(n):
+        q = (w.fpf_involution_length() + 1) * len(w.get_fpf_involution_words())
+        p = 0
+        for word in w.get_fpf_involution_words():
+            for i in range(len(word) + 1):
+                u = Permutation.from_fpf_involution_word(*word[:i])
+                p += fpfdes(u)
+        ans[w] = (p, q)
+    return ans
 
 
 def invexpectx(n):
@@ -137,3 +188,20 @@ def test_inv_weak_order(n):
     for w in sorted(x, key=lambda z: (cde(z), z.involution_shape())):
         if w.is_vexillary():
             bprint(cde(w), w.oneline_repr(n), w.is_vexillary(), w.is_inv_grassmannian(), w.is_dominant(), w.involution_shape(), w.involution_shape().is_shifted_balanced() or w.involution_shape().is_trapezoidal())
+
+
+def test_fpf_weak_order(n):
+    def bprint(*args):
+        args = [a if type(a) != bool else str(a) + (' ' if a else '') for a in args]
+        print(*args)
+
+    x = fpfexpectx(n)
+    y = fpfexpecty(n)
+
+    def cde(w):
+        p1, q1 = x[w]
+        p2, q2 = y[w]
+        return p1 * q2 == p2 * q1
+
+    for w in sorted(x, key=lambda z: (cde(z), z.fpf_involution_shape())):
+        bprint(cde(w), w, w.is_fpf_dominant(), w.fpf_involution_shape(), w.fpf_involution_shape().is_shifted_balanced() or w.fpf_involution_shape().is_trapezoidal())
