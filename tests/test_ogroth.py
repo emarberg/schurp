@@ -18,6 +18,23 @@ OGROTH_HECKE_ATOMS_CACHE = {}
 OGROTH_EXPAND_CACHE = {}
 
 
+def locally_noncrossing_vexillary(n):
+    ans = []
+    for w in Permutation.involutions(n):
+        if w.is_vexillary():
+            _, segments = get_left_segments(w)
+            expected = not any([w(a) < w(b) for s in segments for a in s for b in s if (1 not in s and a < b)])
+            actual = all(coeff.constant_term() > 0 for (s, sigma, coeff) in get_shiftable(w))
+            if expected:
+                ans.append(w)
+            if expected != actual:
+                print(w)
+                for (s, sigma, coeff) in get_shiftable(w):
+                    print(s, sigma, coeff)
+                assert expected == actual
+    return ans
+
+
 def test_sign_reversal(k=2, n=5):
     inds = [2, 3, 4, 5]
     for cmb in itertools.combinations(inds, k):
@@ -178,7 +195,8 @@ def ogroth_expand(w):
                 break
     return ogroth_expand(w)
 
-def get_shiftable(w):
+
+def get_left_segments(w):
     left = [a for a in range(1, w.rank + 1) if a < w(a)]
     segments = []
     for a in left:
@@ -186,7 +204,23 @@ def get_shiftable(w):
             segments.append([a])
         else:
             segments[-1].append(a)
+    return left, segments
 
+
+def get_shiftable_coefficient(s, segments, crossing_pairs):
+    ans = X(0)**0
+    for seg in segments:
+        for i, a in enumerate(seg):
+            if any(b in s for (x, b) in crossing_pairs if x == a):
+                ans *= -1
+            elif a not in s:
+                ans *= 2 + X(a)
+            else:
+                ans *= 1 + X(a)
+    return ans
+
+
+def get_crossing_pairs(w, segments):
     crossing_pairs = []
     for seg in segments if w(1) == 1 else segments[1:]:
         for i, b in enumerate(seg):
@@ -194,6 +228,12 @@ def get_shiftable(w):
             if a:
                 a = a[-1]
                 crossing_pairs.append((a, b))
+    return crossing_pairs
+
+
+def get_shiftable(w):
+    left, segments = get_left_segments(w)
+    crossing_pairs = get_crossing_pairs(w, segments)
 
     def get_cycle(s):
         ans = Permutation()
@@ -202,25 +242,13 @@ def get_shiftable(w):
             ans *= Permutation.from_cycles(cycle)
         return ans
 
-    def get_coefficient(s):
-        ans = X(0)**0
-        for seg in segments:
-            for i, a in enumerate(seg):
-                if any(b in s for (x, b) in crossing_pairs if x == a):
-                    ans *= -1
-                elif a not in s:
-                    ans *= 2 + X(a)
-                else:
-                    ans *= 1 + X(a)
-        return ans
-
     mobile = (set(left) - set(segments[0])) if 1 < w(1) else set(left)
 
     for k in range(len(mobile) + 1):
         for s in itertools.combinations(mobile, k):
             if not any(a not in s and b in s for (a, b) in crossing_pairs):
                 sigma = get_cycle(s)
-                coeff = get_coefficient(s)
+                coeff = get_shiftable_coefficient(s, segments, crossing_pairs)
                 yield s, sigma, coeff
 
 

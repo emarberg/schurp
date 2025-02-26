@@ -20,8 +20,7 @@ def test_onevar_GP(n=10):
                 begs = {(i, j) for (i, j) in sh if (i + 1, j) not in sh and (i, j - 1) not in sh and i != j}
                 gaps = {(i, j) for (i, j) in corners if (i == j or (i + 1, j) in sh) and (i, j + 1) in sh}
                 exts = {(i, j) for (i, j) in corners if (i + 1, j) in sh or (i, j + 1) in sh or i == j} - gaps
-                iles = corners - gaps - exts
-
+                
                 a = len(gaps)
                 b = len(begs) - len(gaps)
                 c = 2 * len(corners) - len(exts) - len(gaps)
