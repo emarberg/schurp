@@ -6,6 +6,13 @@ from .vectors import Vector
 from fractions import Fraction
 
 
+def safe_expand(fn, f):
+    try:
+        return fn(f)
+    except:
+        return None
+
+
 def shortest_expansion(f):
     expanders = [
         e_expansion,

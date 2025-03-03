@@ -761,7 +761,45 @@ class Permutation:
         z = self
         oneline = [z(i) if any(j > z(j) for j in range(min(i, z(i)) + 1,  max(i, z(i)))) else i for i in range(1, len(self.oneline) + 1)]
         return Permutation(*oneline)
-        
+
+    def is_fully_commutative(self):
+        for i in range(1, self.rank + 1):
+            for j in range(i + 1, self.rank + 1):
+                for k in range(j + 1, self.rank + 1):
+                    if self(i) > self(j) > self(k):
+                        return False
+        return True
+
+    def skew_shape(self):
+        assert self.is_fully_commutative()
+        c = self.code()
+        k = [i for i in range(len(c)) if c[i] > 0]
+
+        pairs = [(i, j) for i in range(1, len(k) + 1) for j in range(i + 1 - k[i - 1] - c[k[i - 1]], i + 1 - k[i - 1])]
+        m = max([0] + [1 - j for (i, j) in pairs])
+        pairs = [(i, j + m) for (i, j) in pairs]
+        print(pairs)
+        lam = set()
+        for i, j in pairs:
+            for a in range(1, i + 1):
+                for b in range(1, j + 1):
+                    lam.add((a, b))
+        mu = []
+        for i, j in lam:
+            while len(mu) < i:
+                mu.append(0)
+            mu[i - 1] = max(mu[i - 1], j)
+        mu = tuple(mu)
+
+        nu = list(mu)
+        for i, j in pairs:
+            print(nu, i, j)
+            nu[i - 1] = min(nu[i - 1], j - 1)
+        nu = tuple(nu)
+
+        return mu, nu
+
+
     def is_sp_vexillary(self):
         assert self.is_fpf_involution()
         raise Exception
