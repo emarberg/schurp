@@ -17,6 +17,30 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
 class AbstractCrystalMixin:
 
+    @classmethod
+    def union(cls, b, c):
+        assert b.rank == c.rank
+        assert type(b) == type(c)
+
+        rank = b.rank
+        vertices = []
+        edges = []
+        weights = {}
+
+        for e in [b, c]:
+            for x in e:
+                vertices.append(x)
+                weights[x] = e.weight(x)
+                for i in e.indices:
+                    y = e.f_operator(i, x)
+                    if y is not None:
+                        edges.append((i, x, y))
+
+        printer = b.printer 
+        provided_operators = b.provided_operators
+
+        return cls(rank, vertices, edges, weights, printer, provided_operators)
+
     def is_even(self, v):
         return all(self.e_string(i, v) % 2 == 0 for i in self.indices)
 

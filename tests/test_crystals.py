@@ -353,36 +353,47 @@ def svdecomp_crystal_excess_ranked(n, mu):
 
 def svdecomp_incr_crystal(n, mu, sqrt=True):
     rank = n
-    vertices = []
-    edges = []
-    weights = {}
-
+    
     if sqrt:
-        b = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
+        if type(mu) == int:
+            b = AbstractQCrystal.sqrtcrystal_of_words(mu, n)
+        else:
+            b = AbstractQCrystal.sqrtcrystal_from_strict_partition(mu, n)
     else:
+        assert type(mu) != int
         b = AbstractQCrystal.decomposition_tableaux_from_strict_partition(mu, n)
-    
-    for w in b:
-        vertices.append(w)
-        weights[w] = b.weight(w)
-        for i in b.indices:
-            fw = b.f_operator(i, w)
-            if fw is not None:
-                edges.append((i, fw, w) if len(fw) < len(w) else (i, w, fw))
-    
-    # for w in b:
-    #     t = Tableau.from_svword(b.rectify(w).reverse_row_reading_word(setwise=True))
-    #     if t not in vertices:
-    #         vertices.append(t)
-    #         weights[t] = b.weight(w)
-    #     for i in [-1]:
-    #         ew = b.e_operator(i, w)
-    #         if ew is not None:
-    #             u = Tableau.from_svword(b.rectify(ew).reverse_row_reading_word(setwise=True))
-    #             if t != u and (i, u, t) not in edges:
-    #                 edges.append((i, u, t))
 
-    return draw_graph(vertices, edges)
+    #for w in b:
+    #    vertices.append(w)
+    #    weights[w] = b.weight(w)
+    #    for i in b.indices:
+    #        fw = b.f_operator(i, w)
+    #        if fw is not None:
+    #            edges.append((i, fw, w) if len(fw) < len(w) else (i, w, fw))
+    
+    comp = b.get_components() if type(mu) == int else [b]
+    for b in comp:
+        vertices = []
+        edges = []
+        weights = {}
+
+        for w in b:
+            t = Tableau.from_svword(b.rectify(w).reverse_row_reading_word(setwise=True))
+            if t not in vertices:
+                vertices.append(t)
+                weights[t] = b.weight(w)
+            for i in [-1]:
+                 ew = b.e_operator(i, w)
+                 if ew is not None:
+                     u = Tableau.from_svword(b.rectify(ew).reverse_row_reading_word(setwise=True))
+                     edge = (i, u, t) # if len(u) <= len(t) else (i, t, u)
+                     if t != u and edge not in edges:
+                         edges.append(edge)
+
+        draw_graph(vertices, edges)
+        ch = GP_expansion_no_beta(SymmetricPolynomial.from_polynomial(b.character()))
+        print('  ch =', ch)
+        input('\n')
 
 
 def test_svdecomp_incr(n=3, k=5):
