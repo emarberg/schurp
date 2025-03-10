@@ -16,10 +16,13 @@ class GTPattern:
         self._length = len(self.rows)
         
         if compute_weight is None:
-            w = [0]
-            for row in reversed(self.rows):
-                w.append(sum(row) - w[-1])
-            self._weight = tuple(w[1:])
+            w = []
+            for i in range(len(self.rows)): 
+                diff = sum(self.rows[-i - 1])
+                if i > 0:
+                    diff -= sum(self.rows[-i])
+                w.append(diff)
+            self._weight = tuple(w)
         else:
             self._weight = compute_weight(self.rows)
 
