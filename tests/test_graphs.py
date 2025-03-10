@@ -3,7 +3,6 @@ import random
 import itertools
 import subprocess
 import time
-import numpy
 
 
 def write_graph(comp, part, write=True):
@@ -150,6 +149,7 @@ def get_system(comp, part):
 
 
 def test(n=4):
+    import numpy
     i, j, k = 0, 0, 0
     pairs = [(comp, part) for comp in all_comps(n) for part in all_partitions(n)]
     q = len(pairs)

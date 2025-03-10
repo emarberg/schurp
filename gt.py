@@ -74,6 +74,13 @@ class GTPattern:
         return all(self[i, j - 1] < self[i, j] for i in range(len(self)) for j in range(1, len(self.rows[i])))
 
     @classmethod
+    def from_partition(cls, mu, size=None):
+        if size is not None:
+            assert size >= len(mu)
+            mu = list(mu) + (size - len(mu)) * [0]
+        return cls.all(mu)
+
+    @classmethod
     def all(cls, *args):
         if len(args) == 1 and type(args[0]) in [list, tuple]:
             args = args[0]

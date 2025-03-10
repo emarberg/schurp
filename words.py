@@ -2,7 +2,6 @@ from vectors import Vector
 from marked import MarkedNumber
 from collections import defaultdict
 import itertools
-import numpy
 import random
 
 
@@ -498,6 +497,7 @@ class Word:
         image = Image.new('RGBA', (h, h))
         draw = ImageDraw.Draw(image)
 
+        import numpy
         xcoord = {i + 1: h / 2.0 + (h - 10) / 2 * numpy.cos(numpy.pi * (0.5 + (2 * i + 1.0) / n)) for i in range(n)}
         ycoord = {i + 1: h / 2.0 - (h - 10) / 2 * numpy.sin(numpy.pi * (0.5 + (2 * i + 1.0) / n)) for i in range(n)}
         for i, j in invol.items():

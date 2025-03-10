@@ -5,7 +5,6 @@ import pytest
 import stable.utils as utils
 import time
 from collections import defaultdict
-import numpy
 
 LSHAPES = {}
 RSHAPES = {}
@@ -167,6 +166,7 @@ class RowVector:
             b = arr[j][k]
             if b != 0:
                 try:
+                    import numpy
                     lcm = int(numpy.lcm(a, b))
                 except:
                     return []
