@@ -1406,7 +1406,7 @@ class Permutation:
     def strong_bruhat_less_than(self, other):
         if self.length() >= other.length():
             return False
-        des = self.get_descentset_L()
+        des = self.get_descentset_R()
         for k in des:
             x = sorted(map(self, range(1, k + 1)))
             y = sorted(map(other, range(1, k + 1)))
@@ -1418,8 +1418,8 @@ class Permutation:
     def __repr__(self):
         sep = '' if len(self.oneline) < 10 else ','
         ans = sep.join([str(i) for i in self.oneline])
-        #return ans if ans else '()'
-        return self.cycle_repr()
+        return ans if ans else '()'
+        # return self.cycle_repr()
 
     def oneline_repr(self, n):
         assert n >= len(self.oneline)
