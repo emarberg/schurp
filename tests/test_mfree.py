@@ -1,6 +1,21 @@
 from permutations import Permutation
 
 
+def get_inv_poset(z):
+    n = z.rank
+    atoms = z.get_atoms()
+    upper_poset = {}
+    for w in Permutation.all(n):
+        for a in atoms:
+            if a.strong_bruhat_less_equal(w):
+                upper_poset[w] = set()
+    for x in upper_poset:
+        for y in upper_poset:
+            if x.strong_bruhat_less_equal(y):
+                upper_poset[y].add(x)
+    return upper_poset
+
+
 def get_fpf_poset(z):
     n = z.rank
     atoms = z.get_fpf_atoms()
@@ -44,4 +59,19 @@ def test_fpf(n=4):
         for x in upper_poset:
             if mobius[x] != 0:
                 expected[x] = mobius[x]
+        assert actual == expected
+
+
+def test_inv(n=4):
+    for z in Permutation.involutions(n):
+        print('z =', z)
+        upper_poset = get_inv_poset(z)
+        mobius = get_mobius(upper_poset)
+        hecke = set(z.get_involution_hecke_atoms())
+        actual = {x: (-1)**(x.length() - z.involution_length()) for x in hecke}
+        expected = {}
+        for x in upper_poset:
+            if mobius[x] != 0:
+                expected[x] = mobius[x]
+                # print('  ', x, expected[x], 'vs', actual.get(x, '*'))
         assert actual == expected
