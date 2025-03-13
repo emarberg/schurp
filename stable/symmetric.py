@@ -353,6 +353,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def schur(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._schur(num_variables, mu, nu)
 
     @cached_value(SCHUR_CACHE)
@@ -362,6 +363,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def hook_schur(cls, m, n, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._hook_schur(m, n, mu, nu)
 
     @cached_value(HOOK_SCHUR_CACHE)
@@ -382,6 +384,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def schur_s(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._schur_s(num_variables, mu, nu)
 
     @cached_value(SCHUR_S_CACHE)
@@ -391,6 +394,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def schur_q(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._schur_q(num_variables, mu, nu)
 
     @cached_value(SCHUR_Q_CACHE)
@@ -400,6 +404,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def schur_p(cls, num_variables, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._schur_p(num_variables, mu, nu)
 
     @cached_value(SCHUR_P_CACHE)
@@ -409,6 +414,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck_s_doublebar(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         ans = SymmetricPolynomial()
         if Partition.contains(mu, nu):
             for x in Partition.remove_inner_corners(nu):
@@ -417,6 +423,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck_s(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._stable_grothendieck_s(num_variables, mu, nu, degree_bound)
 
     @cached_value(STABLE_GROTHENDIECK_S_CACHE)
@@ -426,6 +433,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck_q_doublebar(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         ans = SymmetricPolynomial()
         if Partition.contains(mu, nu):
             for x in Partition.remove_shifted_inner_corners(nu):
@@ -434,6 +442,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck_q(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._stable_grothendieck_q(num_variables, mu, nu, degree_bound)
 
     @cached_value(STABLE_GROTHENDIECK_Q_CACHE)
@@ -443,6 +452,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck_p_doublebar(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         ans = SymmetricPolynomial()
         if Partition.contains(mu, nu):
             for x in Partition.remove_shifted_inner_corners(nu):
@@ -451,6 +461,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck_p(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._stable_grothendieck_p(num_variables, mu, nu, degree_bound)
 
     @cached_value(STABLE_GROTHENDIECK_P_CACHE)
@@ -460,6 +471,7 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def stable_grothendieck_doublebar(cls, num_variables, mu, nu=(), degree_bound=None):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         ans = SymmetricPolynomial()
         if Partition.contains(mu, nu):
             for x in Partition.remove_inner_corners(nu):

@@ -1265,6 +1265,7 @@ class Tableau:
 
     @classmethod
     def count_semistandard(cls, max_entry, mu, nu=(), setvalued=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._count_semistandard(max_entry, mu, nu, setvalued)
 
     @cached_value(COUNT_SEMISTANDARD_CACHE)
@@ -1292,6 +1293,7 @@ class Tableau:
 
     @classmethod
     def count_semistandard_marked(cls, max_entry, mu, nu=(), setvalued=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._count_semistandard_marked(max_entry, mu, nu, setvalued)
 
     @cached_value(COUNT_SEMISTANDARD_MARKED_CACHE)
@@ -1321,11 +1323,13 @@ class Tableau:
 
     @classmethod
     def count_semistandard_shifted_marked(cls, max_entry, mu, nu=(), diagonal_primes=True, setvalued=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._count_semistandard_shifted_marked(max_entry, mu, nu, diagonal_primes, setvalued)
 
     @cached_value(COUNT_SEMISTANDARD_SHIFTED_MARKED_CACHE)
     def _count_semistandard_shifted_marked(cls, max_entry, mu, lam, diagonal_primes, setvalued):  # noqa
         assert Partition.is_strict_partition(mu)
+        assert Partition.is_strict_partition(lam)
         ans = defaultdict(int)
         if mu == lam:
             ans[()] = 1
@@ -1351,6 +1355,7 @@ class Tableau:
 
     @classmethod
     def count_semistandard_rpp(cls, max_entry, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._count_semistandard_rpp(max_entry, mu, nu)
 
     @cached_value(COUNT_SEMISTANDARD_RPP_CACHE)
@@ -1370,6 +1375,7 @@ class Tableau:
 
     @classmethod
     def count_semistandard_marked_rpp(cls, max_entry, mu, nu=(), diagonal_nonprimes=True):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._count_semistandard_marked_rpp(max_entry, mu, nu, diagonal_nonprimes)
 
     @cached_value(COUNT_SEMISTANDARD_MARKED_RPP_CACHE)
@@ -1397,6 +1403,7 @@ class Tableau:
 
     @classmethod
     def setvalued_decomposition_tableaux(cls, max_entry, mu):
+        mu = Partition.trim(mu)
         return cls._setvalued_decomposition_tableaux(max_entry, mu)
 
     @cached_value(SETVALUED_DECOMPOSITION_CACHE)
@@ -1443,6 +1450,7 @@ class Tableau:
 
     @classmethod
     def setvalued_decomposition_tableaux_slow(cls, max_entry, mu):
+        mu = Partition.trim(mu)
         return cls._setvalued_decomposition_tableaux_slow(max_entry, mu)
 
     @cached_value(SETVALUED_DECOMPOSITION_SLOW_CACHE)
@@ -1455,6 +1463,7 @@ class Tableau:
 
     @classmethod
     def semistandard_rpp(cls, max_entry, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._semistandard_rpp(max_entry, mu, nu)
 
     @cached_value(SEMISTANDARD_RPP_CACHE)
@@ -1476,6 +1485,7 @@ class Tableau:
 
     @classmethod
     def semistandard_marked_rpp(cls, max_entry, mu, nu=(), diagonal_nonprimes=True):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._semistandard_marked_rpp(max_entry, mu, nu, diagonal_nonprimes)
 
     @cached_value(SEMISTANDARD_MARKED_RPP_CACHE)
@@ -1498,6 +1508,7 @@ class Tableau:
 
     @classmethod
     def all(cls, max_entry, mu, nu=(), shifted=False, setvalued=False, marked=False):
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._all(max_entry, mu, nu, shifted, setvalued, marked)
 
     @cached_value(ALL_CACHE)
@@ -1521,6 +1532,7 @@ class Tableau:
 
     @classmethod
     def semistandard(cls, max_entry, mu, nu=(), setvalued=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._semistandard(max_entry, mu, nu, setvalued)
 
     @cached_value(SEMISTANDARD_CACHE)
@@ -1539,6 +1551,7 @@ class Tableau:
 
     @classmethod
     def semistandard_super(cls, m, n, mu, nu=(), setvalued=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._semistandard_super(m, n, mu, nu, setvalued)
 
     @cached_value(SEMISTANDARD_SUPER_CACHE)
@@ -1566,6 +1579,7 @@ class Tableau:
 
     @classmethod
     def standard(cls, mu, nu=()):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._standard(mu, nu)
 
     @cached_value(STANDARD_CACHE)
@@ -1587,6 +1601,7 @@ class Tableau:
 
     @classmethod
     def standard_shifted_marked(cls, mu, nu=(), diagonal_primes=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._standard_shifted_marked(mu, nu, diagonal_primes)
 
     @cached_value(STANDARD_SHIFTED_MARKED_CACHE)
@@ -1615,6 +1630,7 @@ class Tableau:
 
     @classmethod
     def semistandard_marked(cls, max_entry, mu, nu=(), setvalued=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._semistandard_marked(max_entry, mu, nu, setvalued)
 
     @cached_value(SEMISTANDARD_MARKED_CACHE)
@@ -1645,6 +1661,7 @@ class Tableau:
 
     @classmethod
     def semistandard_shifted_marked(cls, max_entry, mu, nu=(), diagonal_primes=True, setvalued=False):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         return cls._semistandard_shifted_marked(max_entry, mu, nu, diagonal_primes, setvalued)
 
     @cached_value(SEMISTANDARD_SHIFTED_MARKED_CACHE)
@@ -1731,6 +1748,7 @@ class Tableau:
 
     @cached_value(KOG_COUNTS)
     def KOG_counts(cls, nu, mu, p):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         rim = tuple(sorted(Partition.skew(nu, mu, shifted=True)))
         return cls._KOG_count_helper(p, rim)
 
@@ -1868,6 +1886,7 @@ class Tableau:
 
     @cached_value(KLG_COUNTS)
     def KLG_counts(cls, nu, mu, p):  # noqa
+        mu, nu = Partition.trim(mu), Partition.trim(nu)
         rim = tuple(sorted(Partition.skew(nu, mu, shifted=True)))
         return cls._KLG_count_helper(p, rim)
 
