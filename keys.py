@@ -751,6 +751,16 @@ def _generic_key(weak_comp, cache, name, monomial_fn, isobaric_divided_differenc
     return cache[weak_comp]
 
 
+def get_composition(w, mu):
+    ans = list(mu)
+    for i in w.inverse().get_reduced_word():
+        while len(ans) < i + 1:
+            ans.append(0)
+        if ans[i - 1] > ans[i]:
+            ans[i - 1], ans[i] = ans[i], ans[i - 1]
+    return tuple(ans)
+
+
 def key(weak_comp):
     isobaric_divided_difference_fn = lambda f, i: f.isobaric_divided_difference(i)
     return _generic_key(weak_comp, KEY_POLYNOMIAL_CACHE, 'Key Polynomial', leading_monomial, isobaric_divided_difference_fn)

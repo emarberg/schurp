@@ -1,5 +1,6 @@
 from cached import cached_value
 from schubert import X
+from permutations import Permutation
 from stable.partitions import Partition
 import itertools
 
@@ -14,6 +15,7 @@ class GTPattern:
         self.rows = tuple(tuple(row) for row in array)
         self._string = None
         self._length = len(self.rows)
+        self._dkp = None
         
         if compute_weight is None:
             w = []
@@ -51,6 +53,10 @@ class GTPattern:
     def __len__(self):
         return self._length
 
+    @classmethod
+    def constant(cls, n, val):
+        return cls([i * [val] for i in range(n, 0, -1)])
+
     @property
     def length(self):
         return len(self)
@@ -72,6 +78,17 @@ class GTPattern:
 
     def get(self, i, j):
         return self.rows[i][j]
+
+    def dual_kogan_permutation(self):
+        if self._dkp is None:
+            n = len(self)
+            ans = Permutation()
+            for i in range(1, n):
+                for j in range(i - 1, -1, -1):
+                    if self.get(-i, j) == self.get(-i - 1, j + 1):
+                        ans = ans % Permutation.s_i(n - 1 - j)
+            self._dkp = ans
+        return self._dkp
 
     def is_strict(self):
         return all(self[i, j - 1] < self[i, j] for i in range(len(self)) for j in range(1, len(self.rows[i])))
