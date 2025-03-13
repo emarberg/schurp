@@ -163,10 +163,14 @@ m = SymmetricPolynomial.monomial
 p = SymmetricPolynomial.powersum
 
 schur = SymmetricPolynomial.schur
-s = SymmetricPolynomial.schur
-P = SymmetricPolynomial.schur_p
-Q = SymmetricPolynomial.schur_q
-S = SymmetricPolynomial.schur_s
+schur_p = SymmetricPolynomial.schur_p
+schur_q = SymmetricPolynomial.schur_q
+schur_s = SymmetricPolynomial.schur_s
+
+s = schur
+P = schur_p
+Q = schur_q
+S = schur_s
 
 G = grothendieck
 GP = grothendieck_P

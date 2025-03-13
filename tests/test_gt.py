@@ -2,7 +2,7 @@ from gt import GTPattern
 from permutations import Permutation
 from keys import key, get_composition
 from stable.partitions import Partition
-from stable.utils import schur
+from stable.utils import schur, schur_p
 
 
 def test_key(nrows=3, size=6):
@@ -19,7 +19,7 @@ def test_key(nrows=3, size=6):
             for gt in patterns:
                 dkp = gt.dual_kogan_permutation()
                 if flipped_w.strong_bruhat_less_equal(dkp):
-                    actual += gt.monomial
+                    actual += gt.weight
             if expected != actual:
                 print()
                 print('expected =', expected)
@@ -36,7 +36,27 @@ def test_schur(nrows=3, size=6):
         expected = schur(n, mu).polynomial()
         actual = 0
         for gt in patterns:
-            actual += gt.monomial
+            actual += gt.weight
+        assert expected == actual
+
+
+def test_schur_p(nrows=3, size=6):
+    n = nrows
+    mus = list(Partition.generate(size, max_row=n))
+    for mu in mus:
+        mu_plus_delta = tuple(n - i - 1 + (mu[i] if i < len(mu) else 0) for i in range(n))
+        patterns = GTPattern.strict_from_partition(mu, n)
+        print('n =', n, 'mu + delta =', mu_plus_delta, 'patterns =', len(patterns))
+        expected = schur_p(n, mu_plus_delta).polynomial()
+        actual = 0
+        for gt in patterns:
+            actual += gt.weight
+        if expected != actual:
+            print('  ', expected - actual)
+            print()
+            print('  ', expected)
+            print()
+            print('  ', actual)
         assert expected == actual
 
 
