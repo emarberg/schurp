@@ -28,17 +28,16 @@ def ordinary_weight(rows):
 def strict_weight(rows):
     w = []
     for i in range(len(rows)): 
-        diff = sum(rows[-i - 1])
+        diff = sum(map(abs, rows[-i - 1]))
         if i > 0:
-            diff -= sum(rows[-i])
+            diff -= sum(map(abs, rows[-i]))
         w.append(diff)
     ans = get_monomial(w)
-
-    for i in range(1, len(rows)):
-        for j in range(len(rows[i])):
-            a, b, c = rows[i - 1][j], rows[i][j], rows[i - 1][j + 1]
-            if a < b < c:
-                ans *= 2
+    # for i in range(1, len(rows)):
+    #     for j in range(len(rows[i])):
+    #         a, b, c = rows[i - 1][j], rows[i][j], rows[i - 1][j + 1]
+    #         if a < b < c:
+    #             ans *= 2
     return ans
 
 
@@ -51,6 +50,7 @@ class GTPattern:
         self._string = None
         self._length = len(self.rows)
         self._dkp = None
+        self._skp = None
         
         if compute_weight is None:
             compute_weight = ordinary_weight
@@ -58,7 +58,7 @@ class GTPattern:
 
     def __str__(self):
         if self._string is None:
-            space = '.'
+            space = ' '
             pad = max([0] + [len(str(x)) for row in self.rows for x in row])
             gap = (pad + 2) * space
             ans = []
@@ -98,6 +98,25 @@ class GTPattern:
 
     def get(self, i, j):
         return self.rows[i][j]
+
+    def strict_kogan_permutation(self):
+        def dbl(a):
+            return 2 * a if a >= 0 else -1 - 2 * a
+
+        def cmp(a, b, c, d):
+            return dbl(a) >= dbl(b) + dbl(d) and (c is None or dbl(a) > dbl(c) + dbl(d))
+
+        if self._skp is None:
+            n = len(self)
+            ans = Permutation()
+            for i in range(1, n):
+                for j in range(i - 1, -1, -1):
+                    v = n - (i - j)
+                    d = self.get(0, v) - self.get(0, v - 1) - 1
+                    if cmp(self.get(-i, j), abs(self.get(-i - 1, j)), self.get(-i, j - 1) if j > 0 else None, d):
+                        ans = ans % Permutation.s_i(n - 1 - j)
+            self._skp = ans
+        return self._skp
 
     def dual_kogan_permutation(self):
         if self._dkp is None:
@@ -170,10 +189,16 @@ class GTPattern:
             return [GTPattern(compute_weight=strict_weight)]
         if len(mu) == 1:
             return [GTPattern([mu], compute_weight=strict_weight)]
+
+        intervals = []
+        for i in range(1, len(mu)):
+            a = abs(mu[i - 1])
+            b = abs(mu[i])
+            val = list(range(a, b + 1)) + list(range(-b + 1, -a))
+            intervals.append(val)
         ans = []
-        intervals = [range(mu[i - 1], mu[i] + 1) for i in range(1, len(mu))]
         for nu in itertools.product(*intervals):
-            if all(nu[i] < nu[i + 1] for i in range(len(nu) - 1)):
+            if all(abs(nu[i]) < abs(nu[i + 1]) for i in range(len(nu) - 1)):
                 ans.extend([GTPattern((mu,) + x.rows, compute_weight=strict_weight) for x in cls._all_strict(nu)])
         return ans
 
