@@ -4,7 +4,7 @@ from keys import (
     sorting_permutation,
     symmetric_weak_compositions,
     skew_symmetric_weak_compositions,
-    key, atom,
+    key, atom, lascoux,
     q_power,
     p_key, p_atom, p_lascoux, p_lascoux_atom,
     q_key, q_atom, q_lascoux, q_lascoux_atom,
@@ -69,6 +69,45 @@ q_insertion_cache = {}
 p_insertion_cache = {}
 
 
+def test_pkey_products(m=4, l=4):
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in skew_symmetric_weak_compositions(n, k, reduced=True):
+                f = p_key(alpha)
+                for beta in skew_symmetric_weak_compositions(n, k, reduced=True):
+                    g = p_key(beta)
+                    dec = try_to_decompose_p(f * g)
+                    print(dec and min(dec[0].values(), default=0) >= 0, alpha, beta)
+
+
+def test_qkey_products(m=4, l=4):
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in symmetric_weak_compositions(n, k, reduced=True):
+                f = q_key(alpha)
+                for beta in symmetric_weak_compositions(n, k, reduced=True):
+                    g = q_key(beta)
+                    dec = try_to_decompose_q(f * g)
+                    print(dec and min(dec[0].values(), default=0) >= 0, alpha, beta)
+
+
+
+def test_key_products(m=4, l=4):
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in weak_compositions(n, k, reduced=True):
+                f = key(alpha)
+                flasc = lascoux(alpha, -1)
+                for beta in weak_compositions(n, k, reduced=True):
+                    g = key(beta)
+                    glasc = lascoux(alpha, -1)
+                    dec = decompose_into_keys(f * g)
+                    declasc = decompose_into_lascoux(flasc * glasc, -1)
+                    kpositive = min(dec.values(), default=0) >= 0
+                    lpositive = min(declasc.values(), default=0) >= 0
+                    print(kpositive, lpositive, alpha, beta)
+                    
+                
 def test_constituent_conjecture(k=10):
     # k = 1
     # while k <= n:

@@ -921,13 +921,13 @@ def decompose_into_compositions(kappa):
     return {k: v for k, v in ans.items() if v}
 
 
-def decompose_into_lascoux(kappa):
+def decompose_into_lascoux(kappa, lascoux_beta=1):
     ans = {}
     while kappa != 0:
         betas = sorted(get_exponents(kappa), key=lambda x: (len(x), x))
         beta = betas[0]
         coeff = kappa[dict_from_tuple(beta)]
-        kappa = kappa - coeff * lascoux(beta, 1)
+        kappa = kappa - coeff * lascoux(beta, lascoux_beta)
         ans[beta] = ans.get(beta, 0) + coeff
     return {k: v for k, v in ans.items() if v}
 
