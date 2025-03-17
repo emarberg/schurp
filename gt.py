@@ -73,7 +73,7 @@ class GTPattern:
         n = len(t.weight()) if n is None else n
         rows = []
         for i in range(n):
-            mu = list(t.find(*[j for j in range(1, i + 2)]).partition().tuple())
+            mu = list(t.find(*[js for j in range(1, i + 2) for js in [-j, j]]).partition().tuple())
             assert len(mu) <= i + 1
             while len(mu) < i + 1:
                 mu.append(0)
@@ -83,7 +83,7 @@ class GTPattern:
 
     def tableau(self):
         def shape(mu):
-            return {(i + 1, j + 1) for i in range(len(mu)) for j in range(mu[i])}
+            return {(i + 1, j + 1) for i in range(len(mu)) for j in range(abs(mu[i]))}
 
         def diff(i):
             ans = shape(list(reversed(self.rows[i])))
@@ -98,8 +98,40 @@ class GTPattern:
                 boxes[a, b] = n - i
         return Tableau(boxes)
 
+    @classmethod
+    def from_shifted_tableau(cls, t, n=None):
+        n = len(t.weight()) if n is None else n
+        rows = []
+        for i in range(n):
+            mu = list(t.find(*[sj for j in range(1, i + 2) for sj in [-j, j]]).partition().tuple())
+            assert len(mu) <= i + 1
+            while len(mu) < i + 1:
+                mu.append(0)
+            mu = list(reversed(mu))
+            rows.append(mu)
+        rows = list(reversed(rows))
+        for i in range(1, n):
+            mu = rows[-i]
+            nu = rows[-i - 1]
+            for j in range(1, len(mu) + 1):
+                a, b, c = nu[-j - 1], mu[-j], nu[-j]
+                if a < b < c and t.get(j, j + b).is_primed():
+                    rows[-i][-j] *= -1
+        return GTPattern(rows)
+
     def shifted_tableau(self):
-        pass
+        n = len(self)
+        ans = self.tableau().shift()
+        ans = ans.mapping
+        for (i, j) in sorted(ans):
+            if (i - 1, j) in ans and abs(ans[i - 1, j]) == abs(ans[i, j]):
+                ans[i - 1, j] = -ans[i - 1, j]
+            if i != j and ans.get((i, j - 1), None) != ans[i, j] and ans.get((i + 1, j), None) != ans[i, j]:
+                a = n + 1 - abs(ans[i, j])
+                b = abs(ans[i, j]) - i - 1
+                if self[a, b] < 0:
+                    ans[i, j] = -ans[i, j]
+        return Tableau(ans)
 
     def __repr__(self):
         return str(self)

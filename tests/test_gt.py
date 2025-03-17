@@ -22,8 +22,9 @@ def test_tableaux(nrows=3, size=6):
         print('n =', n, 'mu + delta =', mu_plus_delta, 'patterns =', len(patterns))
         for gt in patterns:
             t = gt.shifted_tableau()
-            assert gt == GTPattern.from_shifted_tableau(t, n)
-            assert GTPattern.from_shifted_tableau(t).shifted_tableau() == t
+            nt = GTPattern.from_shifted_tableau(t, n)
+            assert gt == nt
+            assert nt.shifted_tableau() == t
         print()
 
 
