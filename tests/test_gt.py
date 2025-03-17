@@ -6,6 +6,27 @@ from stable.partitions import Partition
 from stable.utils import schur, schur_p
 
 
+def test_tableaux(nrows=3, size=6):
+    n = nrows
+    mus = list(Partition.generate(size, max_row=n))
+    for mu in mus:
+        patterns = GTPattern.from_partition(mu, n)
+        print('n =', n, 'mu =', mu, 'patterns =', len(patterns))
+        for gt in patterns:
+            t = gt.tableau()
+            nt = GTPattern.from_tableau(t, n)
+            assert gt == nt
+            assert nt.tableau() == t
+        mu_plus_delta = tuple(n - i - 1 + (mu[i] if i < len(mu) else 0) for i in range(n))
+        patterns = GTPattern.strict_from_partition(mu, n)
+        print('n =', n, 'mu + delta =', mu_plus_delta, 'patterns =', len(patterns))
+        for gt in patterns:
+            t = gt.shifted_tableau()
+            assert gt == GTPattern.from_shifted_tableau(t, n)
+            assert GTPattern.from_shifted_tableau(t).shifted_tableau() == t
+        print()
+
+
 def test_schur(nrows=3, size=6):
     n = nrows
     mus = list(Partition.generate(size, max_row=n))

@@ -1,7 +1,7 @@
 from cached import cached_value
 from schubert import X
 from permutations import Permutation
-from stable.partitions import Partition
+from tableaux import Tableau
 import itertools
 
 GT_CACHE = {}
@@ -18,11 +18,11 @@ def get_monomial(weight):
 def ordinary_weight(rows):
     w = []
     for i in range(len(rows)): 
-        diff = sum(rows[-i - 1])
+        diff = sum(map(abs, rows[-i - 1]))
         if i > 0:
-            diff -= sum(rows[-i])
+            diff -= sum(map(abs, rows[-i]))
         w.append(diff)
-    return get_monomial(w)
+    ans = get_monomial(w)
 
 
 def strict_weight(rows):
@@ -67,6 +67,39 @@ class GTPattern:
                 ans.append(s[1:])
             self._string = '\n' + '\n'.join(ans) + '\n'
         return self._string
+
+    @classmethod
+    def from_tableau(cls, t, n=None):
+        n = len(t.weight()) if n is None else n
+        rows = []
+        for i in range(n):
+            mu = list(t.find(*[j for j in range(1, i + 2)]).partition().tuple())
+            assert len(mu) <= i + 1
+            while len(mu) < i + 1:
+                mu.append(0)
+            mu = list(reversed(mu))
+            rows.append(mu)
+        return GTPattern(list(reversed(rows)))
+
+    def tableau(self):
+        def shape(mu):
+            return {(i + 1, j + 1) for i in range(len(mu)) for j in range(mu[i])}
+
+        def diff(i):
+            ans = shape(list(reversed(self.rows[i])))
+            if i + 1 < len(self):
+                ans -= shape(list(reversed(self.rows[i + 1])))
+            return ans
+
+        boxes = {}
+        n = len(self)
+        for i in range(n - 1, -1, -1):
+            for (a, b) in diff(i):
+                boxes[a, b] = n - i
+        return Tableau(boxes)
+
+    def shifted_tableau(self):
+        pass
 
     def __repr__(self):
         return str(self)
@@ -186,9 +219,9 @@ class GTPattern:
     @cached_value(STRICT_GT_CACHE)
     def _all_strict(cls, mu):
         if len(mu) == 0:
-            return [GTPattern(compute_weight=strict_weight)]
+            return [GTPattern()]
         if len(mu) == 1:
-            return [GTPattern([mu], compute_weight=strict_weight)]
+            return [GTPattern([mu])]
 
         intervals = []
         for i in range(1, len(mu)):
@@ -199,6 +232,6 @@ class GTPattern:
         ans = []
         for nu in itertools.product(*intervals):
             if all(abs(nu[i]) < abs(nu[i + 1]) for i in range(len(nu) - 1)):
-                ans.extend([GTPattern((mu,) + x.rows, compute_weight=strict_weight) for x in cls._all_strict(nu)])
+                ans.extend([GTPattern((mu,) + x.rows) for x in cls._all_strict(nu)])
         return ans
 
