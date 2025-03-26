@@ -1,4 +1,4 @@
-from schubert import FPFGrothendieck, InvGrothendieck, Grothendieck
+from schubert import FPFGrothendieck, InvGrothendieck, Grothendieck, AltInvGrothendieck
 from permutations import Permutation
 import subprocess
 import time
@@ -8,8 +8,61 @@ SP_GROTHENDIECK_DEGREE = {}
 BASE_DIRECTORY = '/Users/emarberg/Downloads/symplectic-cmr/'
 
 
+def gcd(*args):
+    assert len(args) >= 1
+    if len(args) == 1:
+        return args[0]
+    else:
+        import numpy
+        return int(numpy.gcd(args[0], gcd(*args[1:])))
+
+
+def test_top_term(n):
+    ans = {}
+    for w in Permutation.all(n):
+        if w.is_vexillary():
+            f = Grothendieck.get(w).top_term()
+            c = gcd(*f.coeffs.values())
+            f = f // c
+            ans[f] = ans.get(f, set()) | {w}
+    return ans
+
+
+def test_fpf_top_term(n):
+    ans = {}
+    for w in Permutation.fpf_involutions(n):
+        g = FPFGrothendieck.get(w)
+        f = g.top_term()
+        c = gcd(*f.coeffs.values())
+        f = f // c
+        ans[f] = ans.get(f, set()) | {w}
+    return ans
+
+
+def test_inv_top_term(n):
+    ans = {}
+    for w in Permutation.involutions(n):
+        f = AltInvGrothendieck.get(w).top_term()
+        c = gcd(*f.coeffs.values())
+        f = f // c
+        ans[f] = ans.get(f, set()) | {w}
+    return ans
+
+
+def test_ogroth_top_term(n):
+    ans = {}
+    for w in Permutation.involutions(n):
+        if w.is_vexillary():
+            f = InvGrothendieck.get(w).top_term()
+            c = gcd(*f.coeffs.values())
+            f = f // c
+            ans[f] = ans.get(f, set()) | {w}
+    return ans
+
+
 def nice_str(u, n):
     return ' '.join([str(u(i)) for i in range(1, n + 1)])
+
 
 
 def get_orthogonal_grothendieck_degree(w):

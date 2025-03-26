@@ -213,6 +213,14 @@ class MPolynomial:
     def __init__(self, coeffs={}):
         self.coeffs = coeffs
 
+    def top_term(self):
+        ans = MPolynomial()
+        t = self.total_degree()
+        for exp, val in self.coeffs.items():
+            if t == sum(exp.values()):
+                ans += MPolynomial({exp: val})
+        return ans
+
     def homogenize(self, degree):
         ans = MPolynomial()
         for exp, val in self.coeffs.items():
