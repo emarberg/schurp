@@ -8,6 +8,43 @@ SP_GROTHENDIECK_DEGREE = {}
 BASE_DIRECTORY = '/Users/emarberg/Downloads/symplectic-cmr/'
 
 
+def test_fpfdiff(n):
+    for w in Permutation.fpf_involutions(n):
+        f = FPFGrothendieck.get(w)
+        g = Grothendieck.get(w)
+        print(w.cycle_repr(), f.degree(), g.degree(), 'len =', w.fpf_involution_length(), 'diff =', g.degree() - f.degree())
+        # assert g.degree() - f.degree() == n // 2
+
+
+def test_invdiff(n):
+    for w in Permutation.involutions(n):
+        if w.is_fpf_involution():
+            f = AltInvGrothendieck.get(w)
+            g = Grothendieck.get(w)
+            print(w.cycle_repr(), f.degree(), g.degree(), 'diff =', g.degree() - f.degree())
+            a = list(w.get_involution_hecke_atoms())
+            b = {x.inverse() for x in a if Grothendieck.get(x).degree() == f.degree()}
+            print()
+            print(b)
+            print()
+            assert g.degree() == f.degree()
+            assert len(b) == 1
+
+
+def test_odiff(n):
+    for w in Permutation.involutions(n):
+        if w.is_vexillary():
+            f = InvGrothendieck.get(w)
+            g = Grothendieck.get(w)
+            print(w.cycle_repr(), f.degree(), g.degree(), 'diff =', f.degree() - g.degree())
+            # print()
+            # print(f)
+            # print()
+            # print(g)
+            # print()
+            # assert g.degree() == f.degree()
+
+
 def gcd(*args):
     assert len(args) >= 1
     if len(args) == 1:
