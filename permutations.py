@@ -1218,6 +1218,15 @@ class Permutation:
     def is_identity(self):
         return len(self.cycles) == 0 or max(map(len, self.cycles)) <= 1
 
+    def is_fireworks(self):
+        decr = []
+        for a in self.oneline:
+            if len(decr) == 0 or decr[-1][-1] < a:
+                decr.append([a])
+            else:
+                decr[-1].append(a)
+        return all(decr[i][0] < decr[i + 1][0] for i in range(len(decr) - 1))
+
     def __iter__(self):
         return self.oneline.__iter__()
 

@@ -18,17 +18,22 @@ def test_fpfdiff(n):
 
 def test_invdiff(n):
     for w in Permutation.involutions(n):
-        if w.is_fpf_involution():
-            f = AltInvGrothendieck.get(w)
-            g = Grothendieck.get(w)
-            print(w.cycle_repr(), f.degree(), g.degree(), 'diff =', g.degree() - f.degree())
-            a = list(w.get_involution_hecke_atoms())
-            b = {x.inverse() for x in a if Grothendieck.get(x).degree() == f.degree()}
-            print()
-            print(b)
-            print()
-            assert g.degree() == f.degree()
-            assert len(b) == 1
+        f = AltInvGrothendieck.get(w)
+        g = Grothendieck.get(w)
+        print(w.cycle_repr(), f.degree(), g.degree(), 'diff =', g.degree() - f.degree())
+        a = list(w.get_involution_hecke_atoms())
+        b = {x.inverse() for x in a if Grothendieck.get(x).degree() == f.degree()}
+        print()
+        print(b)
+        print()
+        assert g.degree() == f.degree()
+        assert len(b) == 1
+        z = list(b)[0]
+        assert z.is_fireworks()
+        # c = {x.inverse(): x.length() for x in a if x.inverse().is_fireworks()}
+        # print(c)
+        # print()
+        # assert z in {x for x in c if c[x] == max(c.values())}
 
 
 def test_odiff(n):
