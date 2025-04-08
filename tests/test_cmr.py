@@ -12,24 +12,32 @@ def test_fpfdiff(n):
     for w in Permutation.fpf_involutions(n):
         f = FPFGrothendieck.get(w)
         g = Grothendieck.get(w)
-        print(w.cycle_repr(), f.degree(), g.degree(), 'len =', w.fpf_involution_length(), 'diff =', g.degree() - f.degree())
+        print('z =', w.cycle_repr(), 'Gfpf deg =', f.degree(), 'G deg =', g.degree(), 'len =', w.fpf_involution_length(), 'diff =', g.degree() - f.degree())
         # assert g.degree() - f.degree() == n // 2
-
+        a = list(w.get_symplectic_hecke_atoms())
+        b = {x for x in a if Grothendieck.get(x).degree() == f.degree()}
+        print()
+        print('G terms contributing max deg =', b)
+        assert len(b) == 1
+        z = list(b)[0]
+        print('is inverse fireworks:', z.inverse().is_fireworks())
+        print('is fireworks:', z.is_fireworks())
+        print()
 
 def test_invdiff(n):
     for w in Permutation.involutions(n):
         f = AltInvGrothendieck.get(w)
         g = Grothendieck.get(w)
-        print(w.cycle_repr(), f.degree(), g.degree(), 'diff =', g.degree() - f.degree())
+        print('z =', w.cycle_repr(), 'Ginv deg =', f.degree(), 'G deg =', g.degree(), 'diff =', g.degree() - f.degree())
         a = list(w.get_involution_hecke_atoms())
-        b = {x.inverse() for x in a if Grothendieck.get(x).degree() == f.degree()}
+        b = {x for x in a if Grothendieck.get(x).degree() == f.degree()}
         print()
-        print(b)
+        print('G terms contributing max deg =', b)
         print()
         assert g.degree() == f.degree()
         assert len(b) == 1
         z = list(b)[0]
-        assert z.is_fireworks()
+        assert z.inverse().is_fireworks()
         # c = {x.inverse(): x.length() for x in a if x.inverse().is_fireworks()}
         # print(c)
         # print()
