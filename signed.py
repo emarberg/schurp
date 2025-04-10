@@ -11,6 +11,9 @@ B_SIGNED_REDUCED_WORDS = {(): {()}}
 SIGNED_REDUCED_WORDS = {(): {()}}
 SIGNED_HECKE_WORDS = {}
 
+BC_COMPATIBLE_SEQUENCES = {}
+PEAK_CSEQ_CACHE = {}
+
 SIGNED_INVOLUTION_WORDS = {}
 SIGNED_FPF_INVOLUTION_WORDS = {}
 
@@ -22,6 +25,24 @@ atoms_d_cache = {}
 
 
 class SignedMixin:
+
+    @classmethod
+    def _get_peak_compatible_sequences(cls, n, peaks):
+        key = (n, peaks)
+        cache = PEAK_CSEQ_CACHE
+        if key not in cache:
+            if len(peaks) == 0:
+                ans = {()}
+            else:
+                ans = set()
+                bns = cls._get_peak_compatible_sequences(n, peaks[:-1])
+                for b in bns:
+                    strict = peaks[-1] and len(b) >= 2 and b[-2] == b[-1]
+                    start = 1 if len(b) == 0 else (b[-1] + 1) if strict else b[-1]
+                    for e in range(start, n + 1):
+                        ans.add(b + (e,))
+            cache[key] = ans
+        return cache[key]
 
     def __abs__(self):
         return Permutation(*[abs(self(i)) for i in range(1, self.rank + 1)])
@@ -296,6 +317,26 @@ class SignedPermutation(SignedMixin):
         return str(self)
 
     @classmethod
+    def get_grassmannians_bc(cls, n):
+        for k in range(n + 1):
+            for s in itertools.combinations(list(range(1, n + 1)), k):
+                t = sorted(set(range(1, n + 1)) - set(s))
+                mu = tuple(reversed(s))
+                oneline = [-m for m in mu] + t
+                yield (cls(*oneline), mu)
+
+    @classmethod
+    def get_grassmannians_d(cls, n):
+        for k in range(0, n + 1, 2):
+            for s in itertools.combinations(list(range(1, n + 1)), k):
+                t = sorted(set(range(1, n + 1)) - set(s))
+                mu = tuple(reversed([i - 1 for i in s]))
+                if mu and mu[-1] == 0:
+                    mu = mu[:-1]
+                oneline = [-m for m in reversed(s)] + t
+                yield (cls(*oneline), mu)
+
+    @classmethod
     def reflections(cls, n):
         for i in range(1, n + 1):
             for j in range(i + 1, n + 1):
@@ -355,8 +396,32 @@ class SignedPermutation(SignedMixin):
     def get_reduced_words(self):
         return self._get_reduced_words(SIGNED_REDUCED_WORDS)
 
+    def min_peaks(self):
+        ans = None
+        for w in self.get_reduced_words():
+            a = len([i for i in range(1, len(w) - 1) if w[i - 1] < w[i] > w[i + 1]])
+            ans = a if (ans is None or a < ans) else ans
+        return 0 if ans is None else ans
+
     def get_hecke_words(self, length):
         return self._get_hecke_words(length, SIGNED_HECKE_WORDS)
+
+    def get_hecke_compatible_sequences(self, n, length):
+        w = self.reduce()
+        oneline = w.oneline
+        key = (oneline, n, length)
+        cache = BC_COMPATIBLE_SEQUENCES
+
+        if key not in cache:
+            ans = {}
+            for ell in range(length + 1):
+                for a in self.get_hecke_words(ell):
+                    peaks = []
+                    for i in range(ell):
+                        peaks.append(1 < i < ell and a[i - 2] <= a[i - 1] >= a[i])
+                    ans[a] = self._get_peak_compatible_sequences(n, tuple(peaks))
+            cache[key] = ans
+        return cache[key]
 
     def get_signed_reduced_words(self):
         return self.get_type_b_reduced_words()

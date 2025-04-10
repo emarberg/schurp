@@ -19,6 +19,11 @@ FPF_GROTHENDIECK_CACHE = {}
 INV_GROTHENDIECK_CACHE = {}
 ALT_INV_GROTHENDIECK_CACHE = {}
 
+C_GROTHENDIECK_CACHE = {}
+B_GROTHENDIECK_CACHE = {}
+C_SYMMETRIC_GROTHENDIECK_CACHE = {}
+B_SYMMETRIC_GROTHENDIECK_CACHE = {}
+
 
 class AbstractSchubert(object):
 
@@ -132,7 +137,7 @@ class Schubert(AbstractSchubert):
 
 class Grothendieck(Schubert):
 
-    beta = 1
+    beta = x(0)
 
     @classmethod
     def cache(cls):
@@ -378,3 +383,93 @@ class AltInvGrothendieck(InvGrothendieck):
         for i, j in w.involution_rothe_diagram():
             s *= (x(i) + x(j) + cls.beta * x(i) * x(j)) if i != j else x(i)
         return s
+
+
+class GrothendieckC(Grothendieck):
+
+    @classmethod
+    def exponent(cls, a, b):
+        gamma = 0
+        for i in range(len(a) - 1):
+            if a[i] == a[i + 1] and b[i] == b[i + 1]:
+                gamma += 1
+        return len(set(b)) - gamma
+
+    @classmethod
+    def symmetric(cls, n, w, x_not_y=True, ell=None):
+        w = w.reduce()
+        assert cls.is_valid(w)
+
+        oneline = cls.reduce(w.oneline)
+        key = (n, oneline, x_not_y, ell)
+        cache = cls.symmetric_cache()
+        
+        if key not in cache:
+            if (n == 0 and len(w) > 0) or (0 < n < w.min_peaks() + 1):
+                cache[key] = 0
+            elif ell is None:
+                ans = cls.symmetric(n, w, x_not_y, len(w))
+                assert ans != 0
+                ell = len(w) + 1
+                while True:
+                    bns = cls.symmetric(n, w, x_not_y, ell)
+                    if ans == bns:
+                        cache[key] = ans
+                        break
+                    ans = bns
+                    ell += 1
+            else:
+                ans = 0
+                dictionary = w.get_hecke_compatible_sequences(n, ell)
+                for a in dictionary:
+                    for b in dictionary[a]:
+                        term = one() * cls.beta**(len(a) - len(w))
+                        term *= 2**cls.exponent(a, b)
+                        for i in b:
+                            term *= x(i) if x_not_y else y(i)
+                        ans += term
+                cache[key] = ans
+        return cache[key]
+
+    @classmethod
+    def cache(cls):
+        return C_GROTHENDIECK_CACHE
+
+    @classmethod
+    def symmetric_cache(cls):
+        return C_SYMMETRIC_GROTHENDIECK_CACHE
+
+    @classmethod
+    def get(cls, w, verbose=False):
+        w = w.reduce()
+        assert cls.is_valid(w)
+        oneline = cls.reduce(w.oneline)
+        cache = cls.cache()
+        if oneline not in cache:
+            pass
+            if verbose:
+                print(' . . .', cls.__name__, 'cache:', len(cache))
+        return cache[oneline]
+
+
+class GrothendieckB(GrothendieckC):
+
+    @classmethod
+    def exponent(cls, a, b):
+        gamma = 0
+        oB = 0
+        for i in range(len(a)):
+            if i < len(a) - 1 and a[i] == a[i + 1] and b[i] == b[i + 1]:
+                gamma += 1
+            if a[i] == 0:
+                oB += 1
+        print(a, b, len(set(b)), gamma, oB)
+        return len(set(b)) - gamma - oB
+
+    @classmethod
+    def cache(cls):
+        return B_GROTHENDIECK_CACHE
+
+    @classmethod
+    def symmetric_cache(cls):
+        return B_SYMMETRIC_GROTHENDIECK_CACHE
