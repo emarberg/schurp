@@ -9,6 +9,7 @@ from permutations import Permutation
 C_SIGNED_REDUCED_WORDS = {(): {()}}
 B_SIGNED_REDUCED_WORDS = {(): {()}}
 SIGNED_REDUCED_WORDS = {(): {()}}
+SIGNED_HECKE_WORDS = {}
 
 SIGNED_INVOLUTION_WORDS = {}
 SIGNED_FPF_INVOLUTION_WORDS = {}
@@ -253,10 +254,30 @@ class SignedMixin:
         if oneline not in cache:
             words = set()
             for i in w.right_descent_set:
-                s = self.s_i(i, w.rank)
+                s = w.s_i(i, w.rank)
                 words |= {e + (i,) for e in (w * s)._get_reduced_words(cache)}
             cache[oneline] = words
         return cache[oneline]
+
+    def _get_hecke_words(self, length, cache):
+        w = self.reduce()
+        oneline = tuple(w.oneline)
+        key = (oneline, length)
+        if key not in cache:
+            if length < 0:
+                words = set()
+            elif length == 0:
+                words = {()} if w.is_identity() else set()
+            else:
+                words = {e + (i,) for e in w._get_hecke_words(length - 1, cache) for i in self.right_descent_set}
+                for i in w.right_descent_set:
+                    s = w.s_i(i, w.rank)
+                    words |= {e + (i,) for e in (w * s)._get_hecke_words(length - 1, cache)}
+            cache[key] = words
+        return cache[key]
+
+    def is_identity(self):
+        return len(self) == 0
 
 
 class SignedPermutation(SignedMixin):
@@ -333,6 +354,9 @@ class SignedPermutation(SignedMixin):
 
     def get_reduced_words(self):
         return self._get_reduced_words(SIGNED_REDUCED_WORDS)
+
+    def get_hecke_words(self, length):
+        return self._get_hecke_words(length, SIGNED_HECKE_WORDS)
 
     def get_signed_reduced_words(self):
         return self.get_type_b_reduced_words()

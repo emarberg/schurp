@@ -7,6 +7,8 @@ import random
 from collections import deque
 
 REDUCED_WORDS = {(): {()}}
+HECKE_WORDS = {}
+
 INVOLUTION_WORDS = {(): {()}}
 FPF_INVOLUTION_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
@@ -215,6 +217,22 @@ class Permutation:
                 words |= {e + (i,) for e in (self * s).get_reduced_words()}
             REDUCED_WORDS[oneline] = words
         return REDUCED_WORDS[oneline]
+
+    def get_hecke_words(self, length):
+        oneline = tuple(self.oneline)
+        key = (oneline, length)
+        if key not in HECKE_WORDS:
+            if length < 0:
+                words = set()
+            elif length == 0:
+                words = {()} if self.is_identity() else set()
+            else:
+                words = {e + (i,) for e in self.get_hecke_words(length - 1) for i in self.right_descent_set}
+                for i in self.right_descent_set:
+                    s = Permutation.s_i(i)
+                    words |= {e + (i,) for e in (self * s).get_hecke_words(length - 1)}
+            HECKE_WORDS[key] = words
+        return HECKE_WORDS[key]
 
     def get_increasing_factorizations(self, k):
         for w in self.get_reduced_words():
