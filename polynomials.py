@@ -253,10 +253,7 @@ class MPolynomial:
     def total_degree(self):
         ans = None
         for ind in self.coeffs:
-            d = 0
-            for i in ind:
-                d = d + ind[i]
-
+            d = sum([ind[i] for i in ind])
             if ans is None:
                 ans = d
             else:

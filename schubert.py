@@ -421,13 +421,26 @@ class GrothendieckC(Grothendieck):
             else:
                 ans = 0
                 dictionary = w.get_hecke_compatible_sequences(n, ell)
+                # for a in dictionary:
+                #    s = {i+1 for i in range(1, len(a) - 1) if a[i-1]<=a[i]>=a[i+1]}
+                #    print('a =', a, s, s.issubset({3,4}))
                 for a in dictionary:
                     for b in dictionary[a]:
                         term = one() * cls.beta**(len(a) - len(w))
-                        term *= 2**cls.exponent(a, b)
+                        term *= 2**(len(b) + cls.exponent(a, b))
                         for i in b:
                             term *= x(i) if x_not_y else y(i)
                         ans += term
+                        # if b == (1, 1, 1, 2, 2):
+                        #    gamma = 0
+                        #    for i in range(len(a) - 1):
+                        #        if a[i] == a[i + 1] and b[i] == b[i + 1]:
+                        #            gamma += 1
+                        #    print(a, b, len(set(b)), gamma, len([i for i in a if i == 0]), term)
+                # for (m, c) in ans.coeffs.items():
+                #    print('*', m, c, 2**sum([m[i] for i in m if i != 0]))
+                assert all(c % 2**sum([m[i] for i in m if i != 0]) == 0 for (m, c) in ans.coeffs.items())
+                ans.coeffs = {m: c // 2**sum([m[i] for i in m if i != 0]) for (m, c) in ans.coeffs.items()}
                 cache[key] = ans
         return cache[key]
 
@@ -463,7 +476,6 @@ class GrothendieckB(GrothendieckC):
                 gamma += 1
             if a[i] == 0:
                 oB += 1
-        print(a, b, len(set(b)), gamma, oB)
         return len(set(b)) - gamma - oB
 
     @classmethod
