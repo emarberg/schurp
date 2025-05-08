@@ -9,7 +9,10 @@ B_SIGNED_REDUCED_WORDS = {(): {()}}
 C_SIGNED_REDUCED_WORDS = {(): {()}}
 
 SIGNED_REDUCED_WORDS = {(): {()}}
+DTYPE_REDUCED_WORDS = {(): {()}}
+
 SIGNED_HECKE_WORDS = {}
+DTYPE_HECKE_WORDS = {}
 
 B_COMPATIBLE_SEQUENCES = {}
 C_COMPATIBLE_SEQUENCES = {}
@@ -42,6 +45,18 @@ class SignedMixin:
 
     def length(self):
         return len(self)
+
+    def dlength(self):
+        if self._dlen is None:
+            n = self.reduce().rank
+            self._dlen = 0
+            for i in range(1, n):
+                for j in range(i + 1, n + 1):
+                    if self(i) > self(j):
+                        self._dlen += 1
+                    if self(-i) > self(j):
+                        self._dlen += 1
+        return self._len
 
     @classmethod
     def identity(cls, n):
@@ -254,33 +269,16 @@ class SignedMixin:
         else:
             return ()
 
-    def _get_reduced_words(self, cache):
+    def _get_reduced_words(self, des, cache):
         w = self.reduce()
         oneline = w.oneline
         if oneline not in cache:
             words = set()
-            for i in w.right_descent_set:
+            for i in des(w):
                 s = w.s_i(i, w.rank)
-                words |= {e + (i,) for e in (w * s)._get_reduced_words(cache)}
+                words |= {e + (i,) for e in (w * s)._get_reduced_words(des, cache)}
             cache[oneline] = words
         return cache[oneline]
-
-    def _get_hecke_words(self, length, cache):
-        w = self.reduce()
-        oneline = tuple(w.oneline)
-        key = (oneline, length)
-        if key not in cache:
-            if length < 0:
-                words = set()
-            elif length == 0:
-                words = {()} if w.is_identity() else set()
-            else:
-                words = {e + (i,) for e in w._get_hecke_words(length - 1, cache) for i in self.right_descent_set}
-                for i in w.right_descent_set:
-                    s = w.s_i(i, w.rank)
-                    words |= {e + (i,) for e in (w * s)._get_hecke_words(length - 1, cache)}
-            cache[key] = words
-        return cache[key]
 
     def is_identity(self):
         return len(self) == 0
@@ -295,7 +293,9 @@ class SignedPermutation(SignedMixin):
         # cached fields
         self._rdes = None
         self._ldes = None
+        self._ddes = None
         self._len = None
+        self._dlen = None
 
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
@@ -330,14 +330,16 @@ class SignedPermutation(SignedMixin):
             yield cls.reflection_s(i, i, n)
 
     @classmethod
-    def all(cls, n):
+    def all(cls, n, dtype=False):
         for args in itertools.permutations(range(1, n + 1)):
             for v in range(2**n):
                 oneline = []
                 for i in range(n):
                     oneline.append(args[i] * (-1) ** (v % 2))
                     v = v // 2
-                yield cls(*oneline)
+                w = cls(*oneline)
+                if not dtype or w.is_even_signed():
+                    yield w
 
     @classmethod
     def involutions(cls, n):
@@ -379,7 +381,8 @@ class SignedPermutation(SignedMixin):
         return self.is_involution() and all(self(i) != i for i in range(1, n + 1))
 
     def get_reduced_words(self):
-        return self._get_reduced_words(SIGNED_REDUCED_WORDS)
+        des = lambda w: w.right_descent_set
+        return self._get_reduced_words(des, SIGNED_REDUCED_WORDS)
 
     def min_peaks(self):
         ans = None
@@ -388,8 +391,42 @@ class SignedPermutation(SignedMixin):
             ans = a if (ans is None or a < ans) else ans
         return 0 if ans is None else ans
 
+    def get_dtype_reduced_words(self):
+        des = lambda w: w.dtype_descent_set
+        return self._get_reduced_words(des, DTYPE_REDUCED_WORDS)
+
+
+    def dtype_min_peaks(self):
+        ans = None
+        for w in self.get_dtype_reduced_words():
+            a = len([i for i in range(1, len(w) - 1) if abs(w[i - 1]) <= abs(w[i]) >= abs(w[i + 1])])
+            ans = a if (ans is None or a < ans) else ans
+        return 0 if ans is None else ans
+
+    def _get_hecke_words(self, length, cache, des):
+        w = self.reduce()
+        oneline = tuple(w.oneline)
+        key = (oneline, length)
+        if key not in cache:
+            if length < 0:
+                words = set()
+            elif length == 0:
+                words = {()} if w.is_identity() else set()
+            else:
+                words = {e + (i,) for e in w._get_hecke_words(length - 1, cache, des) for i in des(w)}
+                for i in des(w):
+                    s = w.s_i(i, w.rank)
+                    words |= {e + (i,) for e in (w * s)._get_hecke_words(length - 1, cache, des)}
+            cache[key] = words
+        return cache[key]
+
     def get_hecke_words(self, length):
-        return self._get_hecke_words(length, SIGNED_HECKE_WORDS)
+        des = lambda w: w.right_descent_set
+        return self._get_hecke_words(length, SIGNED_HECKE_WORDS, des)
+
+    def get_dtype_hecke_words(self, length):
+        des = lambda w: w.dtype_descent_set
+        return self._get_hecke_words(length, DTYPE_HECKE_WORDS, des)
 
     @classmethod
     def _get_peak_compatible_sequences(cls, n, ascents, peaks):
@@ -431,7 +468,13 @@ class SignedPermutation(SignedMixin):
         get_ascents = lambda a: len(a) * (False,)
         get_peaks = lambda a: tuple(1 < i < len(a) and a[i - 2] <= a[i - 1] >= a[i] for i in range(len(a)))
         return self._get_hecke_compatible_sequences(n, length, C_COMPATIBLE_SEQUENCES, get_hecke_words, get_ascents, get_peaks)
-    
+
+    def get_hecke_compatible_sequences_d(self, n, length):
+        get_hecke_words = lambda w, ell: w.get_dtype_hecke_words(ell)
+        get_ascents = lambda a: tuple(0 < i < len(a) and abs(a[i - 1]) == abs(a[i]) == 1 for i in range(len(a)))
+        get_peaks = lambda a: tuple(1 < i < len(a) and abs(a[i - 2]) <= abs(a[i - 1]) >= abs(a[i]) for i in range(len(a)))
+        return self._get_hecke_compatible_sequences(n, length, D_COMPATIBLE_SEQUENCES, get_hecke_words, get_ascents, get_peaks)
+        
     def get_signed_reduced_words(self):
         return self.get_type_b_reduced_words()
 
@@ -567,8 +610,11 @@ class SignedPermutation(SignedMixin):
 
     @classmethod
     def s_i(cls, i, n):
-        assert 0 <= i < n
-        if i == 0:
+        assert -1 <= i < n
+        if i == -1:
+            assert n >= 2
+            oneline = [-2, -1] + list(range(3, n + 1))
+        elif i == 0:
             oneline = [-1] + list(range(2, n + 1))
         else:
             oneline = list(range(1, i)) + [i + 1, i] + list(range(i + 2, n + 1))
@@ -584,6 +630,17 @@ class SignedPermutation(SignedMixin):
                 if self(i) > self(i + 1):
                     self._rdes.add(i)
         return self._rdes
+
+    @property
+    def dtype_descent_set(self):
+        if self._ddes is None:
+            self._ddes = set()
+            if self.rank >= 2 and -self(2) > self(1):
+                self._ddes.add(-1)
+            for i in range(1, self.rank):
+                if self(i) > self(i + 1):
+                    self._ddes.add(i)
+        return self._ddes
 
     @property
     def left_descent_set(self):

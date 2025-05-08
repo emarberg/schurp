@@ -21,9 +21,11 @@ ALT_INV_GROTHENDIECK_CACHE = {}
 
 C_GROTHENDIECK_CACHE = {}
 B_GROTHENDIECK_CACHE = {}
+D_GROTHENDIECK_CACHE = {}
+
 C_SYMMETRIC_GROTHENDIECK_CACHE = {}
 B_SYMMETRIC_GROTHENDIECK_CACHE = {}
-
+D_SYMMETRIC_GROTHENDIECK_CACHE = {}
 
 class AbstractSchubert(object):
 
@@ -388,6 +390,14 @@ class AltInvGrothendieck(InvGrothendieck):
 class GrothendieckC(Grothendieck):
 
     @classmethod
+    def get_hecke_compatible_sequences(cls, n, w, ell):
+        return w.get_hecke_compatible_sequences_c(n, ell)
+
+    @classmethod
+    def beta_exponent(cls, a, w):
+        return len(a) - len(w)
+
+    @classmethod
     def exponent(cls, a, b):
         gamma = 0
         for i in range(len(a) - 1):
@@ -413,10 +423,6 @@ class GrothendieckC(Grothendieck):
         return ans
 
     @classmethod
-    def get_hecke_compatible_sequences(cls, n, w, ell):
-        return w.get_hecke_compatible_sequences_c(n, ell)
-
-    @classmethod
     def symmetric(cls, n, w, x_not_y=True, ell=None):
         w = w.reduce()
         assert cls.is_valid(w)
@@ -435,7 +441,7 @@ class GrothendieckC(Grothendieck):
                 dictionary = cls.get_hecke_compatible_sequences(n, w, ell)
                 for a in dictionary:
                     for b in dictionary[a]:
-                        term = one() * cls.beta**(len(a) - len(w)) * 2**cls.exponent(a, b)
+                        term = one() * cls.beta**cls.beta_exponent(a, w) * 2**cls.exponent(a, b)
                         for i in b:
                             term *= x(i) if x_not_y else y(i)
                         ans += term
@@ -492,6 +498,14 @@ class GrothendieckB(GrothendieckC):
 class GrothendieckD(GrothendieckC):
 
     @classmethod
+    def get_hecke_compatible_sequences(cls, n, w, ell):
+        return w.get_hecke_compatible_sequences_d(n, ell)
+
+    @classmethod
+    def beta_exponent(cls, a, w):
+        return len(a) - w.dlength()
+
+    @classmethod
     def exponent(cls, a, b):
         gamma = 0
         oD = 0
@@ -503,8 +517,8 @@ class GrothendieckD(GrothendieckC):
         return len(set(b)) - gamma - oD
 
     @classmethod
-    def get_hecke_compatible_sequences(cls, n, w, ell):
-        return w.get_hecke_compatible_sequences_d(n, ell)
+    def symmetric_is_zero(cls, n, w):
+        return (n == 0 and len(w) > 0) or (0 < n < w.dtype_min_peaks() + 1)
 
     @classmethod
     def cache(cls):
