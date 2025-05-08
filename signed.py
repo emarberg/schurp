@@ -5,13 +5,16 @@ from symmetric import SchurP, SchurQ
 from partitions import StrictPartition
 from permutations import Permutation
 
-
-C_SIGNED_REDUCED_WORDS = {(): {()}}
 B_SIGNED_REDUCED_WORDS = {(): {()}}
+C_SIGNED_REDUCED_WORDS = {(): {()}}
+
 SIGNED_REDUCED_WORDS = {(): {()}}
 SIGNED_HECKE_WORDS = {}
 
-BC_COMPATIBLE_SEQUENCES = {}
+B_COMPATIBLE_SEQUENCES = {}
+C_COMPATIBLE_SEQUENCES = {}
+D_COMPATIBLE_SEQUENCES = {}
+
 PEAK_CSEQ_CACHE = {}
 
 SIGNED_INVOLUTION_WORDS = {}
@@ -25,24 +28,6 @@ atoms_d_cache = {}
 
 
 class SignedMixin:
-
-    @classmethod
-    def _get_peak_compatible_sequences(cls, n, peaks):
-        key = (n, peaks)
-        cache = PEAK_CSEQ_CACHE
-        if key not in cache:
-            if len(peaks) == 0:
-                ans = {()}
-            else:
-                ans = set()
-                bns = cls._get_peak_compatible_sequences(n, peaks[:-1])
-                for b in bns:
-                    strict = peaks[-1] and len(b) >= 2 and b[-2] == b[-1]
-                    start = 1 if len(b) == 0 else (b[-1] + 1) if strict else b[-1]
-                    for e in range(start, n + 1):
-                        ans.add(b + (e,))
-            cache[key] = ans
-        return cache[key]
 
     def __abs__(self):
         return Permutation(*[abs(self(i)) for i in range(1, self.rank + 1)])
@@ -406,23 +391,47 @@ class SignedPermutation(SignedMixin):
     def get_hecke_words(self, length):
         return self._get_hecke_words(length, SIGNED_HECKE_WORDS)
 
-    def get_hecke_compatible_sequences(self, n, length):
-        w = self.reduce()
-        oneline = w.oneline
-        key = (oneline, n, length)
-        cache = BC_COMPATIBLE_SEQUENCES
-
+    @classmethod
+    def _get_peak_compatible_sequences(cls, n, ascents, peaks):
+        key = (n, ascents, peaks)
+        cache = PEAK_CSEQ_CACHE
         if key not in cache:
-            ans = {}
-            for ell in range(length + 1):
-                for a in self.get_hecke_words(ell):
-                    peaks = []
-                    for i in range(ell):
-                        peaks.append(1 < i < ell and a[i - 2] <= a[i - 1] >= a[i])
-                    ans[a] = self._get_peak_compatible_sequences(n, tuple(peaks))
+            if len(peaks) == 0:
+                ans = {()}
+            else:
+                ans = set()
+                bns = cls._get_peak_compatible_sequences(n, ascents[:-1], peaks[:-1])
+                for b in bns:
+                    strict = (ascents[-1] and len(b) >= 1) or (peaks[-1] and len(b) >= 2 and b[-2] == b[-1])
+                    start = 1 if len(b) == 0 else (b[-1] + 1) if strict else b[-1]
+                    for e in range(start, n + 1):
+                        ans.add(b + (e,))
             cache[key] = ans
         return cache[key]
 
+    def _get_hecke_compatible_sequences(self, n, length, cache, get_hecke_words, get_ascents, get_peaks):
+        w = self.reduce()
+        key = (w.oneline, n, length)
+        if key not in cache:
+            ans = {}
+            for ell in range(length + 1):
+                for a in get_hecke_words(w, ell):
+                    ans[a] = self._get_peak_compatible_sequences(n, get_ascents(a), get_peaks(a))
+            cache[key] = ans
+        return cache[key]
+
+    def get_hecke_compatible_sequences_b(self, n, length):
+        get_hecke_words = lambda w, ell: w.get_hecke_words(ell)
+        get_ascents = lambda a: tuple(0 < i < len(a) and a[i - 1] == a[i] == 0 for i in range(len(a)))
+        get_peaks = lambda a: tuple(1 < i < len(a) and a[i - 2] <= a[i - 1] >= a[i] for i in range(len(a)))
+        return self._get_hecke_compatible_sequences(n, length, B_COMPATIBLE_SEQUENCES, get_hecke_words, get_ascents, get_peaks)
+    
+    def get_hecke_compatible_sequences_c(self, n, length):
+        get_hecke_words = lambda w, ell: w.get_hecke_words(ell)
+        get_ascents = lambda a: len(a) * (False,)
+        get_peaks = lambda a: tuple(1 < i < len(a) and a[i - 2] <= a[i - 1] >= a[i] for i in range(len(a)))
+        return self._get_hecke_compatible_sequences(n, length, C_COMPATIBLE_SEQUENCES, get_hecke_words, get_ascents, get_peaks)
+    
     def get_signed_reduced_words(self):
         return self.get_type_b_reduced_words()
 
