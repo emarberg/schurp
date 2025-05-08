@@ -437,14 +437,15 @@ class GrothendieckC(Grothendieck):
             elif ell is None:
                 ans = cls.symmetric_with_unknown_ell(n, w, x_not_y)
             else:
-                ans = 0
+                ansdict = {}
                 dictionary = cls.get_hecke_compatible_sequences(n, w, ell)
                 for a in dictionary:
                     for b in dictionary[a]:
-                        term = one() * cls.beta**cls.beta_exponent(a, w) * 2**cls.exponent(a, b)
+                        term = one() * cls.beta**cls.beta_exponent(a, w) * 2**(len(b) + cls.exponent(a, b))
                         for i in b:
                             term *= x(i) if x_not_y else y(i)
-                        ans += term
+                        ansdict[len(b)] = ansdict.get(len(b), 0) + term
+                ans = sum([ansdict[i] // 2**i for i in ansdict])
             cache[key] = ans
         return cache[key]
 

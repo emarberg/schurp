@@ -395,7 +395,6 @@ class SignedPermutation(SignedMixin):
         des = lambda w: w.dtype_descent_set
         return self._get_reduced_words(des, DTYPE_REDUCED_WORDS)
 
-
     def dtype_min_peaks(self):
         ans = None
         for w in self.get_dtype_reduced_words():
@@ -471,7 +470,7 @@ class SignedPermutation(SignedMixin):
 
     def get_hecke_compatible_sequences_d(self, n, length):
         get_hecke_words = lambda w, ell: w.get_dtype_hecke_words(ell)
-        get_ascents = lambda a: tuple(0 < i < len(a) and abs(a[i - 1]) == abs(a[i]) == 1 for i in range(len(a)))
+        get_ascents = lambda a: tuple(0 < i < len(a) and a[i - 1] == a[i] and abs(a[i]) == 1 for i in range(len(a)))
         get_peaks = lambda a: tuple(1 < i < len(a) and abs(a[i - 2]) <= abs(a[i - 1]) >= abs(a[i]) for i in range(len(a)))
         return self._get_hecke_compatible_sequences(n, length, D_COMPATIBLE_SEQUENCES, get_hecke_words, get_ascents, get_peaks)
         

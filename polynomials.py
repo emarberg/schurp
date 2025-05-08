@@ -433,7 +433,8 @@ class MPolynomial:
 
     def __floordiv__(self, other):
         assert type(other) in [int]
-        coeffs = {m: c // other for (m, c) in self.coeffs.items() if c / other}
+        assert all(c % other == 0 for (m, c) in self.coeffs.items())
+        coeffs = {m: c // other for (m, c) in self.coeffs.items() if c // other}
         return self.__class__(coeffs)
 
     def __pow__(self, i):
