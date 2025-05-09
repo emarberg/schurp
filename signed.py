@@ -5,6 +5,8 @@ from symmetric import SchurP, SchurQ
 from partitions import StrictPartition
 from permutations import Permutation
 
+DEMAZURE_FACTORIZATIONS = {}
+
 B_SIGNED_REDUCED_WORDS = {(): {()}}
 C_SIGNED_REDUCED_WORDS = {(): {()}}
 
@@ -31,6 +33,22 @@ atoms_d_cache = {}
 
 
 class SignedMixin:
+
+    def get_demazure_factorizations(self):
+        w = self.reduce()
+        key = tuple(w.oneline)
+        n = len(key)
+
+        if key not in DEMAZURE_FACTORIZATIONS:
+            for u in SignedPermutation.all(n):
+                for v in Permutation.all(n):
+                    x = u % SignedPermutation(*[v(i) for i in range(1, 1 + u.rank)])
+                    xkey = tuple(x.reduce().oneline)
+                    if xkey not in DEMAZURE_FACTORIZATIONS:
+                        DEMAZURE_FACTORIZATIONS[xkey] = set()
+                    DEMAZURE_FACTORIZATIONS[xkey].add((u, v))
+
+        return DEMAZURE_FACTORIZATIONS[key]
 
     def __abs__(self):
         return Permutation(*[abs(self(i)) for i in range(1, self.rank + 1)])

@@ -291,6 +291,9 @@ class SymmetricPolynomial(Vector):
         sorted_items = [(printer(key), value) for key, value in sorted_items]
         return self._print_sorted(sorted_items)
 
+    def ypolynomial(self):
+        return self.polynomial('y')
+
     def polynomial(self, variable='x'):
         ans = Polynomial()
         for mon, coeff in self.items():

@@ -8,6 +8,7 @@ from polynomials import (
     X,
 )
 from tableaux import Tableau
+from stable.utils import GQ_expansion, GP_expansion, SymmetricPolynomial
 
 
 SCHUBERT_CACHE = {}
@@ -390,6 +391,16 @@ class AltInvGrothendieck(InvGrothendieck):
 class GrothendieckC(Grothendieck):
 
     @classmethod
+    def least_term(cls, f):
+        def key(s):
+            level = s.get(0, 0)
+            pos = sorted([i for i in s if i > 0])
+            mu = tuple(sorted([s[k] for k in s if k < 0], reverse=True))
+            alpha = tuple(-i for k in pos for i in s[k] * [k])
+            return (level, alpha, mu)
+        return min(f, key=key)
+
+    @classmethod
     def get_hecke_compatible_sequences(cls, n, w, ell):
         return w.get_hecke_compatible_sequences_c(n, ell)
 
@@ -458,16 +469,27 @@ class GrothendieckC(Grothendieck):
         return C_SYMMETRIC_GROTHENDIECK_CACHE
 
     @classmethod
+    def symmetric_decomposed(cls, n, w):
+        p = cls.symmetric(n, u)
+        s = SymmetricPolynomial.from_polynomial(p)
+        e = GQ_expansion(s)
+
+    @classmethod
     def get(cls, w, verbose=False):
-        w = w.reduce()
+        n = w.rank
         assert cls.is_valid(w)
-        oneline = cls.reduce(w.oneline)
+        key = tuple(w.oneline)
         cache = cls.cache()
-        if oneline not in cache:
-            pass
+        if key not in cache:
+            ans = 0
+            for (u, v) in w.get_demazure_factorizations():
+                exp = cls.symmetric_decomposed(n, u)
+                f = 0
+                ans += f * Grothendieck.get(v)
+            cache[key] = ans
             if verbose:
                 print(' . . .', cls.__name__, 'cache:', len(cache))
-        return cache[oneline]
+        return cache[key]
 
 
 class GrothendieckB(GrothendieckC):
@@ -519,7 +541,7 @@ class GrothendieckD(GrothendieckC):
 
     @classmethod
     def symmetric_is_zero(cls, n, w):
-        return (n == 0 and len(w) > 0) or (0 < n < w.dtype_min_peaks() + 1)
+        return (not w.is_even_signed()) or (n == 0 and len(w) > 0) or (0 < n < w.dtype_min_peaks() + 1)
 
     @classmethod
     def cache(cls):
