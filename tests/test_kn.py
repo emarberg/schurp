@@ -70,7 +70,7 @@ def test_b_symmetric_transitions(n=4, numvars=2):
         chain += [SignedPermutation.reflection_s(r, r, n + 1)]
         chain += [SignedPermutation.reflection_t(i, r, n + 1) for i in range(1, r)]
         
-        ans = expand_reflection_chain(v, chain lambda x: x.length())
+        ans = expand_reflection_chain(v, chain, lambda x: x.length())
         expected = sum([coeff * GrothendieckB.symmetric(numvars, z).set(0, -1) for (z, coeff) in ans.dictionary.items()])
         actual = GrothendieckB.symmetric(numvars, w).set(0, -1)
         
