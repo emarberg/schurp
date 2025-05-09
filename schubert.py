@@ -140,6 +140,7 @@ class Schubert(AbstractSchubert):
 
 class Grothendieck(Schubert):
 
+    # beta = -1
     beta = x(0)
 
     @classmethod
@@ -390,15 +391,15 @@ class AltInvGrothendieck(InvGrothendieck):
 
 class GrothendieckC(Grothendieck):
 
-    @classmethod
-    def least_term(cls, f):
-        def key(s):
-            level = s.get(0, 0)
-            pos = sorted([i for i in s if i > 0])
-            mu = tuple(sorted([s[k] for k in s if k < 0], reverse=True))
-            alpha = tuple(-i for k in pos for i in s[k] * [k])
-            return (level, alpha, mu)
-        return min(f, key=key)
+    # @classmethod
+    # def least_term(cls, f):
+    #     def key(s):
+    #         level = s.get(0, 0)
+    #         pos = sorted([i for i in s if i > 0])
+    #         mu = tuple(sorted([s[k] for k in s if k < 0], reverse=True))
+    #         alpha = tuple(-i for k in pos for i in s[k] * [k])
+    #         return (level, alpha, mu)
+    #     return min(f, key=key)
 
     @classmethod
     def get_hecke_compatible_sequences(cls, n, w, ell):
@@ -444,7 +445,7 @@ class GrothendieckC(Grothendieck):
         
         if key not in cache:
             if cls.symmetric_is_zero(n, w):
-                ans = 0
+                ans = MPolynomial.zero()
             elif ell is None:
                 ans = cls.symmetric_with_unknown_ell(n, w, x_not_y)
             else:
@@ -481,11 +482,9 @@ class GrothendieckC(Grothendieck):
         key = tuple(w.oneline)
         cache = cls.cache()
         if key not in cache:
-            ans = 0
+            ans = MPolynomial.zero()
             for (u, v) in w.get_demazure_factorizations():
-                exp = cls.symmetric_decomposed(n, u)
-                f = 0
-                ans += f * Grothendieck.get(v)
+                ans += cls.get(n, u, x_not_y=False) * Grothendieck.get(v)
             cache[key] = ans
             if verbose:
                 print(' . . .', cls.__name__, 'cache:', len(cache))

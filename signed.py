@@ -74,7 +74,7 @@ class SignedMixin:
                         self._dlen += 1
                     if self(-i) > self(j):
                         self._dlen += 1
-        return self._len
+        return self._dlen
 
     @classmethod
     def identity(cls, n):
@@ -959,8 +959,8 @@ class SignedPermutation(SignedMixin):
         assert k % 2 == 0
         return k // 2
 
-    def dlength(self):
-        return len(self) - self.ell_zero()
+    # def dlength(self):
+    #    return len(self) - self.ell_zero()
 
     def brion_length_b(self):
         ans = 0
