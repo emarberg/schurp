@@ -46,7 +46,7 @@ class SignedMixin:
                     xkey = tuple(x.reduce().oneline)
                     if xkey not in DEMAZURE_FACTORIZATIONS:
                         DEMAZURE_FACTORIZATIONS[xkey] = set()
-                    DEMAZURE_FACTORIZATIONS[xkey].add((u, v))
+                    DEMAZURE_FACTORIZATIONS[xkey].add((u.reduce(), v))
 
         return DEMAZURE_FACTORIZATIONS[key]
 

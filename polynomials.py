@@ -272,6 +272,9 @@ class MPolynomial:
     def zero(cls):
         return cls()
 
+    def set_variable(self, i, e):
+        return self.set(i, e)
+
     def set(self, i, e):
         return self.substitute(i, e)
 
