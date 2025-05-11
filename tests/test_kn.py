@@ -8,6 +8,7 @@ from stable.utils import (
     GQ, 
     GQ_expansion,
     SymmetricPolynomial,
+    beta
 )
 from vectors import Vector
 import itertools
@@ -39,8 +40,8 @@ def test_a_grothendieck_transitions(n=4):
             chain = []
             chain += [(Permutation.t_ij(i, r), 1) for i in range(r - 1, 0, -1)]
             chain += [(Permutation.t_ij(r, j), -1) for j in range(n + 1, r, -1)]
+            
             ans = expand_reflection_chain(w, chain, lambda x: x.length())
-
             expected = sum([coeff * Grothendieck.get(z).set_variable(0, -1) for (z, coeff) in ans.dictionary.items()])
             actual = Grothendieck.get(w).set_variable(0, -1) * (1 - X(r))
 
@@ -55,32 +56,62 @@ def test_a_grothendieck_transitions(n=4):
 
 
 def test_c_grothendieck_transitions(n=4):
+    orders = {}
     for w in SignedPermutation.all(n):
         for r in range(1, n + 1):
             chain = []
-            chain += [(SignedPermutation.reflection_t(r, j, n + 1), -1) for j in range(r + 1, n + 2)]
-            chain += [(SignedPermutation.reflection_s(i, r, n + 1), -1) for i in range(n + 1, 0, -1) if i != r]
-            chain += [(SignedPermutation.reflection_s(r, r, n + 1), -1)]
-            chain += [(SignedPermutation.reflection_t(i, r, n + 1), +1) for i in range(1, r)]
+            chain += [SignedPermutation.reflection_t(r, j, n + 1) for j in range(r + 1, n + 2)]
+            chain += [SignedPermutation.reflection_s(r, r, n + 1)]
+            chain += [SignedPermutation.reflection_s(i, r, n + 1) for i in range(n + 1, 0, -1) if i != r]
+            chain += [SignedPermutation.reflection_t(i, r, n + 1) for i in range(1, r)]
             
-            ans = expand_reflection_chain(w.inflate(n + 1), chain, lambda x: x.length())
-            expected = sum([coeff * GrothendieckC.get(z).set_variable(0, -1) for (z, coeff) in ans.dictionary.items()])
-            actual = GrothendieckC.get(w.inflate(n + 1)).set_variable(0, -1) * (1 - X(r))
+            worked = []
+            for ch in itertools.permutations(chain):
+                for v in range(2**len(chain)):
+                    signs = []
+                    for i in range(len(chain)):
+                        signs.append(1 if v % 2 == 0 else -1)
+                        v = v // 2
+                    sch = list(zip(ch, signs))
+                    ans = expand_reflection_chain(w.inflate(n + 1), sch, lambda x: x.length())
+                    # for z in ans:
+                    #     print(z)
+                    # print()
 
-            print('n =', n, 'w =', w, 'r =', r)
-            if expected != actual:
-                print(chain)
-                print(ans)
-                print()
-                for v in ans:
-                    print(v, ':', GrothendieckC.get(v).set_variable(0, -1))
+                    expected = sum([coeff * GrothendieckC.get(z).set_variable(0, -1) for (z, coeff) in ans.dictionary.items()])
+                    actual = GrothendieckC.get(w.inflate(n + 1)).set_variable(0, -1) * (1 - X(r))
+
+                if expected == actual:
+                    worked.append(sch)
+                else:
+                    print(sch)
+                    print(ans)
                     print()
-                print()
-                print(expected)
-                print()
-                print(actual)
-                print()
-            input('\n' + str(expected == actual))
+                    for v in ans:
+                        print(v, ':', GrothendieckC.get(v).set_variable(0, -1))
+                        print()
+                    print()
+                    print(expected)
+                    print()
+                    print(actual)
+                    print()
+                    input('')
+
+            print('n =', n, 'w =', w, 'r =', r, len(worked))
+
+            # if expected != actual:
+            #     print(chain)
+            #     print(ans)
+            #     print()
+            #     for v in ans:
+            #         print(v, ':', GrothendieckC.get(v).set_variable(0, -1))
+            #         print()
+            #     print()
+            #     print(expected)
+            #     print()
+            #     print(actual)
+            #     print()
+            # input('\n' + str(expected == actual))
             #assert expected == actual
 
 
@@ -120,11 +151,12 @@ def test_a_symmetric_transitions(n=4, numvars=2):
         s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])[1]
         v = w * Permutation.t_ij(r, s)
 
-        chain = [(Permutation.t_ij(i, r), -1) for i in range(1, r)]
+        chain = [(Permutation.t_ij(i, r), beta) for i in range(1, r)]
         ans = Vector({v: 1}) - expand_reflection_chain(v, chain, lambda x: x.length())
+        ans = Vector({u: -beta**-1 * c for (u, c) in ans.dictionary.items()})
 
-        expected = sum([coeff * G(numvars, z).set_variable(0, -1) for (z, coeff) in ans.dictionary.items()])
-        actual = G(numvars, w).set_variable(0, -1)
+        expected = sum([coeff * G(numvars, z) for (z, coeff) in ans.dictionary.items()])
+        actual = G(numvars, w)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
@@ -145,14 +177,17 @@ def test_b_symmetric_transitions(n=4, numvars=2):
         s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
-        chain = [SignedPermutation.reflection_s(r, r, n + 1)]
-        chain += [SignedPermutation.reflection_s(i, r, n + 1) for i in range(n + 1, 0, -1) if i != r]
-        chain += [SignedPermutation.reflection_s(r, r, n + 1)]
-        chain += [SignedPermutation.reflection_t(i, r, n + 1) for i in range(1, r)]
+        chain = []
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
         
         ans = Vector({v: 1}) - expand_reflection_chain(v, chain, lambda x: x.length())
-        expected = sum([coeff * GrothendieckB.symmetric(numvars, z).set(0, -1) for (z, coeff) in ans.dictionary.items()])
-        actual = GrothendieckB.symmetric(numvars, w).set(0, -1)
+        ans *= -X(0)**-1
+
+        expected = sum([coeff * GrothendieckB.symmetric(numvars, z) for (z, coeff) in ans.dictionary.items()])
+        actual = GrothendieckB.symmetric(numvars, w)
         
         print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
@@ -161,7 +196,6 @@ def test_b_symmetric_transitions(n=4, numvars=2):
             print(actual)
             print()
         assert expected == actual
-
 
 
 def test_c_symmetric_transitions(n=4, numvars=2):
@@ -174,13 +208,15 @@ def test_c_symmetric_transitions(n=4, numvars=2):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         chain = []
-        chain += [SignedPermutation.reflection_s(i, r, n + 1) for i in range(n + 1, 0, -1) if i != r]
-        chain += [SignedPermutation.reflection_s(r, r, n + 1)]
-        chain += [SignedPermutation.reflection_t(i, r, n + 1) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
         
         ans = Vector({v: 1}) - expand_reflection_chain(v, chain, lambda x: x.length())
-        expected = sum([coeff * GrothendieckC.symmetric(numvars, z).set(0, -1) for (z, coeff) in ans.dictionary.items()])
-        actual = GrothendieckC.symmetric(numvars, w).set(0, -1)
+        ans *= -X(0)**-1
+
+        expected = sum([coeff * GrothendieckC.symmetric(numvars, z) for (z, coeff) in ans.dictionary.items()])
+        actual = GrothendieckC.symmetric(numvars, w)
         
         print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
@@ -200,12 +236,15 @@ def test_d_symmetric_transitions(n=4, numvars=2):
         s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
-        chain = [SignedPermutation.reflection_s(i, r, n + 1) for i in range(n + 1, 0, -1) if i != r]
-        chain += [SignedPermutation.reflection_t(i, r, n + 1) for i in range(1, r)]
+        chain =  []
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
         
         ans = Vector({v: 1}) - expand_reflection_chain(v, chain, lambda x: x.dlength())
-        expected = sum([coeff * GrothendieckD.symmetric(numvars, z).set(0, -1) for (z, coeff) in ans.dictionary.items()])
-        actual = GrothendieckD.symmetric(numvars, w).set(0, -1)
+        ans *= -X(0)**-1
+
+        expected = sum([coeff * GrothendieckD.symmetric(numvars, z) for (z, coeff) in ans.dictionary.items()])
+        actual = GrothendieckD.symmetric(numvars, w)
         
         print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
