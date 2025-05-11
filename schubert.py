@@ -531,7 +531,7 @@ class GrothendieckC(Grothendieck):
         return cache[key]
 
     @classmethod
-    def get(cls, w, verbose=False):
+    def get(cls, w, simple=True, verbose=False,):
         n = w.rank
         assert cls.is_valid(w)
         key = tuple(w.oneline)
@@ -539,7 +539,8 @@ class GrothendieckC(Grothendieck):
         if key not in cache:
             ans = MPolynomial.zero()
             for (u, v) in w.get_demazure_factorizations():
-                ans += cls.beta**(u.length() + v.length() - w.length()) * cls.symmetric(n, u, x_not_y=False) * Grothendieck.get(v)
+                sym = cls.symmetric_simple(u) if simple else cls.symmetric(n, u, x_not_y=False)
+                ans += cls.beta**(u.length() + v.length() - w.length()) * sym * Grothendieck.get(v)
             cache[key] = ans
             if verbose:
                 print(' . . .', cls.__name__, 'cache:', len(cache))
