@@ -1,5 +1,6 @@
 from vectors import Vector
 from permutations import Permutation
+from signed import SignedPermutation
 from polynomials import (
     MPolynomial,
     one,
@@ -23,6 +24,10 @@ ALT_INV_GROTHENDIECK_CACHE = {}
 C_GROTHENDIECK_CACHE = {}
 B_GROTHENDIECK_CACHE = {}
 D_GROTHENDIECK_CACHE = {}
+
+C_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
+B_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
+D_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
 
 C_SYMMETRIC_GROTHENDIECK_CACHE = {}
 B_SYMMETRIC_GROTHENDIECK_CACHE = {}
@@ -391,6 +396,23 @@ class AltInvGrothendieck(InvGrothendieck):
 
 class GrothendieckC(Grothendieck):
 
+    @classmethod
+    def expand_reflection_chain(cls, start, chain, length):
+        ans = Vector()
+        queue = [(1, start, chain)]
+        while queue:
+            (sgn, z, c) = queue[0]
+            queue = queue[1:]
+            if len(c) == 0:
+                ans += Vector({z: sgn})
+            else:
+                queue.append((sgn, z, c[1:]))
+                t, change = c[0]
+                zt = z * t
+                if length(zt) == length(z) + 1:
+                    queue.append((change * sgn, zt, c[1:]))
+        return ans
+
     # @classmethod
     # def least_term(cls, f):
     #     def key(s):
@@ -470,10 +492,43 @@ class GrothendieckC(Grothendieck):
         return C_SYMMETRIC_GROTHENDIECK_CACHE
 
     @classmethod
-    def symmetric_decomposed(cls, n, w):
-        p = cls.symmetric(n, u)
-        s = SymmetricPolynomial.from_polynomial(p)
-        e = GQ_expansion(s)
+    def symmetric_simple(cls, w, verbose=False):
+        cache = C_SYMMETRIC_GROTHENDIECK_SIMPLE
+
+        w = w.reduce()
+        n = w.rank
+        key = tuple(w.oneline)
+        
+        if key not in cache:
+            r = [i for i in range(1, n) if w(i) > w(i + 1)]
+            if len(r) == 0:
+                ans = X(0)**0
+                for i in range(1, n + 1):
+                    if w(i) > 0:
+                        break
+                    ans *= y(i)**(-w(i))
+            else:
+                r = max(r)
+                s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
+                v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
+
+                chain = []
+                chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+                chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        
+                vec = Vector({v: 1}) - cls.expand_reflection_chain(v, chain, lambda x: x.length())
+                vec *= -X(0)**-1
+
+                ans = X(0) * 0
+                for (u, c) in vec.dictionary.items():
+                    ans += cls.symmetric_simple(u) * c
+
+                if verbose:
+                    print(' . . .', cls.__name__, 'cache:', len(cache))
+            cache[key] = ans
+        
+        return cache[key]
 
     @classmethod
     def get(cls, w, verbose=False):
@@ -516,6 +571,46 @@ class GrothendieckB(GrothendieckC):
     def symmetric_cache(cls):
         return B_SYMMETRIC_GROTHENDIECK_CACHE
 
+    @classmethod
+    def symmetric_simple(cls, w, verbose=False):
+        cache = B_SYMMETRIC_GROTHENDIECK_SIMPLE
+
+        w = w.reduce()
+        n = w.rank
+        key = tuple(w.oneline)
+        
+        if key not in cache:
+            r = [i for i in range(1, n) if w(i) > w(i + 1)]
+            if len(r) == 0:
+                ans = X(0)**0
+                for i in range(1, n + 1):
+                    if w(i) > 0:
+                        break
+                    ans *= y(i)**(-w(i))
+            else:
+                r = max(r)
+                s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
+                v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
+
+                chain = []
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+                chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+                chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+            
+                vec = Vector({v: 1}) - cls.expand_reflection_chain(v, chain, lambda x: x.length())
+                vec *= -X(0)**-1
+
+                ans = X(0) * 0
+                for (u, c) in vec.dictionary.items():
+                    ans += cls.symmetric_simple(u) * c
+
+                if verbose:
+                    print(' . . .', cls.__name__, 'cache:', len(cache))
+            cache[key] = ans
+        
+        return cache[key]
+
 
 class GrothendieckD(GrothendieckC):
 
@@ -549,3 +644,41 @@ class GrothendieckD(GrothendieckC):
     @classmethod
     def symmetric_cache(cls):
         return D_SYMMETRIC_GROTHENDIECK_CACHE
+
+    @classmethod
+    def symmetric_simple(cls, w, verbose=False):
+        cache = D_SYMMETRIC_GROTHENDIECK_SIMPLE
+        
+        w = w.reduce()
+        n = w.rank
+        key = tuple(w.oneline)
+        
+        if key not in cache:
+            r = [i for i in range(1, n) if w(i) > w(i + 1)]
+            if len(r) == 0:
+                ans = X(0)**0
+                for i in range(1, n + 1):
+                    if w(i) >= -1:
+                        break
+                    ans *= y(i)**(-w(i) - 1)
+            else:
+                r = max(r)
+                s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
+                v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
+
+                chain = []
+                chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+                chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        
+                vec = Vector({v: 1}) - cls.expand_reflection_chain(v, chain, lambda x: x.dlength())
+                vec *= -X(0)**-1
+
+                ans = X(0) * 0
+                for (u, c) in vec.dictionary.items():
+                    ans += cls.symmetric_simple(u) * c
+
+                if verbose:
+                    print(' . . .', cls.__name__, 'cache:', len(cache))
+            cache[key] = ans
+        
+        return cache[key]

@@ -15,23 +15,8 @@ import itertools
 
 
 def expand_reflection_chain(start, chain, length):
-    ans = Vector()
-    queue = [(1, start, chain)]
-    while queue:
-        (sgn, z, c) = queue[0]
-        queue = queue[1:]
-        if len(c) == 0:
-            ans += Vector({z: sgn})
-        else:
-            queue.append((sgn, z, c[1:]))
-            if len(c[0]) == 2:
-                t, change = c[0]
-            else:
-                t, change = c[0], -1
-            zt = z * t
-            if length(zt) == length(z) + 1:
-                queue.append((change * sgn, zt, c[1:]))
-    return ans
+    newchain = [(c, -1) if len(c) == 1 else c for c in chain]
+    return GrothendieckC.expand_reflection_chain(start, newchain, length)
 
 
 def test_a_grothendieck_transitions(n=4):
@@ -262,7 +247,10 @@ def test_b(rank=4, numvars=2):
             fp = GrothendieckB.symmetric(n, w)
             f = SymmetricPolynomial.from_polynomial(fp, n)
             exp = GP_expansion(f)
-            print('  ', exp)
+            if exp != 0:
+                print('  ', exp)
+                print('  ', GrothendieckB.symmetric_simple(w))
+                print()
             assert all(v.is_positive() for v in exp.values())
 
 
@@ -273,7 +261,10 @@ def test_c(rank=4, numvars=2):
             fp = GrothendieckC.symmetric(n, w)
             f = SymmetricPolynomial.from_polynomial(fp, n)
             exp = GQ_expansion(f)
-            print('  ', exp)
+            if exp != 0:
+                print('  ', exp)
+                print('  ', GrothendieckC.symmetric_simple(w))
+                print()
             assert all(v.is_positive() for v in exp.values())
 
 
@@ -284,7 +275,10 @@ def test_d(rank=4, numvars=2):
             fp = GrothendieckD.symmetric(n, w)
             f = SymmetricPolynomial.from_polynomial(fp, n)
             exp = GP_expansion(f)
-            print('  ', exp)
+            if exp != 0:
+                print('  ', exp)
+                print('  ', GrothendieckD.symmetric_simple(w))
+                print()
             assert all(v.is_positive() for v in exp.values())
 
 
