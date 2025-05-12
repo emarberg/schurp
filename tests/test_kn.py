@@ -95,7 +95,6 @@ def test_b_grothendieck_transitions(n=3):
 
 
 def test_c_grothendieck_transitions(n=3):
-    orders = {}
     for w in SignedPermutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -104,119 +103,31 @@ def test_c_grothendieck_transitions(n=3):
         s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
-        chain = []
-        # chain += [SignedPermutation.reflection_t(r, j, n + 1) for j in range(r + 1, n + 2)]
-        chain += [SignedPermutation.reflection_s(i, r, n + 1) for i in range(n + 1, 0, -1) if i != r]
-        chain += [SignedPermutation.reflection_s(r, r, n + 1)]
-        chain += [SignedPermutation.reflection_t(i, r, n + 1) for i in range(1, r)]
+        chain =  []
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        
+        ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
-        worked = []
-        for ch in [tuple(chain)]:
-            ans = expand_reflection_chain(v, ch, lambda x: x.length())
+        expected = GrothendieckC.get(v) - (X(0) * X(r) + 1) * sum([coeff * GrothendieckC.get(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -X(0)**-1
 
-            expected = GrothendieckC.get(v).set_variable(0, -1) + (X(r) - 1) * sum([coeff * GrothendieckC.get(z).set_variable(0, -1) for (z, coeff) in ans.dictionary.items()])
-            actual = GrothendieckC.get(w).set_variable(0, -1)
-            print('n =', n, 'w =', w, 'r =', r)
+        actual = GrothendieckC.get(w)
+
+        print('w =', w, 'r =', r, 's =', s, 'v =', v)
+        if expected != actual:
             print()
-            print('base:', GrothendieckC.get(v).set_variable(0, -1))
+            print('base:', -X(0)**-1 * GrothendieckC.get(v))
             print()
-            for v in sorted(ans, key=len):
-                print(len(v), ':', v, ':', ans[v] * GrothendieckC.get(v).set_variable(0, -1) * (X(r) - 1))
+            for u in sorted(ans, key=len):
+                print(len(u), ':', u, ':', -X(0)**-1 * ans[u] * GrothendieckC.get(u) * (X(r) - 1))
                 print()
-            # print('***')
-            # for v in bns:
-            #     print(v, ':', GrothendieckC.get(v).set_variable(0, -1))
-            #     print()
-            print()
-            #print(' got:', expected)
-            #print()
             print('want:', actual)
             print()
             print('diff:', expected - actual)
             print()
-            #input('')
-            if expected == actual:
-                worked.append(ch)
-
-        if r not in orders:
-            orders[r] = set(worked)
-        else:
-            orders[r] &= set(worked)
-
-        print('n =', n, 'w =', w, 'r =', r, len(worked), len(orders[r]))
-        input('')
-
-        # for r in range(1, n + 1):
-        #     chain = []
-        #     chain += [SignedPermutation.reflection_t(r, j, n + 1) for j in range(r + 1, n + 2)]
-        #     chain += [SignedPermutation.reflection_s(r, r, n + 1)]
-        #     chain += [SignedPermutation.reflection_s(i, r, n + 1) for i in range(n + 1, 0, -1) if i != r]
-        #     chain += [SignedPermutation.reflection_t(i, r, n + 1) for i in range(1, r)]
-
-        #     worked = []
-        #     for cha in signed(chain):
-        #         for chb in signed(chain):
-        #         # for v in [1]: #range(2**len(chain)):
-        #         #     original_v = v
-        #         #     signs = []
-        #         #     for i in range(len(chain)):
-        #         #         signs.append(1 if v % 2 == 0 else -1)
-        #         #         v = v // 2
-        #         #     sch = list(zip(ch, signs))
-        #             #ans = expand_reflection_chain(w.inflate(n + 1), cha, lambda x: x.length())
-        #             # for z in ans:
-        #             #     print(z)
-        #             # print()
-                    
-        #             ans = expand_reflection_chain(w.inflate(n + 1), cha, lambda x: x.length())
-        #             bns = expand_reflection_chain(w.inflate(n + 1), chb, lambda x: x.length())
-                    
-        #             expected = sum([coeff * GrothendieckC.get(z).set_variable(0, -1) for (z, coeff) in ans.dictionary.items()])
-        #             actual = sum([coeff * GrothendieckC.get(z).set_variable(0, -1) for (z, coeff) in bns.dictionary.items()]) * (1 - X(r))
-        #             #actual = GrothendieckC.get(w.inflate(n + 1)).set_variable(0, -1) * (1 - X(r))
-
-        #             if expected == actual:
-        #                 worked.append((cha, chb))
-        #             #else:
-        #                 # print('v =', original_v)
-        #             # print()
-        #             # print(chain)
-        #             # print((cha, chb))
-        #             # print(ans)
-        #             # print()
-        #             # for v in ans:
-        #             #     print(v, ':', GrothendieckC.get(v).set_variable(0, -1))
-        #             #     print()
-        #             # for v in bns:
-        #             #     print(v, ':', GrothendieckC.get(v).set_variable(0, -1) * (1 - X(r)))
-        #             #     print()
-        #             # print()
-        #             # print(expected)
-        #             # print()
-        #             # print(actual)
-        #             # print()
-        #             # print('diff:', expected - actual)
-        #             # print()
-        #             # if expected == actual and set(cha) | set(chb) == set(chain) and len(cha) + len(chb) == len(chain):
-        #             #     input('')
-
-        #     print('n =', n, 'w =', w, 'r =', r, len(worked))
-        #     input('')
-
-        #     # if expected != actual:
-        #     #     print(chain)
-        #     #     print(ans)
-        #     #     print()
-        #     #     for v in ans:
-        #     #         print(v, ':', GrothendieckC.get(v).set_variable(0, -1))
-        #     #         print()
-        #     #     print()
-        #     #     print(expected)
-        #     #     print()
-        #     #     print(actual)
-        #     #     print()
-        #     # input('\n' + str(expected == actual))
-        #     #assert expected == actual
+        assert expected == actual
 
 
 def test_d_grothendieck_transitions(n=4):
