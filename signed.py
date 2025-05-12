@@ -42,7 +42,7 @@ class SignedMixin:
         if key not in DEMAZURE_FACTORIZATIONS:
             for u in SignedPermutation.all(n):
                 for v in Permutation.all(n):
-                    x = u % SignedPermutation(*[v(i) for i in range(1, 1 + u.rank)])
+                    x = u % SignedPermutation(*[v(i) for i in range(1, 1 + n)])
                     xkey = tuple(x.reduce().oneline)
                     if xkey not in DEMAZURE_FACTORIZATIONS:
                         DEMAZURE_FACTORIZATIONS[xkey] = set()
