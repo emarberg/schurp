@@ -161,9 +161,9 @@ def test_b_grothendieck_transitions(n=3):
 
 
 def test_double_b_grothendieck_transitions(n=3):
+    GROTH = DoubleGrothendieckB.get
+
     for w in SignedPermutation.all(n):
-        if w.ell_zero() > 0:
-            continue
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
             continue
@@ -173,41 +173,43 @@ def test_double_b_grothendieck_transitions(n=3):
 
         adj_r = 2 * r - 1
         adj_s = 2 * abs(v(r))
-        sgn_s = -1 if v(r) < 0 else 1
 
         chain =  []
         chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
         chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
         chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
         chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
-        
+
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
-        expected = DoubleGrothendieckB.get(v) - (X(0) * (X(adj_r) + sgn_s * X(adj_s) + X(0)*X(adj_r)*sgn_s*X(adj_s)) + 1) * sum([coeff * DoubleGrothendieckB.get(z) for (z, coeff) in ans.dictionary.items()])
-        expected *= -X(0)**-1
-
-        actual = DoubleGrothendieckB.get(w)
+        if v(r) < 0:
+            continue
+            expected = X(0) * (X(adj_r) - X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+        else:
+            expected = X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+            actual = (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
             print(ans)
             print()
-            print(len(v), ':', v, ':', DoubleGrothendieckB.get(v).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print(len(v), ':', v, ':', GROTH(v).set_variable(0,-1).tostring(Schubert.double_lettering()))
             print()
             for u in sorted(ans, key=len):
-                #print(len(u), ':', u, ':', (ans[u] * DoubleGrothendieckB.get(u)).set_variable(0,-1).tostring(Schubert.double_lettering()))
-                #print()
-                print(len(u), ':', u, ':', (ans[u] * DoubleGrothendieckB.get(u) * -(X(0) * (X(adj_r) + sgn_s * X(adj_s) + X(0)*X(adj_r)*sgn_s*X(adj_s)) + 1)).set_variable(0,-1).tostring(Schubert.double_lettering()))
+                print(len(u), ':', u, ':', (ans[u] * GROTH(u)).set_variable(0,-1).tostring(Schubert.double_lettering()))
                 print()
             print('want:', actual.set_variable(0,-1).tostring(Schubert.double_lettering()))
             print()
             print(' got:', expected.set_variable(0,-1).tostring(Schubert.double_lettering()))
-            #print()
-            #print('term:', sum([coeff * DoubleGrothendieckB.get(z) for (z, coeff) in ans.dictionary.items()]))
             print()
-        #assert expected == actual
-        input('\n\n\n\n')
-
+            print('diff:', (expected-actual).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print()
+            print()
+            print()
+            print(sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            input('\n\n\n\n')
+        # assert expected == actual
 
 
 def test_c_grothendieck_transitions(n=3):
@@ -247,6 +249,8 @@ def test_c_grothendieck_transitions(n=3):
 
 
 def test_double_c_grothendieck_transitions(n=3):
+    GROTH = DoubleGrothendieckC.get
+
     for w in SignedPermutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -255,12 +259,8 @@ def test_double_c_grothendieck_transitions(n=3):
         s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
-        if v(r) > 0:
-            continue 
-
         adj_r = 2 * r - 1
         adj_s = 2 * abs(v(r))
-        sgn_s = -1 if v(r) < 0 else 1
 
         chain =  []
         chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
@@ -269,19 +269,21 @@ def test_double_c_grothendieck_transitions(n=3):
         
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
-        expected = DoubleGrothendieckC.get(v) - (X(0) * (X(adj_r) + sgn_s * X(adj_s)) + 1) * sum([coeff * DoubleGrothendieckC.get(z) for (z, coeff) in ans.dictionary.items()])
-        expected *= -X(0)**-1
-
-        actual = ((1 + X(0)*X(adj_s)) if v(r) < 0 else 1) * DoubleGrothendieckC.get(w)
+        if v(r) < 0:
+            expected = X(0) * (X(adj_r) - X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+        else:
+            expected = X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+            actual = (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
             print(ans)
             print()
-            print(len(v), ':', v, ':', DoubleGrothendieckC.get(v).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print(len(v), ':', v, ':', GROTH(v).set_variable(0,-1).tostring(Schubert.double_lettering()))
             print()
             for u in sorted(ans, key=len):
-                print(len(u), ':', u, ':', (ans[u] * DoubleGrothendieckC.get(u) * -(X(0) * (X(adj_r) + sgn_s * X(adj_s) + X(0)*X(adj_r)*sgn_s*X(adj_s)) + 1)).set_variable(0,-1).tostring(Schubert.double_lettering()))
+                print(len(u), ':', u, ':', (ans[u] * GROTH(u)).set_variable(0,-1).tostring(Schubert.double_lettering()))
                 print()
             print('want:', actual.set_variable(0,-1).tostring(Schubert.double_lettering()))
             print()
@@ -291,9 +293,9 @@ def test_double_c_grothendieck_transitions(n=3):
             print()
             print()
             print()
-            print(sum([coeff * DoubleGrothendieckC.get(z) for (z, coeff) in ans.dictionary.items()]).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print(sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]).set_variable(0,-1).tostring(Schubert.double_lettering()))
             input('\n\n\n\n')
-        #assert expected == actual
+        assert expected == actual
 
 
 def test_d_grothendieck_transitions(n=4):
@@ -329,6 +331,55 @@ def test_d_grothendieck_transitions(n=4):
             print('diff:', expected - actual)
             print()
         assert expected == actual
+
+
+def test_double_d_grothendieck_transitions(n=3):
+    GROTH = DoubleGrothendieckD.get
+
+    for w in SignedPermutation.all(n, dtype=True):
+        r = [i for i in range(1, n) if w(i) > w(i + 1)]
+        if len(r) == 0:
+            continue
+        r = max(r)
+        s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
+        v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
+
+        adj_r = 2 * r - 1
+        adj_s = 2 * abs(v(r))
+
+        chain =  []
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+
+        ans = expand_reflection_chain(v, chain, lambda x: x.dlength())
+
+        if v(r) < 0:
+            expected = X(0) * (X(adj_r) - X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+        else:
+            expected = X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+            actual = (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+
+        print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
+        if expected != actual:
+            print(ans)
+            print()
+            print(len(v), ':', v, ':', GROTH(v).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print()
+            for u in sorted(ans, key=len):
+                print(len(u), ':', u, ':', (ans[u] * GROTH(u)).set_variable(0,-1).tostring(Schubert.double_lettering()))
+                print()
+            print('want:', actual.set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print()
+            print(' got:', expected.set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print()
+            print('diff:', (expected-actual).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            print()
+            print()
+            print()
+            print(sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]).set_variable(0,-1).tostring(Schubert.double_lettering()))
+            input('\n\n\n\n')
+        # assert expected == actual
 
 
 def test_a_symmetric_transitions(n=4, numvars=2):
