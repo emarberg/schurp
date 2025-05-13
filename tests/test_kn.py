@@ -26,7 +26,7 @@ def expand_reflection_chain(start, chain, length):
     return GrothendieckC.expand_reflection_chain(start, newchain, length)
 
 
-def test_a_grothendieck_transitions(n=4):
+def test_general_a_grothendieck_transitions(n=4):
     for w in Permutation.all(n):
         for r in range(1, n + 1):
             chain = []
@@ -45,6 +45,65 @@ def test_a_grothendieck_transitions(n=4):
                 print(actual)
                 print()
             assert expected == actual
+
+
+def test_a_grothendieck_transitions(n=4):
+    for w in Permutation.all(n):
+        r = [i for i in range(1, n) if w(i) > w(i + 1)]
+        if w(1) > 1 or len(r) == 0:
+            continue
+        r = max(r)
+        s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])[1]
+        v = w * Permutation.t_ij(r, s)
+
+        chain = [(Permutation.t_ij(i, r), X(0)) for i in range(1, r)]
+        ans = expand_reflection_chain(v, chain, lambda x: x.length())
+
+        expected = Grothendieck.get(v) - (X(0) * X(r) + 1) * sum([coeff * Grothendieck.get(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -X(0)**-1
+
+        actual = Grothendieck.get(w)
+
+        print('w =', w, 'r =', r, 's =', s, 'v =', v)
+        if expected != actual:
+            print(chain)
+            print(ans)
+            print(expected)
+            print(actual)
+            print()
+        assert expected == actual
+
+
+def test_double_a_grothendieck_transitions(n=4):
+    for w in Permutation.all(n):
+        r = [i for i in range(1, n) if w(i) > w(i + 1)]
+        if w(1) > 1 or len(r) == 0:
+            continue
+        r = max(r)
+        t, s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])
+        v = w * Permutation.t_ij(r, s)
+
+        chain = [(Permutation.t_ij(i, r), X(0)) for i in range(1, r)]
+        ans = expand_reflection_chain(v, chain, lambda x: x.length())
+
+        expected = DoubleGrothendieck.get(v) - (X(0) * (X(r) + X(-t) + X(0)*X(r)*X(-t)) + 1) * sum([coeff * DoubleGrothendieck.get(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -X(0)**-1
+
+        actual = DoubleGrothendieck.get(w)
+
+        print('w =', w, 'r =', r, 's =', s, 'v =', v)
+        if expected != actual:
+            print(chain)
+            print()
+            print(ans)
+            print()
+            print('    :', expected)
+            print()
+            print('want:', actual)
+            print()
+            print('diff:', expected - actual)
+            print()
+        assert expected == actual
 
 
 def subsets(coll):
