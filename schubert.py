@@ -439,11 +439,15 @@ class GrothendieckC(Grothendieck):
             if len(c) == 0:
                 ans += Vector({z: sgn})
             else:
-                queue.append((sgn, z, c[1:]))
-                t, change = c[0]
+                if len(c[0]) == 2:
+                    a = 1
+                    t, b = c[0]
+                else:
+                    t, a, b = c[0]
+                queue.append((a * sgn, z, c[1:]))
                 zt = z * t
                 if length(zt) == length(z) + 1:
-                    queue.append((change * sgn, zt, c[1:]))
+                    queue.append((b * sgn, zt, c[1:]))
         return ans
 
     @classmethod

@@ -40,13 +40,17 @@ class SignedMixin:
         n = len(key)
 
         if key not in DEMAZURE_FACTORIZATIONS:
+            dictionary = {}
             for u in SignedPermutation.all(n):
                 for v in Permutation.all(n):
                     x = u % SignedPermutation(*[v(i) for i in range(1, 1 + n)])
                     xkey = tuple(x.reduce().oneline)
-                    if xkey not in DEMAZURE_FACTORIZATIONS:
-                        DEMAZURE_FACTORIZATIONS[xkey] = set()
-                    DEMAZURE_FACTORIZATIONS[xkey].add((u.reduce(), v))
+                    if xkey not in dictionary:
+                        dictionary[xkey] = set()
+                    dictionary[xkey].add((u.reduce(), v))
+            for xkey in dictionary:
+                if xkey not in DEMAZURE_FACTORIZATIONS:
+                    DEMAZURE_FACTORIZATIONS[xkey] = dictionary[xkey]
 
         return DEMAZURE_FACTORIZATIONS[key]
 
