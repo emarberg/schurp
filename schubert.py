@@ -14,16 +14,25 @@ from stable.utils import GQ_expansion, GP_expansion, SymmetricPolynomial
 
 SCHUBERT_CACHE = {}
 DOUBLE_SCHUBERT_CACHE = {}
-FPF_SCHUBERT_CACHE = {}
-INV_SCHUBERT_CACHE = {}
+
 GROTHENDIECK_CACHE = {}
+DOUBLE_GROTHENDIECK_CACHE = {}
+
+FPF_SCHUBERT_CACHE = {}
 FPF_GROTHENDIECK_CACHE = {}
+
+INV_SCHUBERT_CACHE = {}
 INV_GROTHENDIECK_CACHE = {}
 ALT_INV_GROTHENDIECK_CACHE = {}
 
 C_GROTHENDIECK_CACHE = {}
+C_DOUBLE_GROTHENDIECK_CACHE = {}
+
 B_GROTHENDIECK_CACHE = {}
+B_DOUBLE_GROTHENDIECK_CACHE = {}
+
 D_GROTHENDIECK_CACHE = {}
+D_DOUBLE_GROTHENDIECK_CACHE = {}
 
 C_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
 B_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
@@ -33,7 +42,21 @@ C_SYMMETRIC_GROTHENDIECK_CACHE = {}
 B_SYMMETRIC_GROTHENDIECK_CACHE = {}
 D_SYMMETRIC_GROTHENDIECK_CACHE = {}
 
+
 class AbstractSchubert(object):
+
+    @classmethod
+    def double_lettering(cls):
+        def ans(i):
+            if i > 0 and i % 2 != 0:
+                return "x_" + str((i + 1) // 2)
+            elif i > 0 and i % 2 == 0:
+                return "y_" + str(i // 2)
+            elif i == 0:
+                return "\u03B2"
+            else:
+                return "z_" + str(-i)
+        return ans
 
     @classmethod
     def cache(cls):
@@ -157,7 +180,7 @@ class Grothendieck(Schubert):
         return (f * (1 + cls.beta * MPolynomial.monomial(i + 1))).divided_difference(i)
 
 
-class DoubleSchubert(AbstractSchubert):
+class DoubleSchubert(Schubert):
 
     @classmethod
     def cache(cls):
@@ -170,9 +193,19 @@ class DoubleSchubert(AbstractSchubert):
                 s *= (x(i) - y(j))
         return s
 
+
+class DoubleGrothendieck(Grothendieck):
+
     @classmethod
-    def get_ascent(cls, w):
-        return Schubert.get_ascent(w)
+    def cache(cls):
+        return DOUBLE_GROTHENDIECK_CACHE
+
+    @classmethod
+    def top(cls, w):
+        s = one()
+        for i, j in w.rothe_diagram():
+                s *= (x(i) + y(j) + cls.beta * x(i) * y(j))
+        return s
 
 
 class FPFSchubert(AbstractSchubert):
@@ -412,16 +445,6 @@ class GrothendieckC(Grothendieck):
                 if length(zt) == length(z) + 1:
                     queue.append((change * sgn, zt, c[1:]))
         return ans
-
-    # @classmethod
-    # def least_term(cls, f):
-    #     def key(s):
-    #         level = s.get(0, 0)
-    #         pos = sorted([i for i in s if i > 0])
-    #         mu = tuple(sorted([s[k] for k in s if k < 0], reverse=True))
-    #         alpha = tuple(-i for k in pos for i in s[k] * [k])
-    #         return (level, alpha, mu)
-    #     return min(f, key=key)
 
     @classmethod
     def get_hecke_compatible_sequences(cls, n, w, ell):
@@ -683,3 +706,47 @@ class GrothendieckD(GrothendieckC):
             cache[key] = ans
         
         return cache[key]
+
+
+class DoubleGrothendieckMixin:
+
+    @classmethod
+    def get(cls, w, simple=True, verbose=False,):
+        n = w.rank
+        assert cls.is_valid(w)
+        key = tuple(w.oneline)
+        cache = cls.cache()
+        if key not in cache:
+            ans = MPolynomial.zero()
+            for (x, v2) in w.get_demazure_factorizations():
+                for (u_inv, v1_inv) in x.inverse().get_demazure_factorizations():
+                    u = u_inv.inverse()
+                    sym = cls.symmetric_simple(u) if simple else cls.symmetric(n, u, x_not_y=False)
+                    apart = Grothendieck.get(v2).odd_split_vars()
+                    bpart = Grothendieck.get(v1_inv).even_split_vars()
+                    ans += cls.beta**(u.length() + v1_inv.length() + v2.length() - w.length()) * sym * apart * bpart
+            cache[key] = ans
+            if verbose:
+                print(' . . .', cls.__name__, 'cache:', len(cache))
+        return cache[key]
+
+
+class DoubleGrothendieckB(DoubleGrothendieckMixin,GrothendieckB):
+
+    @classmethod
+    def cache(cls):
+        return B_DOUBLE_GROTHENDIECK_CACHE
+
+
+class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
+
+    @classmethod
+    def cache(cls):
+        return C_DOUBLE_GROTHENDIECK_CACHE
+
+
+class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
+
+    @classmethod
+    def cache(cls):
+        return D_DOUBLE_GROTHENDIECK_CACHE

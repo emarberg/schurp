@@ -1,4 +1,11 @@
-from schubert import X, Grothendieck, GrothendieckB, GrothendieckC, GrothendieckD
+from schubert import (
+    X, 
+    Schubert, DoubleSchubert,
+    Grothendieck, DoubleGrothendieck,
+    GrothendieckB, DoubleGrothendieckB, 
+    GrothendieckC, DoubleGrothendieckC,
+    GrothendieckD, DoubleGrothendieckD,
+)
 from permutations import Permutation
 from signed import SignedPermutation
 from stable.utils import (
@@ -360,3 +367,11 @@ def test_d_grassmannian(rank=4, numvars=2):
                 print(g)
                 print()
             assert f == g
+
+
+def test_double_grothendieck(n=4):
+    for w in Permutation.all(n):
+        f = DoubleGrothendieck.get(w)
+        g = DoubleSchubert.get(w)
+        assert f.set_variable(0, 0).negate_vars(range(-1, -n, -1)) == g
+

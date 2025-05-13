@@ -64,17 +64,20 @@ class SignedMixin:
     def length(self):
         return len(self)
 
+    # def dlength(self):
+    #     if self._dlen is None:
+    #         n = self.reduce().rank
+    #         self._dlen = 0
+    #         for i in range(1, n):
+    #             for j in range(i + 1, n + 1):
+    #                 if self(i) > self(j):
+    #                     self._dlen += 1
+    #                 if self(-i) > self(j):
+    #                     self._dlen += 1
+    #     return self._dlen
+
     def dlength(self):
-        if self._dlen is None:
-            n = self.reduce().rank
-            self._dlen = 0
-            for i in range(1, n):
-                for j in range(i + 1, n + 1):
-                    if self(i) > self(j):
-                        self._dlen += 1
-                    if self(-i) > self(j):
-                        self._dlen += 1
-        return self._dlen
+        return len(self) - self.ell_zero()
 
     @classmethod
     def identity(cls, n):
@@ -313,7 +316,6 @@ class SignedPermutation(SignedMixin):
         self._ldes = None
         self._ddes = None
         self._len = None
-        self._dlen = None
 
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
@@ -958,9 +960,6 @@ class SignedPermutation(SignedMixin):
         k = len([i for i in range(1, self.rank + 1) if -i != self(i) < 0])
         assert k % 2 == 0
         return k // 2
-
-    # def dlength(self):
-    #    return len(self) - self.ell_zero()
 
     def brion_length_b(self):
         ans = 0

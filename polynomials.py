@@ -278,6 +278,12 @@ class MPolynomial:
     def set(self, i, e):
         return self.substitute(i, e)
 
+    def negate_vars(self, indices):
+        ans = self
+        for i in indices:
+            ans = ans.set(i, -X(i))
+        return ans
+
     def substitute(self, i, e):
         ans = 0
         for ind in self.coeffs:
@@ -295,6 +301,22 @@ class MPolynomial:
         # divide by x(i) + c
         ans = self.substitute(i, x(i) - c) * self.monomial(i, -1)
         return ans.substitute(i, x(i) + c)
+
+    def even_split_vars(self):
+        return self._split_variables(True)
+
+    def odd_split_vars(self):
+        return self._split_variables(False)
+
+    def _split_variables(self, even):
+        newcoeffs = {}
+        for (i, c) in self.coeffs.items():
+            newi = i.__class__({
+                (a if a == 0 else (2 * a) if even else (2 * a - 1) if a > 0 else (2 * a + 1)): b
+                for (a, b) in i.items()
+            })
+            newcoeffs[newi] = c
+        return self.__class__(newcoeffs)
 
     def __getitem__(self, i):
         i = HashableDict(i)
@@ -510,12 +532,13 @@ class MPolynomial:
             return "y_" + str(-i)
 
     @classmethod
-    def index_to_str(cls, ind):
+    def index_to_str(cls, ind, toletter=None):
+        toletter = cls.letters if toletter is None else toletter
 
         s = ''
         for i in ind:
             if ind[i] != 0:
-                s = s + ' ' + cls.letters(i)
+                s = s + ' ' + toletter(i)
                 if ind[i] != 1:
                     s = s + "^" + str(ind[i])
         # s = '(' + s[1:] + ')'
@@ -533,14 +556,14 @@ class MPolynomial:
             ans += abs(index[i]) * [-i]
         return (c,) + tuple(ans)
 
-    def __repr__(self):
+    def tostring(self, toletter=None):
         if self.nnz() == 0:
             return '0'
         s = ''
         filtered = filter(lambda x: self[x] != 0, self.coeffs)
 
         for i in sorted(filtered, key=self.sorter):
-            monomial = self.index_to_str(i)
+            monomial = self.index_to_str(i, toletter)
             coeff = str(abs(self[i]))
 
             if coeff == "1" and monomial != "":
@@ -560,8 +583,11 @@ class MPolynomial:
 
         return s
 
+    def __repr__(self):
+        return self.tostring()
+
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.tostring())
 
 
 def x(i):
