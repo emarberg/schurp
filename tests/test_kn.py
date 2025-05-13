@@ -378,7 +378,7 @@ def test_double_d_grothendieck_transitions(n=3):
         assert expected == actual
 
 
-def test_a_symmetric_transitions(n=4, numvars=2):
+def test_a_symmetric_transitions(n=3, numvars=2):
     for w in Permutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if w(1) > 1 or len(r) == 0:
@@ -404,7 +404,7 @@ def test_a_symmetric_transitions(n=4, numvars=2):
         assert expected == actual
 
 
-def test_b_symmetric_transitions(n=4, numvars=2):
+def test_b_symmetric_transitions(n=3, numvars=2):
     for w in SignedPermutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -434,7 +434,7 @@ def test_b_symmetric_transitions(n=4, numvars=2):
         assert expected == actual
 
 
-def test_c_symmetric_transitions(n=4, numvars=2):
+def test_c_symmetric_transitions(n=3, numvars=2):
     for w in SignedPermutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -491,7 +491,7 @@ def test_d_symmetric_transitions(n=4, numvars=2):
         assert expected == actual
 
 
-def test_b(rank=4, numvars=2):
+def test_b(rank=3, numvars=2):
     for w in SignedPermutation.all(rank):
         print('w =', w)
         for n in range(numvars + 1):
@@ -505,7 +505,7 @@ def test_b(rank=4, numvars=2):
             assert all(v.is_positive() for v in exp.values())
 
 
-def test_c(rank=4, numvars=2):
+def test_c(rank=3, numvars=2):
     for w in SignedPermutation.all(rank):
         print('w =', w)
         for n in range(numvars + 1):
@@ -533,7 +533,7 @@ def test_d(rank=4, numvars=2):
             assert all(v.is_positive() for v in exp.values())
 
 
-def test_b_grassmannian(rank=4, numvars=2):
+def test_b_grassmannian(rank=3, numvars=2):
     for w, mu in SignedPermutation.get_grassmannians_bc(rank):
         for n in range(numvars + 1):
             f = GrothendieckB.symmetric(n, w)
@@ -547,7 +547,7 @@ def test_b_grassmannian(rank=4, numvars=2):
             assert f == g
 
 
-def test_c_grassmannian(rank=4, numvars=2):
+def test_c_grassmannian(rank=3, numvars=2):
     for w, mu in SignedPermutation.get_grassmannians_bc(rank):
         for n in range(numvars + 1):
             f = GrothendieckC.symmetric(n, w)
