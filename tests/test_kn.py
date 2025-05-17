@@ -182,13 +182,14 @@ def test_double_b_grothendieck_transitions(n=3):
         chain += [(SignedPermutation.reflection_t(i, r, n + 1), 1, X(0)) for i in range(1, r)]
 
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
+        sigma = sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
 
         if v(r) < 0:
-            expected = X(0) * (X(adj_r) - X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-            actual = (1 + X(0)*X(adj_s)) * ((1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v)) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+            expected = ((1 + X(0)*X(adj_s)) + X(0) * (X(adj_r) - X(adj_s))) * sigma
+            actual = (1 + X(0)*X(adj_s)) * ((1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v)))
         else:
-            expected = X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v)) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+            expected = (1 + X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s))) * sigma
+            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v))
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
@@ -262,13 +263,14 @@ def test_double_c_grothendieck_transitions(n=3):
         chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
         
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
+        sigma = sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
 
         if v(r) < 0:
-            expected = X(0) * (X(adj_r) - X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+            expected = ((1 + X(0)*X(adj_s)) + X(0)*(X(adj_r) - X(adj_s))) * sigma
+            actual = (1 + X(0)*X(adj_s)) * (X(0)*GROTH(w) + GROTH(v))
         else:
-            expected = X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-            actual = (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+            expected = (1 + X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s))) * sigma
+            actual = X(0) * GROTH(w) + GROTH(v)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
@@ -348,13 +350,14 @@ def test_double_d_grothendieck_transitions(n=3):
         chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
 
         ans = expand_reflection_chain(v, chain, lambda x: x.dlength())
+        sigma = sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
 
         if v(r) < 0:
-            expected = X(0) * (X(adj_r) - X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+            expected = ((1 + X(0)*X(adj_s)) + X(0)*(X(adj_r) - X(adj_s))) * sigma
+            actual = (1 + X(0)*X(adj_s)) * (X(0)*GROTH(w) + GROTH(v))
         else:
-            expected = X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s)) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-            actual = (X(0) * GROTH(w) + GROTH(v) - sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()]))
+            expected = (1 + X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s))) * sigma
+            actual = X(0) * GROTH(w) + GROTH(v)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
