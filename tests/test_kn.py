@@ -76,11 +76,13 @@ def test_a_grothendieck_transitions(n=4):
 def test_double_a_grothendieck_transitions(n=4):
     for w in Permutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
-        if w(1) > 1 or len(r) == 0:
+        if len(r) == 0:
             continue
         r = max(r)
-        t, s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])
+        #t, s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])
+        s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
         v = w * Permutation.t_ij(r, s)
+        t = v(r)
 
         chain = [(Permutation.t_ij(i, r), X(0)) for i in range(1, r)]
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
@@ -90,7 +92,7 @@ def test_double_a_grothendieck_transitions(n=4):
 
         actual = DoubleGrothendieck.get(w)
 
-        print('w =', w, 'r =', r, 's =', s, 'v =', v)
+        print('w =', w, 'r =', r, 's =', s, 't =', t, 'v =', v)
         if expected != actual:
             print(chain)
             print()
@@ -102,6 +104,12 @@ def test_double_a_grothendieck_transitions(n=4):
             print()
             print('diff:', expected - actual)
             print()
+        
+        tt, ss = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])
+        if (s, t) != (ss, tt):
+            print('ss =', ss, 'tt =', tt)
+            input('')
+
         assert expected == actual
 
 
@@ -173,7 +181,7 @@ def test_double_b_grothendieck_transitions(n=3):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         adj_r = 2 * r - 1
-        adj_s = 2 * abs(v(r))
+        adj_s = 2 * abs(v(r)) # = 2 * abs(w(s))
 
         chain =  []
         chain += [(SignedPermutation.reflection_s(r, r, n + 1), 1+X(0)*X(adj_s), X(0))]
@@ -185,7 +193,7 @@ def test_double_b_grothendieck_transitions(n=3):
         sigma = sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
 
         if v(r) < 0:
-            expected = ((1 + X(0)*X(adj_s)) + X(0) * (X(adj_r) - X(adj_s))) * sigma
+            expected = ((1 + X(0)*X(adj_s)) + X(0)*(X(adj_r) - X(adj_s))) * sigma
             actual = (1 + X(0)*X(adj_s)) * ((1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v)))
         else:
             expected = (1 + X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s))) * sigma
