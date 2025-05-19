@@ -1,5 +1,248 @@
-from signed import SignedPermutation
+from signed import SignedPermutation, Permutation
 from polynomials import X
+from qp_utils import is_quasiparabolic, is_zero_hecke_module
+
+
+def test_a_conjugation_modules(n):
+    simple = [Permutation.s_i(i) for i in range(1, n)]
+    reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
+
+    count = 0
+    subcount = 0
+    of = 0
+    seen = set()
+    for y in Permutation.involutions(n):
+        if y in seen:
+            continue
+        of += 1
+
+        xset = y.conjugacy_class(n)
+        k = min([x.length() for x in xset])
+        seen |= xset
+        
+        height = lambda x: (x.length() - k) // 2
+        right_action = lambda x,s: s * x * s
+        left_action = lambda s,x: s * x * s
+
+        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
+        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        
+        count += int(b1)
+        subcount += int(b2)
+        
+        if b1 or b2:
+            print([x for x in xset if len(x) == k], b1, b2)
+        if b2:
+            assert b1
+
+    print()
+    print('count:', count, '>', subcount, 'of', of)
+    print()
+
+
+def test_a_twisted_conjugation_modules(n):
+    simple = [Permutation.s_i(i) for i in range(1, n)]
+    reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
+    t = Permutation.longest_element(n)
+
+    count = 0
+    subcount = 0
+    of = 0
+    seen = set()
+    for y in Permutation.twisted_involutions(n):
+        if y in seen:
+            continue
+        of += 1
+
+        xset = y.twisted_conjugacy_class(n)
+        k = min([x.length() for x in xset])
+        seen |= xset
+        
+        height = lambda x: (x.length() - k) // 2
+
+        right_action = lambda x,s: t * s * t * x * s
+        left_action = lambda s,x: t * s * t * x * s
+
+        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
+        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        
+        count += int(b1)
+        subcount += int(b2)
+        
+        if b1 or b2:
+            print([(t * x).cycle_repr() for x in xset if len(x) == k], b1, b2)
+        if b2:
+            assert b1
+
+    print()
+    print('count:', count, '>', subcount, 'of', of)
+    print()
+
+
+def test_b_conjugation_modules(n):
+    simple = [SignedPermutation.s_i(i, n) for i in range(0, n)]
+    reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n + 1) for j in range(i, n + 1)]
+
+    count = 0
+    subcount = 0
+    of = 0
+    seen = set()
+    for y in SignedPermutation.involutions(n):
+        if y in seen:
+            continue
+        of += 1
+
+        xset = y.conjugacy_class()
+        k = min([x.length() for x in xset])
+        seen |= xset
+        
+        height = lambda x: (x.length() - k) // 2
+        right_action = lambda x,s: s * x * s
+        left_action = lambda s,x: s * x * s
+
+        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
+        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        
+        count += int(b1)
+        subcount += int(b2)
+        
+        if b1 or b2:
+            print([x for x in xset if len(x) == k], b1, b2)
+        if b2:
+            assert b1
+
+    print()
+    print('count:', count, '>', subcount, 'of', of)
+    print()
+
+
+def test_d_conjugation_modules(n):
+    assert n >= 2
+    simple = [SignedPermutation.ds_i(-1, n)] + [SignedPermutation.s_i(i, n) for i in range(1, n)]
+    reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+
+    count = 0
+    subcount = 0
+    of = 0
+    seen = set()
+    for y in SignedPermutation.involutions(n, dtype=True):
+        if y in seen:
+            continue
+        of += 1
+
+        xset = y.conjugacy_class(dtype=True)
+        k = min([x.dlength() for x in xset])
+        seen |= xset
+        
+        height = lambda x: (x.dlength() - k) // 2
+        right_action = lambda x,s: s * x * s
+        left_action = lambda s,x: s * x * s
+
+        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
+        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        
+        count += int(b1)
+        subcount += int(b2)
+        
+        if b1 or b2:
+            print([x for x in xset if x.dlength() == k], b1, b2)
+        if b2:
+            assert b1
+
+    print()
+    print('count:', count, '>', subcount, 'of', of)
+    print()
+
+
+def test_d_twisted_conjugation_modules(n):
+    assert n >= 2
+    simple = [SignedPermutation.ds_i(-1, n)] + [SignedPermutation.s_i(i, n) for i in range(1, n)]
+    reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    t = SignedPermutation.s_i(0, n)
+
+    count = 0
+    subcount = 0
+    of = 0
+    seen = set()
+    for y in SignedPermutation.involutions(n, dtype=True, twisted=True):
+        if y in seen:
+            continue
+        of += 1
+
+        xset = y.twisted_conjugacy_class()
+        k = min([x.dlength() for x in xset])
+        seen |= xset
+        
+        height = lambda x: (x.dlength() - k) // 2
+
+        right_action = lambda x,s: t * s * t * x * s
+        left_action = lambda s,x: t * s * t * x * s
+
+        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
+        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        
+        count += int(b1)
+        subcount += int(b2)
+        
+        if b1 or b2:
+            print([t * x for x in xset if x.dlength() == k], b1, b2)
+        if b2:
+            assert b1
+
+    print()
+    print('count:', count, '>', subcount, 'of', of)
+    print()
+
+
+def test_d_fpf_module(n):
+    assert n >= 2
+    xset = SignedPermutation.fpf_class(n, dtype=True)
+    k = (n + 1) // 2
+    height = lambda x: (x.dlength() - k) // 2
+    t = SignedPermutation.s_i(0, n) if n % 2 != 0 else SignedPermutation.identity(n)
+    action = lambda x,s: t * s * t * x * s
+    ds = SignedPermutation.ds_i
+    simple = [ds(-1, n)] + [ds(i, n) for i in range(1, n)]
+    assert is_zero_hecke_module(xset, height, action, simple)
+
+
+def test_d_fpf_quasiparabolic(n):
+    # fails if n is odd
+    assert n >= 2
+    xset = SignedPermutation.fpf_class(n, dtype=True)
+    k = n // 2
+    height = lambda x: (x.dlength() - k) // 2
+    t = SignedPermutation.s_i(0, n) if n % 2 != 0 else SignedPermutation.identity(n)
+    action = lambda s,x: t * s * t * x * s
+    ds = SignedPermutation.ds_i
+    simple = [ds(-1, n)] + [ds(i, n) for i in range(1, n)]
+    reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    assert is_quasiparabolic(xset, height, action, simple, reflections)
+
+
+def test_b_fpf_module(n):
+    xset = SignedPermutation.fpf_class(n)
+    k = (n + 1) // 2
+    height = lambda x: (x.length() - k) // 2
+    action = lambda x,s: s * x * s
+    simple = [SignedPermutation.s_i(i, n) for i in range(n)]
+    assert is_zero_hecke_module(xset, height, action, simple)
+
+
+def test_b_fpf_quasiparabolic(n):
+    # fails if n is odd
+    xset = SignedPermutation.fpf_class(n)
+    k = (n + 1) // 2
+    height = lambda x: (x.length() - k) // 2
+    action = lambda s,x: s * x * s
+    simple = [SignedPermutation.s_i(i, n) for i in range(n)]
+    reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n + 1) for j in range(i, n + 1)]
+    assert is_quasiparabolic(xset, height, action, simple, reflections)
 
 
 def test_get_minimal_fpf_involution():

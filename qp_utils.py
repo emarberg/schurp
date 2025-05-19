@@ -3,6 +3,80 @@ from permutations import Permutation
 from signed import SignedPermutation
 
 
+def is_zero_hecke_module(xset, height, right_action, simple, verbose=True):
+    def act(x, *a):
+        y = x
+        for s in a:
+            z = right_action(y, s)
+            if height(y) == height(z):
+                return None
+            if height(y) > height(z):
+                z = y
+            y = z
+        return y
+
+    def order(x):
+        ans = 1
+        y = x
+        while len(y) > 0:
+            y *= x
+            ans += 1
+        return ans
+
+    for s in simple:
+        for t in simple:
+            m = order(s * t)
+            a = [s if i % 2 == 0 else t for i in range(m)]
+            b = [s if i % 2 != 0 else t for i in range(m)]
+            for x in xset:
+                y = act(x, *a)
+                z = act(x, *b)
+
+                ans = True
+                if y is None and z is not None:
+                    ans = False
+                if y is not None and z is None:
+                    ans = False
+                if y is not None and z is not None and y != z:
+                    ans = False
+                if not ans:
+                    if verbose:
+                        print(x, ':', a, '->', y)
+                        print(x, ':', b, '->', z)
+                    return False
+    return True
+
+
+def is_quasiparabolic(xset, height, action, simple, reflections, verbose=True):
+    if type(height) == dict:
+        height = lambda x: height[x]
+    if type(action) == dict:
+        action = lambda r, x: actions[r, x]
+
+    for x in xset:
+        for s in simple:
+            sx = action(s, x)
+            if abs(height(sx) - height(x)) not in [0, 1]:
+                if verbose:
+                    print('1:', s, x, sx, height(sx), height(x))
+                return False
+        for r in reflections:
+            rx = action(r, x)
+            if height(rx) == height(x) and rx != x:
+                if verbose:
+                    print('2:', r, x, rx, height(rx), height(x))
+                return False
+            if height(rx) > height(x):
+                for s in simple:
+                    srx = action(s, rx)
+                    sx = action(s, x)
+                    if height(srx) < height(sx) and rx != sx:
+                        if verbose:
+                            print('3:', r, x, rx, s, sx, srx, height(rx), height(x), height(srx), height(sx))
+                        return False
+    return True
+
+
 def rsk(w):
     p, q = {}, {}
     for a in w:

@@ -14,7 +14,9 @@ FPF_INVOLUTION_WORDS = {(): {()}}
 PRIMED_INVOLUTION_WORDS = {(): {()}}
 PIPE_DREAMS = {(): {((),)}}
 ATOMS_CACHE = {}
+
 TWISTED_ATOMS_CACHE = {}
+TWISTED_HECKE_ATOMS_CACHE = {}
 TWISTED_INVOLUTION_WORDS_CACHE = {}
 TWISTED_PRIMED_INVOLUTION_WORDS_CACHE = {}
 FPF_ATOMS_CACHE = {}
@@ -543,6 +545,20 @@ class Permutation:
             EXTENDED_HECKE_ATOMS_CACHE[self] = list(s)
         return EXTENDED_HECKE_ATOMS_CACHE[self]
 
+    def get_twisted_hecke_atoms(self, n):
+        if (self, n) not in TWISTED_HECKE_ATOMS_CACHE:
+            w0 = Permutation.longest_element(n)
+            dictionary = {}
+            for w in Permutation.all(n):
+                z = (w0 * w * w0).inverse() % w
+                if (z, n) not in dictionary:
+                    dictionary[z, n] = set()
+                dictionary[z, n].add(w)
+            for (key, val) in dictionary.items():
+                if key not in TWISTED_HECKE_ATOMS_CACHE:
+                    TWISTED_HECKE_ATOMS_CACHE[key] = val
+        return TWISTED_HECKE_ATOMS_CACHE[self, n]
+
     def get_involution_hecke_atoms(self):
         if self not in INVOLUTION_HECKE_ATOMS_CACHE:
             INVOLUTION_HECKE_ATOMS_CACHE[self] = list(self._get_involution_hecke_atoms())
@@ -614,6 +630,25 @@ class Permutation:
     def all(cls, n):
         for args in itertools.permutations(range(1, n + 1)):
             yield Permutation(args)
+
+    def twisted_conjugacy_class(self, n):
+        return self.conjugacy_class(n, True)
+
+    def conjugacy_class(self, n, twisted=False):
+        t = self.longest_element(n) if twisted else self.identity()
+        g = [self.s_i(i) for i in range(1, n)]
+        ans = set()
+        add = {self}
+        while add:
+            newadd = set()
+            ans |= add
+            for s in g:
+                for a in add:
+                    sas = t * s * t * a * s
+                    if sas not in ans:
+                        newadd.add(sas)
+            add = newadd
+        return ans
 
     @classmethod
     def twisted_involutions(cls, n):

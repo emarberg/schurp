@@ -57,6 +57,19 @@ class SignedMixin:
     def __abs__(self):
         return Permutation(*[abs(self(i)) for i in range(1, self.rank + 1)])
 
+    def embedded_permutation(self):
+        n = self.rank
+        t = lambda x: (x + n + 1) if x < 0 else x + n
+        oneline = [t(self(i)) for i in range(-n, n + 1) if i != 0]
+        return Permutation(*oneline)
+
+    def strong_bruhat_less_equal(self, other, dtype=False):
+        return self == other or self.strong_bruhat_less_than(other, dtype)
+
+    def strong_bruhat_less_than(self, other, dtype=False):
+        assert dtype == False
+        return self.embedded_permutation().strong_bruhat_less_than(other.embedded_permutation())
+
     def pair(self):
         n = self.rank
         return sorted([
@@ -99,6 +112,46 @@ class SignedMixin:
                 return (self * s) % (s * other)
         else:
             return self
+
+    @classmethod
+    def fpf_class(cls, n, dtype=False):
+        if n % 2 == 0:
+            oneline = [(i + 2) if i % 2 == 0 else i for i in range(n)]
+            w = SignedPermutation(*oneline)
+            return w.conjugacy_class(dtype=dtype, twisted=False)
+        else:
+            oneline = [1 if dtype else -1] + [(i + 3) if i % 2 == 0 else (i + 1) for i in range(n - 1)]
+            w = SignedPermutation(*oneline)
+            return w.conjugacy_class(dtype=dtype, twisted=dtype)
+
+    def twisted_conjugacy_class(self):
+        return self.conjugacy_class(True, True)
+
+    def conjugacy_class(self, dtype=False, twisted=False):
+        n = self.rank
+        if twisted:
+            assert dtype
+            t = self.s_i(0, n)
+        else:
+            t = self.s_i(0, n)**2
+        if dtype:
+            g = [self.ds_i(i, n) for i in range(1, n)]
+            if n >= 2:
+                g += [self.ds_i(-1, n)]
+        else:
+            g = [self.s_i(i, n) for i in range(n)]
+        ans = set()
+        add = {self}
+        while add:
+            newadd = set()
+            ans |= add
+            for s in g:
+                for a in add:
+                    sas = t * s * t * a * s
+                    if sas not in ans:
+                        newadd.add(sas)
+            add = newadd
+        return ans
 
     def __mul__(self, other):
         assert type(other) == type(self)
@@ -366,7 +419,9 @@ class SignedPermutation(SignedMixin):
                     yield w
 
     @classmethod
-    def involutions(cls, n):
+    def involutions(cls, n, dtype=False, twisted=False):
+        if twisted:
+            assert dtype
         for w in Permutation.involutions(n):
             oneline = w.oneline
             oneline += tuple(range(len(oneline) + 1, n + 1))
@@ -379,7 +434,13 @@ class SignedPermutation(SignedMixin):
                         for j in cycles[i]:
                             newline[j] *= -1
                     v = v // 2
-                yield cls(*newline)
+                w = cls(*newline)
+                if not dtype:                 
+                    yield w
+                elif dtype and not twisted and w.is_even_signed():
+                    yield w
+                elif dtype and twisted and not w.is_even_signed():
+                    yield cls.s_i(0, n) * w
 
     @classmethod
     def abs_fpf_involutions(cls, n):
@@ -1052,6 +1113,7 @@ class SignedPermutation(SignedMixin):
 
     @classmethod
     def relative_atoms(cls, y, z):
+        assert y.rank == z.rank
         if y == z:
             yield cls.identity(y.rank)
         elif y.involution_length() < z.involution_length():
@@ -1067,6 +1129,11 @@ class SignedPermutation(SignedMixin):
         for w in self.get_atoms():
             shapes[tuple(sorted(w.shape()))].add(w)
         return shapes
+
+    def get_involution_hecke_atoms(self, dtype=False):
+        assert not dtype
+        n = self.rank
+        return [w for w in SignedPermutation.all(n) if w.inverse() % w == self]
 
     def get_atoms(self, offset=None):
         assert self == self.inverse()
