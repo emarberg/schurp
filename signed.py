@@ -57,18 +57,65 @@ class SignedMixin:
     def __abs__(self):
         return Permutation(*[abs(self(i)) for i in range(1, self.rank + 1)])
 
+    @property
+    def ranktable(self):
+        if self._ranks is None:
+            w = self.inflate(self.rank + 1)
+            n = w.rank
+            self._ranks = {(i, j): 0 for i in range(-n, n + 1) for j in range(-n, n + 1)}
+            for a in range(-n, n + 1):
+                b = w(a)
+                for i in range(a, n + 1):
+                    for j in range(-n, b + 1):
+                        self._ranks[i, j] += 1
+        return self._ranks
+
+    @property
+    def emptyranks(self):
+        if self._empty is None:
+            n = self.rank
+            self._empty = set()
+            c = None
+            for a in range(1, n + 1):
+                c = abs(self(a)) if c is None else min(c, abs(self(a)))
+                for b in range(1, c):
+                    self._empty.add((a, b))
+        return self._empty
+
     def embedded_permutation(self):
         n = self.rank
         t = lambda x: (x + n + 1) if x < 0 else x + n
         oneline = [t(self(i)) for i in range(-n, n + 1) if i != 0]
         return Permutation(*oneline)
 
+    def dbruhat_less_equal(self, other):
+        assert self.is_even_signed()
+        assert other.is_even_signed()
+        n = self.rank
+        assert n == other.rank
+        v = self
+        u = other
+        for i in range(-n, n + 1):
+            for j in range(-n, n + 1):
+                if not (v.ranktable[i, j] <= u.ranktable[i, j]):
+                    return False
+        for (a, b) in v.emptyranks & u.emptyranks:
+            if u.ranktable[-a - 1, b + 1] == v.ranktable[-a - 1, b + 1]:
+                if (u.ranktable[-1, b + 1] - v.ranktable[-1, b + 1]) % 2 != 0:
+                    return False
+        return True
+
+    def dbruhat_less_than(self, other):
+        return self != other and self.dbruhat_less_equal(other)
+
     def strong_bruhat_less_equal(self, other, dtype=False):
         return self == other or self.strong_bruhat_less_than(other, dtype)
 
     def strong_bruhat_less_than(self, other, dtype=False):
-        assert dtype == False
-        return self.embedded_permutation().strong_bruhat_less_than(other.embedded_permutation())
+        if dtype:
+            return self.dbruhat_less_than(other)
+        else:
+            return self.embedded_permutation().strong_bruhat_less_than(other.embedded_permutation())
 
     def pair(self):
         n = self.rank
@@ -373,6 +420,8 @@ class SignedPermutation(SignedMixin):
         self._ldes = None
         self._ddes = None
         self._len = None
+        self._ranks = None
+        self._empty = None
 
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
