@@ -199,7 +199,7 @@ def test_d_conjugation_modules(n):
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
     reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
     length = lambda x: x.dlength()
-    leq = lambda x,y: x.dbruhat_less_or_equal(y)
+    leq = lambda x,y: x.dbruhat_less_equal(y)
 
     count = 0
     subcount = 0
@@ -235,7 +235,7 @@ def test_d_conjugation_modules(n):
             hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
             atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
             for z in atoms:
-                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
+                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
                 mobius = get_mobius(upper_poset)
                 actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
                 expected = {}
@@ -254,6 +254,8 @@ def test_d_twisted_conjugation_modules(n):
     simple = [SignedPermutation.ds_i(-1, n)] + [SignedPermutation.s_i(i, n) for i in range(1, n)]
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
     reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
+    length = lambda x: x.dlength()
+    leq = lambda x,y: x.dbruhat_less_equal(y)
     t = SignedPermutation.s_i(0, n)
 
     count = 0
@@ -266,10 +268,10 @@ def test_d_twisted_conjugation_modules(n):
         of += 1
 
         xset = y.twisted_conjugacy_class()
-        k = min([x.dlength() for x in xset])
+        k = min([length(x) for x in xset])
         seen |= xset
         
-        height = lambda x: (x.dlength() - k) // 2
+        height = lambda x: (length(x) - k) // 2
 
         right_action = lambda x,s: t * s * t * x * s
         left_action = lambda s,x: t * s * t * x * s
@@ -280,10 +282,25 @@ def test_d_twisted_conjugation_modules(n):
         count += int(b1)
         subcount += int(b2)
         
-        if b1 or b2:
-            print([t * x for x in xset if x.dlength() == k], b1, b2)
         if b2:
             assert b1
+        if b1:
+            minimum = [x for x in xset if height(x) == 0]
+            assert len(minimum) == 1
+            m = minimum[0]
+            print(m, b1, b2)
+            
+            hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
+            atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
+            for z in atoms:
+                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
+                mobius = get_mobius(upper_poset)
+                actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
+                expected = {}
+                for x in upper_poset:
+                    if mobius[x] != 0:
+                        expected[x] = mobius[x]
+                assert actual == expected
 
     print()
     print('count:', count, '>', subcount, 'of', of)
