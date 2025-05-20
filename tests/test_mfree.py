@@ -372,6 +372,14 @@ def get_upper_poset(z, atomsfn, allfn, leq=None):
     return upper_poset
 
 
+def get_dinv_poset(z, twisted):
+    n = z.rank
+    atomsfn = lambda x: x.get_atoms_d(twisted)
+    allfn = lambda x: x.all(n, dtype=True)
+    leq = lambda x,y: x.dbruhat_less_equal(y)
+    return get_upper_poset(z, atomsfn, allfn, leq)
+
+
 def get_inv_poset(z):
     n = z.rank
     return get_upper_poset(z, lambda x: x.get_atoms(), lambda x: x.all(n))
@@ -402,7 +410,7 @@ def get_mobius(upper_poset):
     return ans
 
 
-def test_twisted(n=4):
+def test_twisted_hecke_mobius(n=4):
     for z in Permutation.twisted_involutions(n):
         print('z =', z)
         upper_poset = get_twisted_poset(z, n)
@@ -416,7 +424,7 @@ def test_twisted(n=4):
         assert actual == expected
 
 
-def test_fpf(n=4):
+def test_fpf_hecke_mobius(n=4):
     # tests formula in Theorem 3 of https://arxiv.org/pdf/0902.1930
     for z in Permutation.fpf_involutions(n):
         print('z =', z)
@@ -431,7 +439,7 @@ def test_fpf(n=4):
         assert actual == expected
 
 
-def test_inv(n=4):
+def test_inv_hecke_mobius(n=4):
     for z in Permutation.involutions(n):
         print('z =', z)
         upper_poset = get_inv_poset(z)
@@ -446,21 +454,7 @@ def test_inv(n=4):
         assert actual == expected
 
 
-def test_fpf(n=4):
-    for z in SignedPermutation.fpf_involutions(n):
-        print('z =', z)
-        upper_poset = get_fpf_poset(z)
-        mobius = get_mobius(upper_poset)
-        hecke = set(z.get_symplectic_hecke_atoms())
-        actual = {x: (-1)**(x.length() - z.fpf_involution_length()) for x in hecke}
-        expected = {}
-        for x in upper_poset:
-            if mobius[x] != 0:
-                expected[x] = mobius[x]
-        assert actual == expected
-
-
-def test_binv(n=4):
+def test_binv_hecke_mobius(n=4):
     for z in SignedPermutation.involutions(n):
         print('z =', z)
         upper_poset = get_inv_poset(z)
@@ -471,4 +465,38 @@ def test_binv(n=4):
         for x in upper_poset:
             if mobius[x] != 0:
                 expected[x] = mobius[x]
+        assert actual == expected
+
+
+def test_dinv_hecke_mobius(n=4):
+    for z in SignedPermutation.involutions(n, dtype=True):
+        print('z =', z)
+        upper_poset = get_dinv_poset(z, False)
+        mobius = get_mobius(upper_poset)
+        hecke = set(z.get_involution_hecke_atoms(dtype=True))
+        actual = {x: (-1)**(x.length() - z.involution_length(dtype=True)) for x in hecke}
+        expected = {}
+        for x in upper_poset:
+            if mobius[x] != 0:
+                expected[x] = mobius[x]
+        if actual != expected:
+            for x in set(actual) | set(expected):
+                print('  ', x, actual.get(x, 0), expected.get(x, 0))
+        assert actual == expected
+
+
+def test_dtwisted_hecke_mobius(n=4):
+    for z in SignedPermutation.involutions(n, dtype=True, twisted=True):
+        print('z =', z)
+        upper_poset = get_dinv_poset(z, True)
+        mobius = get_mobius(upper_poset)
+        hecke = set(z.get_involution_hecke_atoms(dtype=True, twisted=True))
+        actual = {x: (-1)**(x.length() - z.involution_length(dtype=True, twisted=True)) for x in hecke}
+        expected = {}
+        for x in upper_poset:
+            if mobius[x] != 0:
+                expected[x] = mobius[x]
+        if actual != expected:
+            for x in set(actual) | set(expected):
+                print('  ', x, actual.get(x, 0), expected.get(x, 0))
         assert actual == expected

@@ -160,6 +160,19 @@ class SignedMixin:
         else:
             return self
 
+    def dtype_demazure(self, other):
+        assert type(other) == type(self)
+        assert self.rank == other.rank
+        if other.dtype_left_descent_set:
+            i = next(iter(other.dtype_left_descent_set))
+            s = self.ds_i(i, self.rank)
+            if i in self.dtype_descent_set:
+                return self.dtype_demazure(s * other)
+            else:
+                return (self * s).dtype_demazure(s * other)
+        else:
+            return self
+
     @classmethod
     def fpf_class(cls, n, dtype=False):
         if n % 2 == 0:
@@ -721,8 +734,14 @@ class SignedPermutation(SignedMixin):
         else:
             return ()
 
-    def involution_length(self):
-        return (len(self.neg()) + len(self.pair()) + len(self)) // 2
+    def involution_length(self, dtype=False, twisted=False):
+        if twisted:
+            assert dtype
+            return len(next(iter(self.get_atoms_d(twisted=True))))
+        elif dtype:
+            return len(next(iter(self.get_atoms_d())))
+        else:
+            return (len(self.neg()) + len(self.pair()) + len(self)) // 2
 
     @classmethod
     def longest_element(cls, n, k=None):
@@ -763,6 +782,10 @@ class SignedPermutation(SignedMixin):
                 if self(i) > self(i + 1):
                     self._rdes.add(i)
         return self._rdes
+
+    @property
+    def dtype_left_descent_set(self):
+        return self.inverse().dtype_descent_set
 
     @property
     def dtype_descent_set(self):
@@ -1179,14 +1202,18 @@ class SignedPermutation(SignedMixin):
             shapes[tuple(sorted(w.shape()))].add(w)
         return shapes
 
-    def get_involution_hecke_atoms(self, dtype=False):
-        assert not dtype
+    def get_involution_hecke_atoms(self, dtype=False, twisted=False):
         n = self.rank
-        return [w for w in SignedPermutation.all(n) if w.inverse() % w == self]
+        if twisted:
+            assert dtype
+            t = self.s_i(0, n)
+            return [w for w in SignedPermutation.all(n, dtype=True) if (t * w * t).inverse().dtype_demazure(w) == self]
+        elif dtype:
+            return [w for w in SignedPermutation.all(n, dtype=True) if w.inverse().dtype_demazure(w) == self]
+        else:   
+            return [w for w in SignedPermutation.all(n) if w.inverse() % w == self]
 
     def get_atoms(self, offset=None):
-        assert self == self.inverse()
-
         n = self.rank
         if offset is None:
             offset = 0
@@ -1247,40 +1274,33 @@ class SignedPermutation(SignedMixin):
                 yield SignedPermutation(*w).inverse()
             add = {new for w in add for new in next(w)}
 
-    def get_atoms_d(self):
+    def get_atoms_d(self, twisted=False):
         assert self.is_even_signed()
-        assert self == self.inverse()
-        w = self.reduce()
-        if w not in atoms_d_cache:
-            atoms_d_cache[w] = list(w._get_atoms_d())
-        ans = atoms_d_cache[w]
+        key = (self.reduce(), twisted)
+        if key not in atoms_d_cache:
+            atoms_d_cache[key] = list(self._get_atoms_d(twisted))
+        ans = atoms_d_cache[key]
         return [x.inflate(self.rank) for x in ans]
 
-    def _get_atoms_d(self):
-        def length(w):
-            ans = 0
-            for i in range(1, w.rank + 1):
-                for j in range(i + 1, w.rank + 1):
-                    if w(i) > w(j):
-                        ans += 1
-                    if -w(i) > w(j):
-                        ans += 1
-            return ans
+    def _get_atoms_d(self, twisted):
+        n = self.rank
+        t = self.s_i(0, n) if twisted else self.identity(n)
+        length = lambda w: w.dlength()
 
         if length(self) == 0:
             yield self
             return
 
-        def s_i(i, n):
-            return self.s_i(i, n) if i != 0 else self.s_i(0, n) * self.s_i(1, n) * self.s_i(0, n)
+        def s_i(i):
+            return self.ds_i(i if i!=0 else -1, n)
 
-        for i in range(self.rank):
-            s = s_i(i, self.rank)
+        for i in range(n):
+            s = s_i(i)
             w = self * s
             if length(w) < length(self):
-                if w == s * self:
-                    for a in w.get_atoms_d():
+                if w == t * s * t * self:
+                    for a in w.get_atoms_d(twisted):
                         yield a * s
                 else:
-                    for a in (s * w).get_atoms_d():
+                    for a in (t * s * t * w).get_atoms_d(twisted):
                         yield a * s
