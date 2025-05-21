@@ -1,6 +1,10 @@
 from permutations import Permutation
 from signed import SignedPermutation
-from qp_utils import is_quasiparabolic, is_zero_hecke_module
+from qp_utils import (
+    is_quasiparabolic, 
+    is_zero_hecke_module,
+    is_q_hecke_module
+)
 
 
 def get_pseudo_hecke_atoms(m, simple, length, act):
@@ -31,13 +35,14 @@ def get_pseudo_hecke_atoms(m, simple, length, act):
     return ans
          
 
-def test_a_conjugation_modules(n):
+def test_a_conjugation_modules(n=4, test_mobius=True):
     simple = [Permutation.s_i(i) for i in range(1, n)]
     reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
     length = lambda w: w.length()
 
     count = 0
     subcount = 0
+    subsubcount = 0
     of = 0
     seen = set()
     for y in Permutation.involutions(n):
@@ -54,37 +59,43 @@ def test_a_conjugation_modules(n):
         left_action = lambda s,x: s * x * s
 
         b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
+        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
         
         count += int(b1)
         subcount += int(b2)
-        
+        subsubcount += int(b3)
+
+        if b3:
+            assert b2        
         if b2:
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
             assert len(minimum) == 1
             m = minimum[0]
-            print(m.cycle_repr(), b1, b2)
+            print(m.cycle_repr(), b1, b2, b3)
     
-            hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-            atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-            for z in atoms:
-                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
-                mobius = get_mobius(upper_poset)
-                actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                expected = {}
-                for x in upper_poset:
-                    if mobius[x] != 0:
-                        expected[x] = mobius[x]
-                assert actual == expected
+            if test_mobius:
+                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
+                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
+                for z in atoms:
+                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
+                    mobius = get_mobius(upper_poset)
+                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
+                    expected = {}
+                    for x in upper_poset:
+                        if mobius[x] != 0:
+                            expected[x] = mobius[x]
+                    assert actual == expected
 
     print()
-    print('count:', count, '>', subcount, 'of', of)
+    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
     print()
+    assert subcount == subsubcount
 
 
-def test_a_twisted_conjugation_modules(n):
+def test_a_twisted_conjugation_modules(n=4, test_mobius=False):
     simple = [Permutation.s_i(i) for i in range(1, n)]
     reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
     length = lambda w: w.length()
@@ -92,6 +103,7 @@ def test_a_twisted_conjugation_modules(n):
 
     count = 0
     subcount = 0
+    subsubcount = 0
     of = 0
     seen = set()
     for y in Permutation.twisted_involutions(n):
@@ -109,37 +121,43 @@ def test_a_twisted_conjugation_modules(n):
         left_action = lambda s,x: t * s * t * x * s
 
         b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
+        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
         
         count += int(b1)
         subcount += int(b2)
-        
+        subsubcount += int(b3)
+
+        if b3:
+            assert b2        
         if b2:
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
             assert len(minimum) == 1
             m = minimum[0]
-            print((t * m).cycle_repr(), b1, b2)
+            print((t * m).cycle_repr(), b1, b2, b3)
             
-            hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-            atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-            for z in atoms:
-                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
-                mobius = get_mobius(upper_poset)
-                actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                expected = {}
-                for x in upper_poset:
-                    if mobius[x] != 0:
-                        expected[x] = mobius[x]
-                assert actual == expected
+            if test_mobius:
+                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
+                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
+                for z in atoms:
+                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
+                    mobius = get_mobius(upper_poset)
+                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
+                    expected = {}
+                    for x in upper_poset:
+                        if mobius[x] != 0:
+                            expected[x] = mobius[x]
+                    assert actual == expected
 
     print()
-    print('count:', count, '>', subcount, 'of', of)
+    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
     print()
+    assert subcount == subsubcount
 
 
-def test_b_conjugation_modules(n):
+def test_b_conjugation_modules(n=3, test_mobius=True):
     simple = [SignedPermutation.s_i(i, n) for i in range(0, n)]
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
     reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n + 1) for j in range(i, n + 1)]
@@ -147,6 +165,7 @@ def test_b_conjugation_modules(n):
 
     count = 0
     subcount = 0
+    subsubcount = 0
     of = 0
     seen = set()
     for y in SignedPermutation.involutions(n):
@@ -163,37 +182,43 @@ def test_b_conjugation_modules(n):
         left_action = lambda s,x: s * x * s
 
         b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
+        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
         
         count += int(b1)
         subcount += int(b2)
-        
+        subsubcount += int(b3)
+
+        if b3:
+            assert b2        
         if b2:
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
             assert len(minimum) == 1
             m = minimum[0]
-            print(m, b1, b2)
+            print(m, b1, b2, b3)
             
-            hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-            atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-            for z in atoms:
-                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
-                mobius = get_mobius(upper_poset)
-                actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                expected = {}
-                for x in upper_poset:
-                    if mobius[x] != 0:
-                        expected[x] = mobius[x]
-                assert actual == expected
+            if test_mobius:
+                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
+                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
+                for z in atoms:
+                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
+                    mobius = get_mobius(upper_poset)
+                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
+                    expected = {}
+                    for x in upper_poset:
+                        if mobius[x] != 0:
+                            expected[x] = mobius[x]
+                    assert actual == expected
 
     print()
-    print('count:', count, '>', subcount, 'of', of)
+    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
     print()
+    assert subcount == subsubcount
 
 
-def test_d_conjugation_modules(n):
+def test_d_conjugation_modules(n=4, test_mobius=False):
     assert n >= 2
     simple = [SignedPermutation.ds_i(-1, n)] + [SignedPermutation.s_i(i, n) for i in range(1, n)]
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
@@ -203,6 +228,7 @@ def test_d_conjugation_modules(n):
 
     count = 0
     subcount = 0
+    subsubcount = 0
     of = 0
     seen = set()
     for y in SignedPermutation.involutions(n, dtype=True):
@@ -219,37 +245,43 @@ def test_d_conjugation_modules(n):
         left_action = lambda s,x: s * x * s
 
         b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
+        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
         
         count += int(b1)
         subcount += int(b2)
-        
+        subsubcount += int(b3)
+
+        if b3:
+            assert b2        
         if b2:
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
             assert len(minimum) == 1
             m = minimum[0]
-            print(m, b1, b2)
+            print(m, b1, b2, b3)
             
-            hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-            atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-            for z in atoms:
-                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
-                mobius = get_mobius(upper_poset)
-                actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                expected = {}
-                for x in upper_poset:
-                    if mobius[x] != 0:
-                        expected[x] = mobius[x]
-                assert actual == expected
+            if test_mobius:
+                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
+                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
+                for z in atoms:
+                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
+                    mobius = get_mobius(upper_poset)
+                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
+                    expected = {}
+                    for x in upper_poset:
+                        if mobius[x] != 0:
+                            expected[x] = mobius[x]
+                    assert actual == expected
 
     print()
-    print('count:', count, '>', subcount, 'of', of)
+    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
     print()
+    assert subcount == subsubcount
 
 
-def test_d_twisted_conjugation_modules(n):
+def test_d_twisted_conjugation_modules(n=4, test_mobius=True):
     assert n >= 2
     simple = [SignedPermutation.ds_i(-1, n)] + [SignedPermutation.s_i(i, n) for i in range(1, n)]
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
@@ -260,6 +292,7 @@ def test_d_twisted_conjugation_modules(n):
 
     count = 0
     subcount = 0
+    subsubcount = 0
     of = 0
     seen = set()
     for y in SignedPermutation.involutions(n, dtype=True, twisted=True):
@@ -277,34 +310,40 @@ def test_d_twisted_conjugation_modules(n):
         left_action = lambda s,x: t * s * t * x * s
 
         b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
+        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
+        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
         
         count += int(b1)
         subcount += int(b2)
-        
+        subsubcount += int(b3)
+
+        if b3:
+            assert b2        
         if b2:
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
             assert len(minimum) == 1
             m = minimum[0]
-            print(m, b1, b2)
+            print(m, b1, b2, b3)
             
-            hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-            atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-            for z in atoms:
-                upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
-                mobius = get_mobius(upper_poset)
-                actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                expected = {}
-                for x in upper_poset:
-                    if mobius[x] != 0:
-                        expected[x] = mobius[x]
-                assert actual == expected
+            if test_mobius:
+                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
+                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
+                for z in atoms:
+                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
+                    mobius = get_mobius(upper_poset)
+                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
+                    expected = {}
+                    for x in upper_poset:
+                        if mobius[x] != 0:
+                            expected[x] = mobius[x]
+                    assert actual == expected
 
     print()
-    print('count:', count, '>', subcount, 'of', of)
+    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
     print()
+    assert subcount == subsubcount
 
 
 def test_d_fpf_module(n):

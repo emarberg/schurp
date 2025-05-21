@@ -1,6 +1,60 @@
 from tableaux import Tableau
 from permutations import Permutation
 from signed import SignedPermutation
+from polynomials import X
+from vectors import Vector
+
+
+def order(x):
+    ans = 1
+    y = x
+    while len(y) > 0:
+        y *= x
+        ans += 1
+    return ans
+
+
+def is_q_hecke_module(xset, height, right_action, simple, verbose=True):
+    q = X(0)
+
+    def act(x, coeff, a):
+        if len(a) == 0:
+            yield (x, coeff)
+        else:
+            s = a[0]
+            y = right_action(x, s)
+            if height(y) == height(x):
+                for pair in act(x, coeff * q, a[1:]):
+                    yield pair
+            elif height(y) > height(x):
+                for pair in act(y, coeff, a[1:]):
+                    yield pair
+            else:
+                for pair in act(y, coeff * q, a[1:]):
+                    yield pair
+                for pair in act(x, coeff * (q - 1), a[1:]):
+                    yield pair
+
+    for s in simple:
+        for t in simple:
+            m = order(s * t)
+            a = [s if i % 2 == 0 else t for i in range(m)]
+            b = [s if i % 2 != 0 else t for i in range(m)]
+            for x in xset:
+                y = Vector()
+                for (key, val) in act(x, 1, a):
+                    y += Vector({key: val})
+                
+                z = Vector()
+                for (key, val) in act(x, 1, b):
+                    z += Vector({key: val})
+
+                if y != z:
+                    if verbose:
+                        print(x, ':', a, '->', y)
+                        print(x, ':', b, '->', z)
+                    return False
+    return True
 
 
 def is_zero_hecke_module(xset, height, right_action, simple, verbose=True):
@@ -14,14 +68,6 @@ def is_zero_hecke_module(xset, height, right_action, simple, verbose=True):
                 z = y
             y = z
         return y
-
-    def order(x):
-        ans = 1
-        y = x
-        while len(y) > 0:
-            y *= x
-            ans += 1
-        return ans
 
     for s in simple:
         for t in simple:
