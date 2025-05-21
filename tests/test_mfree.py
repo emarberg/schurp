@@ -35,7 +35,7 @@ def get_pseudo_hecke_atoms(m, simple, length, act):
     return ans
          
 
-def test_a_conjugation_modules(n=4, test_mobius=True):
+def test_a_conjugation_modules(n=4, test_mobius=True, test_all=False):
     simple = [Permutation.s_i(i) for i in range(1, n)]
     reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
     length = lambda w: w.length()
@@ -45,7 +45,7 @@ def test_a_conjugation_modules(n=4, test_mobius=True):
     subsubcount = 0
     of = 0
     seen = set()
-    for y in Permutation.involutions(n):
+    for y in Permutation.involutions(n) if not test_all else Permutation.all(n):
         if y in seen:
             continue
         of += 1
@@ -72,9 +72,9 @@ def test_a_conjugation_modules(n=4, test_mobius=True):
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
-            assert len(minimum) == 1
+            assert test_all or len(minimum) == 1
             m = minimum[0]
-            print(m.cycle_repr(), b1, b2, b3)
+            print(m.cycle_repr(), len(minimum), b1, b2, b3)
     
             if test_mobius:
                 hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
@@ -95,7 +95,7 @@ def test_a_conjugation_modules(n=4, test_mobius=True):
     assert subcount == subsubcount
 
 
-def test_a_twisted_conjugation_modules(n=4, test_mobius=False):
+def test_a_twisted_conjugation_modules(n=4, test_mobius=True, test_all=False):
     simple = [Permutation.s_i(i) for i in range(1, n)]
     reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
     length = lambda w: w.length()
@@ -106,7 +106,7 @@ def test_a_twisted_conjugation_modules(n=4, test_mobius=False):
     subsubcount = 0
     of = 0
     seen = set()
-    for y in Permutation.twisted_involutions(n):
+    for y in Permutation.twisted_involutions(n) if not test_all else Permutation.all(n):
         if y in seen:
             continue
         of += 1
@@ -134,9 +134,9 @@ def test_a_twisted_conjugation_modules(n=4, test_mobius=False):
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
-            assert len(minimum) == 1
+            assert test_all or len(minimum) == 1
             m = minimum[0]
-            print((t * m).cycle_repr(), b1, b2, b3)
+            print((t * m).cycle_repr(), len(minimum), b1, b2, b3)
             
             if test_mobius:
                 hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
@@ -157,7 +157,7 @@ def test_a_twisted_conjugation_modules(n=4, test_mobius=False):
     assert subcount == subsubcount
 
 
-def test_b_conjugation_modules(n=3, test_mobius=True):
+def test_b_conjugation_modules(n=3, test_mobius=True, test_all=False):
     simple = [SignedPermutation.s_i(i, n) for i in range(0, n)]
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
     reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n + 1) for j in range(i, n + 1)]
@@ -168,7 +168,7 @@ def test_b_conjugation_modules(n=3, test_mobius=True):
     subsubcount = 0
     of = 0
     seen = set()
-    for y in SignedPermutation.involutions(n):
+    for y in SignedPermutation.involutions(n) if not test_all else SignedPermutation.all(n):
         if y in seen:
             continue
         of += 1
@@ -195,9 +195,9 @@ def test_b_conjugation_modules(n=3, test_mobius=True):
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
-            assert len(minimum) == 1
+            assert test_all or len(minimum) == 1
             m = minimum[0]
-            print(m, b1, b2, b3)
+            print(m, len(minimum), b1, b2, b3)
             
             if test_mobius:
                 hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
@@ -218,7 +218,7 @@ def test_b_conjugation_modules(n=3, test_mobius=True):
     assert subcount == subsubcount
 
 
-def test_d_conjugation_modules(n=4, test_mobius=False):
+def test_d_conjugation_modules(n=4, test_mobius=False, test_all=False):
     assert n >= 2
     simple = [SignedPermutation.ds_i(-1, n)] + [SignedPermutation.s_i(i, n) for i in range(1, n)]
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
@@ -231,7 +231,7 @@ def test_d_conjugation_modules(n=4, test_mobius=False):
     subsubcount = 0
     of = 0
     seen = set()
-    for y in SignedPermutation.involutions(n, dtype=True):
+    for y in SignedPermutation.involutions(n, dtype=True) if not test_all else SignedPermutation.all(n, dtype=True):
         if y in seen:
             continue
         of += 1
@@ -258,9 +258,9 @@ def test_d_conjugation_modules(n=4, test_mobius=False):
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
-            assert len(minimum) == 1
+            assert test_all or len(minimum) == 1
             m = minimum[0]
-            print(m, b1, b2, b3)
+            print(m, len(minimum), b1, b2, b3)
             
             if test_mobius:
                 hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
@@ -281,7 +281,7 @@ def test_d_conjugation_modules(n=4, test_mobius=False):
     assert subcount == subsubcount
 
 
-def test_d_twisted_conjugation_modules(n=4, test_mobius=True):
+def test_d_twisted_conjugation_modules(n=4, test_mobius=True, test_all=False):
     assert n >= 2
     simple = [SignedPermutation.ds_i(-1, n)] + [SignedPermutation.s_i(i, n) for i in range(1, n)]
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
@@ -295,7 +295,7 @@ def test_d_twisted_conjugation_modules(n=4, test_mobius=True):
     subsubcount = 0
     of = 0
     seen = set()
-    for y in SignedPermutation.involutions(n, dtype=True, twisted=True):
+    for y in SignedPermutation.involutions(n, dtype=True, twisted=True) if not test_all else SignedPermutation.all(n, dtype=True):
         if y in seen:
             continue
         of += 1
@@ -323,9 +323,9 @@ def test_d_twisted_conjugation_modules(n=4, test_mobius=True):
             assert b1
         if b1:
             minimum = [x for x in xset if height(x) == 0]
-            assert len(minimum) == 1
+            assert test_all or len(minimum) == 1
             m = minimum[0]
-            print(m, b1, b2, b3)
+            print(m, len(minimum), b1, b2, b3)
             
             if test_mobius:
                 hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
