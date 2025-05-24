@@ -68,7 +68,7 @@ def _test_conjugation_modules(test_mobius, test_all, simple, reflections, length
             minimum = [x for x in xset if height(x) == 0]
             assert test_all or len(minimum) == 1
             m = minimum[0]
-            print(printer(m), len(printer(m)**2) == 0, ':', len(minimum), b1, b2, b3)
+            print(printer(m), len(printer(m)**2) == 0, ':', len(minimum), 'of', len(xset), b1, b2, b3)
     
             if test_mobius:
                 hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
