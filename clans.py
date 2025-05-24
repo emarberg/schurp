@@ -82,6 +82,14 @@ class Clan:
             if pair in [(True, True), (False, False)]:
                 return False
 
+        if self.family == self.TYPE_A:
+            support = [a for pair in matching for a in pair]
+            trivial = [a for a in range(1, self.rank() + 1) if type(self(a)) == bool and a not in support]
+            signs = [self(i) for i in trivial]
+            if any(signs[i] != signs[i + 1] for i in range(len(signs) - 1)):
+                return False
+            return True
+
         trivial = [a for (a, b) in sorted(matching) if -a == b]
 
         if self.family == self.TYPE_C2:

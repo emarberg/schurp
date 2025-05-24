@@ -159,7 +159,7 @@ def test_atoms_a3(n=4):
         q = n - p
         offset = (n - abs(p - q)) // 2
         for clan in Clan.all_a(p, q):
-            z = w0 * clan.richardson_springer_map().inverse()
+            z = w0 * clan.richardson_springer_map()
             atoms = set(clan.get_atoms())
             print(clan)
             for a in atoms:
@@ -258,6 +258,32 @@ def test_relatoms(n=3):
                 assert gw.shape() == sh
 
 
+def test_atoms_a3_refined(n=4, verbose=False):
+    w0 = Permutation.longest_element(n)
+    for p in range(n + 1):
+        q = n - p
+        k = (n - abs(p - q)) // 2
+        for clan in Clan.all_a(p, q):
+            z = clan.richardson_springer_map()
+            base = z.fixed(n)
+            excluded_guess = {
+                m for m in Permutation.nc_matchings(base)
+                if not clan.is_aligned(m, verbose=verbose)
+            }
+            if verbose:
+                print('\nexcluded_guess:', excluded_guess)
+
+            atoms_by_shape = {}
+            for w in Permutation.get_twisted_atoms(w0 * z, n, k):
+                sh = w.twisted_shape(n)
+                sh = tuple(sorted(sh))
+                atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
+            if verbose:
+                print('atoms_by_shape:', atoms_by_shape)
+
+            _test_refinement(clan, atoms_by_shape, excluded_guess)
+
+
 def test_atoms_b_refined(n=4):
     for p in range(n + 1):
         q = n - p
@@ -354,7 +380,8 @@ def _test_refinement(clan, atoms_by_shape, excluded_guess):
         lines += ['']
     lines += ['']
 
-    print('\n', 'clan atoms:', clan_atoms, '\n')
-    print('\n'.join(lines))
+    if set(excluded_guess) != set(excluded):
+        print('\n', 'clan atoms:', clan_atoms, '\n')
+        print('\n'.join(lines))
 
     assert set(excluded_guess) == set(excluded)

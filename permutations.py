@@ -403,9 +403,6 @@ class Permutation:
         return {i for i in range(1, n + 1) if self(i) == i}
 
     def twisted_shape(self, n):
-        y = self.star(n).inverse() % self
-        assert y.twisted_involution_length(n) == self.length()
-
         w = self.inverse()
         line = [w(i) for i in range(1, n + 1)]
         pairs = []
@@ -1294,6 +1291,24 @@ class Permutation:
 
     def __iter__(self):
         return self.oneline.__iter__()
+
+    @classmethod
+    def nc_matchings(cls, base):
+        base = set(base)
+
+        if len(base) == 0:
+            yield ()
+            return
+
+        x = min(base)
+        for y in base:
+            left = {z for z in base if x < z < y}
+            right = {z for z in base if y < z}
+            for a in cls.nc_matchings(left):
+                for b in cls.nc_matchings(right):
+                    yield tuple(sorted(set(a) | set(b) | {(x, y)}))
+        for a in cls.nc_matchings(base - {x}):
+            yield tuple(sorted(set(a)))
 
     # Input is [i_1, i_2, ... , i_k], returns permutation (i_1 i_2 ... i_k)
     @classmethod
