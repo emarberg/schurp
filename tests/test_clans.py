@@ -291,7 +291,7 @@ def test_relatoms(n=3):
                 assert gw.shape() == sh
 
 
-def test_atoms_a3_refined(n=4, verbose=False):
+def test_atoms_a_refined(n=4, verbose=False):
     w0 = Permutation.longest_element(n)
     for p in range(n + 1):
         q = n - p

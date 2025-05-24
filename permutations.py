@@ -1300,15 +1300,23 @@ class Permutation:
             yield ()
             return
 
+        def check(ans):
+            subbase = {x for pair in ans for x in pair}
+            return not any(x < y < z for y in base - subbase for (x, z) in ans)                  
+        
         x = min(base)
         for y in base:
             left = {z for z in base if x < z < y}
             right = {z for z in base if y < z}
             for a in cls.nc_matchings(left):
                 for b in cls.nc_matchings(right):
-                    yield tuple(sorted(set(a) | set(b) | {(x, y)}))
+                    ans = tuple(sorted(set(a) | set(b) | {(x, y)}))
+                    if check(ans):
+                        yield ans
         for a in cls.nc_matchings(base - {x}):
-            yield tuple(sorted(set(a)))
+            ans = tuple(sorted(set(a)))
+            if check(ans):
+                yield ans
 
     # Input is [i_1, i_2, ... , i_k], returns permutation (i_1 i_2 ... i_k)
     @classmethod
