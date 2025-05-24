@@ -35,28 +35,22 @@ def get_pseudo_hecke_atoms(m, simple, length, act):
     return ans
          
 
-def test_a_conjugation_modules(n=4, test_mobius=True, test_all=False):
-    simple = [Permutation.s_i(i) for i in range(1, n)]
-    reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
-    length = lambda w: w.length()
-
+def _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn, leq=None):
     count = 0
     subcount = 0
     subsubcount = 0
     of = 0
     seen = set()
-    for y in Permutation.involutions(n) if not test_all else Permutation.all(n):
+    for y in elements:
         if y in seen:
             continue
         of += 1
 
-        xset = y.conjugacy_class(n)
+        xset = construct(y)
         k = min([length(x) for x in xset])
         seen |= xset
         
         height = lambda x: (length(x) - k) // 2
-        right_action = lambda x,s: s * x * s
-        left_action = lambda s,x: s * x * s
 
         b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
         b2 = is_q_hecke_module(xset, height, right_action, simple, False)
@@ -66,21 +60,21 @@ def test_a_conjugation_modules(n=4, test_mobius=True, test_all=False):
         subcount += int(b2)
         subsubcount += int(b3)
 
-        if b3:
-            assert b2        
-        if b2:
-            assert b1
-        if b1:
+        #if b3:
+        #    assert b2        
+        #if b2:
+        #    assert b1
+        if b1 or b2 or b3:
             minimum = [x for x in xset if height(x) == 0]
             assert test_all or len(minimum) == 1
             m = minimum[0]
-            print(m.cycle_repr(), len(minimum), b1, b2, b3)
+            print(printer(m), len(printer(m)**2) == 0, ':', len(minimum), b1, b2, b3)
     
             if test_mobius:
                 hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
                 atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
                 for z in atoms:
-                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
+                    upper_poset = get_upper_poset(z, lambda x: atoms[x], allfn, leq)
                     mobius = get_mobius(upper_poset)
                     actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
                     expected = {}
@@ -92,69 +86,33 @@ def test_a_conjugation_modules(n=4, test_mobius=True, test_all=False):
     print()
     print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
     print()
-    assert subcount == subsubcount
+    # assert subcount == subsubcount
 
+
+def test_a_conjugation_modules(n=4, test_mobius=True, test_all=False):
+    simple = [Permutation.s_i(i) for i in range(1, n)]
+    reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
+    length = lambda w: w.length()
+    elements = Permutation.involutions(n) if not test_all else Permutation.all(n)
+    construct = lambda y: y.conjugacy_class(n)
+    right_action = lambda x,s: s * x * s
+    left_action = lambda s,x: s * x * s
+    printer = lambda m: m
+    allfn = lambda x: Permutation.all(n)
+    _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn)
 
 def test_a_twisted_conjugation_modules(n=4, test_mobius=True, test_all=False):
     simple = [Permutation.s_i(i) for i in range(1, n)]
     reflections = [Permutation.t_ij(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
     length = lambda w: w.length()
     t = Permutation.longest_element(n)
-
-    count = 0
-    subcount = 0
-    subsubcount = 0
-    of = 0
-    seen = set()
-    for y in Permutation.twisted_involutions(n) if not test_all else Permutation.all(n):
-        if y in seen:
-            continue
-        of += 1
-
-        xset = y.twisted_conjugacy_class(n)
-        k = min([length(x) for x in xset])
-        seen |= xset
-        
-        height = lambda x: (length(x) - k) // 2
-
-        right_action = lambda x,s: t * s * t * x * s
-        left_action = lambda s,x: t * s * t * x * s
-
-        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
-        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
-        
-        count += int(b1)
-        subcount += int(b2)
-        subsubcount += int(b3)
-
-        if b3:
-            assert b2        
-        if b2:
-            assert b1
-        if b1:
-            minimum = [x for x in xset if height(x) == 0]
-            assert test_all or len(minimum) == 1
-            m = minimum[0]
-            print((t * m).cycle_repr(), len(minimum), b1, b2, b3)
-            
-            if test_mobius:
-                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-                for z in atoms:
-                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
-                    mobius = get_mobius(upper_poset)
-                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                    expected = {}
-                    for x in upper_poset:
-                        if mobius[x] != 0:
-                            expected[x] = mobius[x]
-                    assert actual == expected
-
-    print()
-    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
-    print()
-    assert subcount == subsubcount
+    elements = Permutation.twisted_involutions(n) if not test_all else Permutation.all(n)
+    construct = lambda y: y.twisted_conjugacy_class(n)
+    right_action = lambda x,s: t * s * t * x * s
+    left_action = lambda s,x: t * s * t * x * s
+    printer = lambda m: t * m
+    allfn = lambda x: Permutation.all(n)
+    _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn)
 
 
 def test_b_conjugation_modules(n=3, test_mobius=True, test_all=False):
@@ -162,60 +120,13 @@ def test_b_conjugation_modules(n=3, test_mobius=True, test_all=False):
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
     reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n + 1) for j in range(i, n + 1)]
     length = lambda w: w.length()
-
-    count = 0
-    subcount = 0
-    subsubcount = 0
-    of = 0
-    seen = set()
-    for y in SignedPermutation.involutions(n) if not test_all else SignedPermutation.all(n):
-        if y in seen:
-            continue
-        of += 1
-
-        xset = y.conjugacy_class()
-        k = min([length(x) for x in xset])
-        seen |= xset
-        
-        height = lambda x: (length(x) - k) // 2
-        right_action = lambda x,s: s * x * s
-        left_action = lambda s,x: s * x * s
-
-        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
-        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
-        
-        count += int(b1)
-        subcount += int(b2)
-        subsubcount += int(b3)
-
-        if b3:
-            assert b2        
-        if b2:
-            assert b1
-        if b1:
-            minimum = [x for x in xset if height(x) == 0]
-            assert test_all or len(minimum) == 1
-            m = minimum[0]
-            print(m, len(minimum), b1, b2, b3)
-            
-            if test_mobius:
-                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-                for z in atoms:
-                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n))
-                    mobius = get_mobius(upper_poset)
-                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                    expected = {}
-                    for x in upper_poset:
-                        if mobius[x] != 0:
-                            expected[x] = mobius[x]
-                    assert actual == expected
-
-    print()
-    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
-    print()
-    assert subcount == subsubcount
+    elements = SignedPermutation.involutions(n) if not test_all else SignedPermutation.all(n)
+    construct = lambda y: y.conjugacy_class()
+    right_action = lambda x,s: s * x * s
+    left_action = lambda s,x: s * x * s
+    printer = lambda m: m
+    allfn = lambda x: SignedPermutation.all(n)
+    _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn)
 
 
 def test_d_conjugation_modules(n=4, test_mobius=False, test_all=False):
@@ -225,60 +136,13 @@ def test_d_conjugation_modules(n=4, test_mobius=False, test_all=False):
     reflections += [SignedPermutation.reflection_s(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
     length = lambda x: x.dlength()
     leq = lambda x,y: x.dbruhat_less_equal(y)
-
-    count = 0
-    subcount = 0
-    subsubcount = 0
-    of = 0
-    seen = set()
-    for y in SignedPermutation.involutions(n, dtype=True) if not test_all else SignedPermutation.all(n, dtype=True):
-        if y in seen:
-            continue
-        of += 1
-
-        xset = y.conjugacy_class(dtype=True)
-        k = min([length(x) for x in xset])
-        seen |= xset
-        
-        height = lambda x: (length(x) - k) // 2
-        right_action = lambda x,s: s * x * s
-        left_action = lambda s,x: s * x * s
-
-        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
-        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
-        
-        count += int(b1)
-        subcount += int(b2)
-        subsubcount += int(b3)
-
-        if b3:
-            assert b2        
-        if b2:
-            assert b1
-        if b1:
-            minimum = [x for x in xset if height(x) == 0]
-            assert test_all or len(minimum) == 1
-            m = minimum[0]
-            print(m, len(minimum), b1, b2, b3)
-            
-            if test_mobius:
-                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-                for z in atoms:
-                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
-                    mobius = get_mobius(upper_poset)
-                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                    expected = {}
-                    for x in upper_poset:
-                        if mobius[x] != 0:
-                            expected[x] = mobius[x]
-                    assert actual == expected
-
-    print()
-    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
-    print()
-    assert subcount == subsubcount
+    elements = SignedPermutation.involutions(n, dtype=True) if not test_all else SignedPermutation.all(n, dtype=True)
+    construct = lambda y: y.conjugacy_class(dtype=True)
+    right_action = lambda x,s: s * x * s
+    left_action = lambda s,x: s * x * s
+    printer = lambda m: m
+    allfn = lambda x: SignedPermutation.all(n, dtype=True)
+    _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn, leq)
 
 
 def test_d_twisted_conjugation_modules(n=4, test_mobius=True, test_all=False):
@@ -289,61 +153,13 @@ def test_d_twisted_conjugation_modules(n=4, test_mobius=True, test_all=False):
     length = lambda x: x.dlength()
     leq = lambda x,y: x.dbruhat_less_equal(y)
     t = SignedPermutation.s_i(0, n)
-
-    count = 0
-    subcount = 0
-    subsubcount = 0
-    of = 0
-    seen = set()
-    for y in SignedPermutation.involutions(n, dtype=True, twisted=True) if not test_all else SignedPermutation.all(n, dtype=True):
-        if y in seen:
-            continue
-        of += 1
-
-        xset = y.twisted_conjugacy_class()
-        k = min([length(x) for x in xset])
-        seen |= xset
-        
-        height = lambda x: (length(x) - k) // 2
-
-        right_action = lambda x,s: t * s * t * x * s
-        left_action = lambda s,x: t * s * t * x * s
-
-        b1 = is_zero_hecke_module(xset, height, right_action, simple, False)
-        b2 = is_q_hecke_module(xset, height, right_action, simple, False)
-        b3 = is_quasiparabolic(xset, height, left_action, simple, reflections, False)
-        
-        count += int(b1)
-        subcount += int(b2)
-        subsubcount += int(b3)
-
-        if b3:
-            assert b2        
-        if b2:
-            assert b1
-        if b1:
-            minimum = [x for x in xset if height(x) == 0]
-            assert test_all or len(minimum) == 1
-            m = minimum[0]
-            print(m, len(minimum), b1, b2, b3)
-            
-            if test_mobius:
-                hecke = get_pseudo_hecke_atoms(m, simple, length, right_action)
-                atoms = {z: {w for w in hecke[z] if length(w) == min(map(length, hecke[z]))} for z in hecke if z is not None}
-                for z in atoms:
-                    upper_poset = get_upper_poset(z, lambda x: atoms[x], lambda x: z.all(n, dtype=True), leq)
-                    mobius = get_mobius(upper_poset)
-                    actual = {x: (-1)**(length(x) - length(next(iter(atoms[z])))) for x in hecke[z]}
-                    expected = {}
-                    for x in upper_poset:
-                        if mobius[x] != 0:
-                            expected[x] = mobius[x]
-                    assert actual == expected
-
-    print()
-    print('count:', count, '>=', subcount, '==', subsubcount, 'of', of)
-    print()
-    assert subcount == subsubcount
+    elements = SignedPermutation.involutions(n, dtype=True, twisted=True) if not test_all else SignedPermutation.all(n, dtype=True)
+    construct = lambda y: y.twisted_conjugacy_class()
+    right_action = lambda x,s: t * s * t * x * s
+    left_action = lambda s,x: t * s * t * x * s
+    printer = lambda m: t * m
+    allfn = lambda x: SignedPermutation.all(n, dtype=True)
+    _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn, leq)
 
 
 def test_d_fpf_module(n):

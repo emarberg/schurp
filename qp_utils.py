@@ -69,12 +69,16 @@ def is_zero_hecke_module(xset, height, right_action, simple, verbose=True):
             y = z
         return y
 
-    for s in simple:
-        for t in simple:
-            m = order(s * t)
-            a = [s if i % 2 == 0 else t for i in range(m)]
-            b = [s if i % 2 != 0 else t for i in range(m)]
-            for x in xset:
+    for x in xset:
+        for s in simple:
+            #y = right_action(x, s)
+            #if height(y) == height(x) and y != x:
+            #    return False
+            for t in simple:
+                m = order(s * t)
+                a = [s if i % 2 == 0 else t for i in range(m)]
+                b = [s if i % 2 != 0 else t for i in range(m)]
+            
                 y = act(x, *a)
                 z = act(x, *b)
 
