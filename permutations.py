@@ -368,14 +368,26 @@ class Permutation:
             ans += [e + (i,) for e in w.get_twisted_involution_words(n)]
         return ans
 
-    def get_twisted_atoms(self, n):
+    def get_twisted_atoms(self, n, offset=None):
         assert self.is_twisted_involution(n)
-        if self not in TWISTED_ATOMS_CACHE:
-            TWISTED_ATOMS_CACHE[(self, n)] = list(self._get_twisted_atoms(n))
-        return TWISTED_ATOMS_CACHE[(self, n)]
+        key = (self, n, offset)
+        if key not in TWISTED_ATOMS_CACHE:
+            TWISTED_ATOMS_CACHE[key] = list(self._get_twisted_atoms(n, offset))
+        return TWISTED_ATOMS_CACHE[key]
 
-    def _get_twisted_atoms(self, n):
-        if self.is_identity():
+    def _get_twisted_atoms(self, n, offset):
+        if offset is None:
+            base = Permutation()
+        else:
+            cyc = []
+            for l in range(offset + 1, n):
+                if l >= n + 1 - l:
+                    break
+                cyc.append((l, n + 1 - l))
+            base = Permutation.from_cycles(*cyc)
+        if len(self) <= len(base) and self != base:
+            return []
+        if self == base:
             return [Permutation()]
         ans = set()
         for i in self.right_descent_set:
@@ -384,7 +396,7 @@ class Permutation:
             w = t * self * s
             if self == w:
                 w = self * s
-            ans |= {e * s for e in w.get_twisted_atoms(n)}
+            ans |= {e * s for e in w.get_twisted_atoms(n, offset)}
         return list(ans)
 
     def fixed(self, n):

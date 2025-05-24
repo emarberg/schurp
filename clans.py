@@ -331,7 +331,7 @@ class Clan:
         if type(a) == int and type(b) != int and a < i:
             return self._conjugate(i)
         if type(a) != int and type(b) == int and i + 1 < b:
-            return self.conjugate(i)
+            return self._conjugate(i)
         if type(a) != int and type(b) != int and a != b:
             return self._translate(i)
         return self
