@@ -5,6 +5,7 @@ import itertools
 
 CLAN_WORDS_CACHE = {}
 CLAN_ATOMS_CACHE = {}
+CLAN_HECKE_ATOMS_CACHE = {}
 
 
 class Clan:
@@ -236,6 +237,42 @@ class Clan:
         for i in range(start, self.rank()):
             yield i
 
+    def simple_generator(self, i):
+        if self.family == self.TYPE_A:
+            return Permutation.s_i(i)
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return SignedPermutation.s_i(i, self.rank())
+        else:
+            raise Exception
+
+    def weyl_group(self):
+        if self.family == self.TYPE_A:
+            return Permutation.all(self.rank())
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return SignedPermutation.all(self.rank())
+        else:
+            raise Exception
+
+    def weyl_group_identity(self):
+        if self.family == self.TYPE_A:
+            return Permutation()
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return SignedPermutation.identity(self.rank())
+        else:
+            raise Exception
+
+    def weyl_group_bruhat_leq(self, a, b):
+        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return a.strong_bruhat_less_equal(b)
+        else:
+            raise Exception
+
+    def weyl_group_length(self, w):
+        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return w.length()
+        else:
+            raise Exception
+
     def get_clan_words(self):
         if self not in CLAN_WORDS_CACHE:
             ans = []
@@ -246,26 +283,49 @@ class Clan:
             CLAN_WORDS_CACHE[self] = ans if len(ans) > 0 else [()]
         return CLAN_WORDS_CACHE[self]
 
+    def get_hecke_atoms(self):
+        if self not in CLAN_HECKE_ATOMS_CACHE:
+            atoms = self.get_atoms()
+            upper_poset = {}
+            for w in self.weyl_group():
+                for a in atoms:
+                    if self.weyl_group_bruhat_leq(a, w):
+                        upper_poset[w] = set()
+            for x in upper_poset:
+                for y in upper_poset:
+                    if self. weyl_group_bruhat_leq(x, y):
+                        upper_poset[y].add(x)
+            return upper_poset
+
+            ans = {}
+            def mobius(x):
+                if x not in ans:
+                    mu = 0
+                    for z in upper_poset[x] - {x}:
+                        mu += mobius(z)
+                    ans[x] = 1 - mu
+                return ans[x]
+            for x in upper_poset:
+                mobius(x)
+
+            a = next(iter(atoms))
+            CLAN_HECKE_ATOMS_CACHE[self] = set()
+            for w in ans:
+                if ans[w] == 0:
+                    continue
+                assert ans[w] == (-1)**(self.weyl_group_length(w) - self.weyl_group_length(a))
+                CLAN_HECKE_ATOMS_CACHE[self].add(w)
+        return CLAN_HECKE_ATOMS_CACHE[self]
+
     def get_atoms(self):
-        def s(i):
-            if self.family == self.TYPE_A:
-                return Permutation.s_i(i)
-            elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
-                return SignedPermutation.s_i(i, self.rank())
-
-        if self.family == self.TYPE_A:
-            identity = Permutation()
-        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
-            identity = SignedPermutation.identity(self.rank())
-
         if self not in CLAN_ATOMS_CACHE:
             ans = set()
             for i in self.generators():
                 other = i * self
                 if other != self:
                     for w in other.get_atoms():
-                        ans.add(w * s(i))
-            CLAN_ATOMS_CACHE[self] = ans if len(ans) > 0 else {identity}
+                        ans.add(w * self.simple_generator(i))
+            CLAN_ATOMS_CACHE[self] = ans if len(ans) > 0 else {self.weyl_group_identity()}
         return CLAN_ATOMS_CACHE[self]
 
     def cycles(self):

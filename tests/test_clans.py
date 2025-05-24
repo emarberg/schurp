@@ -3,6 +3,39 @@ from permutations import Permutation
 from signed import SignedPermutation
 
 
+def _test_hecke_atoms(cl):
+    print(cl)
+    atoms = cl.get_atoms()
+    for w in cl.get_hecke_atoms():
+        print('  ', w, 'atom' if w in atoms else '')
+    print()
+
+
+def test_hecke_atoms_a(n=4):
+    for p in range(n + 1):
+        q = n - p
+        for cl in Clan.all_a(p, q):
+            _test_hecke_atoms(cl)
+
+def test_hecke_atoms_b(n=4):
+    for p in range(n + 1):
+        q = n - p
+        for cl in Clan.all_b(p, q):
+            _test_hecke_atoms(cl)
+
+
+def test_hecke_atoms_c2(n=4):
+    for p in range(n + 1):
+        q = n - p
+        for cl in Clan.all_c2(p, q):
+            _test_hecke_atoms(cl)
+
+
+def test_hecke_atoms_c1(n=4):
+    for cl in Clan.all_c1(n):
+        _test_hecke_atoms(cl)
+
+
 def test_init():
     w = Clan([1, True, 1, False])
     assert w.cycles() == [(1, 3)]
