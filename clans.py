@@ -19,16 +19,22 @@ class Clan:
     TYPE_D3 = 'clans for G = SO(2n), K = GL(n)'
 
     def __init__(self, oneline, family=TYPE_A):
+        s = sorted(oneline)
+        assert not any(type(s[i]) == int and type(s[i + 1]) == int and type(s[i + 2]) == int and s[i] == s[i + 2] for i in range(len(s) - 2))
+
         pairs = [
             (i, j)
             for i in range(len(oneline))
             for j in range(i + 1, len(oneline))
             if type(oneline[i]) == int and type(oneline[j]) == int and oneline[i] == oneline[j]
         ]
+
         oneline = list(oneline)
         for i, j in pairs:
             oneline[i] = j + 1
             oneline[j] = i + 1
+        assert all(type(oneline[i]) == bool or oneline[oneline[i] - 1] - 1 == i for i in range(len(oneline)))
+
         self.oneline = tuple(oneline)
         self.family = family
 
@@ -443,10 +449,9 @@ class Clan:
         return self.oneline[i - 1]
 
     def _conjugate(self, i, j=None):
-        # todo for type D
         if j is None:
             j = i + 1
-        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
             newline = list(self.oneline)
             a, b = self(i), self(j)
             if type(a) == int:
@@ -455,14 +460,17 @@ class Clan:
                 newline[b - 1] = i
             newline[i - 1], newline[j - 1] = b, a
             return Clan(newline, self.family)
+        else:
+            raise Exception
 
     def _translate(self, i):
-        # todo for type D
-        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
             assert type(self(i)) != int and type(self(i + 1)) != int
             newline = list(self.oneline)
             newline[i - 1], newline[i] = i + 1, i
             return Clan(newline, self.family)
+        else:
+            raise Exception
 
     def _multiply_a(self, i):
         assert 1 <= i < self.rank()
@@ -553,8 +561,51 @@ class Clan:
         return self
 
     def _multiply_d1(self, i):
-        # todo
         assert i in set(self.generators())
+        n = self.rank()
+
+        if i == -1:
+            active = False
+            a, b, c, d = self(n - 1), self(n), self(n + 1), self(n + 2)
+
+            if type(a) == bool and type(b) == bool and a != b:
+                return self._translate(n - 1)._translate(n + 1)._conjugate(n)
+            elif type(a) == int and type(b) == int and a == n:
+                return self._conjugate(n - 1, n + 1)
+            elif type(a) != int and type(b) == int:
+                active = (b == n + 1) or (b < n - 1)
+            elif type(a) == int and type(b) != int:
+                active = a < n - 1
+            elif type(a) == int and type(b) == int:
+                if b == n + 1 and a < n - 1:
+                    active = True
+                elif a == n + 2 and b < n - 1:
+                    active = True
+                elif a < n - 1 and b < n - 1:
+                    active = True
+                elif a < c < n - 1:
+                    active = True 
+                elif n + 2 < a < c:
+                    active = True 
+
+            if active:
+                return self._conjugate(n - 1, n + 1)._conjugate(n, n + 2)
+            else:
+                return self
+
+        a, b = self(n + i), self(n + 1 + i)
+        if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
+            return self._conjugate(n + i)
+        if type(a) == int and type(b) == int and a < b:
+            return self._conjugate(n + i)._conjugate(n - i)
+        if type(a) == int and type(b) != int and a < n + i:
+            return self._conjugate(n + i)._conjugate(n - i)
+        if type(a) != int and type(b) == int and n + 1 + i < b:
+            return self._conjugate(n + i)._conjugate(n - i)
+        if type(a) != int and type(b) != int and a != b:
+            return self._translate(n + i)._translate(n - i)
+        return self
+
 
     def _multiply_d2(self, i):
         # todo

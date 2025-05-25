@@ -306,9 +306,9 @@ class SignedMixin:
     def __hash__(self):
         return hash(self.oneline)
 
-    def reduce(self):
+    def reduce(self, limit=0):
         newline = self.oneline
-        while newline and newline[-1] == len(newline):
+        while newline and len(newline) > limit and newline[-1] == len(newline):
             newline = newline[:-1]
         return self.__class__(*newline)
 
@@ -399,11 +399,12 @@ class SignedMixin:
         for args in itertools.permutations(range(1, n + 1)):
             yield cls(*args)
 
-    def get_reduced_word(self):
-        if self.left_descent_set:
-            i = min(self.left_descent_set)
-            s = self.s_i(i, self.rank)
-            return (i,) + (s * self).get_reduced_word()
+    def get_reduced_word(self, dtype=False):
+        des = self.dtype_descent_set if dtype else self.right_descent_set
+        if des:
+            i = min(des)
+            s = self.ds_i(i, self.rank) if dtype else self.s_i(i, self.rank)
+            return (self * s).get_reduced_word(dtype) + (i,)
         else:
             return ()
 
@@ -742,6 +743,13 @@ class SignedPermutation(SignedMixin):
             return len(next(iter(self.get_atoms_d())))
         else:
             return (len(self.neg()) + len(self.pair()) + len(self)) // 2
+
+    @classmethod
+    def dtype_longest_element(cls, n):
+        if n % 2 == 0:
+            return cls.longest_element(n)
+        else:
+            return cls.s_i(0, n) * cls.longest_element(n)
 
     @classmethod
     def longest_element(cls, n, k=None):
@@ -1274,33 +1282,51 @@ class SignedPermutation(SignedMixin):
                 yield SignedPermutation(*w).inverse()
             add = {new for w in add for new in next(w)}
 
-    def get_atoms_d(self, twisted=False):
-        assert self.is_even_signed()
-        key = (self.reduce(), twisted)
+    def get_fpf_atoms_d(self):
+        n = self.rank
+        twisted = n % 2 == 0
+        atoms = self.get_atoms_d(twisted)
+        offset = 1 if twisted else 0
+        for w in atoms:
+            oneline = w.inverse().oneline
+            if all(oneline[i] > oneline[i + 1] for i in range(offset, len(oneline) - 1, 2)):
+                newline = oneline[:offset]
+                for i in range(offset, len(oneline) - 1, 2):
+                    newline += (oneline[i + 1], oneline[i])
+                yield SignedPermutation(*newline).inverse()
+
+    def get_atoms_d(self, twisted=False, offset=0):
+        w = self.reduce(limit=2)
+        assert w.is_even_signed()
+        assert offset <= w.rank
+        key = (w, twisted, offset)
         if key not in atoms_d_cache:
-            atoms_d_cache[key] = list(self._get_atoms_d(twisted))
+            atoms_d_cache[key] = list(w._get_atoms_d(twisted, offset))
         ans = atoms_d_cache[key]
         return [x.inflate(self.rank) for x in ans]
 
-    def _get_atoms_d(self, twisted):
+    def _get_atoms_d(self, twisted, offset):
         n = self.rank
         t = self.s_i(0, n) if twisted else self.identity(n)
         length = lambda w: w.dlength()
 
-        if length(self) == 0:
-            yield self
+        oneline = [-i for i in range(1, offset + 1)] + [i for i in range(offset + 1, n + 1)]
+        if offset % 2 != 0 and len(oneline) > 0:
+            oneline[0] = 1
+        base = SignedPermutation(*oneline)
+
+        if length(self) <= length(base):
+            if self == base:
+                yield SignedPermutation.identity(n)
             return
 
-        def s_i(i):
-            return self.ds_i(i if i!=0 else -1, n)
-
         for i in range(n):
-            s = s_i(i)
+            s = self.ds_i(i if i != 0 else -1, n)
             w = self * s
             if length(w) < length(self):
                 if w == t * s * t * self:
-                    for a in w.get_atoms_d(twisted):
+                    for a in w.get_atoms_d(twisted, offset):
                         yield a * s
                 else:
-                    for a in (t * s * t * w).get_atoms_d(twisted):
+                    for a in (t * s * t * w).get_atoms_d(twisted, offset):
                         yield a * s

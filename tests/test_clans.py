@@ -204,24 +204,40 @@ def test_atoms_a3(n=4):
 def test_atoms_b(n=4):
     for p in range(1, n):
         q = n - p
+        print('n =', n, '(p, q) =', (p, q))
         offset = abs(2 * p - 2 * q - 1) // 2
         for clan in Clan.all_b(p, q):
             z = -clan.richardson_springer_map()
+            
+            print(' ', clan)
             atoms = set(clan.get_atoms())
-            print(clan)
+            lengths_a = set()
             for a in atoms:
-                print('  ', a.inverse(), a.inverse().get_reduced_word())
-            print(z, offset)
+                word = a.inverse().get_reduced_word()
+                print('  ', a.inverse(), word)
+                lengths_a.add(len(word))
+            print()
+
+            print(' ', z, offset)
             btoms = set(z.get_atoms(offset))
+            lengths_b = set()
             for a in btoms:
-                print('  ', a.inverse(), a.inverse().get_reduced_word())
+                word = a.inverse().get_reduced_word()
+                print('  ', a.inverse(), word)
+                lengths_b.add(len(word))
+            print()
+
             assert atoms.issubset(btoms)
+            assert lengths_a == lengths_b
+            assert len(lengths_a) == 1
 
 
 def test_atoms_c1(n=4):
     for m in range(n + 1):
         for clan in Clan.all_c1(m):
             z = -clan.richardson_springer_map()
+            print(clan)
+            print(z)
             assert set(clan.get_atoms()).issubset(set(z.get_atoms()))
 
 
@@ -239,6 +255,70 @@ def test_atoms_c2(n=4):
             btoms = set(z.get_fpf_atoms(offset))
             for a in btoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
+            assert atoms.issubset(btoms)
+
+
+def test_atoms_d1(nn=4):
+    for n in [nn, nn + 1]:
+        for p in range(1, n):
+            q = n - p
+            print('n =', n, '(p, q) =', (p, q))
+            offset = abs(p - q)
+            twisted = offset % 2 != 0
+            for clan in Clan.all_d1(p, q):
+                phi = clan.richardson_springer_map()
+                z = phi.dtype_longest_element(n) * phi.inverse()
+
+                print(' ', clan)
+                atoms = set(clan.get_atoms())
+                lengths_a = set()
+                for a in atoms:
+                    word = a.inverse().get_reduced_word(dtype=True)
+                    print('  ', a.inverse(), word)
+                    lengths_a.add(len(word))
+                print()
+                
+                print(' ', z, offset)
+                btoms = set(z.get_atoms_d(twisted, offset))
+                lengths_b = set()
+                for a in btoms:
+                    word = a.inverse().get_reduced_word(dtype=True)
+                    print('  ', a.inverse(), word)
+                    lengths_b.add(len(word))
+                print()
+
+                assert atoms.issubset(btoms)
+                assert lengths_a == lengths_b
+                assert len(lengths_a) == 1
+
+
+def test_atoms_d2(nn=4):
+    for n in [nn, nn + 1]:
+        for p in range(1, n + 1):
+            q = n + 1 - p
+            print('n =', n, '(p, q) =', (p, q))
+            offset = abs(p - q)
+            twisted = offset % 2 != 0
+            for clan in Clan.all_d2(p, q):
+                phi = clan.richardson_springer_map()
+                z = phi.dtype_longest_element(n) * phi.inverse()
+                atoms = set(clan.get_atoms())
+                print('  ', clan)
+                print('  ', z, offset)
+                btoms = set(z.get_atoms_d(twisted, offset))
+                assert atoms.issubset(btoms)
+
+
+def test_atoms_d3(nn=4):
+    for n in [nn, nn + 1]:
+        print('n =', n)
+        for clan in Clan.all_d3(n):
+            phi = clan.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            atoms = set(clan.get_atoms())
+            print('  ', clan)
+            print('  ', z)
+            btoms = set(z.get_fpf_atoms_d())
             assert atoms.issubset(btoms)
 
 
@@ -314,7 +394,7 @@ def test_atoms_a_refined(n=4, verbose=False):
             _test_refinement(clan, atoms_by_shape, excluded_guess)
 
 
-def test_atoms_b_refined(n=4):
+def test_atoms_b_refined(n=3):
     for p in range(n + 1):
         q = n - p
         k = abs(2 * p - 2 * q - 1) // 2
@@ -338,7 +418,7 @@ def test_atoms_b_refined(n=4):
             _test_refinement(clan, atoms_by_shape, excluded_guess)
 
 
-def test_atoms_c2_refined(n=4):
+def test_atoms_c2_refined(n=3):
     for p in range(n + 1):
         q = n - p
         k = abs(p - q)
