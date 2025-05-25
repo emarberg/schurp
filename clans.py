@@ -137,10 +137,13 @@ class Clan:
                 yield cl
 
     @classmethod
-    def symmetric_clans(cls, p, q):
+    def symmetric_clans(cls, p, q, disallow_negations=False):
         n = (p + q) // 2
         mod = 1 if (p + q) % 2 == 0 else 0
         for w in SignedPermutation.involutions(n):
+            if disallow_negations and any(w(i) == -i for i in range(1, n + 1)):
+                continue
+
             fixed = [i for i in range(1, n + 1) if w(i) == i]
             f = len(fixed)
 
@@ -158,16 +161,20 @@ class Clan:
             # and k = (p - q + 2*f - e) / 4
 
             base = [i if i < w(i) else w(i) if w(i) < i else False for i in range(-n, 0)]
+            
             if (p + q) % 2 != 0:
                 base += [(p - q + 2 * f) % 4 == 1]
                 e = 1 if base[n] else -1
+                k = p - q + 2 * f - e
+                assert k % 4 == 0
+                k = k // 4
             else:
-                e = 0
+                k = p - q + 2 * f
+                if k % 4 != 0:
+                    continue
+                k = k // 4
+            
             base += [i if i < w(i) else w(i) if w(i) < i else False for i in range(1, n + 1)]
-
-            k = p - q + 2 * f - e
-            assert k % 4 == 0
-            k = k // 4
 
             if 0 <= k <= f:
                 for subset in itertools.combinations(fixed, k):
@@ -202,11 +209,17 @@ class Clan:
                 yield cl
 
     @classmethod
-    def all_c1(cls, n):
+    def skew_symmetric_clans(cls, p, q, disallow_negations=False):
+        assert p == q
+        n = p
         for w in SignedPermutation.involutions(n):
+            if disallow_negations and any(w(i) == -i for i in range(1, n + 1)):
+                continue
+
             fixed = [i for i in range(1, n + 1) if w(i) == i]
             base = [i if i < w(i) else w(i) if w(i) < i else True for i in range(-n, 0)]
             base += [i if i < w(i) else w(i) if w(i) < i else False for i in range(1, n + 1)]
+            
             for p in range(len(fixed) + 1):
                 for subset in itertools.combinations(fixed, p):
                     oneline = base[:]
@@ -214,10 +227,16 @@ class Clan:
                         # the tuple is 0-indexed
                         oneline[n + i - 1] = True
                         oneline[n - i] = False
-                    yield Clan(oneline, cls.TYPE_C1)
+                    yield oneline
+
+    @classmethod
+    def all_c1(cls, n):
+        for oneline in cls.skew_symmetric_clans(n, n):
+            yield Clan(oneline, cls.TYPE_C1)
 
     @classmethod
     def _all_c2(cls, p, q):
+        # todo: refactor using symmetric clans
         n = p + q
         for w in SignedPermutation.involutions(n):
             if any(w(i) == -i for i in range(1, n + 1)):
@@ -251,8 +270,8 @@ class Clan:
                 for clan in cls.all_c2(p, n - p):
                     yield clan
         else:
-            for c in cls._all_c2(p, q):
-                yield c
+            for oneline in cls.symmetric_clans(2 * p, 2 * q, disallow_negations=True):
+                yield Clan(oneline, cls.TYPE_C2)
 
     @classmethod
     def all_d1(cls, p, q=None):
@@ -282,8 +301,17 @@ class Clan:
                 yield cl
 
     @classmethod
-    def all_d3(cls, p, q=None):
-        raise NotImplementedError
+    def all_d3(cls, n):
+        for oneline in cls.skew_symmetric_clans(n, n, disallow_negations=True):
+            a = len([i for i in range(n) if oneline[i] is False])
+            b = len([
+                (i, j)
+                for i in range(n)
+                for j in range(i + 1, n)
+                if type(oneline[i]) == int and oneline[i] == oneline[j]
+            ])
+            if (a + b) % 2 == 0:
+                yield Clan(oneline, cls.TYPE_D3)
 
     def rank(self):
         if self.family == self.TYPE_A:
