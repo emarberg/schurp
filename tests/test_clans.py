@@ -3,35 +3,32 @@ from permutations import Permutation
 from signed import SignedPermutation
 
 
-def _test_hecke_atoms(cl):
+def _test_hecke_atoms(cl, verbose=False):
     print(cl)
     atoms = cl.get_atoms()
     for w in cl.get_hecke_atoms():
-        print('  ', w, 'atom' if w in atoms else '')
-    print()
+        if verbose:
+            print('  ', w, 'atom' if w in atoms else '')
+    if verbose:
+        print()
 
 
-def test_hecke_atoms_a(n=4):
-    for p in range(n + 1):
-        q = n - p
-        for cl in Clan.all_a(p, q):
-            _test_hecke_atoms(cl)
-
-def test_hecke_atoms_b(n=4):
-    for p in range(n + 1):
-        q = n - p
-        for cl in Clan.all_b(p, q):
-            _test_hecke_atoms(cl)
+def test_hecke_atoms_a(n=3):
+    for cl in Clan.all_a(n):
+        _test_hecke_atoms(cl)
 
 
-def test_hecke_atoms_c2(n=4):
-    for p in range(n + 1):
-        q = n - p
-        for cl in Clan.all_c2(p, q):
-            _test_hecke_atoms(cl)
+def test_hecke_atoms_b(n=3):
+    for cl in Clan.all_b(n):
+        _test_hecke_atoms(cl)
 
 
-def test_hecke_atoms_c1(n=4):
+def test_hecke_atoms_c2(n=3):
+    for cl in Clan.all_c2(n):
+        _test_hecke_atoms(cl)
+
+
+def test_hecke_atoms_c1(n=3):
     for cl in Clan.all_c1(n):
         _test_hecke_atoms(cl)
 

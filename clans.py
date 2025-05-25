@@ -10,10 +10,13 @@ CLAN_HECKE_ATOMS_CACHE = {}
 
 class Clan:
 
-    TYPE_A = 'clans for G = GL(p + q), K = GL(p) x GL(q)'
-    TYPE_B = 'clans for G = SO(2n + 1), K = S(O(2p) x O(2q + 1))'
+    TYPE_A = 'clans for G = GL(p+q), K = GL(p) x GL(q)'
+    TYPE_B = 'clans for G = SO(2n+1), K = S(O(2p) x O(2q+1))'
     TYPE_C1 = 'clans for G = Sp(2n), K = GL(n)'
     TYPE_C2 = 'clans for G = Sp(2n), K = Sp(2p) x Sp(2q)'
+    TYPE_D1 = 'clans for G = SO(2n), K = S(O(2p) x O(2q))'
+    TYPE_D2 = 'clans for G = SO(2n), K = S(O(2p-1) x O(2q-1)) with p+q = n+1'
+    TYPE_D3 = 'clans for G = SO(2n), K = GL(n)'
 
     def __init__(self, oneline, family=TYPE_A):
         pairs = [
@@ -45,6 +48,18 @@ class Clan:
     def create_c2(cls, oneline):
         return Clan(oneline, cls.TYPE_C2)
 
+    @classmethod
+    def create_d1(cls, oneline):
+        return Clan(oneline, cls.TYPE_D1)
+
+    @classmethod
+    def create_d2(cls, oneline):
+        return Clan(oneline, cls.TYPE_D2)
+
+    @classmethod
+    def create_d3(cls, oneline):
+        return Clan(oneline, cls.TYPE_D2)
+
     def __repr__(self):
         l = [str(min(i, self(i))) if type(i) == int else '+' if i else '-' for i in self.oneline]
         return ' '.join(l)
@@ -65,6 +80,7 @@ class Clan:
         return p - q
 
     def is_aligned(self, matching, verbose=False):
+        # todo for type D
         for (i, j) in matching:
             if self.family in [self.TYPE_B, self.TYPE_C2] and i + j == 0:
                 continue
@@ -121,21 +137,35 @@ class Clan:
                 yield cl
 
     @classmethod
-    def _all_b(cls, p, q):
-        n = p + q
+    def symmetric_clans(cls, p, q):
+        n = (p + q) // 2
+        mod = 1 if (p + q) % 2 == 0 else 0
         for w in SignedPermutation.involutions(n):
             fixed = [i for i in range(1, n + 1) if w(i) == i]
             f = len(fixed)
 
+            # suppose p + q is even. let k be number of positive +.
+            # then p - q = 2*k - 2*(f-k) = 4*k - 2*f
+            # so k = (p - q + 2*f) / 4
+            # 
+            # instead suppose p + q is odd.
+            # let e = 1 if central + and e = -1 if central -
+            # if k is number of positive + then must have
+            #
+            #   p - q = 2*k + e - 2*(f-k) = 4*k - 2*f + e
+            #
+            # thus e = 1 iff p - q + 2 * f is 1 mod 4
+            # and k = (p - q + 2*f - e) / 4
+
             base = [i if i < w(i) else w(i) if w(i) < i else False for i in range(-n, 0)]
-            base += [(2 * p - 2 * q + 2 * f - 1) % 4 == 1]
+            if (p + q) % 2 != 0:
+                base += [(p - q + 2 * f) % 4 == 1]
+                e = 1 if base[n] else -1
+            else:
+                e = 0
             base += [i if i < w(i) else w(i) if w(i) < i else False for i in range(1, n + 1)]
 
-            e = 1 if base[n] else -1
-            f = len(fixed)
-            # 2 * k + e - 2 * (f - k) == 4 * k - 2 * f + e == 2 * p - 2 * q - 1
-            # 4 * k + e == 2 * p - 2 * q + 2 * f - 1
-            k = (2 * p - 2 * q + 2 * f - 1 - e)
+            k = p - q + 2 * f - e
             assert k % 4 == 0
             k = k // 4
 
@@ -143,18 +173,16 @@ class Clan:
                 for subset in itertools.combinations(fixed, k):
                     oneline = base[:]
                     for i in subset:
-                        oneline[n + i] = True
+                        oneline[n - mod + i] = True
                         oneline[n - i] = True
-                    cl = Clan(oneline, cls.TYPE_B)
-                    assert cl.clan_type() == 2 * p - 2 * q - 1
-                    yield cl
+                    yield oneline
 
     @classmethod
     def all_a(cls, p, q=None):
         if q is None:
             n = p
             for p in range(1, n):
-                for clan in cls.all_a(p, n - p):
+                for clan in cls._all_a(p, n - p):
                     yield clan
         else:
             for c in cls._all_a(p, q):
@@ -167,8 +195,11 @@ class Clan:
             for p in range(1, n):
                 for clan in cls.all_b(p, n - p):
                     yield clan
-        for c in cls._all_b(p, q):
-            yield c
+        else:
+            for oneline in cls.symmetric_clans(2 * p, 2 * q + 1):
+                cl = Clan(oneline, cls.TYPE_B)
+                assert cl.clan_type() == 2 * p - 2 * q - 1
+                yield cl
 
     @classmethod
     def all_c1(cls, n):
@@ -217,24 +248,55 @@ class Clan:
         if q is None:
             n = p
             for p in range(1, n):
-                for clan in cls.all_b(p, n - p):
+                for clan in cls.all_c2(p, n - p):
                     yield clan
-        for c in cls._all_c2(p, q):
-            yield c
+        else:
+            for c in cls._all_c2(p, q):
+                yield c
+
+    @classmethod
+    def all_d1(cls, p, q=None):
+        if q is None:
+            n = p
+            for p in range(1, n):
+                for clan in cls.all_d1(p, n - p):
+                    yield clan
+        else:
+            for oneline in cls.symmetric_clans(2 * p, 2 * q):
+                cl = Clan(oneline, cls.TYPE_D1)
+                assert cl.clan_type() == 2 * p - 2 * q
+                yield cl
+
+    @classmethod
+    def all_d2(cls, p, q=None):
+        if q is None:
+            n = p
+            for p in range(1, n + 1):
+                q = n + 1 - p
+                for clan in cls.all_d2(p, q):
+                    yield clan
+        else:
+            for oneline in cls.symmetric_clans(2 * p - 1, 2 * q - 1):
+                cl = Clan(oneline, cls.TYPE_D2)
+                assert cl.clan_type() == (2 * p - 1) - (2 * q - 1)
+                yield cl
+
+    @classmethod
+    def all_d3(cls, p, q=None):
+        raise NotImplementedError
 
     def rank(self):
         if self.family == self.TYPE_A:
             return len(self.oneline)
-        if self.family == self.TYPE_B:
-            return (len(self.oneline) - 1) // 2
-        if self.family == self.TYPE_C1:
-            return len(self.oneline) // 2
-        if self.family == self.TYPE_C2:
+        else:
             return len(self.oneline) // 2
 
     def generators(self):
-        start = 1 if self.family == self.TYPE_A else 0
-        for i in range(start, self.rank()):
+        if self.rank() >= 2 and self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            yield -1
+        elif self.rank() >= 1 and self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            yield 0
+        for i in range(1, self.rank()):
             yield i
 
     def simple_generator(self, i):
@@ -242,6 +304,8 @@ class Clan:
             return Permutation.s_i(i)
         elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             return SignedPermutation.s_i(i, self.rank())
+        elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            return SignedPermutation.ds_i(i, self.rank())
         else:
             raise Exception
 
@@ -250,13 +314,15 @@ class Clan:
             return Permutation.all(self.rank())
         elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             return SignedPermutation.all(self.rank())
+        elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            return SignedPermutation.all(self.rank(), dtype=True)
         else:
             raise Exception
 
     def weyl_group_identity(self):
         if self.family == self.TYPE_A:
             return Permutation()
-        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
             return SignedPermutation.identity(self.rank())
         else:
             raise Exception
@@ -264,12 +330,16 @@ class Clan:
     def weyl_group_bruhat_leq(self, a, b):
         if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             return a.strong_bruhat_less_equal(b)
+        elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            return a.dbruhat_less_equal(b)
         else:
             raise Exception
 
     def weyl_group_length(self, w):
         if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             return w.length()
+        elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            return w.dlength()
         else:
             raise Exception
 
@@ -355,23 +425,25 @@ class Clan:
 
         if self.family == self.TYPE_A:
             return phi_a(self.cycles())
-
-        if self.family == self.TYPE_B:
+        elif self.family == self.TYPE_B:
             n = self.rank()
             cycles = [(i - n - 1, j - n - 1) for (i, j) in self.cycles()]
             return phi_bcd(cycles, n)
-
-        if self.family in [self.TYPE_C1, self.TYPE_C2]:
+        elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
             n = self.rank()
             cycles = [(
                 i - n - 1 if i <= n else i - n,
                 j - n - 1 if j <= n else j - n) for (i, j) in self.cycles()]
-            return phi_bcd(cycles, n)
+            w = phi_bcd(cycles, n)
+            return w if self.family != self.TYPE_D2 else (w * SignedPermutation(0, self.rank()))
+        else:
+            raise Exception
 
     def __call__(self, i):
         return self.oneline[i - 1]
 
     def _conjugate(self, i, j=None):
+        # todo for type D
         if j is None:
             j = i + 1
         if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
@@ -385,6 +457,7 @@ class Clan:
             return Clan(newline, self.family)
 
     def _translate(self, i):
+        # todo for type D
         if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             assert type(self(i)) != int and type(self(i + 1)) != int
             newline = list(self.oneline)
@@ -479,14 +552,34 @@ class Clan:
             return self._translate(n + i)._translate(n - i)
         return self
 
+    def _multiply_d1(self, i):
+        # todo
+        assert i in set(self.generators())
+
+    def _multiply_d2(self, i):
+        # todo
+        assert i in set(self.generators())
+
+    def _multiply_d3(self, i):
+        # todo
+        assert i in set(self.generators())
+
     def __rmul__(self, i):
         assert type(i) == int
         if self.family == self.TYPE_A:
             return self._multiply_a(i)
-        if self.family == self.TYPE_B:
+        elif self.family == self.TYPE_B:
             return self._multiply_b(i)
-        if self.family == self.TYPE_C1:
+        elif self.family == self.TYPE_C1:
             return self._multiply_c1(i)
-        if self.family == self.TYPE_C2:
+        elif self.family == self.TYPE_C2:
             return self._multiply_c2(i)
+        elif self.family == self.TYPE_D1:
+            return self._multiply_d1(i)
+        elif self.family == self.TYPE_D2:
+            return self._multiply_d2(i)
+        elif self.family == self.TYPE_D3:
+            return self._multiply_d3(i)
+        else:
+            raise Exception
 
