@@ -235,34 +235,6 @@ class Clan:
             yield Clan(oneline, cls.TYPE_C1)
 
     @classmethod
-    def _all_c2(cls, p, q):
-        # todo: refactor using symmetric clans
-        n = p + q
-        for w in SignedPermutation.involutions(n):
-            if any(w(i) == -i for i in range(1, n + 1)):
-                continue
-            fixed = [i for i in range(1, n + 1) if w(i) == i]
-            base = [i if i < w(i) else w(i) if w(i) < i else False for i in range(-n, 0)]
-            base += [i if i < w(i) else w(i) if w(i) < i else False for i in range(1, n + 1)]
-
-            f = len(fixed)
-            # 2 * k - 2 * (f - k) == 4 * k - 2 * f == 2 * p - 2 * q
-            # 4 * k == 2 * p - 2 * q + 2 * f
-            k = (2 * p - 2 * q + 2 * f)
-            assert k % 4 == 0
-            k = k // 4
-
-            if 0 <= k <= f:
-                for subset in itertools.combinations(fixed, k):
-                    oneline = base[:]
-                    for i in subset:
-                        oneline[n + i - 1] = True
-                        oneline[n - i] = True
-                    cl = Clan(oneline, cls.TYPE_C2)
-                    assert cl.clan_type() == 2 * p - 2 * q
-                    yield cl
-
-    @classmethod
     def all_c2(cls, p, q=None):
         if q is None:
             n = p
