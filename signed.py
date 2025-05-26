@@ -738,9 +738,9 @@ class SignedPermutation(SignedMixin):
     def involution_length(self, dtype=False, twisted=False):
         if twisted:
             assert dtype
-            return len(next(iter(self.get_atoms_d(twisted=True))))
+            return next(iter(self.get_atoms_d(twisted=True))).dlength()
         elif dtype:
-            return len(next(iter(self.get_atoms_d())))
+            return next(iter(self.get_atoms_d())).dlength()
         else:
             return (len(self.neg()) + len(self.pair()) + len(self)) // 2
 
@@ -1036,6 +1036,29 @@ class SignedPermutation(SignedMixin):
             oneline += [i + 1, i]
         return (SignedPermutation(*oneline) * self).shape()
 
+    def dshape(self):
+        ndes, fix, neg = self._dtype_ndes()
+        
+        desd = [(b, a) for a, b in ndes if 0 < a and not (0 < a < -b)]
+        desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg), 2)]
+        
+        negd = [(abs(a), abs(a)) for a, b in ndes if 0 < abs(a) < -b] + [(-b, -b) for a, b in ndes if 0 < abs(a) < -b]
+        
+        n = self.rank
+        y = SignedPermutation.identity(n)
+        for (i, i) in negd:
+            y *= SignedPermutation.t_ij(-i, i, n)
+        for a, b in desd:
+            y *= SignedPermutation.t_ij(a, b, n)
+        assert self.inverse().dtype_demazure(self) == y
+
+        sh = set()
+        for a, b in ndes:
+            if 0 < abs(a) < -b:
+                sh.add((b, -abs(a)))
+                sh.add((abs(a), -b))
+        return sh
+
     def shape(self):
         ndes, fix, neg = self._ndes()
 
@@ -1069,6 +1092,26 @@ class SignedPermutation(SignedMixin):
     def nneg(self):
         ndes, fix, neg = self._ndes()
         return neg
+
+    def _dtype_ndes(self):
+        y = self.inverse().dtype_demazure(self)
+        assert y.involution_length(dtype=True) == self.dlength()
+
+        o = list(self.inverse().oneline)
+        ndes = []
+        while True:
+            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]]
+            if len(i) == 0:
+                break
+            i = i[0]
+            a, b = o[i:i + 2]
+            ndes.append((a, b))
+            o = o[:i] + o[i + 2:]
+            if a > 0 > b and o:
+                o[0] *= -1
+        fix = tuple(i for i in o if i > 0)
+        neg = tuple(i for i in o if i < 0)
+        return tuple(sorted(ndes)), fix, neg
 
     def _ndes(self):
         y = self.inverse() % self
@@ -1301,19 +1344,58 @@ class SignedPermutation(SignedMixin):
         assert offset <= w.rank
         key = (w, twisted, offset)
         if key not in atoms_d_cache:
-            atoms_d_cache[key] = list(w._get_atoms_d(twisted, offset))
+            atoms_d_cache[key] = list(set(w._get_atoms_d(twisted, offset)))
         ans = atoms_d_cache[key]
         return [x.inflate(self.rank) for x in ans]
+
+    @classmethod
+    def dbase(cls, n, offset):
+        oneline = [-i for i in range(1, offset + 1)] + [i for i in range(offset + 1, n + 1)]
+        if offset % 2 != 0 and len(oneline) > 0:
+            oneline[0] = 1
+        return SignedPermutation(*oneline)
+
+    @classmethod
+    def bbase_atom(cls, n, k):
+        assert k <= n
+        oneline = list(range(1, n + 1))
+        for i in range(k):
+            oneline[i] = -k + i
+        return SignedPermutation(*oneline) 
+
+    @classmethod
+    def dbase_atom(cls, n, k):
+        assert k <= n
+        oneline = list(range(1, n + 1))
+        if k % 2 == 0:
+            for i in range(0, k, 2):
+                oneline[i] = 1 - k + i
+                oneline[i + 1] = -k + i
+        else:
+            for i in range(0, k - 1, 2):
+                oneline[i] = 1 - k + i
+                oneline[i + 1] = -k + i
+            oneline[k - 1] = 1 
+        return SignedPermutation(*oneline) 
+        # oneline = list(range(1, n + 1))
+        # if k % 2 == 0:
+        #     for i in range(1, k, 2):
+        #         oneline[i] *= -1
+        #     if (k // 2) % 2 != 0:
+        #         oneline[0] *= -1
+        # else:
+        #     for i in range(2, k, 2):
+        #         oneline[i] *= -1
+        #     if (k // 2) % 2 != 0:
+        #         oneline[0] *= -1  
+        # return SignedPermutation(*oneline)          
 
     def _get_atoms_d(self, twisted, offset):
         n = self.rank
         t = self.s_i(0, n) if twisted else self.identity(n)
         length = lambda w: w.dlength()
 
-        oneline = [-i for i in range(1, offset + 1)] + [i for i in range(offset + 1, n + 1)]
-        if offset % 2 != 0 and len(oneline) > 0:
-            oneline[0] = 1
-        base = SignedPermutation(*oneline)
+        base = self.dbase(n, offset)
 
         if length(self) <= length(base):
             if self == base:

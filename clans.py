@@ -95,7 +95,7 @@ class Clan:
             elif self.family == self.TYPE_B:
                 i, j = self.rank() + 1 + i, self.rank() + 1 + j
                 pair = (self(i), (self(j)))
-            elif self.family in [self.TYPE_C1, self.TYPE_C2]:
+            elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1]:
                 i = self.rank() + i + (0 if i > 0 else 1)
                 j = self.rank() + j + (0 if j > 0 else 1)
                 pair = (self(i), self(j))

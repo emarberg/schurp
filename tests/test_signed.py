@@ -2,6 +2,14 @@ from signed import SignedPermutation, Permutation
 from polynomials import X
 
 
+def test_dshape(n=4):
+    for z in SignedPermutation.involutions(n, dtype=True):
+        for w in z.get_atoms_d():
+            print(z, w.inverse())
+            print(w.dshape())
+            print()
+
+
 def test_b_bruhat_order(n=4):
     length = lambda x: x.length()
     reflections = [SignedPermutation.reflection_t(i, j, n) for i in range(1, n) for j in range(i + 1, n + 1)]
