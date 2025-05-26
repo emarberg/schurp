@@ -493,11 +493,11 @@ def test_atoms_d1_refined(nn=4, verbose=False):
         for p in range(1, n):
             q = n - p
             k = abs(p - q)
-            twisted = k % 2 != 0
             g = SignedPermutation.dbase_atom(n, k)
-            if twisted:
-                continue
+            
+            twisted = k % 2 != 0
             print('n =', n, '(p, q) =', (p, q), 'k =', k)
+            
             for clan in Clan.all_d1(p, q):
                 phi = clan.richardson_springer_map()
                 z = phi.dtype_longest_element(n) * phi.inverse()
@@ -505,7 +505,6 @@ def test_atoms_d1_refined(nn=4, verbose=False):
                 if verbose:
                     atoms = set(clan.get_atoms())
                     btoms = set(z.get_atoms_d(twisted, k))
-                    
                     print(' ', clan)
                     print()
                     for a in atoms:
@@ -516,12 +515,13 @@ def test_atoms_d1_refined(nn=4, verbose=False):
                     for a in btoms:
                         print('  ', a in atoms, a.inverse(), '->', (g*a).inverse(), (g*a).dshape(k))
                         print()
-                        print('  ', a.get_reduced_word(dtype=True))
+                        print('   ', a.get_reduced_word(dtype=True))
                         print()
                     print()
                     print()
 
-                base = z.negated_points()
+                t = SignedPermutation.s_i(0, n) if twisted else SignedPermutation.identity(n)
+                base = (t * z).negated_points()
                 excluded_guess = {
                     m for m in SignedPermutation.ncsp_matchings(base)
                     if not clan.is_aligned(m)

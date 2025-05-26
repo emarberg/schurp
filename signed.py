@@ -1099,8 +1099,13 @@ class SignedPermutation(SignedMixin):
         return neg
 
     def _dtype_ndes(self, offset):
-        y = self.inverse().dtype_demazure(self)
-        assert y.involution_length(dtype=True) == self.dlength()
+        if offset % 2 == 0:
+            y = self.inverse().dtype_demazure(self)
+            assert y.involution_length(dtype=True) == self.dlength()
+        else:
+            t = SignedPermutation.s_i(0, self.rank)
+            y = (t * self.inverse() * t).dtype_demazure(self)
+            assert y.involution_length(dtype=True, twisted=True) == self.dlength()
 
         o = list(self.inverse().oneline)
         ndes = []
