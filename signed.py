@@ -1036,27 +1036,32 @@ class SignedPermutation(SignedMixin):
             oneline += [i + 1, i]
         return (SignedPermutation(*oneline) * self).shape()
 
-    def dshape(self):
-        ndes, fix, neg = self._dtype_ndes()
+    def dshape(self, offset=0):
+        ndes, fix, neg = self._dtype_ndes(offset)
         
         desd = [(b, a) for a, b in ndes if 0 < a and not (0 < a < -b)]
         desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg), 2)]
         
         negd = [(abs(a), abs(a)) for a, b in ndes if 0 < abs(a) < -b] + [(-b, -b) for a, b in ndes if 0 < abs(a) < -b]
         
-        n = self.rank
-        y = SignedPermutation.identity(n)
-        for (i, i) in negd:
-            y *= SignedPermutation.t_ij(-i, i, n)
-        for a, b in desd:
-            y *= SignedPermutation.t_ij(a, b, n)
-        assert self.inverse().dtype_demazure(self) == y
+        if offset == 0:
+            n = self.rank
+            y = SignedPermutation.identity(n)
+            for (i, i) in negd:
+                y *= SignedPermutation.t_ij(-i, i, n)
+            for a, b in desd:
+                y *= SignedPermutation.t_ij(a, b, n)
+            assert self.inverse().dtype_demazure(self) == y
 
         sh = set()
         for a, b in ndes:
             if 0 < abs(a) < -b:
                 sh.add((b, -abs(a)))
                 sh.add((abs(a), -b))
+        for a in range(1, offset + 1):
+            b = self.inverse()(a)
+            b = abs(b)
+            sh.add((-b, b))
         return sh
 
     def shape(self):
@@ -1093,14 +1098,14 @@ class SignedPermutation(SignedMixin):
         ndes, fix, neg = self._ndes()
         return neg
 
-    def _dtype_ndes(self):
+    def _dtype_ndes(self, offset):
         y = self.inverse().dtype_demazure(self)
         assert y.involution_length(dtype=True) == self.dlength()
 
         o = list(self.inverse().oneline)
         ndes = []
         while True:
-            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]]
+            i = [i for i in range(len(o) - 1) if i >= offset and o[i] > o[i + 1]]
             if len(i) == 0:
                 break
             i = i[0]

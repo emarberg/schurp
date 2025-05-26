@@ -88,7 +88,7 @@ class Clan:
     def is_aligned(self, matching, verbose=False):
         # todo for type D
         for (i, j) in matching:
-            if self.family in [self.TYPE_B, self.TYPE_C2] and i + j == 0:
+            if self.family in [self.TYPE_B, self.TYPE_C2, self.TYPE_D1] and i + j == 0:
                 continue
             if self.family == self.TYPE_A:
                 pair = (self(i), self(j))
