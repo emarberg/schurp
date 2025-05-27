@@ -1037,7 +1037,54 @@ class SignedPermutation(SignedMixin):
         return (SignedPermutation(*oneline) * self).shape()
 
     def fpf_dshape(self):
-        pass
+        if offset % 2 == 0:
+            y = self.inverse().dtype_demazure(self)
+            assert y.involution_length(dtype=True) == self.dlength()
+        else:
+            t = SignedPermutation.s_i(0, self.rank)
+            y = (t * self.inverse() * t).dtype_demazure(self)
+            assert y.involution_length(dtype=True, twisted=True) == self.dlength()
+        
+        ndes, fix, neg, init = self._dtype_ndes(offset)
+        
+        desd = [(b, a) for a, b in ndes if a >= -b]
+        desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg) - 1, 2)]
+        
+        negd = [(-a, -a) for a in init] + [(a, a) for a, b in ndes if a < -b] + [(-b, -b) for a, b in ndes if a < -b]
+        
+        sh = set()
+        for a, b in ndes:
+            if a < -b:
+                sh.add((b, -a))
+                sh.add((a, -b))
+        for a in init:
+            sh.add((-a, a))
+
+        n = self.rank
+        z = SignedPermutation.identity(n)
+        if offset % 2 != 0:
+            z = z * SignedPermutation.s_i(0, n)
+        for (i, i) in negd:
+            z *= SignedPermutation.t_ij(-i, i, n)
+        for a, b in desd:
+            z *= SignedPermutation.t_ij(a, b, n)
+
+        if verbose:
+            print()
+            print('*', 'y =', y, offset, 'offset', self.inverse())
+            print(' ', 'z =', z)
+            print()
+            print(' ndes =', ndes)
+            print('  fix =', fix)
+            print('  neg =', neg)
+            print()
+            print(' desd =', desd)
+            print(' negd =', negd)
+            print()
+            print('   sh =', sh)
+
+        assert y == z
+        return sh
 
     def dshape(self, offset=0, verbose=False):
         if offset % 2 == 0:
@@ -1049,7 +1096,16 @@ class SignedPermutation(SignedMixin):
             assert y.involution_length(dtype=True, twisted=True) == self.dlength()
         
         ndes, fix, neg, init = self._dtype_ndes(offset)
-        
+
+        if len(neg) % 2 != 0:
+            a, b = -neg[-1], fix[0]
+            if a < b:
+                neg = neg[:-1]
+                fix = (a,) + fix
+            else:
+                neg = neg + (b,)
+                fix = fix[:-1]
+
         desd = [(b, a) for a, b in ndes if a >= -b]
         desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg) - 1, 2)]
         
@@ -1125,11 +1181,13 @@ class SignedPermutation(SignedMixin):
 
     def _dtype_ndes(self, offset):
         o = list(self.inverse().oneline)
+        
         init = tuple(abs(a) for a in o[:offset])
+        o = o[offset:]
 
         ndes = []
         while True:
-            i = [i for i in range(len(o) - 1) if i >= offset and o[i] > o[i + 1]]
+            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]]
             if len(i) == 0:
                 break
             i = i[0]
@@ -1137,22 +1195,10 @@ class SignedPermutation(SignedMixin):
             a, b = o[i:i + 2]
             assert a > 0 or abs(a) < abs(b)
             ndes.append((abs(a), b))
-
             o = o[:i] + o[i + 2:]
-            if a > 0 > b and len(o) > 0:
-                o[0] *= -1
 
-        m = None
-        if len([a for a in o[:offset] if a < 0]) % 2 != 0:
-            m = min(map(abs, o[offset:]))
-            o = [i if abs(i) != m else -i for i in o]
-
-        fix = [i for i in o[offset:] if i > 0]
-        neg = [i for i in o[offset:] if i < 0]
-        
-        if m is not None and neg and neg[-1] == -m:
-            neg[-1] *= -1
-
+        fix = tuple(i for i in o if i > 0)
+        neg = tuple(i for i in o if i < 0)
         return tuple(sorted(ndes)), fix, neg, init
 
     def _ndes(self):
