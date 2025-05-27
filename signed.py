@@ -1037,13 +1037,32 @@ class SignedPermutation(SignedMixin):
         return (SignedPermutation(*oneline) * self).shape()
 
     def dshape(self, offset=0):
-        ndes, fix, neg = self._dtype_ndes(offset)
+        ndes, fix, neg, init = self._dtype_ndes(offset)
         
-        desd = [(b, a) for a, b in ndes if 0 < a and not (0 < a < -b)]
-        desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg), 2)]
+        desd = [(b, a) for a, b in ndes if a >= -b]
+        desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg) - 1, 2)]
         
-        negd = [(abs(a), abs(a)) for a, b in ndes if 0 < abs(a) < -b] + [(-b, -b) for a, b in ndes if 0 < abs(a) < -b]
+        negd = [(a, a) for a, b in ndes if a < -b] + [(-b, -b) for a, b in ndes if a < -b]
         
+        sh = set()
+        for a, b in ndes:
+            if a < -b:
+                sh.add((b, -a))
+                sh.add((a, -b))
+        for a in init:
+            sh.add((-a, a))
+
+        print('\n*', offset, 'offset', self.inverse())
+        print()
+        print(' ndes =', ndes)
+        print('  fix =', fix) 
+        print('  neg =', neg) 
+        print()
+        print(' desd =', desd)
+        print(' negd =', negd)
+        print()
+        print('   sh =', sh)
+
         if offset == 0:
             n = self.rank
             y = SignedPermutation.identity(n)
@@ -1053,15 +1072,6 @@ class SignedPermutation(SignedMixin):
                 y *= SignedPermutation.t_ij(a, b, n)
             assert self.inverse().dtype_demazure(self) == y
 
-        sh = set()
-        for a, b in ndes:
-            if 0 < abs(a) < -b:
-                sh.add((b, -abs(a)))
-                sh.add((abs(a), -b))
-        for a in range(1, offset + 1):
-            b = self.inverse()(a)
-            b = abs(b)
-            sh.add((-b, b))
         return sh
 
     def shape(self):
@@ -1108,20 +1118,25 @@ class SignedPermutation(SignedMixin):
             assert y.involution_length(dtype=True, twisted=True) == self.dlength()
 
         o = list(self.inverse().oneline)
+        init = tuple(abs(a) for a in o[:offset])
+
         ndes = []
         while True:
             i = [i for i in range(len(o) - 1) if i >= offset and o[i] > o[i + 1]]
             if len(i) == 0:
                 break
             i = i[0]
+
             a, b = o[i:i + 2]
-            ndes.append((a, b))
+            assert a > 0 or abs(a) < abs(b)
+            ndes.append((abs(a), b))
+
             o = o[:i] + o[i + 2:]
-            if a > 0 > b and o:
+            if a > 0 > b and len(o) > 0:
                 o[0] *= -1
         fix = tuple(i for i in o if i > 0)
         neg = tuple(i for i in o if i < 0)
-        return tuple(sorted(ndes)), fix, neg
+        return tuple(sorted(ndes)), fix, neg, init
 
     def _ndes(self):
         y = self.inverse() % self
