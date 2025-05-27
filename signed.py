@@ -1036,15 +1036,21 @@ class SignedPermutation(SignedMixin):
             oneline += [i + 1, i]
         return (SignedPermutation(*oneline) * self).shape()
 
-    def fpf_dshape(self):
-        if offset % 2 == 0:
-            y = self.inverse().dtype_demazure(self)
-            assert y.involution_length(dtype=True) == self.dlength()
+    def dtype_demazure_conjugate(self, twisted):
+        if not twisted:
+            return self.inverse().dtype_demazure(self)
         else:
             t = SignedPermutation.s_i(0, self.rank)
-            y = (t * self.inverse() * t).dtype_demazure(self)
-            assert y.involution_length(dtype=True, twisted=True) == self.dlength()
-        
+            return (t * self.inverse() * t).dtype_demazure(self)
+            
+    def is_atom_d(self, twisted):
+        y = self.dtype_demazure_conjugate(twisted)
+        return y.involution_length(dtype=True, twisted=twisted) == self.dlength()
+
+    def fpf_dshape(self):
+        n = self.rank
+        assert self.is_atom_d(n % 2 != 0)
+
         ndes, fix, neg, init = self._dtype_ndes(offset)
         
         desd = [(b, a) for a, b in ndes if a >= -b]
@@ -1087,15 +1093,9 @@ class SignedPermutation(SignedMixin):
         return sh
 
     def dshape(self, offset=0, verbose=False):
-        if offset % 2 == 0:
-            y = self.inverse().dtype_demazure(self)
-            assert y.involution_length(dtype=True) == self.dlength()
-        else:
-            t = SignedPermutation.s_i(0, self.rank)
-            y = (t * self.inverse() * t).dtype_demazure(self)
-            assert y.involution_length(dtype=True, twisted=True) == self.dlength()
-        
+        assert self.is_atom_d(offset % 2 != 0)
         ndes, fix, neg, init = self._dtype_ndes(offset)
+        ndes = [(abs(a), b) for (a, b) in ndes]
 
         if len(neg) % 2 != 0:
             a, b = -neg[-1], fix[0]
@@ -1119,14 +1119,15 @@ class SignedPermutation(SignedMixin):
         for a in init:
             sh.add((-a, a))
 
-        n = self.rank
-        z = SignedPermutation.identity(n)
+        y = self.dtype_demazure_conjugate(offset % 2 != 0)
+        z = SignedPermutation.identity(self.rank)
+        
         if offset % 2 != 0:
-            z = z * SignedPermutation.s_i(0, n)
+            z = z * SignedPermutation.s_i(0, self.rank)
         for (i, i) in negd:
-            z *= SignedPermutation.t_ij(-i, i, n)
+            z *= SignedPermutation.t_ij(-i, i, self.rank)
         for a, b in desd:
-            z *= SignedPermutation.t_ij(a, b, n)
+            z *= SignedPermutation.t_ij(a, b, self.rank)
 
         if verbose:
             print()
@@ -1194,7 +1195,7 @@ class SignedPermutation(SignedMixin):
 
             a, b = o[i:i + 2]
             assert a > 0 or abs(a) < abs(b)
-            ndes.append((abs(a), b))
+            ndes.append((a, b))
             o = o[:i] + o[i + 2:]
 
         fix = tuple(i for i in o if i > 0)
