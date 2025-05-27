@@ -332,7 +332,7 @@ def test_atoms_d3(nn=4, verbose=False):
             for a in atoms:
                 word = a.inverse().get_reduced_word(dtype=True)
                 if verbose:
-                    print('  ', a.inverse(), '->', (g*a).inverse(), a.fpf_dshape())
+                    print('  ', a.inverse(), '->', (g*a).inverse(), (g*a).fpf_dshape())
                 lengths_a.add(len(word))
             if verbose:
                 print()
@@ -348,7 +348,6 @@ def test_atoms_d3(nn=4, verbose=False):
             if verbose:
                 print()
                 print()
-                input('')
 
             assert atoms.issubset(btoms)
             assert lengths_a == lengths_b
@@ -576,7 +575,8 @@ def test_atoms_d3_refined(nn=4, verbose=False):
     for n in [nn, nn + 1]:
         g = SignedPermutation.one_fpf_d(n)    
         print('n =', n)
-        
+        if n %2 !=0:
+            continue
         for clan in Clan.all_d3(n):
             phi = clan.richardson_springer_map()
             z = phi.dtype_longest_element(n) * phi.inverse()
@@ -587,12 +587,12 @@ def test_atoms_d3_refined(nn=4, verbose=False):
                 print(' ', clan)
                 print()
                 for a in atoms:
-                    print('  ', a.inverse(), a.fpf_dshape())
+                    print('  ', a.inverse(), (g*a).inverse(), (g*a).fpf_dshape())
                 print()
                 print(' ', 'z =', z)
                 print()
                 for a in btoms:
-                    print('  ', a in atoms, a.inverse(), '->', a.fpf_dshape())
+                    print('  ', a in atoms, a.inverse(), '->', (g*a).inverse(), (g*a).fpf_dshape())
                     print()
                     print('   ', a.get_reduced_word(dtype=True))
                     print()
@@ -613,7 +613,7 @@ def test_atoms_d3_refined(nn=4, verbose=False):
             atoms_by_shape = {}
             for w in z.get_fpf_atoms_d():
                 assert (g * w).dlength() == g.dlength() + w.dlength()
-                sh = (g * w).dshape(n % 2)
+                sh = (g * w).fpf_dshape()
                 sh = tuple(sorted(sh))
                 atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
             

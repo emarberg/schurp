@@ -125,6 +125,12 @@ class Clan:
             signs += [self(self.rank() + 1)]
             if any(signs[i] == signs[i + 1] for i in range(k, len(signs) - 1)):
                 return False
+        if self.family == self.TYPE_D3:
+            if len(trivial) % 2 != 0:
+                return False
+            signs = [self(self.rank() + 1 + i) for i in trivial]
+            if any(signs[i] != signs[i + 1] for i in range(0, len(signs), 2)):
+                return False
         return True
 
     @classmethod

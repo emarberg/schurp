@@ -1047,37 +1047,37 @@ class SignedPermutation(SignedMixin):
         y = self.dtype_demazure_conjugate(twisted)
         return y.involution_length(dtype=True, twisted=twisted) == self.dlength()
 
-    def fpf_dshape(self):
+    def fpf_dshape(self, verbose=False):
         n = self.rank
-        assert self.is_atom_d(n % 2 != 0)
+        twisted = n % 2 != 0
+        assert self.is_atom_d(twisted)
 
-        ndes, fix, neg, init = self._dtype_ndes(offset)
+        ndes, fix, neg = self._ndes()
+        #assert len(fix) == 0
+        #assert len(neg) == 0
         
         desd = [(b, a) for a, b in ndes if a >= -b]
-        desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg) - 1, 2)]
-        
-        negd = [(-a, -a) for a in init] + [(a, a) for a, b in ndes if a < -b] + [(-b, -b) for a, b in ndes if a < -b]
+        negd = [abs(a) for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
         
         sh = set()
         for a, b in ndes:
-            if a < -b:
+            if 0 < a < -b:
                 sh.add((b, -a))
                 sh.add((a, -b))
-        for a in init:
-            sh.add((-a, a))
+            elif a < 0 < -b:
+                sh.add((b, -b))
+                sh.add((a, -a))
 
-        n = self.rank
+        y = self.dtype_demazure_conjugate(twisted)
         z = SignedPermutation.identity(n)
-        if offset % 2 != 0:
-            z = z * SignedPermutation.s_i(0, n)
-        for (i, i) in negd:
+        for i in negd:
             z *= SignedPermutation.t_ij(-i, i, n)
         for a, b in desd:
             z *= SignedPermutation.t_ij(a, b, n)
 
         if verbose:
             print()
-            print('*', 'y =', y, offset, 'offset', self.inverse())
+            print('*', 'y =', y, 'w =', self.inverse())
             print(' ', 'z =', z)
             print()
             print(' ndes =', ndes)
@@ -1094,7 +1094,11 @@ class SignedPermutation(SignedMixin):
 
     def dshape(self, offset=0, verbose=False):
         assert self.is_atom_d(offset % 2 != 0)
-        ndes, fix, neg, init = self._dtype_ndes(offset)
+
+        o = list(self.inverse().oneline)
+        init = tuple(abs(a) for a in o[:offset])
+        ndes, fix, neg = self._ndes(o[offset:])
+        
         ndes = [(abs(a), b) for (a, b) in ndes]
 
         if len(neg) % 2 != 0:
@@ -1109,7 +1113,7 @@ class SignedPermutation(SignedMixin):
         desd = [(b, a) for a, b in ndes if a >= -b]
         desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg) - 1, 2)]
         
-        negd = [(-a, -a) for a in init] + [(a, a) for a, b in ndes if a < -b] + [(-b, -b) for a, b in ndes if a < -b]
+        negd = [a for a in init] + [a for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
         
         sh = set()
         for a, b in ndes:
@@ -1124,7 +1128,7 @@ class SignedPermutation(SignedMixin):
         
         if offset % 2 != 0:
             z = z * SignedPermutation.s_i(0, self.rank)
-        for (i, i) in negd:
+        for i in negd:
             z *= SignedPermutation.t_ij(-i, i, self.rank)
         for a, b in desd:
             z *= SignedPermutation.t_ij(a, b, self.rank)
@@ -1177,36 +1181,12 @@ class SignedPermutation(SignedMixin):
         return fix
 
     def nneg(self):
-        ndes, fix, neg = self._ndes()
+        ndes, fix, neg = self._ndes(o)
         return neg
 
-    def _dtype_ndes(self, offset):
-        o = list(self.inverse().oneline)
-        
-        init = tuple(abs(a) for a in o[:offset])
-        o = o[offset:]
-
-        ndes = []
-        while True:
-            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]]
-            if len(i) == 0:
-                break
-            i = i[0]
-
-            a, b = o[i:i + 2]
-            assert a > 0 or abs(a) < abs(b)
-            ndes.append((a, b))
-            o = o[:i] + o[i + 2:]
-
-        fix = tuple(i for i in o if i > 0)
-        neg = tuple(i for i in o if i < 0)
-        return tuple(sorted(ndes)), fix, neg, init
-
-    def _ndes(self):
-        y = self.inverse() % self
-        assert y.involution_length() == self.length()
-
-        oneline = tuple(self.inverse().oneline)
+    def _ndes(self, oneline=None):
+        if oneline is None:
+            oneline = list(self.inverse().oneline)
         ndes = []
         while True:
             i = [i for i in range(len(oneline) - 1) if oneline[i] > oneline[i + 1]]
