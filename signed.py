@@ -1036,7 +1036,7 @@ class SignedPermutation(SignedMixin):
             oneline += [i + 1, i]
         return (SignedPermutation(*oneline) * self).shape()
 
-    def dshape(self, offset=0):
+    def dshape(self, offset=0, verbose=True):
         if offset % 2 == 0:
             y = self.inverse().dtype_demazure(self)
             assert y.involution_length(dtype=True) == self.dlength()
@@ -1060,31 +1060,30 @@ class SignedPermutation(SignedMixin):
         for a in init:
             sh.add((-a, a))
 
-        print('\n*', 'y =', y, offset, 'offset', self.inverse())
-        print()
-        print(' ndes =', ndes)
-        print('  fix =', fix) 
-        print('  neg =', neg) 
-        print()
-        print(' desd =', desd)
-        print(' negd =', negd)
-        print()
-        print('   sh =', sh)
+        n = self.rank
+        z = SignedPermutation.identity(n)
+        if offset % 2 != 0:
+            z = z * SignedPermutation.s_i(0, n)
+        for (i, i) in negd:
+            z *= SignedPermutation.t_ij(-i, i, n)
+        for a, b in desd:
+            z *= SignedPermutation.t_ij(a, b, n)
 
-        if offset <= 1:
-            n = self.rank
-            z = SignedPermutation.identity(n)
-            if offset % 2 != 0:
-                z = z * SignedPermutation.s_i(0, n)
-            for (i, i) in negd:
-                z *= SignedPermutation.t_ij(-i, i, n)
-            for a, b in desd:
-                z *= SignedPermutation.t_ij(a, b, n)
-            if y != z:
-                print('\nz =', z)
-                input('')
-            assert y == z
+        if verbose:
+            print()
+            print('*', 'y =', y, offset, 'offset', self.inverse())
+            print(' ', 'z =', z)
+            print()
+            print(' ndes =', ndes)
+            print('  fix =', fix)
+            print('  neg =', neg)
+            print()
+            print(' desd =', desd)
+            print(' negd =', negd)
+            print()
+            print('   sh =', sh)
 
+        assert y == z
         return sh
 
     def shape(self):
@@ -1137,7 +1136,6 @@ class SignedPermutation(SignedMixin):
             ndes.append((abs(a), b))
 
             o = o[:i] + o[i + 2:]
-            #if len([x for x in (a, b) if x < 0]) % 2 != offset % 2 and len(o) > 0:
             if a > 0 > b and len(o) > 0:
                 o[0] *= -1
 
