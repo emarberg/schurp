@@ -95,7 +95,7 @@ class Clan:
             elif self.family == self.TYPE_B:
                 i, j = self.rank() + 1 + i, self.rank() + 1 + j
                 pair = (self(i), (self(j)))
-            elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1]:
+            elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D3]:
                 i = self.rank() + i + (0 if i > 0 else 1)
                 j = self.rank() + j + (0 if j > 0 else 1)
                 pair = (self(i), self(j))
@@ -435,13 +435,16 @@ class Clan:
             n = self.rank()
             cycles = [(i - n - 1, j - n - 1) for (i, j) in self.cycles()]
             return phi_bcd(cycles, n)
-        elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+        if self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
             n = self.rank()
             cycles = [(
                 i - n - 1 if i <= n else i - n,
                 j - n - 1 if j <= n else j - n) for (i, j) in self.cycles()]
             w = phi_bcd(cycles, n)
-            return w if self.family != self.TYPE_D2 else (w * SignedPermutation(0, self.rank()))
+            if self.family == self.TYPE_D2:
+                return w * SignedPermutation.s_i(0, n)
+            else:
+                return w
         else:
             raise Exception
 
@@ -471,6 +474,14 @@ class Clan:
             return Clan(newline, self.family)
         else:
             raise Exception
+
+    def _flip(self):
+        assert len(self.oneline) % 2 == 0
+        k = len(self.oneline) // 2
+        if self(k) == k + 1:
+            return self
+        else:
+            return self._conjugate(k, k + 1)
 
     def _multiply_a(self, i):
         assert 1 <= i < self.rank()
@@ -606,14 +617,16 @@ class Clan:
             return self._translate(n + i)._translate(n - i)
         return self
 
-
     def _multiply_d2(self, i):
         # todo
         assert i in set(self.generators())
 
     def _multiply_d3(self, i):
-        # todo
         assert i in set(self.generators())
+        if i == -1:
+            return self._flip()._multiply_c2(1)._flip()
+        else:
+            return self._multiply_c2(i)
 
     def __rmul__(self, i):
         assert type(i) == int

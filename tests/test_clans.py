@@ -258,46 +258,46 @@ def test_atoms_c2(n=4):
             assert atoms.issubset(btoms)
 
 
-def test_atoms_d1(nn=4):
+def test_atoms_d1(nn=4, verbose=False):
     for n in [nn, nn + 1]:
         for p in range(1, n):
             q = n - p
-            if p != q:
-                continue
             offset = abs(p - q)
-            #if offset % 2 != 0:
-            #    continue
+            g = SignedPermutation.dbase_atom(n, offset)
+
             print('n =', n, '(p, q) =', (p, q))
             twisted = offset % 2 != 0
             for clan in Clan.all_d1(p, q):
                 phi = clan.richardson_springer_map()
                 z = phi.dtype_longest_element(n) * phi.inverse()
-
-                print(' ', clan)
-                print()
+                if verbose:
+                    print(' ', clan)
+                    print()
                 atoms = set(clan.get_atoms())
                 lengths_a = set()
                 for a in atoms:
                     word = a.inverse().get_reduced_word(dtype=True)
-                    print('  ', a.inverse(), a.dshape())
+                    if verbose:
+                        print('  ', a.inverse(), (g*a).dshape(offset))
                     lengths_a.add(len(word))
-                print()
-                
-                print(' ', z, offset)
-                print()
+                if verbose:
+                    print()
+                    print(' ', z, offset)
+                    print()
                 btoms = set(z.get_atoms_d(twisted, offset))
                 lengths_b = set()
                 for a in btoms:
                     word = a.inverse().get_reduced_word(dtype=True)
-                    print('  ', a.inverse(), a.dshape())
+                    if verbose:
+                        print('  ', a.inverse(), (g*a).dshape(offset))
                     lengths_b.add(len(word))
-                print()
-                print()
+                if verbose:
+                    print()
+                    print()
 
                 assert atoms.issubset(btoms)
                 assert lengths_a == lengths_b
                 assert len(lengths_a) == 1
-                input('\n')
 
 
 def test_atoms_d2(nn=4):
@@ -317,17 +317,42 @@ def test_atoms_d2(nn=4):
                 assert atoms.issubset(btoms)
 
 
-def test_atoms_d3(nn=4):
+def test_atoms_d3(nn=4, verbose=False):
     for n in [nn, nn + 1]:
         print('n =', n)
         for clan in Clan.all_d3(n):
             phi = clan.richardson_springer_map()
             z = phi.dtype_longest_element(n) * phi.inverse()
+            g = z.one_fpf_d(n)
+            if verbose:
+                print(' ', clan)
+                print()
             atoms = set(clan.get_atoms())
-            print('  ', clan)
-            print('  ', z)
+            lengths_a = set()
+            for a in atoms:
+                word = a.inverse().get_reduced_word(dtype=True)
+                if verbose:
+                    print('  ', a.inverse(), '->', (g*a).inverse(), a.fpf_dshape())
+                lengths_a.add(len(word))
+            if verbose:
+                print()
+                print(' ', z)
+                print()
             btoms = set(z.get_fpf_atoms_d())
+            lengths_b = set()
+            for a in btoms:
+                word = a.inverse().get_reduced_word(dtype=True)
+                if verbose:
+                    print('  ', a in atoms, a.inverse(), '->', (g*a).inverse(), (g*a).fpf_dshape())
+                lengths_b.add(len(word))
+            if verbose:
+                print()
+                print()
+                input('')
+
             assert atoms.issubset(btoms)
+            assert lengths_a == lengths_b
+            assert len(lengths_a) == 1
 
 
 def relatom_shape_test(aword, y):
@@ -381,6 +406,7 @@ def test_atoms_a_refined(n=4, verbose=False):
     for p in range(n + 1):
         q = n - p
         k = (n - abs(p - q)) // 2
+        print('n =', n, '(p, q) =', (p, q), 'k =', k)
         for clan in Clan.all_a(p, q):
             z = clan.richardson_springer_map()
             base = z.fixed(n)
@@ -544,6 +570,59 @@ def test_atoms_d1_refined(nn=4, verbose=False):
                         print(' ', sh, *[w.inverse() for w in atoms_by_shape[sh]])
 
                 _test_refinement(clan, atoms_by_shape, excluded_guess)
+
+
+def test_atoms_d3_refined(nn=4, verbose=False):
+    for n in [nn, nn + 1]:
+        g = SignedPermutation.one_fpf_d(n)    
+        print('n =', n)
+        
+        for clan in Clan.all_d3(n):
+            phi = clan.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            
+            if verbose:
+                atoms = set(clan.get_atoms())
+                btoms = set(z.get_fpf_atoms_d())
+                print(' ', clan)
+                print()
+                for a in atoms:
+                    print('  ', a.inverse(), a.fpf_dshape())
+                print()
+                print(' ', 'z =', z)
+                print()
+                for a in btoms:
+                    print('  ', a in atoms, a.inverse(), '->', a.fpf_dshape())
+                    print()
+                    print('   ', a.get_reduced_word(dtype=True))
+                    print()
+                print()
+                print()
+
+            t = SignedPermutation.s_i(0, n) if (n % 2 != 0) else SignedPermutation.identity(n)
+            base = (t * z).negated_points()
+            excluded_guess = {
+                m for m in SignedPermutation.ncsp_matchings(base)
+                if not clan.is_aligned(m)
+            }
+            if verbose:
+                print('\nexcluded_guess:')
+                for sh in excluded_guess:
+                    print(' ', sh)
+
+            atoms_by_shape = {}
+            for w in z.get_fpf_atoms_d():
+                assert (g * w).dlength() == g.dlength() + w.dlength()
+                sh = (g * w).dshape(n % 2)
+                sh = tuple(sorted(sh))
+                atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
+            
+            if verbose:
+                print('atoms_by_shape:')
+                for sh in atoms_by_shape:
+                    print(' ', sh, *[w.inverse() for w in atoms_by_shape[sh]])
+
+            _test_refinement(clan, atoms_by_shape, excluded_guess)
 
 
 def _test_refinement(clan, atoms_by_shape, excluded_guess):

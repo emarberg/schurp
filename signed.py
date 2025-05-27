@@ -1036,7 +1036,10 @@ class SignedPermutation(SignedMixin):
             oneline += [i + 1, i]
         return (SignedPermutation(*oneline) * self).shape()
 
-    def dshape(self, offset=0, verbose=True):
+    def fpf_dshape(self):
+        pass
+
+    def dshape(self, offset=0, verbose=False):
         if offset % 2 == 0:
             y = self.inverse().dtype_demazure(self)
             assert y.involution_length(dtype=True) == self.dlength()
@@ -1364,9 +1367,16 @@ class SignedPermutation(SignedMixin):
                 yield SignedPermutation(*w).inverse()
             add = {new for w in add for new in next(w)}
 
+    @classmethod
+    def one_fpf_d(cls, n):
+        if n % 2 == 0:
+            return SignedPermutation(*[a for i in range(0, n, 2) for a in [i + 2, i + 1]])
+        else:
+            return SignedPermutation(*([1] + [a for i in range(1, n, 2) for a in [i + 2, i + 1]]))
+
     def get_fpf_atoms_d(self):
         n = self.rank
-        twisted = n % 2 == 0
+        twisted = n % 2 != 0
         atoms = self.get_atoms_d(twisted)
         offset = 1 if twisted else 0
         for w in atoms:
