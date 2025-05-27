@@ -575,8 +575,6 @@ def test_atoms_d3_refined(nn=4, verbose=False):
     for n in [nn, nn + 1]:
         g = SignedPermutation.one_fpf_d(n)    
         print('n =', n)
-        if n %2 !=0:
-            continue
         for clan in Clan.all_d3(n):
             phi = clan.richardson_springer_map()
             z = phi.dtype_longest_element(n) * phi.inverse()

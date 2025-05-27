@@ -1052,12 +1052,15 @@ class SignedPermutation(SignedMixin):
         twisted = n % 2 != 0
         assert self.is_atom_d(twisted)
 
-        ndes, fix, neg = self._ndes()
+        offset = 1 if twisted else 0
+        o = list(self.inverse().oneline)
+        init = [abs(i) for i in o[:offset]]
+        ndes, fix, neg = self._ndes(o[offset:])
         #assert len(fix) == 0
         #assert len(neg) == 0
         
         desd = [(b, a) for a, b in ndes if a >= -b]
-        negd = [abs(a) for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
+        negd = init + [abs(a) for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
         
         sh = set()
         for a, b in ndes:
@@ -1067,9 +1070,13 @@ class SignedPermutation(SignedMixin):
             elif a < 0 < -b:
                 sh.add((b, -b))
                 sh.add((a, -a))
+        for a in init:
+            sh.add((-a, a))
 
         y = self.dtype_demazure_conjugate(twisted)
         z = SignedPermutation.identity(n)
+        if twisted:
+            z = z * SignedPermutation.s_i(0, self.rank)
         for i in negd:
             z *= SignedPermutation.t_ij(-i, i, n)
         for a, b in desd:
@@ -1096,7 +1103,7 @@ class SignedPermutation(SignedMixin):
         assert self.is_atom_d(offset % 2 != 0)
 
         o = list(self.inverse().oneline)
-        init = tuple(abs(a) for a in o[:offset])
+        init = [abs(a) for a in o[:offset]]
         ndes, fix, neg = self._ndes(o[offset:])
         
         ndes = [(abs(a), b) for (a, b) in ndes]
@@ -1113,7 +1120,7 @@ class SignedPermutation(SignedMixin):
         desd = [(b, a) for a, b in ndes if a >= -b]
         desd += [(-neg[i], neg[i + 1]) for i in range(0, len(neg) - 1, 2)]
         
-        negd = [a for a in init] + [a for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
+        negd = init + [a for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
         
         sh = set()
         for a, b in ndes:
