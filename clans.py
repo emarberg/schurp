@@ -413,7 +413,6 @@ class Clan:
                 for y in upper_poset:
                     if self. weyl_group_bruhat_leq(x, y):
                         upper_poset[y].add(x)
-            return upper_poset
 
             ans = {}
             def mobius(x):
@@ -445,6 +444,89 @@ class Clan:
                         ans.add(w * self.simple_generator(i))
             CLAN_ATOMS_CACHE[self] = ans if len(ans) > 0 else {self.weyl_group_identity()}
         return CLAN_ATOMS_CACHE[self]
+
+    def get_hecke_atoms_extended(self):
+        n = self.rank()
+        offset = abs(self.clan_type()) // 2
+            
+        if self.family == self.TYPE_A:
+            z = Permutation.longest_element(n) * self.richardson_springer_map()
+            offset = (n - abs(self.clan_type())) // 2
+            raise Exception
+
+        elif self.family == self.TYPE_B:
+            z = -self.richardson_springer_map()
+            raise Exception
+
+        elif self.family == self.TYPE_C1:
+            z = -self.richardson_springer_map()
+            return z.get_involution_hecke_atoms()
+
+        elif self.family == self.TYPE_C2:
+            z = -self.richardson_springer_map()
+            raise Exception
+
+        elif self.family == self.TYPE_D1:
+            phi = self.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            twisted = offset % 2 != 0
+            raise Exception
+
+        elif self.family == self.TYPE_D2:
+            phi = self.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            twisted = offset % 2 != 0
+            raise Exception
+
+        elif self.family == self.TYPE_D3:
+            phi = self.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            raise Exception
+
+        else:
+            raise Exception
+
+
+    def get_atoms_extended(self):
+        n = self.rank()
+        offset = abs(self.clan_type()) // 2
+            
+        if self.family == self.TYPE_A:
+            z = Permutation.longest_element(n) * self.richardson_springer_map()
+            offset = (n - abs(self.clan_type())) // 2
+            return z.get_twisted_atoms(n, offset)
+
+        elif self.family == self.TYPE_B:
+            z = -self.richardson_springer_map()
+            return z.get_atoms(offset)
+
+        elif self.family == self.TYPE_C1:
+            z = -self.richardson_springer_map()
+            return z.get_atoms()
+
+        elif self.family == self.TYPE_C2:
+            z = -self.richardson_springer_map()
+            return z.get_fpf_atoms(offset)
+
+        elif self.family == self.TYPE_D1:
+            phi = self.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            twisted = offset % 2 != 0
+            return z.get_atoms_d(twisted, offset)
+
+        elif self.family == self.TYPE_D2:
+            phi = self.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            twisted = offset % 2 != 0
+            return z.get_atoms_d(twisted, offset)
+
+        elif self.family == self.TYPE_D3:
+            phi = self.richardson_springer_map()
+            z = phi.dtype_longest_element(n) * phi.inverse()
+            return z.get_fpf_atoms_d()
+
+        else:
+            raise Exception
 
     def cycles(self):
         cycles = []

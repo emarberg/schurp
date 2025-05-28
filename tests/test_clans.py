@@ -6,8 +6,9 @@ from signed import SignedPermutation
 def _test_hecke_atoms(cl):
     length = lambda x: cl.weyl_group_length(x)
 
-    atoms = cl.get_atoms()
-    for w in sorted(cl.get_hecke_atoms(), key=length):
+    atoms = set(cl.get_atoms())
+    hecke = set(cl.get_hecke_atoms())
+    for w in sorted(hecke, key=length):
         shapes = set()
         print('clan =', cl)
         print()
@@ -23,6 +24,11 @@ def _test_hecke_atoms(cl):
         print()
         print()
 
+    expected = {w for w in cl.get_hecke_atoms_extended() if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
+    print('   total:', set(cl.get_hecke_atoms_extended()))
+    print('  actual:', hecke)
+    print('expected:', expected)
+    assert hecke == expected
 
 def test_hecke_atoms_a(n=3):
     for cl in Clan.all_a(n):
@@ -210,18 +216,14 @@ def test_all_c1():
 
 
 def test_atoms_a3(n=4):
-    w0 = Permutation.longest_element(n)
     for p in range(1, n):
         q = n - p
-        offset = (n - abs(p - q)) // 2
         for clan in Clan.all_a(p, q):
-            z = w0 * clan.richardson_springer_map()
             atoms = set(clan.get_atoms())
             print(clan)
             for a in atoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
-            print(z, offset)
-            btoms = set(z.get_twisted_atoms(n, offset))
+            btoms = set(clan.get_atoms_extended())
             for a in btoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
             assert atoms.issubset(btoms)
@@ -231,10 +233,7 @@ def test_atoms_b(n=4):
     for p in range(1, n):
         q = n - p
         print('n =', n, '(p, q) =', (p, q))
-        offset = abs(2 * p - 2 * q - 1) // 2
         for clan in Clan.all_b(p, q):
-            z = -clan.richardson_springer_map()
-            
             print(' ', clan)
             atoms = set(clan.get_atoms())
             lengths_a = set()
@@ -244,8 +243,7 @@ def test_atoms_b(n=4):
                 lengths_a.add(len(word))
             print()
 
-            print(' ', z, offset)
-            btoms = set(z.get_atoms(offset))
+            btoms = set(clan.get_atoms_extended())
             lengths_b = set()
             for a in btoms:
                 word = a.inverse().get_reduced_word()
@@ -261,24 +259,20 @@ def test_atoms_b(n=4):
 def test_atoms_c1(n=4):
     for m in range(n + 1):
         for clan in Clan.all_c1(m):
-            z = -clan.richardson_springer_map()
             print(clan)
-            print(z)
-            assert set(clan.get_atoms()).issubset(set(z.get_atoms()))
+            assert set(clan.get_atoms()).issubset(set(clan.get_atoms_extended()))
 
 
 def test_atoms_c2(n=4):
     for p in range(1, n):
         q = n - p
-        offset = abs(p - q)
+        
         for clan in Clan.all_c2(p, q):
-            z = -clan.richardson_springer_map()
             atoms = clan.get_atoms()
             print(clan)
             for a in atoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
-            print(z, offset)
-            btoms = set(z.get_fpf_atoms(offset))
+            btoms = set(clan.get_atoms_extended())
             for a in btoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
             assert atoms.issubset(btoms)
@@ -294,8 +288,6 @@ def test_atoms_d1(nn=4, verbose=False):
             print('n =', n, '(p, q) =', (p, q))
             twisted = offset % 2 != 0
             for clan in Clan.all_d1(p, q):
-                phi = clan.richardson_springer_map()
-                z = phi.dtype_longest_element(n) * phi.inverse()
                 if verbose:
                     print(' ', clan)
                     print()
@@ -306,11 +298,7 @@ def test_atoms_d1(nn=4, verbose=False):
                     if verbose:
                         print('  ', a.inverse(), (g*a).dshape(offset))
                     lengths_a.add(len(word))
-                if verbose:
-                    print()
-                    print(' ', z, offset)
-                    print()
-                btoms = set(z.get_atoms_d(twisted, offset))
+                btoms = set(clan.get_atoms_extended())
                 lengths_b = set()
                 for a in btoms:
                     word = a.inverse().get_reduced_word(dtype=True)
@@ -331,15 +319,10 @@ def test_atoms_d2(nn=4):
         for p in range(1, n + 1):
             q = n + 1 - p
             print('n =', n, '(p, q) =', (p, q))
-            offset = abs(p - q)
-            twisted = offset % 2 != 0
             for clan in Clan.all_d2(p, q):
-                phi = clan.richardson_springer_map()
-                z = phi.dtype_longest_element(n) * phi.inverse()
                 atoms = set(clan.get_atoms())
                 print('  ', clan)
-                print('  ', z, offset)
-                btoms = set(z.get_atoms_d(twisted, offset))
+                btoms = set(clan.get_atoms_extended())
                 assert atoms.issubset(btoms)
 
 
