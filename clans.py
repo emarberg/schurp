@@ -80,10 +80,14 @@ class Clan:
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
 
+    def plus(self):
+        return len([x for x in self.oneline if x is True])
+
+    def minus(self):
+        return len([x for x in self.oneline if x is False])
+
     def clan_type(self):
-        p = len([x for x in self.oneline if x is True])
-        q = len([x for x in self.oneline if x is False])
-        return p - q
+        return self.plus() - self.minus()
 
     def is_aligned(self, matching, verbose=False):
         # todo for type D
@@ -359,6 +363,33 @@ class Clan:
             return w.dlength()
         else:
             raise Exception
+
+    def weyl_group_shape(self, w):
+        n = self.rank()
+        k = abs(self.clan_type()) // 2
+
+        if self.family == self.TYPE_A:
+            sh = w.twisted_shape(n)
+        elif self.family == self.TYPE_B:
+            g = w.bbase_atom(n, k)
+            sh = (g * w).shape()
+            sh = tuple(sorted(sh))
+        elif self.family == self.TYPE_C1:
+            sh = w.shape()
+        elif self.family == self.TYPE_C2:
+            sh = w.fpf_shape(offset=k)
+        elif self.family == self.TYPE_D1:
+            g = w.dbase_atom(n, k)
+            sh = (g * w).dshape(k)
+        elif self.family == self.TYPE_D2:
+            raise Exception
+        elif self.family == self.TYPE_D3:
+            g = w.one_fpf_d(n) 
+            sh = (g * w).fpf_dshape()
+        else:
+            raise Exception
+
+        return tuple(sorted(sh))
 
     def get_clan_words(self):
         if self not in CLAN_WORDS_CACHE:

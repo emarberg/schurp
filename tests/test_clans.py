@@ -3,13 +3,24 @@ from permutations import Permutation
 from signed import SignedPermutation
 
 
-def _test_hecke_atoms(cl, verbose=False):
-    print(cl)
+def _test_hecke_atoms(cl):
+    length = lambda x: cl.weyl_group_length(x)
+
     atoms = cl.get_atoms()
-    for w in cl.get_hecke_atoms():
-        if verbose:
-            print('  ', w, 'atom' if w in atoms else '')
-    if verbose:
+    for w in sorted(cl.get_hecke_atoms(), key=length):
+        shapes = set()
+        print('clan =', cl)
+        print()
+        print('  *', 'w =', w.inverse(), 'atom' if w in atoms else '')
+        print()
+        for v in atoms:
+            if cl.weyl_group_bruhat_leq(v, w):
+                sh = cl.weyl_group_shape(v)
+                shapes.add(sh)
+                print('   ', 'v =', v.inverse(), 'sh =', sh)
+        print()
+        print('  possible shapes:', len(shapes))
+        print()
         print()
 
 
@@ -23,13 +34,28 @@ def test_hecke_atoms_b(n=3):
         _test_hecke_atoms(cl)
 
 
+def test_hecke_atoms_c1(n=3):
+    for cl in Clan.all_c1(n):
+        _test_hecke_atoms(cl)
+
+
 def test_hecke_atoms_c2(n=3):
     for cl in Clan.all_c2(n):
         _test_hecke_atoms(cl)
 
 
-def test_hecke_atoms_c1(n=3):
-    for cl in Clan.all_c1(n):
+def test_hecke_atoms_d1(n=3):
+    for cl in Clan.all_d1(n):
+        _test_hecke_atoms(cl)
+
+
+def test_hecke_atoms_d2(n=3):
+    for cl in Clan.all_d2(n):
+        _test_hecke_atoms(cl)
+
+
+def test_hecke_atoms_d3(n=3):
+    for cl in Clan.all_d3(n):
         _test_hecke_atoms(cl)
 
 
