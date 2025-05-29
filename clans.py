@@ -65,7 +65,7 @@ class Clan:
 
     @classmethod
     def create_d3(cls, oneline):
-        return Clan(oneline, cls.TYPE_D2)
+        return Clan(oneline, cls.TYPE_D3)
 
     def __repr__(self):
         l = [str(min(i, self(i))) if type(i) == int else '+' if i else '-' for i in self.oneline]
@@ -529,7 +529,9 @@ class Clan:
                 length = lambda x: x.dlength()
                 if n % 2 != 0:
                     conjugate = lambda x,s: t * s * t * x * s
-                #translate = None
+                    translate = lambda x,s: x * s if (t * x*s).is_fpf_involution() else None
+                else:
+                    translate = lambda x,s: x * s if (x*s).is_fpf_involution() else None
             else:
                 raise Exception
 

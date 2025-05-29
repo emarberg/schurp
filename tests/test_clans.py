@@ -3,9 +3,9 @@ from permutations import Permutation
 from signed import SignedPermutation
 
 
-def _test_hecke_atoms(cl):
-    if not cl.is_alternating():
-        return
+def _test_hecke_atoms(cl, dtype=False):
+    # if not cl.is_alternating():
+    #    return
 
     length = lambda x: cl.weyl_group_length(x)
 
@@ -15,6 +15,10 @@ def _test_hecke_atoms(cl):
     for w in sorted(extended, key=length):
         shapes = set()
         print('clan =', cl)
+        print()
+        print('clan b =', cl.richardson_springer_base())
+        print()
+        print('clan z =', cl.richardson_springer_involution())
         print()
         print('  *', 'w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
         print()
@@ -29,9 +33,11 @@ def _test_hecke_atoms(cl):
         print()
 
     expected = {w for w in cl.get_hecke_atoms_extended() if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
-    print(' extended:', {w.get_reduced_word() for w in extended})
-    print(' computed:', {w.get_reduced_word() for w in hecke})
-    print('predicted:', {w.get_reduced_word() for w in expected})
+    print(' extended:', {w.get_reduced_word(dtype) for w in extended})
+    print(' computed:', {w.get_reduced_word(dtype) for w in hecke})
+    print('predicted:', {w.get_reduced_word(dtype) for w in expected})
+    print()
+    print(hecke == expected)
     print()
     # try:
     #     assert hecke == expected
@@ -65,17 +71,17 @@ def test_hecke_atoms_c2(n=3):
 
 def test_hecke_atoms_d1(n=3):
     for cl in Clan.all_d1(n):
-        _test_hecke_atoms(cl)
+        _test_hecke_atoms(cl, True)
 
 
 def test_hecke_atoms_d2(n=3):
     for cl in Clan.all_d2(n):
-        _test_hecke_atoms(cl)
+        _test_hecke_atoms(cl, True)
 
 
 def test_hecke_atoms_d3(n=3):
     for cl in Clan.all_d3(n):
-        _test_hecke_atoms(cl)
+        _test_hecke_atoms(cl, True)
 
 
 def test_init():
