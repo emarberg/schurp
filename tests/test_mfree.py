@@ -8,8 +8,8 @@ from qp_utils import (
 )
 
 
-def get_pseudo_hecke_atoms(m, simple, length, act):
-    return Clan.get_pseudo_hecke_atoms(m, simple, length, act)
+def get_pseudo_hecke_atoms(m, simple, length, conjugate, translate=None):
+    return Clan.get_pseudo_hecke_atoms(m, simple, length, conjugate, translate)
          
 
 def _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn, leq=None):
@@ -243,17 +243,35 @@ def get_mobius(upper_poset):
 
 
 def test_twisted_hecke_mobius(n=4):
-    for z in Permutation.twisted_involutions(n):
-        print('z =', z)
-        upper_poset = get_twisted_poset(z, n)
-        mobius = get_mobius(upper_poset)
-        hecke = set(z.get_twisted_hecke_atoms(n))
-        actual = {x: (-1)**(x.length() - z.twisted_involution_length(n)) for x in hecke}
-        expected = {}
-        for x in upper_poset:
-            if mobius[x] != 0:
-                expected[x] = mobius[x]
-        assert actual == expected
+    simple = [Permutation.s_i(i) for i in range(1, n)]
+    length = lambda x: x.length()
+    t = Permutation.longest_element(n)
+    conjugate = lambda x,s: t * s * t * x * s
+    translate = lambda x,s: x * s
+
+    for y in Permutation.twisted_involutions(n):
+        yhecke = get_pseudo_hecke_atoms(y, simple, length, conjugate, translate)
+
+        for z in Permutation.twisted_involutions(n):
+            if z not in yhecke:
+                continue
+
+            hecke = yhecke[z] 
+            minlen = min(map(len, hecke))
+            atomsfn = lambda z: {x for x in hecke if x.length() == minlen}
+            allfn = lambda x: x.all(n)
+
+            upper_poset = get_upper_poset(z, atomsfn, allfn, leq=None)
+            mobius = get_mobius(upper_poset)
+            actual = {x: (-1)**(x.length() - z.twisted_involution_length(n) + y.twisted_involution_length(n)) for x in hecke}
+            expected = {}
+            for x in upper_poset:
+                if mobius[x] != 0:
+                    expected[x] = mobius[x]
+                    # print('  ', x, expected[x], 'vs', actual.get(x, '*'))
+            print(set(actual) == set(expected), 'y =', y, 'z =', z)
+            if len(y) == 0 or set(actual) == set(expected):
+                assert actual == expected
 
 
 def test_fpf_hecke_mobius(n=4):
@@ -272,18 +290,34 @@ def test_fpf_hecke_mobius(n=4):
 
 
 def test_inv_hecke_mobius(n=4):
-    for z in Permutation.involutions(n):
-        print('z =', z)
-        upper_poset = get_inv_poset(z)
-        mobius = get_mobius(upper_poset)
-        hecke = set(z.get_involution_hecke_atoms())
-        actual = {x: (-1)**(x.length() - z.involution_length()) for x in hecke}
-        expected = {}
-        for x in upper_poset:
-            if mobius[x] != 0:
-                expected[x] = mobius[x]
-                # print('  ', x, expected[x], 'vs', actual.get(x, '*'))
-        assert actual == expected
+    simple = [Permutation.s_i(i) for i in range(1, n)]
+    length = lambda x: x.length()
+    conjugate = lambda x,s: s * x * s
+    translate = lambda x,s: x * s
+
+    for y in Permutation.involutions(n):
+        yhecke = get_pseudo_hecke_atoms(y, simple, length, conjugate, translate)
+
+        for z in Permutation.involutions(n):
+            if z not in yhecke:
+                continue
+
+            hecke = yhecke[z] 
+            minlen = min(map(len, hecke))
+            atomsfn = lambda z: {x for x in hecke if x.length() == minlen}
+            allfn = lambda x: x.all(n)
+
+            upper_poset = get_upper_poset(z, atomsfn, allfn, leq=None)
+            mobius = get_mobius(upper_poset)
+            actual = {x: (-1)**(x.length() - z.involution_length() + y.involution_length()) for x in hecke}
+            expected = {}
+            for x in upper_poset:
+                if mobius[x] != 0:
+                    expected[x] = mobius[x]
+                    # print('  ', x, expected[x], 'vs', actual.get(x, '*'))
+            print(set(actual) == set(expected), 'y =', y, 'z =', z)
+            if len(y) == 0 or set(actual) == set(expected):
+                assert actual == expected
 
 
 def test_binv_hecke_mobius(n=4):

@@ -82,10 +82,10 @@ class Clan:
         s = [a for a in self.oneline if type(a) is bool]
         if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1]:
             return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
-        elif self.family == self.TYPE_C2:
+        elif self.family in [self.TYPE_C2, self.TYPE_D1]:
             return not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
         else:
-            raise Exception
+            return False
 
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
@@ -533,18 +533,11 @@ class Clan:
             else:
                 raise Exception
 
-            print(self)
-            print(self.family)
-            print(v, z)
-            print()
-            print(simple)
-            print(self.get_pseudo_hecke_atoms(v, simple, length, conjugate, translate))
             CLAN_HECKE_ATOMS_EXTENDED_CACHE[key] = self.get_pseudo_hecke_atoms(v, simple, length, conjugate, translate)
 
         dictionary = CLAN_HECKE_ATOMS_EXTENDED_CACHE[key]
         return dictionary[z]
             
-        
     def get_atoms_extended(self):
         z = self.richardson_springer_involution()
         n = self.rank()

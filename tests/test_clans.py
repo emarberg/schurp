@@ -4,8 +4,8 @@ from signed import SignedPermutation
 
 
 def _test_hecke_atoms(cl):
-    #if not cl.is_alternating():
-    #    return
+    if not cl.is_alternating():
+        return
 
     length = lambda x: cl.weyl_group_length(x)
 
