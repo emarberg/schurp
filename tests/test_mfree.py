@@ -139,7 +139,7 @@ def test_d_twisted_conjugation_modules(n=4, test_mobius=True, test_all=False):
     _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn, leq)
 
 
-def test_d_fpf_module(n):
+def test_d_fpf_module(n=4):
     assert n >= 2
     xset = SignedPermutation.fpf_class(n, dtype=True)
     k = (n + 1) // 2
@@ -151,7 +151,7 @@ def test_d_fpf_module(n):
     assert is_zero_hecke_module(xset, height, action, simple)
 
 
-def test_d_fpf_quasiparabolic(n):
+def test_d_fpf_quasiparabolic(n=4):
     # fails if n is odd
     assert n >= 2
     xset = SignedPermutation.fpf_class(n, dtype=True)
@@ -166,7 +166,7 @@ def test_d_fpf_quasiparabolic(n):
     assert is_quasiparabolic(xset, height, action, simple, reflections)
 
 
-def test_b_fpf_module(n):
+def test_b_fpf_module(n=4):
     xset = SignedPermutation.fpf_class(n)
     k = (n + 1) // 2
     height = lambda x: (x.length() - k) // 2
@@ -175,7 +175,7 @@ def test_b_fpf_module(n):
     assert is_zero_hecke_module(xset, height, action, simple)
 
 
-def test_b_fpf_quasiparabolic(n):
+def test_b_fpf_quasiparabolic(n=4):
     # fails if n is odd
     xset = SignedPermutation.fpf_class(n)
     k = (n + 1) // 2
