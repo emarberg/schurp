@@ -1,3 +1,4 @@
+from clans import Clan
 from permutations import Permutation
 from signed import SignedPermutation
 from qp_utils import (
@@ -8,31 +9,7 @@ from qp_utils import (
 
 
 def get_pseudo_hecke_atoms(m, simple, length, act):
-    one = m * m.inverse()
-    action = {one: m}
-    level = {one}
-    while level:
-        newlevel = set()
-        for w in level:
-            z = action[w]
-            for s in simple:
-                ws = w * s
-                if length(ws) > length(w):
-                    newlevel.add(ws)
-                    szs = None if z is None else act(z, s)
-                    if szs is None or length(szs) == length(z):
-                        action[ws] = None
-                    elif length(szs) < length(z):
-                        action[ws] = z
-                    else:
-                        action[ws] = szs
-            level = newlevel
-    ans = {}
-    for (w, z) in action.items():
-        if z not in ans:
-            ans[z] = set()
-        ans[z].add(w)
-    return ans
+    return Clan.get_pseudo_hecke_atoms(m, simple, length, act)
          
 
 def _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn, leq=None):

@@ -6,6 +6,7 @@ import itertools
 CLAN_WORDS_CACHE = {}
 CLAN_ATOMS_CACHE = {}
 CLAN_HECKE_ATOMS_CACHE = {}
+CLAN_HECKE_ATOMS_EXTENDED_CACHE = {}
 
 
 class Clan:
@@ -348,6 +349,17 @@ class Clan:
         else:
             raise Exception
 
+    def weyl_group_longest_element(self):
+        n = self.rank()
+        if self.family == self.TYPE_A:
+            return Permutation.longest_element(n)
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return SignedPermutation.longest_element(n)
+        elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            return SignedPermutation.dtype_longest_element(n)
+        else:
+            raise Exception
+
     def weyl_group_bruhat_leq(self, a, b):
         if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
             return a.strong_bruhat_less_equal(b)
@@ -445,84 +457,110 @@ class Clan:
             CLAN_ATOMS_CACHE[self] = ans if len(ans) > 0 else {self.weyl_group_identity()}
         return CLAN_ATOMS_CACHE[self]
 
+    @classmethod
+    def get_pseudo_hecke_atoms(cls, minimal_element, simple, length, conjugate, translate=None):
+        m = minimal_element
+        one = m * m.inverse()
+        action = {one: m}
+        level = {one}
+        while level:
+            newlevel = set()
+            for w in level:
+                z = action[w]
+                for s in simple:
+                    ws = w * s
+                    if length(ws) > length(w):
+                        newlevel.add(ws)
+                        szs = None if z is None else conjugate(z, s)
+                        if szs is None or (translate is None and length(szs) == length(z)):
+                            action[ws] = None
+                        elif translate is not None and length(szs) == length(z):
+                            zs = translate(z, s)
+                            action[ws] = z if length(zs) < length(z) else zs
+                        else:
+                            action[ws] = z if length(szs) < length(z) else szs
+            level = newlevel
+        ans = {}
+        for (w, z) in action.items():
+            if z not in ans:
+                ans[z] = set()
+            ans[z].add(w)
+        return ans
+
     def get_hecke_atoms_extended(self):
-        n = self.rank()
-        offset = abs(self.clan_type()) // 2
+        z = self.richardson_springer_involution()
+        v = self.richardson_springer_base()
+        
+        key = (self.family, self.rank(), v)
+        if key not in CLAN_HECKE_ATOMS_EXTENDED_CACHE:
+            n = self.rank()
+            k = abs(self.clan_type()) // 2
+
+            simple = [self.simple_generator(i) for i in self.generators()]
+            length = lambda w: w.length()
+            conjugate = lambda x,s: s * x * s
+            translate = lambda x,s: x * s
+
+            if self.family == self.TYPE_A:
+                t = Permutation.longest_element(n)
+                conjugate = lambda x,s: t * s * t * x * s
+            elif self.family in [self.TYPE_B, self.TYPE_C1]:
+                pass
+            elif self.family == self.TYPE_C2:
+                pass
+            elif self.family in [self.TYPE_D1, self.TYPE_D2]:
+                t = SignedPermutation.s_i(0, n)
+                length = lambda x: x.dlength()
+                if k % 2 != 0:
+                    conjugate = lambda x,s: t * s * t * x * s
+            elif self.family == self.TYPE_D3:
+                t = SignedPermutation.s_i(0, n)
+                length = lambda x: x.dlength()
+                if n % 2 != 0:
+                    conjugate = lambda x,s: t * s * t * x * s
+                #translate = None
+            else:
+                raise Exception
+
+            print(self)
+            print(self.family)
+            print(v, z)
+            print()
+            print(simple)
+            print(self.get_pseudo_hecke_atoms(v, simple, length, conjugate, translate))
+            CLAN_HECKE_ATOMS_EXTENDED_CACHE[key] = self.get_pseudo_hecke_atoms(v, simple, length, conjugate, translate)
+
+        dictionary = CLAN_HECKE_ATOMS_EXTENDED_CACHE[key]
+        return dictionary[z]
             
-        if self.family == self.TYPE_A:
-            z = Permutation.longest_element(n) * self.richardson_springer_map()
-            offset = (n - abs(self.clan_type())) // 2
-            raise Exception
-
-        elif self.family == self.TYPE_B:
-            z = -self.richardson_springer_map()
-            raise Exception
-
-        elif self.family == self.TYPE_C1:
-            z = -self.richardson_springer_map()
-            return z.get_involution_hecke_atoms()
-
-        elif self.family == self.TYPE_C2:
-            z = -self.richardson_springer_map()
-            raise Exception
-
-        elif self.family == self.TYPE_D1:
-            phi = self.richardson_springer_map()
-            z = phi.dtype_longest_element(n) * phi.inverse()
-            twisted = offset % 2 != 0
-            raise Exception
-
-        elif self.family == self.TYPE_D2:
-            phi = self.richardson_springer_map()
-            z = phi.dtype_longest_element(n) * phi.inverse()
-            twisted = offset % 2 != 0
-            raise Exception
-
-        elif self.family == self.TYPE_D3:
-            phi = self.richardson_springer_map()
-            z = phi.dtype_longest_element(n) * phi.inverse()
-            raise Exception
-
-        else:
-            raise Exception
-
-
+        
     def get_atoms_extended(self):
+        z = self.richardson_springer_involution()
         n = self.rank()
         offset = abs(self.clan_type()) // 2
             
         if self.family == self.TYPE_A:
-            z = Permutation.longest_element(n) * self.richardson_springer_map()
             offset = (n - abs(self.clan_type())) // 2
             return z.get_twisted_atoms(n, offset)
 
         elif self.family == self.TYPE_B:
-            z = -self.richardson_springer_map()
             return z.get_atoms(offset)
 
         elif self.family == self.TYPE_C1:
-            z = -self.richardson_springer_map()
             return z.get_atoms()
 
         elif self.family == self.TYPE_C2:
-            z = -self.richardson_springer_map()
             return z.get_fpf_atoms(offset)
 
         elif self.family == self.TYPE_D1:
-            phi = self.richardson_springer_map()
-            z = phi.dtype_longest_element(n) * phi.inverse()
             twisted = offset % 2 != 0
             return z.get_atoms_d(twisted, offset)
 
         elif self.family == self.TYPE_D2:
-            phi = self.richardson_springer_map()
-            z = phi.dtype_longest_element(n) * phi.inverse()
             twisted = offset % 2 != 0
             return z.get_atoms_d(twisted, offset)
 
         elif self.family == self.TYPE_D3:
-            phi = self.richardson_springer_map()
-            z = phi.dtype_longest_element(n) * phi.inverse()
             return z.get_fpf_atoms_d()
 
         else:
@@ -534,6 +572,46 @@ class Clan:
             if type(a) == int and i + 1 < a:
                 cycles.append((i + 1, a))
         return cycles
+
+    def richardson_springer_involution(self):
+        w0 = self.weyl_group_longest_element()
+        phi = self.richardson_springer_map()
+        return w0 * phi.inverse()
+
+    def richardson_springer_base(self):
+        n = self.rank()
+        k = abs(self.clan_type()) // 2
+
+        if self.family == self.TYPE_A:
+            k = (n - abs(self.clan_type())) // 2
+            w = Permutation()
+            for i in range(1, k + 1):
+                w *= Permutation.t_ij(i, n + 1 - i)
+            return self.weyl_group_longest_element() * w
+
+        elif self.family == self.TYPE_B:
+            return SignedPermutation.longest_element(n, k)
+
+        elif self.family == self.TYPE_C1:
+            return self.weyl_group_identity()
+
+        elif self.family == self.TYPE_C2:
+            w = SignedPermutation.longest_element(n, k)
+            for i in range(k + 1, n, 2):
+                w *= SignedPermutation.s_i(i, n)
+            return w
+
+        elif self.family == self.TYPE_D1:
+            return SignedPermutation.dbase(n, k)
+
+        elif self.family == self.TYPE_D2:
+            return SignedPermutation.dbase(n, k)
+
+        elif self.family == self.TYPE_D3:
+            return SignedPermutation.one_fpf_d(n)
+
+        else:
+            raise Exception
 
     def richardson_springer_map(self):
         def phi_a(cycles):

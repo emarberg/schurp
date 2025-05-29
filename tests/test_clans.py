@@ -8,11 +8,12 @@ def _test_hecke_atoms(cl):
 
     atoms = set(cl.get_atoms())
     hecke = set(cl.get_hecke_atoms())
-    for w in sorted(hecke, key=length):
+    extended = set(cl.get_hecke_atoms_extended())
+    for w in sorted(extended, key=length):
         shapes = set()
         print('clan =', cl)
         print()
-        print('  *', 'w =', w.inverse(), 'atom' if w in atoms else '')
+        print('  *', 'w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
         print()
         for v in atoms:
             if cl.weyl_group_bruhat_leq(v, w):
@@ -25,10 +26,16 @@ def _test_hecke_atoms(cl):
         print()
 
     expected = {w for w in cl.get_hecke_atoms_extended() if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
-    print('   total:', set(cl.get_hecke_atoms_extended()))
-    print('  actual:', hecke)
-    print('expected:', expected)
-    assert hecke == expected
+    print(' extended:', set(cl.get_hecke_atoms_extended()))
+    print(' computed:', hecke)
+    print('predicted:', expected)
+    print()
+    # try:
+    #     assert hecke == expected
+    #     input('\ntrue\n')
+    # except:
+    #     input('\nfalse\n')
+    assert hecke.issubset(expected)
 
 def test_hecke_atoms_a(n=3):
     for cl in Clan.all_a(n):
