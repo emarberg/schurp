@@ -78,6 +78,15 @@ class Clan:
     def __hash__(self):
         return hash((self.family, self.oneline))
 
+    def is_alternating(self):
+        s = [a for a in self.oneline if type(a) is bool]
+        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1]:
+            return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
+        elif self.family == self.TYPE_C2:
+            return not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
+        else:
+            raise Exception
+
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
 
@@ -462,6 +471,7 @@ class Clan:
         m = minimal_element
         one = m * m.inverse()
         action = {one: m}
+        
         level = {one}
         while level:
             newlevel = set()
@@ -476,10 +486,11 @@ class Clan:
                             action[ws] = None
                         elif translate is not None and length(szs) == length(z):
                             zs = translate(z, s)
-                            action[ws] = z if length(zs) < length(z) else zs
+                            action[ws] = None if zs is None else z if length(zs) < length(z) else zs
                         else:
                             action[ws] = z if length(szs) < length(z) else szs
             level = newlevel
+
         ans = {}
         for (w, z) in action.items():
             if z not in ans:
@@ -507,7 +518,7 @@ class Clan:
             elif self.family in [self.TYPE_B, self.TYPE_C1]:
                 pass
             elif self.family == self.TYPE_C2:
-                pass
+                translate = lambda x,s: x * s if (x*s).is_fpf_involution() else None
             elif self.family in [self.TYPE_D1, self.TYPE_D2]:
                 t = SignedPermutation.s_i(0, n)
                 length = lambda x: x.dlength()

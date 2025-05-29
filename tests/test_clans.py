@@ -4,6 +4,9 @@ from signed import SignedPermutation
 
 
 def _test_hecke_atoms(cl):
+    #if not cl.is_alternating():
+    #    return
+
     length = lambda x: cl.weyl_group_length(x)
 
     atoms = set(cl.get_atoms())
@@ -26,9 +29,9 @@ def _test_hecke_atoms(cl):
         print()
 
     expected = {w for w in cl.get_hecke_atoms_extended() if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
-    print(' extended:', set(cl.get_hecke_atoms_extended()))
-    print(' computed:', hecke)
-    print('predicted:', expected)
+    print(' extended:', {w.get_reduced_word() for w in extended})
+    print(' computed:', {w.get_reduced_word() for w in hecke})
+    print('predicted:', {w.get_reduced_word() for w in expected})
     print()
     # try:
     #     assert hecke == expected
@@ -36,6 +39,9 @@ def _test_hecke_atoms(cl):
     # except:
     #     input('\nfalse\n')
     assert hecke.issubset(expected)
+
+    if cl.is_alternating():
+        assert hecke == expected
 
 def test_hecke_atoms_a(n=3):
     for cl in Clan.all_a(n):
