@@ -82,10 +82,10 @@ class Clan:
         s = [a for a in self.oneline if type(a) is bool]
         if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1]:
             return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
-        elif self.family in [self.TYPE_C2, self.TYPE_D1]:
+        elif self.family in [self.TYPE_C2, self.TYPE_D1, self.TYPE_D2]:
             return not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
         else:
-            return False
+            raise Exception
 
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
@@ -102,14 +102,14 @@ class Clan:
     def is_aligned(self, matching, verbose=False):
         # todo for type D
         for (i, j) in matching:
-            if self.family in [self.TYPE_B, self.TYPE_C2, self.TYPE_D1] and i + j == 0:
+            if self.family in [self.TYPE_B, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2] and i + j == 0:
                 continue
             if self.family == self.TYPE_A:
                 pair = (self(i), self(j))
             elif self.family == self.TYPE_B:
                 i, j = self.rank() + 1 + i, self.rank() + 1 + j
                 pair = (self(i), (self(j)))
-            elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D3]:
+            elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
                 i = self.rank() + i + (0 if i > 0 else 1)
                 j = self.rank() + j + (0 if j > 0 else 1)
                 pair = (self(i), self(j))
@@ -399,11 +399,9 @@ class Clan:
             sh = w.shape()
         elif self.family == self.TYPE_C2:
             sh = w.fpf_shape(offset=k)
-        elif self.family == self.TYPE_D1:
+        elif self.family in [self.TYPE_D1, self.TYPE_D2]:
             g = w.dbase_atom(n, k)
             sh = (g * w).dshape(k)
-        elif self.family == self.TYPE_D2:
-            raise Exception
         elif self.family == self.TYPE_D3:
             g = w.one_fpf_d(n) 
             sh = (g * w).fpf_dshape()
@@ -529,9 +527,9 @@ class Clan:
                 length = lambda x: x.dlength()
                 if n % 2 != 0:
                     conjugate = lambda x,s: t * s * t * x * s
-                    translate = lambda x,s: x * s if (t * x*s).is_fpf_involution() else None
+                    translate = lambda x,s: x * s if s == self.simple_generator(-1) else None #(t * x*s).is_fpf_involution() else None
                 else:
-                    translate = lambda x,s: x * s if (x*s).is_fpf_involution() else None
+                    translate = lambda x,s: x * s if (s == self.simple_generator(-1) and (x(1) == 2 or (x(1)==-1 and x(2)==-2))) or any(s == self.simple_generator(i) and (x(i) == -i - 1 or (x(i) == -i and x(i+1)==-i-1)) for i in range(1, n)) else None
             else:
                 raise Exception
 
@@ -607,10 +605,7 @@ class Clan:
                 w *= SignedPermutation.s_i(i, n)
             return w
 
-        elif self.family == self.TYPE_D1:
-            return SignedPermutation.dbase(n, k)
-
-        elif self.family == self.TYPE_D2:
+        elif self.family in [self.TYPE_D1, self.TYPE_D2]:
             return SignedPermutation.dbase(n, k)
 
         elif self.family == self.TYPE_D3:
@@ -826,8 +821,7 @@ class Clan:
         return self
 
     def _multiply_d2(self, i):
-        # todo
-        assert i in set(self.generators())
+        return self._multiply_d1(i)
 
     def _multiply_d3(self, i):
         assert i in set(self.generators())

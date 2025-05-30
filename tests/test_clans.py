@@ -3,7 +3,7 @@ from permutations import Permutation
 from signed import SignedPermutation
 
 
-def _test_hecke_atoms(cl, dtype=False):
+def _test_hecke_atoms(cl, dtype=False, verbose=False):
     # if not cl.is_alternating():
     #    return
 
@@ -16,72 +16,70 @@ def _test_hecke_atoms(cl, dtype=False):
         shapes = set()
         print('clan =', cl)
         print()
-        print('clan b =', cl.richardson_springer_base())
+        print('   b =', cl.richardson_springer_base())
         print()
-        print('clan z =', cl.richardson_springer_involution())
+        print('   z =', cl.richardson_springer_involution())
         print()
-        print('  *', 'w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
+        print(' *', 'w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
         print()
         for v in atoms:
             if cl.weyl_group_bruhat_leq(v, w):
                 sh = cl.weyl_group_shape(v)
                 shapes.add(sh)
-                print('   ', 'v =', v.inverse(), 'sh =', sh)
+                print('  ', 'v =', v.inverse(), 'sh =', sh)
         print()
         print('  possible shapes:', len(shapes))
         print()
         print()
 
     expected = {w for w in cl.get_hecke_atoms_extended() if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
-    print(' extended:', {w.get_reduced_word(dtype) for w in extended})
-    print(' computed:', {w.get_reduced_word(dtype) for w in hecke})
-    print('predicted:', {w.get_reduced_word(dtype) for w in expected})
+    if verbose:
+        print(' extended:', {w.get_reduced_word(dtype) for w in extended})
+        print(' computed:', {w.get_reduced_word(dtype) for w in hecke})
+        print('predicted:', {w.get_reduced_word(dtype) for w in expected})
+        print()
+    print(hecke == expected, ': is alternating?', cl.is_alternating())
     print()
-    print(hecke == expected)
-    print()
-    # try:
-    #     assert hecke == expected
-    #     input('\ntrue\n')
-    # except:
-    #     input('\nfalse\n')
+
+    # assert hecke == expected
     assert hecke.issubset(expected)
 
     if cl.is_alternating():
         assert hecke == expected
 
-def test_hecke_atoms_a(n=3):
+def test_hecke_atoms_a(n=3, verbose=False):
     for cl in Clan.all_a(n):
-        _test_hecke_atoms(cl)
+        _test_hecke_atoms(cl, verbose=verbose)
 
 
-def test_hecke_atoms_b(n=3):
+def test_hecke_atoms_b(n=3, verbose=False):
     for cl in Clan.all_b(n):
-        _test_hecke_atoms(cl)
+        _test_hecke_atoms(cl, verbose=verbose)
 
 
-def test_hecke_atoms_c1(n=3):
+def test_hecke_atoms_c1(n=3, verbose=False):
     for cl in Clan.all_c1(n):
-        _test_hecke_atoms(cl)
+        _test_hecke_atoms(cl, verbose=verbose)
 
 
-def test_hecke_atoms_c2(n=3):
+def test_hecke_atoms_c2(n=3, verbose=False):
     for cl in Clan.all_c2(n):
-        _test_hecke_atoms(cl)
+        _test_hecke_atoms(cl, verbose=verbose)
 
 
-def test_hecke_atoms_d1(n=3):
+def test_hecke_atoms_d1(n=3, verbose=False):
     for cl in Clan.all_d1(n):
-        _test_hecke_atoms(cl, True)
+        _test_hecke_atoms(cl, dtype=True, verbose=verbose)
 
 
-def test_hecke_atoms_d2(n=3):
+def test_hecke_atoms_d2(n=3, verbose=False):
     for cl in Clan.all_d2(n):
-        _test_hecke_atoms(cl, True)
+        _test_hecke_atoms(cl, dtype=True, verbose=verbose)
 
 
-def test_hecke_atoms_d3(n=3):
+def test_hecke_atoms_d3(n=3, verbose=False):
     for cl in Clan.all_d3(n):
-        _test_hecke_atoms(cl, True)
+        _test_hecke_atoms(cl, dtype=True, verbose=verbose)
 
 
 def test_init():
@@ -333,14 +331,15 @@ def test_atoms_d1(nn=4, verbose=False):
                 assert len(lengths_a) == 1
 
 
-def test_atoms_d2(nn=4):
+def test_atoms_d2(nn=4, verbose=False):
     for n in [nn, nn + 1]:
         for p in range(1, n + 1):
             q = n + 1 - p
             print('n =', n, '(p, q) =', (p, q))
             for clan in Clan.all_d2(p, q):
                 atoms = set(clan.get_atoms())
-                print('  ', clan)
+                if verbose:
+                    print('  ', clan)
                 btoms = set(clan.get_atoms_extended())
                 assert atoms.issubset(btoms)
 
@@ -591,6 +590,64 @@ def test_atoms_d1_refined(nn=4, verbose=False):
                     sh = tuple(sorted(sh))
                     atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
                 
+                if verbose:
+                    print('atoms_by_shape:')
+                    for sh in atoms_by_shape:
+                        print(' ', sh, *[w.inverse() for w in atoms_by_shape[sh]])
+
+                _test_refinement(clan, atoms_by_shape, excluded_guess)
+
+
+def test_atoms_d2_refined(nn=4, verbose=False):
+    for n in [nn, nn + 1]:
+        for p in range(1, n + 1):
+            q = n + 1 - p
+            k = abs(p - q)
+            g = SignedPermutation.dbase_atom(n, k)
+
+            twisted = k % 2 != 0
+            print('n =', n, '(p, q) =', (p, q), 'k =', k)
+
+            for clan in Clan.all_d2(p, q):
+                phi = clan.richardson_springer_map()
+                z = phi.dtype_longest_element(n) * phi.inverse()
+
+                if verbose:
+                    atoms = set(clan.get_atoms())
+                    btoms = set(z.get_atoms_d(twisted, k))
+                    print(' ', clan)
+                    print()
+                    for a in atoms:
+                        print('  ', a.inverse(), (g*a).inverse(), (g*a).dshape(k))
+                    print()
+                    print(' ', z, k)
+                    print()
+                    for a in btoms:
+                        print('  ', a in atoms, a.inverse(), '->', (g*a).inverse(), (g*a).dshape(k))
+                        print()
+                        print('   ', a.get_reduced_word(dtype=True))
+                        print()
+                    print()
+                    print()
+
+                t = SignedPermutation.s_i(0, n) if twisted else SignedPermutation.identity(n)
+                base = (t * z).negated_points()
+                excluded_guess = {
+                    m for m in SignedPermutation.ncsp_matchings(base)
+                    if not clan.is_aligned(m)
+                }
+                if verbose:
+                    print('\nexcluded_guess:')
+                    for sh in excluded_guess:
+                        print(' ', sh)
+
+                atoms_by_shape = {}
+                for w in z.get_atoms_d(twisted=twisted, offset=k):
+                    assert (g * w).dlength() == g.dlength() + w.dlength()
+                    sh = (g * w).dshape(k)
+                    sh = tuple(sorted(sh))
+                    atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
+
                 if verbose:
                     print('atoms_by_shape:')
                     for sh in atoms_by_shape:

@@ -1108,7 +1108,7 @@ class SignedPermutation(SignedMixin):
         
         ndes = [(abs(a), b) for (a, b) in ndes]
 
-        if len(neg) % 2 != 0:
+        if len(fix) > 0 and len(neg) % 2 != 0:
             a, b = -neg[-1], fix[0]
             if a < b:
                 neg = neg[:-1]
