@@ -4,23 +4,24 @@ from signed import SignedPermutation
 
 
 def _test_hecke_atoms(cl, dtype=False, verbose=False):
-    # if not cl.is_alternating():
-    #    return
+    if not cl.is_alternating():
+       return
 
     length = lambda x: cl.weyl_group_length(x)
+    get_reduced_word = lambda w: w.get_reduced_word(dtype=dtype) if dtype else w.get_reduced_word()
 
     atoms = set(cl.get_atoms())
     hecke = set(cl.get_hecke_atoms())
     extended = set(cl.get_hecke_atoms_extended())
+
+    print('clan =', cl)
+    print()
+
     for w in sorted(extended, key=length):
         shapes = set()
-        print('clan =', cl)
-        print()
         print('   b =', cl.richardson_springer_base())
-        print()
         print('   z =', cl.richardson_springer_involution())
-        print()
-        print(' *', 'w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
+        print('   w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
         print()
         for v in atoms:
             if cl.weyl_group_bruhat_leq(v, w):
@@ -34,18 +35,22 @@ def _test_hecke_atoms(cl, dtype=False, verbose=False):
 
     expected = {w for w in cl.get_hecke_atoms_extended() if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
     if verbose:
-        print(' extended:', {w.get_reduced_word(dtype) for w in extended})
-        print(' computed:', {w.get_reduced_word(dtype) for w in hecke})
-        print('predicted:', {w.get_reduced_word(dtype) for w in expected})
+        print(' extended:', {get_reduced_word(w) for w in extended})
+        print(' computed:', {get_reduced_word(w) for w in hecke})
+        print('predicted:', {get_reduced_word(w) for w in expected})
         print()
     print(hecke == expected, ': is alternating?', cl.is_alternating())
     print()
 
-    # assert hecke == expected
+    if not hecke.issubset(expected):
+        print({get_reduced_word(w) for w in hecke - expected})
     assert hecke.issubset(expected)
 
     if cl.is_alternating():
         assert hecke == expected
+
+    #if hecke == expected:
+    #    input('')
 
 def test_hecke_atoms_a(n=3, verbose=False):
     for cl in Clan.all_a(n):

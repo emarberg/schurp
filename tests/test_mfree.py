@@ -6,6 +6,41 @@ from qp_utils import (
     is_zero_hecke_module,
     is_q_hecke_module
 )
+from tests.test_kn import subsets
+
+
+def test_subsets(n=4):
+    types = ['A', 'BC', 'D']
+    for t in types:
+        print('check type', t, n)
+        
+        length = lambda w: w.dlength() if t == 'D' else w.length()
+        group = lambda x: Permutation.all(x) if t == 'A' else SignedPermutation.all(x, dtype=(t=='D'))
+        leq = lambda x,y: x.dbruhat_less_equal(y) if t == 'D' else x.strong_bruhat_less_equal(y)
+
+        bylength = {}
+        for w in group(n):
+            bylength[length(w)] = bylength.get(length(w), set()) | {w}
+        mapping = {}
+        for ell in sorted(bylength):
+            for s in subsets(bylength[ell]):
+                upper_poset = get_upper_poset(None, lambda x: s, lambda x: group(n), leq)
+                mobius = get_mobius(upper_poset)
+                mapping[tuple(sorted(s))] = mobius
+                print('  ', ell, s, set(mobius.values()))
+                if not set(mobius.values()).issubset({-1, 0, 1}):
+                    print('')
+                else:
+                    for r in subsets(s):
+                        mobius = mapping[tuple(sorted(r))]
+                        try:
+                            assert set(mobius.values()).issubset({-1, 0, 1})
+                        except:
+                            print()
+                            print(r, s)
+                            return
+                
+
 
 
 def get_pseudo_hecke_atoms(m, simple, length, conjugate, translate=None):

@@ -1,5 +1,9 @@
+from signed import SignedPermutation
 from even import EvenSignedPermutation
 import subprocess
+
+
+
 
 
 def test_is_perfect(m=5):
@@ -259,7 +263,8 @@ def print_atoms_span(n=3):
         with open(dotfile, 'w') as f:
             f.write(s)
         subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
-
+        #subprocess.run(["open", pngfile])
+        #input('')
 
 def test_atoms_span(nn=3):
     for n in [nn, nn + 1]:
@@ -289,6 +294,10 @@ def test_shape(nn=3):
             for a in w.get_atoms():
                 sh = tuple(sorted(a.shape()))
                 shapes[sh] = shapes.get(sh, []) + [a]
+
+                _a = SignedPermutation(*a.oneline)
+                _sh = tuple(sorted(_a.dshape()))
+                assert sh == _sh     
             print(w, ' :: ', w * w0, ' :: ', (w * w0).involution_fixed_points(n % 2 != 0))
             print()
             for sh, atoms in shapes.items():
@@ -389,7 +398,7 @@ def twisted_span(v, strong=False):
 
 
 def test_twisted_shape(nn=3):
-    for n in [nn]:
+    for n in [nn, nn + 1]:
         cls = EvenSignedPermutation
         w0 = cls.longest_element(n)
         for w in cls.twisted_involutions(n):
@@ -397,6 +406,10 @@ def test_twisted_shape(nn=3):
             for a in w.get_twisted_atoms():
                 sh = tuple(sorted(a.twisted_shape()))
                 shapes[sh] = shapes.get(sh, []) + [a]
+
+                _a = SignedPermutation(*a.oneline)
+                _sh = tuple(sorted(_a.dshape(1)))
+                assert sh == _sh
             print(w, ' :: ', w0 * w, ' :: ', (w0 * w).involution_fixed_points(n % 2 == 0))
             print()
             for sh, atoms in shapes.items():

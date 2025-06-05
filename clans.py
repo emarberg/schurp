@@ -84,8 +84,13 @@ class Clan:
             return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
         elif self.family in [self.TYPE_C2, self.TYPE_D1, self.TYPE_D2]:
             return not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
+        elif self.family == self.TYPE_D3:
+            return len([i for i in self.oneline if type(i) == bool]) <= 2
         else:
             raise Exception
+
+    def is_signless(self):
+        return not any(type(i) == bool for i in self.oneline)
 
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
@@ -100,7 +105,6 @@ class Clan:
         return self.plus() - self.minus()
 
     def is_aligned(self, matching, verbose=False):
-        # todo for type D
         for (i, j) in matching:
             if self.family in [self.TYPE_B, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2] and i + j == 0:
                 continue
@@ -527,9 +531,9 @@ class Clan:
                 length = lambda x: x.dlength()
                 if n % 2 != 0:
                     conjugate = lambda x,s: t * s * t * x * s
-                    translate = lambda x,s: x * s if s == self.simple_generator(-1) else None #(t * x*s).is_fpf_involution() else None
+                    translate = lambda x,s: None #x * s # if (t * x*s).is_fpf_involution() else None
                 else:
-                    translate = lambda x,s: x * s if (s == self.simple_generator(-1) and (x(1) == 2 or (x(1)==-1 and x(2)==-2))) or any(s == self.simple_generator(i) and (x(i) == -i - 1 or (x(i) == -i and x(i+1)==-i-1)) for i in range(1, n)) else None
+                    translate = lambda x,s: None #x * s # if (x*s).is_fpf_involution() else None
             else:
                 raise Exception
 
@@ -690,14 +694,14 @@ class Clan:
         assert 1 <= i < self.rank()
         a, b = self(i), self(i + 1)
         if type(a) == int and type(b) == int and a < b:
-            return self._conjugate(i)
+            return self._conjugate(i), False
         if type(a) == int and type(b) != int and a < i:
-            return self._conjugate(i)
+            return self._conjugate(i), False
         if type(a) != int and type(b) == int and i + 1 < b:
-            return self._conjugate(i)
+            return self._conjugate(i), False
         if type(a) != int and type(b) != int and a != b:
-            return self._translate(i)
-        return self
+            return self._translate(i), False
+        return self, None
 
     def _multiply_b(self, i):
         assert 0 <= i < self.rank()
@@ -705,26 +709,26 @@ class Clan:
         if i == 0:
             a, b = self(n), self(n + 2)
             if type(a) == int and type(b) == int and a < b:
-                return self._conjugate(n, n + 2)
+                return self._conjugate(n, n + 2), False
             if type(a) != int and type(self(n + 1)) != int and a != self(n + 1):
                 oneline = list(self.oneline)
                 oneline[n - 1], oneline[n + 1] = n + 2, n
                 oneline[n] = not oneline[n]
-                return Clan(oneline, self.TYPE_B)
-            return self
+                return Clan(oneline, self.TYPE_B), True
+            return self, None
 
         a, b = self(n + 1 + i), self(n + 2 + i)
         if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
-            return self._conjugate(n + 1 + i)
+            return self._conjugate(n + 1 + i), True
         if type(a) == int and type(b) == int and a < b:
-            return self._conjugate(n + 1 + i)._conjugate(n - i)
+            return self._conjugate(n + 1 + i)._conjugate(n - i), False
         if type(a) == int and type(b) != int and a < n + 1 + i:
-            return self._conjugate(n + 1 + i)._conjugate(n - i)
+            return self._conjugate(n + 1 + i)._conjugate(n - i), False
         if type(a) != int and type(b) == int and n + 2 + i < b:
-            return self._conjugate(n + 1 + i)._conjugate(n - i)
+            return self._conjugate(n + 1 + i)._conjugate(n - i), False
         if type(a) != int and type(b) != int and a != b:
-            return self._translate(n + 1 + i)._translate(n - i)
-        return self
+            return self._translate(n + 1 + i)._translate(n - i), False
+        return self, None
 
     def _multiply_c1(self, i):
         assert 0 <= i < self.rank()
@@ -732,25 +736,25 @@ class Clan:
         if i == 0:
             a, b = self(n), self(n + 1)
             if type(a) == int and type(b) == int and a < b:
-                return self._conjugate(n, n + 1)
+                return self._conjugate(n, n + 1), False
             if type(a) != int and type(b) != int and a != b:
                 oneline = list(self.oneline)
                 oneline[n - 1], oneline[n] = n + 1, n
-                return Clan(oneline, self.TYPE_C1)
-            return self
+                return Clan(oneline, self.TYPE_C1), False
+            return self, None
 
         a, b = self(n + i), self(n + 1 + i)
         if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
-            return self._conjugate(n + i)
+            return self._conjugate(n + i), False
         if type(a) == int and type(b) == int and a < b:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) == int and type(b) != int and a < n + i:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) != int and type(b) == int and n + 1 + i < b:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) != int and type(b) != int and a != b:
-            return self._translate(n + i)._translate(n - i)
-        return self
+            return self._translate(n + i)._translate(n - i), False
+        return self, None
 
     def _multiply_c2(self, i):
         assert 0 <= i < self.rank()
@@ -758,21 +762,21 @@ class Clan:
         if i == 0:
             a, b = self(n), self(n + 1)
             if type(a) == int and type(b) == int and a < b:
-                return self._conjugate(n, n + 1)
-            return self
+                return self._conjugate(n, n + 1), False
+            return self, None
 
         a, b = self(n + i), self(n + 1 + i)
         if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
-            return self
+            return self, True
         if type(a) == int and type(b) == int and a < b:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) == int and type(b) != int and a < n + i:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) != int and type(b) == int and n + 1 + i < b:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) != int and type(b) != int and a != b:
-            return self._translate(n + i)._translate(n - i)
-        return self
+            return self._translate(n + i)._translate(n - i), False
+        return self, None
 
     def _multiply_d1(self, i):
         assert i in set(self.generators())
@@ -783,9 +787,9 @@ class Clan:
             a, b, c, d = self(n - 1), self(n), self(n + 1), self(n + 2)
 
             if type(a) == bool and type(b) == bool and a != b:
-                return self._translate(n - 1)._translate(n + 1)._conjugate(n)
+                return self._translate(n - 1)._translate(n + 1)._conjugate(n), False
             elif type(a) == int and type(b) == int and a == n:
-                return self._conjugate(n - 1, n + 1)
+                return self._conjugate(n - 1, n + 1), True
             elif type(a) != int and type(b) == int:
                 active = (b == n + 1) or (b < n - 1)
             elif type(a) == int and type(b) != int:
@@ -803,22 +807,22 @@ class Clan:
                     active = True 
 
             if active:
-                return self._conjugate(n - 1, n + 1)._conjugate(n, n + 2)
+                return self._conjugate(n - 1, n + 1)._conjugate(n, n + 2), False
             else:
-                return self
+                return self, None
 
         a, b = self(n + i), self(n + 1 + i)
         if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
-            return self._conjugate(n + i)
+            return self._conjugate(n + i), True
         if type(a) == int and type(b) == int and a < b:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) == int and type(b) != int and a < n + i:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) != int and type(b) == int and n + 1 + i < b:
-            return self._conjugate(n + i)._conjugate(n - i)
+            return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) != int and type(b) != int and a != b:
-            return self._translate(n + i)._translate(n - i)
-        return self
+            return self._translate(n + i)._translate(n - i), False
+        return self, None
 
     def _multiply_d2(self, i):
         return self._multiply_d1(i)
@@ -826,11 +830,12 @@ class Clan:
     def _multiply_d3(self, i):
         assert i in set(self.generators())
         if i == -1:
-            return self._flip()._multiply_c2(1)._flip()
+            ans, doubled = self._flip()._multiply_c2(1)
+            return ans._flip(), doubled
         else:
             return self._multiply_c2(i)
 
-    def __rmul__(self, i):
+    def weak_order_action(self, i):
         assert type(i) == int
         if self.family == self.TYPE_A:
             return self._multiply_a(i)
@@ -846,6 +851,26 @@ class Clan:
             return self._multiply_d2(i)
         elif self.family == self.TYPE_D3:
             return self._multiply_d3(i)
+        else:
+            raise Exception
+
+
+    def __rmul__(self, i):
+        assert type(i) == int
+        if self.family == self.TYPE_A:
+            return self._multiply_a(i)[0]
+        elif self.family == self.TYPE_B:
+            return self._multiply_b(i)[0]
+        elif self.family == self.TYPE_C1:
+            return self._multiply_c1(i)[0]
+        elif self.family == self.TYPE_C2:
+            return self._multiply_c2(i)[0]
+        elif self.family == self.TYPE_D1:
+            return self._multiply_d1(i)[0]
+        elif self.family == self.TYPE_D2:
+            return self._multiply_d2(i)[0]
+        elif self.family == self.TYPE_D3:
+            return self._multiply_d3(i)[0]
         else:
             raise Exception
 
