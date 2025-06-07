@@ -381,6 +381,7 @@ def test_atoms_d3(nn=4, verbose=False):
                 if verbose:
                     print('  ', a.inverse(), '->', (g*a).inverse(), (g*a).fpf_dshape())
                 lengths_a.add(len(word))
+                assert clan.weyl_group_weight(a) == 0
             if verbose:
                 print()
                 print(' ', z)
