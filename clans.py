@@ -1,6 +1,10 @@
 from signed import SignedPermutation
 from permutations import Permutation
 import itertools
+import subprocess
+
+
+BASE_DIRECTORY = '/Users/emarberg/examples/clans/'
 
 
 CLAN_WORDS_CACHE = {}
@@ -66,6 +70,90 @@ class Clan:
     @classmethod
     def create_d3(cls, oneline):
         return Clan(oneline, cls.TYPE_D3)
+
+    @classmethod
+    def _draw(cls, clans, folder, filename):
+        assert len(clans) > 0
+
+        def printer(c):
+            return str(c) + '\n' + c.richardson_springer_involution().cycle_repr()
+
+        edges = []
+        for c in clans:
+            for i in c.generators():
+                d, doubled = c.weak_order_action(i)
+                if doubled is not None:
+                    edges.append((c, d, i, doubled))
+        
+        s = []
+        s += ['digraph G {']
+        s += ['    rankdir=BT;']
+        s += ['    overlap=false;']
+        s += ['    splines=true;']
+        
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        for x in clans:
+            s += ['    "%s"' % printer(x) + (' [fillcolor=white];' if not x.is_alternating() else ';')]
+        for c, d, i, doubled in edges:
+            s += ['    "%s" -> "%s" [label="%s",color="%s"];' % (printer(c), printer(d), str(i), 'blue' if doubled else 'black')]
+        s += ['}']
+        s = '\n'.join(s)
+        
+        dot_filename = BASE_DIRECTORY + 'dot/' + folder + '/%s.dot' % filename
+        png_filename = BASE_DIRECTORY + 'png/' + folder + '/%s.png' % filename
+        with open(dot_filename, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["open", png_filename])
+
+    @classmethod
+    def draw_a(cls, p, q=None):
+        clans = list(cls.all_a(p, q))
+        folder = 'A'
+        filename = folder + '_'+ ('n' + str(p) if q is None else 'p' + str(p) + 'q' + str(q)) + '_' + str(len(clans))
+        cls._draw(clans, folder, filename)
+
+    @classmethod
+    def draw_b(cls, p, q=None):
+        clans = list(cls.all_b(p, q))
+        folder = 'B'
+        filename = folder + '_'+ ('n' + str(p) if q is None else 'p' + str(p) + 'q' + str(q)) + '_' + str(len(clans))
+        cls._draw(clans, folder, filename)
+
+    @classmethod
+    def draw_c1(cls, n):
+        clans = list(cls.all_c1(n))
+        folder = 'C1'
+        filename = folder + '_'+ 'n' + str(n) + '_' + str(len(clans))
+        cls._draw(clans, folder, filename)
+
+    @classmethod
+    def draw_c2(cls, p, q=None):
+        clans = list(cls.all_c2(p, q))
+        folder = 'C2'
+        filename = folder + '_'+ ('n' + str(p) if q is None else 'p' + str(p) + 'q' + str(q)) + '_' + str(len(clans))
+        cls._draw(clans, folder, filename)
+
+    @classmethod
+    def draw_d1(cls, p, q=None):
+        clans = list(cls.all_d1(p, q))
+        folder = 'D1'
+        filename = folder + '_'+ ('n' + str(p) if q is None else 'p' + str(p) + 'q' + str(q)) + '_' + str(len(clans))
+        cls._draw(clans, folder, filename)
+
+    @classmethod
+    def draw_d2(cls, p, q=None):
+        clans = list(cls.all_d2(p, q))
+        folder = 'D2'
+        filename = folder + '_'+ ('n' + str(p) if q is None else 'p' + str(p) + 'q' + str(q)) + '_' + str(len(clans))
+        cls._draw(clans, folder, filename)
+
+    @classmethod
+    def draw_d3(cls, n):
+        clans = list(cls.all_d3(n))
+        folder = 'D3'
+        filename = folder + '_'+ 'n' + str(n) + '_' + str(len(clans))
+        cls._draw(clans, folder, filename)
 
     def __repr__(self):
         l = [str(min(i, self(i))) if type(i) == int else '+' if i else '-' for i in self.oneline]
@@ -414,6 +502,20 @@ class Clan:
 
         return tuple(sorted(sh))
 
+    def weyl_group_weight(self, w):
+        top = True
+        for i in self.generators():
+            c, doubled = self.weak_order_action(i)
+            if self != c:
+                top = False
+                v = w * self.simple_generator(i)
+                if self.weyl_group_length(v) < self.weyl_group_length(w):
+                    return c.weyl_group_weight(v) + (1 if doubled else 0)
+        if top and self.weyl_group_length(w) == 0:
+            return 0
+        else:
+            return None
+
     def get_clan_words(self):
         if self not in CLAN_WORDS_CACHE:
             ans = []
@@ -745,7 +847,7 @@ class Clan:
 
         a, b = self(n + i), self(n + 1 + i)
         if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
-            return self._conjugate(n + i), False
+            return self._conjugate(n + i), True
         if type(a) == int and type(b) == int and a < b:
             return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) == int and type(b) != int and a < n + i:
@@ -767,7 +869,7 @@ class Clan:
 
         a, b = self(n + i), self(n + 1 + i)
         if type(a) == int and type(b) == int and a == n - i and b == n - i + 1:
-            return self, True
+            return self, None
         if type(a) == int and type(b) == int and a < b:
             return self._conjugate(n + i)._conjugate(n - i), False
         if type(a) == int and type(b) != int and a < n + i:

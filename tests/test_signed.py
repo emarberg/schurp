@@ -113,6 +113,7 @@ def test_get_abs_fpf_atoms(n=6):
 def test_brion_length(n=4):
     for y in SignedPermutation.involutions(n):
         ell = len(y.neg()) + len(y.pair())
+        pos =  y.count_nontrivial_positive_cycles()
         assert ell + len(y) == 2 * y.involution_length()
         for w in y.get_atoms():
             ndes = w.ndes()
@@ -120,8 +121,24 @@ def test_brion_length(n=4):
             nfix = w.nfix()
             nneg = w.nneg()
             print('b:', w.brion_length_b(), 'c:', w.brion_length_c(), ':', ell, len(y.neg()), len(y.pair()), ':', 'cdes =', len(cdes), 'ndes =', len(ndes), 'nfix =', len(nfix), 'nneg =', len(nneg), w == y.get_min_atom(), w.shape())
+            
+            # (nontrivial blocks of w.shape()) / 2 == len(cdes) 
+            # y.get_min_atom().ell_zero() == len(y.neg()) + |{a : a < 0 < -a < y(a)}|
+            #                             == ell - |{a : 0 < a < y(a)}|
+
+            # (nontrivial blocks of w.shape()) / 2 == ell - pos - w.ell_zero()
+
+            sh = w.shape()
+            nb = len([(a, b) for (a, b) in sh if a + b != 0])
+            assert nb % 2 == 0
+            assert nb // 2 == y.get_min_atom().ell_zero() - w.ell_zero()
+            assert y.get_min_atom().ell_zero() == ell - pos
+
             assert w.brion_length_b() == ell - len(cdes)
+            assert w.brion_length_b() == w.ell_zero() + pos
+
             assert w.brion_length_c() == len(y.pair()) + len(cdes)
+            assert w.brion_length_c() == y.count_positive_ascents() - w.ell_zero()
             assert len(cdes) * 2 == len(y.neg()) - len(nneg)
         print()
 

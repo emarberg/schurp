@@ -295,9 +295,8 @@ class SignedMixin:
         return tuple(a for a in range(-n, n + 1) if 0 != a == -self(a))
 
     def __call__(self, i):
-        if i == 0:
-            return 0
-        assert 1 <= abs(i) <= self.rank
+        if not (1 <= abs(i) <= self.rank):
+            return i
         if i > 0:
             return self.oneline[i - 1]
         else:
@@ -353,6 +352,12 @@ class SignedMixin:
     def __neg__(self):
         return self.longest_element(self.rank) * self
 
+    def count_nontrivial_positive_cycles(self):
+        return len([c for c in self.cycles() if min(c) > 0 and len(c) > 1])
+
+    def count_positive_ascents(self):
+        return len([i for i in range(1, self.rank + 1) if i > self(i)])
+
     def cycles(self):
         ans = []
         a = list(range(1, 1 + self.rank))
@@ -376,12 +381,14 @@ class SignedMixin:
 
         s = ''
         for c in self.cycles():
-            if len(c) == 1 and c[0] > 0:
-                s += '%s' % c[0]
-            elif len(c) == 2 and c[0] == -c[1]:
-                s += '%s' % (str(abs(c[0])) + '\u0305')
-            elif c[0] > 0:
-                s += '(' + (DELIM + SPACE).join([(str(-x) + '\u0305') if x < 0 else str(x) for x in c]) + ')'
+            # if len(c) == 1 and c[0] > 0:
+            #    s += '%s' % c[0]
+            # elif len(c) == 2 and c[0] == -c[1]:
+            #    s += '%s' % (str(abs(c[0])) + '\u0305')
+            # elif c[0] > 0:
+            #    s += '(' + (DELIM + SPACE).join([(str(-x) + '\u0305') if x < 0 else str(x) for x in c]) + ')'
+            if len(c) > 1:
+                s += '(' + (DELIM + SPACE).join([str(x) for x in c]) + ')'
         return s.strip()
 
     def __str__(self):
@@ -1188,7 +1195,7 @@ class SignedPermutation(SignedMixin):
         return fix
 
     def nneg(self):
-        ndes, fix, neg = self._ndes(o)
+        ndes, fix, neg = self._ndes()
         return neg
 
     def _ndes(self, oneline=None):

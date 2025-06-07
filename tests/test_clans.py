@@ -237,7 +237,7 @@ def test_all_c1():
             assert cl.clan_type() == 0
 
 
-def test_atoms_a3(n=4):
+def test_atoms_a(n=4):
     for p in range(1, n):
         q = n - p
         for clan in Clan.all_a(p, q):
@@ -245,33 +245,38 @@ def test_atoms_a3(n=4):
             print(clan)
             for a in atoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
+                assert clan.weyl_group_weight(a) == 0
             btoms = set(clan.get_atoms_extended())
             for a in btoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
             assert atoms.issubset(btoms)
 
 
-def test_atoms_b(n=4):
+def test_atoms_b(n=4, verbose=False):
     for p in range(1, n):
         q = n - p
+        k = abs(2 * p - 2 * q - 1) // 2
+        g = SignedPermutation.bbase_atom(n, k)
+
         print('n =', n, '(p, q) =', (p, q))
         for clan in Clan.all_b(p, q):
-            print(' ', clan)
+            z = clan.richardson_springer_involution()
+            d = len([i for i in range(1, n + 1) if i > z(i) > 0])
+            print(' ', clan, '  <--->  ', z, '=', z.cycle_repr())
             atoms = set(clan.get_atoms())
             lengths_a = set()
             for a in atoms:
+                sh = (g * a).shape()
                 word = a.inverse().get_reduced_word()
-                print('  ', a.inverse(), word)
                 lengths_a.add(len(word))
-            print()
+                assert clan.weyl_group_weight(a) == (g * a).brion_length_b() - g.brion_length_b()
+                assert clan.weyl_group_weight(a) == d + a.ell_zero()
 
             btoms = set(clan.get_atoms_extended())
             lengths_b = set()
             for a in btoms:
                 word = a.inverse().get_reduced_word()
-                print('  ', a.inverse(), word)
                 lengths_b.add(len(word))
-            print()
 
             assert atoms.issubset(btoms)
             assert lengths_a == lengths_b
@@ -280,9 +285,18 @@ def test_atoms_b(n=4):
 
 def test_atoms_c1(n=4):
     for m in range(n + 1):
+        print()
+        print('n =', n)
+        print()
         for clan in Clan.all_c1(m):
             print(clan)
-            assert set(clan.get_atoms()).issubset(set(clan.get_atoms_extended()))
+            z = clan.richardson_springer_involution()
+            d = len([i for i in range(1, n + 1) if i > z(i)])
+            atoms = set(clan.get_atoms())
+            assert atoms.issubset(set(clan.get_atoms_extended()))
+            for a in atoms:
+                print('  ', a, clan.weyl_group_weight(a), '==', d - a.ell_zero())
+                assert clan.weyl_group_weight(a) == d - a.ell_zero()
 
 
 def test_atoms_c2(n=4):
@@ -294,6 +308,7 @@ def test_atoms_c2(n=4):
             print(clan)
             for a in atoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
+                assert clan.weyl_group_weight(a) == 0
             btoms = set(clan.get_atoms_extended())
             for a in btoms:
                 print('  ', a.inverse(), a.inverse().get_reduced_word())
