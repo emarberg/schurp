@@ -335,6 +335,8 @@ def test_atoms_d1(nn=4, verbose=False):
                     if verbose:
                         print('  ', a.inverse(), (g*a).dshape(offset))
                     lengths_a.add(len(word))
+                    assert clan.weyl_group_weight(a) == (g * a).brion_length_d(twisted) - g.brion_length_d(twisted)
+                
                 btoms = set(clan.get_atoms_extended())
                 lengths_b = set()
                 for a in btoms:
@@ -355,11 +357,17 @@ def test_atoms_d2(nn=4, verbose=False):
     for n in [nn, nn + 1]:
         for p in range(1, n + 1):
             q = n + 1 - p
+            offset = abs(p - q)
+            g = SignedPermutation.dbase_atom(n, offset)
+
             print('n =', n, '(p, q) =', (p, q))
+            twisted = offset % 2 != 0
             for clan in Clan.all_d2(p, q):
                 atoms = set(clan.get_atoms())
                 if verbose:
                     print('  ', clan)
+                for a in atoms:
+                    assert clan.weyl_group_weight(a) == (g * a).brion_length_d(twisted) - g.brion_length_d(twisted)
                 btoms = set(clan.get_atoms_extended())
                 assert atoms.issubset(btoms)
 

@@ -1,4 +1,5 @@
 from signed import SignedPermutation, Permutation
+from even import EvenSignedPermutation
 from polynomials import X
 
 
@@ -141,6 +142,44 @@ def test_brion_length(n=4):
             assert w.brion_length_c() == y.count_positive_ascents() - w.ell_zero()
             assert len(cdes) * 2 == len(y.neg()) - len(nneg)
         print()
+
+
+def test_brion_length_d(n=4):
+    for twisted in [False, True]:
+        offset = 1 if twisted else 0
+        u = SignedPermutation.s_i(0, n) if twisted else SignedPermutation.identity(n)
+        for y in SignedPermutation.involutions(n, dtype=True, twisted=twisted):
+            ell = len(y.neg()) + len(y.pair())
+            # assert ell + len(y) == 2 * y.involution_length()
+            for w in y.get_atoms_d(twisted=twisted):
+                sh = w.dshape(offset)
+                
+                ndes = w.ndes()
+                cdes = [(a, b) for a, b in ndes if 0 < a < -b]
+                nfix = w.nfix()
+                nneg = w.nneg()
+                
+                nb = len([(a, b) for (a, b) in sh if a + b != 0])
+                pair = len((u*y).pair())
+                
+                assert w.brion_length_d(twisted=twisted) == nb // 2 + pair
+                
+                # (nontrivial blocks of w.shape()) / 2 == len(cdes) 
+                # y.get_min_atom().ell_zero() == len(y.neg()) + |{a : a < 0 < -a < y(a)}|
+                #                             == ell - |{a : 0 < a < y(a)}|
+
+                # (nontrivial blocks of w.shape()) / 2 == ell - pos - w.ell_zero()
+
+                #assert nb % 2 == 0
+                #assert nb // 2 == y.get_min_atom().ell_zero() - w.ell_zero()
+                #assert y.get_min_atom().ell_zero() == ell - pos
+
+                #assert w.brion_length_b() == ell - len(cdes)
+                #assert w.brion_length_b() == w.ell_zero() + pos
+
+                #assert w.brion_length_c() == len(y.pair()) + len(cdes)
+                #assert w.brion_length_c() == y.count_positive_ascents() - w.ell_zero()
+                #assert len(cdes) * 2 == len(y.neg()) - len(nneg)
 
 
 def test_brion_weight_counts(n=4):

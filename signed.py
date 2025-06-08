@@ -1258,6 +1258,21 @@ class SignedPermutation(SignedMixin):
             y = y * t if t * y == y * t else t * y * t
         return ans
 
+    def brion_length_d(self, twisted=False):
+        ans = 0
+        n = self.rank
+        y = SignedPermutation.identity(n)
+        u = SignedPermutation.s_i(0, n) if twisted else SignedPermutation.identity(n)
+        for i in self.get_reduced_word(dtype=True):
+            assert i not in y.right_descent_set
+            t = SignedPermutation.ds_i(i, n)
+            if i > 0 and (u * y)(i) == i and (u * y)(i + 1) == i + 1:
+                ans += 1
+            elif i == -1 and (u * y)(1) == 1 and (u * y)(2) == 2:
+                ans += 1
+            y = y * t if u * t * u * y == y * t else u * t * u * y * t
+        return ans
+
     def _min_abs_fpf_inv_atom_oneline(self):
         return tuple(i for p in self.cyc() for i in p)
 
