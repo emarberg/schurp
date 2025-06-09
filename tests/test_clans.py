@@ -49,8 +49,6 @@ def _test_hecke_atoms(cl, dtype=False, verbose=False):
     if cl.is_alternating():
         assert hecke == expected
 
-    #if hecke == expected:
-    #    input('')
 
 def test_hecke_atoms_a(n=3, verbose=False):
     for cl in Clan.all_a(n):

@@ -613,32 +613,31 @@ class Clan:
 
             simple = [self.simple_generator(i) for i in self.generators()]
             length = lambda w: w.length()
-            conjugate = lambda x,s: s * x * s
             translate = lambda x,s: x * s
 
+            t = SignedPermutation.identity(n)
+            
             if self.family == self.TYPE_A:
                 t = Permutation.longest_element(n)
-                conjugate = lambda x,s: t * s * t * x * s
             elif self.family in [self.TYPE_B, self.TYPE_C1]:
                 pass
             elif self.family == self.TYPE_C2:
-                translate = lambda x,s: x * s if (x*s).is_fpf_involution() else None
+                translate = lambda x,s: x * s if (x * s).is_fpf_involution() else None
             elif self.family in [self.TYPE_D1, self.TYPE_D2]:
-                t = SignedPermutation.s_i(0, n)
                 length = lambda x: x.dlength()
                 if k % 2 != 0:
-                    conjugate = lambda x,s: t * s * t * x * s
+                    t = SignedPermutation.s_i(0, n)
             elif self.family == self.TYPE_D3:
-                t = SignedPermutation.s_i(0, n)
                 length = lambda x: x.dlength()
                 if n % 2 != 0:
-                    conjugate = lambda x,s: t * s * t * x * s
+                    t = SignedPermutation.s_i(0, n)
                     translate = lambda x,s: None #x * s # if (t * x*s).is_fpf_involution() else None
                 else:
                     translate = lambda x,s: None #x * s # if (x*s).is_fpf_involution() else None
             else:
                 raise Exception
 
+            conjugate = lambda x,s: t * s * t * x * s
             CLAN_HECKE_ATOMS_EXTENDED_CACHE[key] = self.get_pseudo_hecke_atoms(v, simple, length, conjugate, translate)
 
         dictionary = CLAN_HECKE_ATOMS_EXTENDED_CACHE[key]
