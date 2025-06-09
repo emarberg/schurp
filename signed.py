@@ -1138,10 +1138,11 @@ class SignedPermutation(SignedMixin):
             sh.add((-a, a))
 
         y = self.dtype_demazure_conjugate(offset % 2 != 0)
-        z = SignedPermutation.identity(self.rank)
         
+        z = SignedPermutation.identity(self.rank)
         if offset % 2 != 0:
-            z = z * SignedPermutation.s_i(0, self.rank)
+            z = SignedPermutation.s_i(0, self.rank)
+        
         for i in negd:
             z *= SignedPermutation.t_ij(-i, i, self.rank)
         for a, b in desd:
