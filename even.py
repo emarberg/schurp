@@ -33,6 +33,9 @@ class EvenSignedPermutation(SignedMixin):
         self._involution_length = None
         self._twisted_involution_length = None
 
+    def __iter__(self):
+        return self.oneline.__iter__()
+        
     def __repr__(self):
         # return 'EvenSignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
         return str(self)

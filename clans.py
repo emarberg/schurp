@@ -220,16 +220,22 @@ class Clan:
             return True
 
         trivial = [a for (a, b) in sorted(matching) if -a == b]
+        k = abs(self.clan_type()) // 2
 
         if self.family == self.TYPE_C2:
-            return len(trivial) == abs(self.clan_type()) // 2
+            return len(trivial) == k
         if self.family == self.TYPE_B:
-            k = abs(self.clan_type()) // 2
             if len(trivial) < k:
                 return False
             signs = [self(self.rank() + 1 + i) for i in trivial]
             signs += [self(self.rank() + 1)]
             if any(signs[i] == signs[i + 1] for i in range(k, len(signs) - 1)):
+                return False
+        if self.family in [self.TYPE_D1, self.TYPE_D2]:
+            if len(trivial) < k:
+                return False
+            signs = [self(self.rank() + 1 + i) for i in reversed(trivial)]
+            if any(signs[i] != signs[i + 1] for i in range(0, len(signs) - 1)):
                 return False
         if self.family == self.TYPE_D3:
             if len(trivial) % 2 != self.rank() % 2:
@@ -631,9 +637,7 @@ class Clan:
                 length = lambda x: x.dlength()
                 if n % 2 != 0:
                     t = SignedPermutation.s_i(0, n)
-                    translate = lambda x,s: None #x * s # if (t * x*s).is_fpf_involution() else None
-                else:
-                    translate = lambda x,s: None #x * s # if (x*s).is_fpf_involution() else None
+                translate = lambda x,s: None #x * s # if (t * x*s).is_fpf_involution() else None
             else:
                 raise Exception
 

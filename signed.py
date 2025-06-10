@@ -391,10 +391,14 @@ class SignedMixin:
                 s += '(' + (DELIM + SPACE).join([str(x) for x in c]) + ')'
         return s.strip()
 
+    def __iter__(self):
+        return self.oneline.__iter__()
+        
     def __str__(self):
         s = []
         for i in self.oneline:
-            s += [str(abs(i)) + ('\u0305' if i < 0 else '')]
+            #s += [str(abs(i)) + ('\u0305' if i < 0 else '')]
+            s += [str(i) if i < 0 else ('+' + str(i))]
         if s:
             sep = '' if len(self.oneline) < 10 else ' '
             return sep.join(s)

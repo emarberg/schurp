@@ -148,6 +148,11 @@ def span(v, n, strong=False):
 
 
 def print_atoms_span(n=3):
+    def printer(oneline):
+        w = oneline if type(oneline) == Permutation else Permutation(*oneline)
+        sh = w.inverse().twisted_shape(n)
+        return str(w) + '\n' + str(sh)
+
     for w in Permutation.twisted_involutions(n):
         v = w.get_min_twisted_atom(n).inverse()
         edges = list(span(v, n, True))
@@ -159,8 +164,8 @@ def print_atoms_span(n=3):
         s += ['    splines=spline;']
         s += ['    node [fontname="courier"];']
         for x in set(w.get_twisted_atoms(n)):
-            s += ['    "%s";' % str(x.inverse())]
-        s += ['    "%s" -> "%s" [style="%s"];' % (str(Permutation(*x)), str(Permutation(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
+            s += ['    "%s";' % printer(x.inverse())]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges]
         s += ['}']
         s = '\n'.join(s)
         name = ''.join([str(v(i)) for i in range(1, n + 1)])
@@ -173,6 +178,9 @@ def print_atoms_span(n=3):
 
 
 def test_atoms_span(n=5):
+    def shape(u):
+        return Permutation(*u).inverse().twisted_shape(n)
+
     cls = Permutation
     for w in cls.twisted_involutions(n):
         v = w.get_min_twisted_atom(n).inverse()
@@ -188,3 +196,5 @@ def test_atoms_span(n=5):
                 x += [u]
             print('  ', x)
             assert False
+        assert all(b == (shape(u) != shape(x)) for (u, x, b) in span(v, n, True))
+        

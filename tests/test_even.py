@@ -266,7 +266,11 @@ def print_atoms_span(n=3):
         #subprocess.run(["open", pngfile])
         #input('')
 
+
 def test_atoms_span(nn=3):
+    def shape(u):
+        return SignedPermutation(*u).inverse().dshape()
+
     for n in [nn, nn + 1]:
         cls = EvenSignedPermutation
         for w in cls.involutions(n):
@@ -283,6 +287,7 @@ def test_atoms_span(nn=3):
                     x += [u]
                 print('  ', x)
                 assert False
+            assert all(b == (shape(u) != shape(x)) for (u, x, b) in span(v, True))    
 
 
 def test_shape(nn=3):
@@ -351,28 +356,42 @@ def is_min_twisted_atom(w):
 
 
 def twisted_span(v, strong=False):
-    v = v.oneline
-    level = {(None, v, None)}
+    w = v.star() % v.inverse()
+    level = {(None, v.inverse().oneline, None) for v in w.get_twisted_atoms()}
+    
+    #v = v.oneline
+    #level = {(None, v, None)}
+    seen = set()
     while level:
         nextlevel = set()
         for u, v, label in level:
             if u is not None:
                 yield (u, v, label)
+            
+            if v in seen:
+                continue
+            seen.add(v)
+            
             for i in range(1, len(v) - 2):
                 b, c, a = v[i: i + 3]
                 if a < b < c:
                     w = v[:i] + (c, a, b) + v[i + 3:]
                     nextlevel.add((v, w, False))
+
+                #c, a, b = v[i: i + 3]
+                #if a < b < c:
+                #    w = v[:i] + (b, c, a) + v[i + 3:]
+                #    nextlevel.add((v, w, False))
             if len(v) >= 2:
                 b, a = v[:2]
                 if abs(a) < abs(b) and b > 0:
                     w = (-b, -a) + v[2:]
                     nextlevel.add((v, w, False))
-            if len(v) >= 4:
-                x, b, c, a = v[:4]
-                if a < -b < c < abs(x):
-                    w = (x, -c, a, -b) + v[4:]
-                    nextlevel.add((v, w, False))
+            #if len(v) >= 4:
+            #    x, b, c, a = v[:4]
+            #    if a < -b < c < abs(x):
+            #        w = (x, -c, a, -b) + v[4:]
+            #        nextlevel.add((v, w, False))
             if strong:
                 # for j in range(len(v)):
                 #     for k in range(j + 1, len(v) - 1):
@@ -382,18 +401,18 @@ def twisted_span(v, strong=False):
                 #             nextlevel.add((v, w, False))
                 if len(v) >= 3:
                     a, b, c = v[:3]
-                    if 0 < -a < b < -c:
-                        w = (-c, a, -b) + v[3:]
-                        nextlevel.add((v, w, True))
-                    if 0 < a < b < -c:
-                        w = (-c, a, -b) + v[3:]
-                        nextlevel.add((v, w, True))
-                if len(v) >= 4:
-                    b, a, c, d = v[:4]
-                    if 0 < a < -b < c < -d:
-                        w = (-d, -a, -b, -c) + v[4:]
+                    if 0 < abs(a) < b < -c and (a, b, c) < (c, -a, -b):
+                        w = (c, -a, -b) + v[3:]
                         nextlevel.add((v, w, True))
 
+                    if 0 < abs(b) < -c < -a and (a, b, c) < (-b, -c, a):
+                        w = (-b, -c, a) + v[3:]
+                        nextlevel.add((v, w, True))
+                #if len(v) >= 4:
+                #    b, a, c, d = v[:4]
+                #    if 0 < a < -b < c < -d:
+                #        w = (-d, -a, -b, -c) + v[4:]
+                #        nextlevel.add((v, w, True))
         level = nextlevel
 
 
@@ -429,23 +448,46 @@ def test_twisted_shape(nn=3):
 
 
 def print_twisted_atoms_span(n):
+    def normalize(w):
+        w = tuple(w)
+        if len(w) >= 2 and abs(w[0]) > abs(w[1]) and w[0] < 0:
+            w = (-w[0], -w[1],) + w[2:]
+        return w
+
+    def printer(oneline):
+        w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
+        sh = w.inverse().dshape(offset=1)
+        return str(w) + '\n' + str(sh)
+
     cls = EvenSignedPermutation
     for w in cls.twisted_involutions(n):
         v = w.get_min_twisted_atom().inverse()
+        
         edges = list(twisted_span(v, True))
+        atoms = set(w.get_twisted_atoms())
+
+        edges = {(normalize(u), normalize(v), b) for (u, v, b) in edges if normalize(u) != normalize(v)}
+        atoms = {cls(*normalize(w.inverse())) for w in atoms}
+
         if len(edges) == 0:
             continue
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
-        s += ['    node [fontname="courier"];']
-        for x in set(w.get_twisted_atoms()):
-            s += ['    "%s";' % str(x.inverse())]
-        s += ['    "%s" -> "%s" [style="%s"];' % (str(cls(*x)), str(cls(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        for x in atoms:
+            if x == v:
+                s += ['    "%s";' % printer(x)]
+            else:
+                s += ['    "%s" [fillcolor=white];' % printer(x)]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges]
         s += ['}']
         s = '\n'.join(s)
         name = ''.join([str(v(i)) for i in range(1, n + 1)])
+
+        name = 'n' + str(n) + '_' + str(len(atoms)) + '_' + name
+        
         file = '/Users/emarberg/examples/atoms/'
         dotfile = file + 'dot/DII/' + name + '.dot'
         pngfile = file + 'png/DII/' + name + '.png'
@@ -455,7 +497,10 @@ def print_twisted_atoms_span(n):
 
 
 def test_twisted_atoms_span(nn=3):
-    for n in [nn]:
+    def shape(u):
+        return SignedPermutation(*u).inverse().dshape(1)
+
+    for n in [nn, nn + 1]:
         cls = EvenSignedPermutation
         for w in cls.twisted_involutions(n):
             v = w.get_min_twisted_atom().inverse()
@@ -471,3 +516,7 @@ def test_twisted_atoms_span(nn=3):
                     x += [u]
                 print('  ', v, '<', x)
                 print('  ', [u for u in test if u not in sest])
+                assert False
+            assert all(b == (shape(u) != shape(x)) for (u, x, b) in twisted_span(v, True))    
+
+
