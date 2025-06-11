@@ -575,7 +575,7 @@ def test_atoms_d1_refined(nn=4, verbose=False):
                     sh = tuple(sorted(sh))
                     atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
 
-                _test_typed_atoms_by_shape(z, g, k, atoms_by_shape)
+                _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape)
                 _test_refinement(clan, atoms_by_shape, expected_shapes)
 
 
@@ -606,18 +606,12 @@ def test_atoms_d2_refined(nn=4, verbose=False):
                     sh = tuple(sorted(sh))
                     atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
 
-                _test_typed_atoms_by_shape(z, g, k, atoms_by_shape)
+                _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape)
                 _test_refinement(clan, atoms_by_shape, expected_shapes)
 
 
 
-def _test_typed_atoms_by_shape(z, g, k, atoms_by_shape):
-    if k < 2 or k % 2 != 0:
-        print('  skipping k =', k)
-        return
-    else:
-        print('   testing k =', k)
-
+def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
     def span(v):
         v = v.oneline
         level = {(None, v)}
@@ -628,9 +622,34 @@ def _test_typed_atoms_by_shape(z, g, k, atoms_by_shape):
 
                 for i in range(k, len(v) - 2):
                     b, c, a = v[i: i + 3]
-                    if a < b < c:
+                    if a < b < c and not (i == k == 1 and abs(c) < -v[0]):
                         w = v[:i] + (c, a, b) + v[i + 3:]
                         nextlevel.add((v, w))
+
+                if len(v) > k > 1:
+                    b, a = v[0], v[k]
+                    if a == abs(a) < abs(b):
+                        w = (-b,) + v[1:k] + (-a,) + v[k + 1:]
+                        nextlevel.add((v, w))
+
+                if k == 0 and len(v) >= 3:
+                    b, c, a = v[:3]
+                    if a < -b < c:
+                        w = (-c, a, -b) + v[3:]
+                        nextlevel.add((v, w))
+
+                if k == 1 and len(v) >= 2:
+                    b, a = v[:2]
+                    if abs(a) < abs(b) == b:
+                        w = (-b, -a) + v[2:]
+                        nextlevel.add((v, w))
+
+                if k == 1 and len(v) >= 4:
+                    x, b, c, a = v[:4]
+                    if a < b < c and abs(c) < -x:
+                        w = (-x, -c, a, b) + v[4:]
+                        nextlevel.add((v, w))
+
             level = nextlevel
 
     z = EvenSignedPermutation(*z)
@@ -640,14 +659,10 @@ def _test_typed_atoms_by_shape(z, g, k, atoms_by_shape):
         assert (g.inverse() * a).length() == a.length() - g.length()
         a = a.inverse() * g
         btoms = set(span(a))
-        print(z, a, sh)
-        print({x.inverse() for x in atoms})
-        print({x.inverse() for x in btoms})
-        print()
-        try:
-            assert atoms == set(span(a))
-        except:
-            input('\n\n')
+        #print(z, 'k =', k, a, sh)
+        #print({w.inverse() for w in atoms})
+        #print({w.inverse() for w in btoms})
+        assert atoms == btoms
 
 
 def test_atoms_d3_refined(nn=4, verbose=False):

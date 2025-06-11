@@ -594,7 +594,7 @@ class EvenSignedPermutation(SignedMixin):
         init = {i for i in x if (-i, i) in matching}
         init = sorted(init)
         k = len(init)
-        for i in range(1 if k % 2 == 0 else 1, k, 2):
+        for i in range(1, k, 2):
             init[i] *= -1
 
         matching = [(a, b) for a, b in matching if a != -b]
@@ -624,8 +624,10 @@ class EvenSignedPermutation(SignedMixin):
         init = {i for i in x if (-i, i) in matching}
         init = sorted(init)
         k = len(init)
-        for i in range(1 if k % 2 == 0 else 1, k, 2):
+        for i in range(0, k, 2):
             init[i] *= -1
+        if len([i for i in init if i < 0]) % 2 != 0:
+            init[0] *= -1
 
         matching = [(a, b) for a, b in matching if a != -b]
         fix = [(i,) for i in self.twisted_fixed_points() if i > 0]
@@ -637,12 +639,14 @@ class EvenSignedPermutation(SignedMixin):
             for m in sorted(fix + neg + pair + des, key=operator.itemgetter(0))
             for i in m
         ]
+
         if len([i for i in oneline if i < 0]) % 2 != 0:
             a, b = oneline[:2]
             if abs(a) < abs(b):
                 oneline[0] *= -1
             else:
                 oneline[1] *= -1
+        
         w = EvenSignedPermutation(*oneline).inverse()
         assert w.inverse().star() % w == self
         assert self.twisted_involution_length() == w.length()
