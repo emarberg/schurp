@@ -3,9 +3,6 @@ from even import EvenSignedPermutation
 import subprocess
 
 
-
-
-
 def test_is_perfect(m=5):
     def is_perfect(w, n):
         for t in EvenSignedPermutation.reflections(n):
@@ -249,19 +246,28 @@ def print_atoms_span(n=3):
     for w in cls.involutions(n):
         v = w.get_min_atom().inverse()
         edges = list(span(v, True))
-        atoms = set(w.get_atoms())
+        atoms = {a.inverse() for a in w.get_atoms()}
+        
         if len(edges) == 0:
             continue
+
+        sources = {x for x in atoms if not any(tuple(x) == tuple(v) for u, v, b in edges)}
+        assert len(sources) == 1
+        assert next(iter(sources)) == v
+        expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
+        minima = {x for x in atoms if x.inverse() == w.get_min_atom(SignedPermutation(*x).inverse().dshape(offset=0))}
+        assert expected == minima
+        
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
         s += ['    node [shape=box; fontname="courier"; style=filled];']
         for x in atoms:
-            if x.inverse() == v:
-                s += ['    "%s";' % printer(x.inverse())]
+            if x in minima:
+                s += ['    "%s";' % printer(x)]
             else:
-                s += ['    "%s" [fillcolor=white];' % printer(x.inverse())]
+                s += ['    "%s" [fillcolor=white];' % printer(x)]
         s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges]
         s += ['}']
         s = '\n'.join(s)
@@ -279,7 +285,7 @@ def print_atoms_span(n=3):
         #input('')
 
 
-def test_atoms_span(nn=3):
+def test_atoms_span(nn=4):
     def shape(u):
         return SignedPermutation(*u).inverse().dshape()
 
@@ -302,10 +308,9 @@ def test_atoms_span(nn=3):
             assert all(b == (shape(u) != shape(x)) for (u, x, b) in span(v, True))    
 
 
-def test_shape(nn=3):
+def test_shape(nn=4):
     for n in [nn, nn + 1]:
         cls = EvenSignedPermutation
-        w0 = cls.longest_element(n)
         for w in cls.involutions(n):
             shapes = {}
             for a in w.get_atoms():
@@ -315,22 +320,15 @@ def test_shape(nn=3):
                 _a = SignedPermutation(*a.oneline)
                 _sh = tuple(sorted(_a.dshape()))
                 assert sh == _sh     
-            print(w, ' :: ', w * w0, ' :: ', (w * w0).involution_fixed_points(n % 2 != 0))
-            print()
             for sh, atoms in shapes.items():
                 minima = [a.inverse() for a in atoms if is_min_atom(a)]
                 maxima = [a.inverse() for a in atoms if is_max_atom(a)]
-                print(' ', set(sh), '->', minima, '<', [a.inverse() for a in atoms], '<', maxima)
-                print()
-
                 v = w.get_min_atom(sh).inverse()
                 test = {v.inverse()} | {cls(*q).inverse() for (_, q, _) in span(v)}
                 assert sorted(test) == sorted(atoms)
 
                 assert not any(i == j for i, j in sh)
                 assert minima == [v]
-            print()
-            print()
 
 
 def is_max_twisted_atom(w):
@@ -368,9 +366,6 @@ def is_min_twisted_atom(w):
 
 
 def twisted_span(v, strong=False):
-    #w = v.star() % v.inverse()
-    #level = {(None, v.inverse().oneline, None) for v in w.get_twisted_atoms()}
-    
     v = v.oneline
     level = {(None, v, None)}
     seen = set()
@@ -386,14 +381,10 @@ def twisted_span(v, strong=False):
             
             for i in range(1, len(v) - 2):
                 b, c, a = v[i: i + 3]
-                if a < b < c:
+                if a < b < c and not (i == 1 and abs(c) < -v[0]):
                     w = v[:i] + (c, a, b) + v[i + 3:]
                     nextlevel.add((v, w, False))
 
-                #c, a, b = v[i: i + 3]
-                #if a < b < c:
-                #    w = v[:i] + (b, c, a) + v[i + 3:]
-                #    nextlevel.add((v, w, False))
             if len(v) >= 2:
                 b, a = v[:2]
                 if abs(a) < abs(b) == b:
@@ -422,10 +413,9 @@ def twisted_span(v, strong=False):
         level = nextlevel
 
 
-def test_twisted_shape(nn=3):
+def test_twisted_shape(nn=4):
     for n in [nn, nn + 1]:
         cls = EvenSignedPermutation
-        w0 = cls.longest_element(n)
         for w in cls.twisted_involutions(n):
             shapes = {}
             for a in w.get_twisted_atoms():
@@ -435,31 +425,18 @@ def test_twisted_shape(nn=3):
                 _a = SignedPermutation(*a.oneline)
                 _sh = tuple(sorted(_a.dshape(1)))
                 assert sh == _sh
-            print(w, ' :: ', w0 * w, ' :: ', (w0 * w).involution_fixed_points(n % 2 == 0))
-            print()
             for sh, atoms in shapes.items():
                 minima = [a.inverse() for a in atoms if is_min_twisted_atom(a)]
                 maxima = [a.inverse() for a in atoms if is_max_twisted_atom(a)]
-                print(' ', set(sh), '->', minima, '<', [a.inverse() for a in atoms], '<', maxima)
-                print()
-
                 v = w.get_min_twisted_atom(sh).inverse()
                 test = {v.inverse()} | {cls(*u).inverse() for (_, u, _) in twisted_span(v)}
                 assert sorted(test) == sorted(atoms)
-
                 assert len([i for i, j in sh if i == -j]) == 1
                 assert len(minima) == 1
                 assert minima == [v]
-            print()
 
 
 def print_twisted_atoms_span(n):
-    def normalize(w):
-        # w = tuple(w)
-        #if len(w) >= 2 and abs(w[0]) > abs(w[1]) and w[0] < 0:
-        #    w = (-w[0], -w[1],) + w[2:]
-        return w
-
     def printer(oneline):
         w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
         sh = w.inverse().dshape(offset=1)
@@ -470,14 +447,14 @@ def print_twisted_atoms_span(n):
         v = w.get_min_twisted_atom().inverse()
         
         edges = list(twisted_span(v, True))
-        atoms = set(w.get_twisted_atoms())
+        atoms = {a.inverse() for a in w.get_twisted_atoms()}
 
-        edges = {(normalize(u), normalize(v), b) for (u, v, b) in edges if normalize(u) != normalize(v)}
-        atoms = {cls(*normalize(w.inverse())) for w in atoms}
-        
-        sources = {w for w in atoms if not any(tuple(w) == tuple(v) for u, v, b in edges)}
-        if len(sources) == 1:
-            continue
+        sources = {x for x in atoms if not any(tuple(x) == tuple(v) for u, v, b in edges)}
+        assert len(sources) == 1
+        assert next(iter(sources)) == v
+        expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
+        minima = {x for x in atoms if x.inverse() == w.get_min_twisted_atom(SignedPermutation(*x).inverse().dshape(offset=1))}
+        assert expected == minima
 
         for x, y, b in edges:
             if cls(*x) not in atoms or cls(*y) not in atoms:
@@ -493,7 +470,7 @@ def print_twisted_atoms_span(n):
         s += ['    splines=spline;']
         s += ['    node [shape=box; fontname="courier"; style=filled];']
         for x in atoms:
-            if x == v:
+            if x in minima:
                 s += ['    "%s";' % printer(x)]
             else:
                 s += ['    "%s" [fillcolor=white];' % printer(x)]
@@ -512,7 +489,7 @@ def print_twisted_atoms_span(n):
         subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
 
-def test_twisted_atoms_span(nn=3):
+def test_twisted_atoms_span(nn=4):
     def shape(u):
         return SignedPermutation(*u).inverse().dshape(1)
 
@@ -536,3 +513,149 @@ def test_twisted_atoms_span(nn=3):
             assert all(b == (shape(u) != shape(x)) for (u, x, b) in twisted_span(v, True))    
 
 
+def is_max_fpf_atom(w):
+    v = w.inverse().oneline
+    for i in range(len(v) - 2):
+        b, c, a = v[i: i + 3]
+        if a < b < c:
+            return False
+    if len(v) >= 3:
+        b, c, a = v[:3]
+        if a < -b < c:
+            return False
+    return True
+
+
+def is_min_fpf_atom(w):
+    v = w.inverse().oneline
+    for i in range(len(v) - 2):
+        c, a, b = v[i: i + 3]
+        if a < b < c:
+            return False
+    if len(v) >= 3:
+        c, a, b = v[:3]
+        if a < b < -c:
+            return False
+    return True
+
+
+def fpf_span(v, strong=False):
+    v = v.oneline
+    level = {(None, v, None)}
+    while level:
+        nextlevel = set()
+        for u, v, label in level:
+            if u is not None:
+                yield (u, v, label)
+            for i in range(len(v) - 2):
+                b, c, a = v[i: i + 3]
+                if a < b < c:
+                    w = v[:i] + (c, a, b) + v[i + 3:]
+                    nextlevel.add((v, w, False))
+            if len(v) >= 3:
+                b, c, a = v[:3]
+                if a < -b < c:
+                    w = (-c, a, -b) + v[3:]
+                    nextlevel.add((v, w, False))
+            if strong:
+                for j in range(1, len(v)):
+                    for k in range(j + 1, len(v) - 1):
+                        b, c, d = v[j], v[k], v[k + 1]
+                        if 0 < -b < c < -d and all(abs(x) <= abs(b) for x in v[:k]):
+                            w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
+                            nextlevel.add((v, w, True))
+        level = nextlevel
+
+
+def print_fpf_atoms_span(n=3):
+    def printer(oneline):
+        w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
+        sh = w.inverse().fpf_dshape()
+        return str(w) + '\n' + str(sh)
+    
+    cls = EvenSignedPermutation
+    for w in cls.fpf_involutions(n):
+        v = w.get_min_fpf_atom().inverse()
+        edges = list(span(v, True))
+        atoms = {a.inverse() for a in w.get_fpf_atoms()}
+        
+        if len(edges) == 0:
+            continue
+
+        sources = {x for x in atoms if not any(tuple(x) == tuple(v) for u, v, b in edges)}
+        assert len(sources) == 1
+        assert next(iter(sources)) == v
+        expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
+        minima = {x for x in atoms if x.inverse() == w.get_min_fpf_atom(SignedPermutation(*x).inverse().fpf_dshape())}
+        assert expected == minima
+        
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        for x in atoms:
+            if x in minima:
+                s += ['    "%s";' % printer(x)]
+            else:
+                s += ['    "%s" [fillcolor=white];' % printer(x)]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges]
+        s += ['}']
+        s = '\n'.join(s)
+
+        name = ''.join([str(w(i)) for i in range(1, n + 1)])
+        name = 'n' + str(n) + '_' + str(len(atoms)) + '_' + name
+
+        file = '/Users/emarberg/examples/atoms/'
+        dotfile = file + 'dot/DIII/' + name + '.dot'
+        pngfile = file + 'png/DIII/' + name + '.png'
+        with open(dotfile, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+        #subprocess.run(["open", pngfile])
+        #input('')
+
+
+def test_fpf_atoms_span(nn=4):
+    def shape(u):
+        return SignedPermutation(*u).inverse().fpf_dshape()
+
+    for n in [nn, nn + 1]:
+        cls = EvenSignedPermutation
+        for w in cls.fpf_involutions(n):
+            v = w.get_min_fpf_atom().inverse()
+            test = sorted({v} | {cls(*u) for (_, u, _) in span(v, True)})
+            sest = sorted([u.inverse() for u in w.get_fpf_atoms()])
+            if test != sest:
+                print(w)
+                print('  ', test)
+                x = []
+                for u in sest:
+                    if is_min_fpf_atom(u.inverse()) and u not in test:
+                        x += ['*']
+                    x += [u]
+                print('  ', x)
+                assert False
+            assert all(b == (shape(u) != shape(x)) for (u, x, b) in span(v, True))    
+
+
+def test_fpf_shape(nn=4):
+    for n in [nn, nn + 1]:
+        cls = EvenSignedPermutation
+        for w in cls.fpf_involutions(n):
+            shapes = {}
+            for a in w.get_fpf_atoms():
+                sh = tuple(sorted(a.fpf_shape()))
+                shapes[sh] = shapes.get(sh, []) + [a]
+
+                _a = SignedPermutation(*a.oneline)
+                _sh = tuple(sorted(_a.fpf_dshape()))
+                assert sh == _sh     
+            for sh, atoms in shapes.items():
+                minima = [a.inverse() for a in atoms if is_min_fpf_atom(a)]
+                maxima = [a.inverse() for a in atoms if is_max_fpf_atom(a)]
+                v = w.get_min_fpf_atom(sh).inverse()
+                test = {v.inverse()} | {cls(*q).inverse() for (_, q, _) in fpf_span(v)}
+                assert sorted(test) == sorted(atoms)
+                assert not any(i == j for i, j in sh)
+                assert minima == [v]

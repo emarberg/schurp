@@ -164,7 +164,8 @@ class EvenSignedPermutation(SignedMixin):
         return EVEN_SIGNED_REDUCED_COUNTS[oneline]
 
     def get_reduced_words(self):
-        return self._get_reduced_words(EVEN_SIGNED_REDUCED_WORDS)
+        des = lambda w: w.right_descent_set
+        return self._get_reduced_words(des, EVEN_SIGNED_REDUCED_WORDS)
 
     def get_signed_reduced_words(self):
         w = self.reduce()
@@ -579,6 +580,9 @@ class EvenSignedPermutation(SignedMixin):
                 else:
                     for a in (t * w).get_atoms(twist):
                         yield a * s
+    
+    def get_min_fpf_atom(self, matching=None):
+        raise NotImplementedError
 
     def get_min_atom(self, matching=None):
         assert self.is_involution()
