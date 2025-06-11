@@ -590,11 +590,19 @@ class EvenSignedPermutation(SignedMixin):
             g = sorted(self.negated_points())
             matching = {(g[i], g[i + 1]) for i in range(0, len(g), 2)}
         x = {i for m in matching for i in m if i > 0}
+
+        init = {i for i in x if (-i, i) in matching}
+        init = sorted(init)
+        k = len(init)
+        for i in range(1 if k % 2 == 0 else 1, k, 2):
+            init[i] *= -1
+
+        matching = [(a, b) for a, b in matching if a != -b]
         fix = [(i,) for i in self.fixed_points() if i > 0]
         neg = [(-i,) for i in self.negated_points() if i not in x and i > 0]
         pair = [(b, a) for a, b in self.pair()]
         des = [(a, -b) for a, b in matching if a > 0]
-        oneline = [
+        oneline = init + [
             i
             for m in sorted(fix + neg + pair + des, key=operator.itemgetter(0))
             for i in m
@@ -612,14 +620,19 @@ class EvenSignedPermutation(SignedMixin):
             g = sorted(self.twisted_negated_points())
             matching = {(g[i], g[i + 1]) for i in range(0, len(g) - 1, 2)}
         x = {i for m in matching for i in m if i > 0}
-        oneline = [b for a, b in matching if a == -b]
+
+        init = {i for i in x if (-i, i) in matching}
+        init = sorted(init)
+        k = len(init)
+        for i in range(1 if k % 2 == 0 else 1, k, 2):
+            init[i] *= -1
+
         matching = [(a, b) for a, b in matching if a != -b]
-        assert len(oneline) == 1
         fix = [(i,) for i in self.twisted_fixed_points() if i > 0]
         neg = [(-i,) for i in self.twisted_negated_points() if i not in x and i > 0]
         pair = [(b, a) for a, b in self.twisted_pair()]
         des = [(a, -b) for a, b in matching if a > 0]
-        oneline += [
+        oneline = init + [
             i
             for m in sorted(fix + neg + pair + des, key=operator.itemgetter(0))
             for i in m

@@ -1,6 +1,7 @@
 from clans import Clan
 from permutations import Permutation
 from signed import SignedPermutation
+from even import EvenSignedPermutation
 
 
 def _test_hecke_atoms(cl, dtype=False, verbose=False):
@@ -574,6 +575,7 @@ def test_atoms_d1_refined(nn=4, verbose=False):
                     sh = tuple(sorted(sh))
                     atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
 
+                _test_typed_atoms_by_shape(z, g, k, atoms_by_shape)
                 _test_refinement(clan, atoms_by_shape, expected_shapes)
 
 
@@ -604,7 +606,48 @@ def test_atoms_d2_refined(nn=4, verbose=False):
                     sh = tuple(sorted(sh))
                     atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
 
+                _test_typed_atoms_by_shape(z, g, k, atoms_by_shape)
                 _test_refinement(clan, atoms_by_shape, expected_shapes)
+
+
+
+def _test_typed_atoms_by_shape(z, g, k, atoms_by_shape):
+    if k < 2 or k % 2 != 0:
+        print('  skipping k =', k)
+        return
+    else:
+        print('   testing k =', k)
+
+    def span(v):
+        v = v.oneline
+        level = {(None, v)}
+        while level:
+            nextlevel = set()
+            for u, v in level:
+                yield SignedPermutation(*v).inverse()
+
+                for i in range(k, len(v) - 2):
+                    b, c, a = v[i: i + 3]
+                    if a < b < c:
+                        w = v[:i] + (c, a, b) + v[i + 3:]
+                        nextlevel.add((v, w))
+            level = nextlevel
+
+    z = EvenSignedPermutation(*z)
+    g = EvenSignedPermutation(*g)
+    for sh, atoms in atoms_by_shape.items():
+        a = z.get_min_atom(sh) if k % 2 ==0 else z.get_min_twisted_atom(sh)
+        assert (g.inverse() * a).length() == a.length() - g.length()
+        a = a.inverse() * g
+        btoms = set(span(a))
+        print(z, a, sh)
+        print({x.inverse() for x in atoms})
+        print({x.inverse() for x in btoms})
+        print()
+        try:
+            assert atoms == set(span(a))
+        except:
+            input('\n\n')
 
 
 def test_atoms_d3_refined(nn=4, verbose=False):
