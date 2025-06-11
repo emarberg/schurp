@@ -240,23 +240,35 @@ def span(v, strong=False):
 
 
 def print_atoms_span(n=3):
+    def printer(oneline):
+        w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
+        sh = w.inverse().dshape()
+        return str(w) + '\n' + str(sh)
+    
     cls = EvenSignedPermutation
     for w in cls.involutions(n):
         v = w.get_min_atom().inverse()
         edges = list(span(v, True))
+        atoms = set(w.get_atoms())
         if len(edges) == 0:
             continue
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
         s += ['    splines=spline;']
-        s += ['    node [fontname="courier"];']
-        for x in set(w.get_atoms()):
-            s += ['    "%s";' % str(x.inverse())]
-        s += ['    "%s" -> "%s" [style="%s"];' % (str(cls(*x)), str(cls(*y)), 'dotted' if b else 'bold') for (x, y, b) in edges]
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        for x in atoms:
+            if x.inverse() == v:
+                s += ['    "%s";' % printer(x.inverse())]
+            else:
+                s += ['    "%s" [fillcolor=white];' % printer(x.inverse())]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges]
         s += ['}']
         s = '\n'.join(s)
-        name = ''.join([str(v(i)) for i in range(1, n + 1)])
+
+        name = ''.join([str(w(i)) for i in range(1, n + 1)])
+        name = 'n' + str(n) + '_' + str(len(atoms)) + '_' + name
+
         file = '/Users/emarberg/examples/atoms/'
         dotfile = file + 'dot/DI/' + name + '.dot'
         pngfile = file + 'png/DI/' + name + '.png'
@@ -356,11 +368,11 @@ def is_min_twisted_atom(w):
 
 
 def twisted_span(v, strong=False):
-    w = v.star() % v.inverse()
-    level = {(None, v.inverse().oneline, None) for v in w.get_twisted_atoms()}
+    #w = v.star() % v.inverse()
+    #level = {(None, v.inverse().oneline, None) for v in w.get_twisted_atoms()}
     
-    #v = v.oneline
-    #level = {(None, v, None)}
+    v = v.oneline
+    level = {(None, v, None)}
     seen = set()
     while level:
         nextlevel = set()
@@ -384,35 +396,29 @@ def twisted_span(v, strong=False):
                 #    nextlevel.add((v, w, False))
             if len(v) >= 2:
                 b, a = v[:2]
-                if abs(a) < abs(b) and b > 0:
+                if abs(a) < abs(b) == b:
                     w = (-b, -a) + v[2:]
                     nextlevel.add((v, w, False))
-            #if len(v) >= 4:
-            #    x, b, c, a = v[:4]
-            #    if a < -b < c < abs(x):
-            #        w = (x, -c, a, -b) + v[4:]
-            #        nextlevel.add((v, w, False))
+            if len(v) >= 4:
+                x, b, c, a = v[:4]
+                if a < b < c and abs(c) < -x:
+                    w = (-x, -c, a, b) + v[4:]
+                    nextlevel.add((v, w, False))
             if strong:
-                # for j in range(len(v)):
-                #     for k in range(j + 1, len(v) - 1):
-                #         a, b, c = v[j], v[k], v[k + 1]
-                #         if 0 < -a < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
-                #             w = v[:j] + (-c,) + v[j + 1:k] + (a, -b) + v[k + 2:]
-                #             nextlevel.add((v, w, False))
-                if len(v) >= 3:
-                    a, b, c = v[:3]
-                    if 0 < abs(a) < b < -c and (a, b, c) < (c, -a, -b):
-                        w = (c, -a, -b) + v[3:]
-                        nextlevel.add((v, w, True))
+                for j in [0]:
+                    for k in range(j + 1, len(v) - 1):
+                        a, b, c = v[j], v[k], v[k + 1]
+                        if 0 < abs(a) < b < -c and all(x <= a for x in v[:k]):
+                            w = v[:j] + (-c,) + v[j + 1:k] + (a, -b) + v[k + 2:]
+                            nextlevel.add((v, w, True))
 
-                    if 0 < abs(b) < -c < -a and (a, b, c) < (-b, -c, a):
-                        w = (-b, -c, a) + v[3:]
-                        nextlevel.add((v, w, True))
-                #if len(v) >= 4:
-                #    b, a, c, d = v[:4]
-                #    if 0 < a < -b < c < -d:
-                #        w = (-d, -a, -b, -c) + v[4:]
-                #        nextlevel.add((v, w, True))
+                for j in range(2, len(v)):
+                    for k in range(j + 1, len(v) - 1):
+                        b, c, d = v[j], v[k], v[k + 1]
+                        if 0 < -b < c < -d and all(abs(x) <= abs(b) for x in v[:k]):
+                            w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
+                            nextlevel.add((v, w, True))
+
         level = nextlevel
 
 
@@ -449,9 +455,9 @@ def test_twisted_shape(nn=3):
 
 def print_twisted_atoms_span(n):
     def normalize(w):
-        w = tuple(w)
-        if len(w) >= 2 and abs(w[0]) > abs(w[1]) and w[0] < 0:
-            w = (-w[0], -w[1],) + w[2:]
+        # w = tuple(w)
+        #if len(w) >= 2 and abs(w[0]) > abs(w[1]) and w[0] < 0:
+        #    w = (-w[0], -w[1],) + w[2:]
         return w
 
     def printer(oneline):
@@ -468,7 +474,17 @@ def print_twisted_atoms_span(n):
 
         edges = {(normalize(u), normalize(v), b) for (u, v, b) in edges if normalize(u) != normalize(v)}
         atoms = {cls(*normalize(w.inverse())) for w in atoms}
+        
+        sources = {w for w in atoms if not any(tuple(w) == tuple(v) for u, v, b in edges)}
+        if len(sources) == 1:
+            continue
 
+        for x, y, b in edges:
+            if cls(*x) not in atoms or cls(*y) not in atoms:
+                print(x, y, b)
+                print(atoms)
+                return
+        
         if len(edges) == 0:
             continue
         s = []
