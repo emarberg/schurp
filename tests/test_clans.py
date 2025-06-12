@@ -673,7 +673,10 @@ def test_atoms_d3_refined(nn=4, verbose=False):
                 sh = (g * w).fpf_dshape()
                 sh = tuple(sorted(sh))
                 atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
-            
+            for sh, atoms in atoms_by_shape.items():
+                print(z, sh)
+                for w in atoms:
+                    print('  ', w.inverse())
             _test_refinement(clan, atoms_by_shape, expected_shapes)
 
 

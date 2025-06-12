@@ -34,25 +34,15 @@ atoms_d_cache = {}
 
 class SignedMixin:
 
-    def get_demazure_factorizations(self):
-        w = self.reduce()
-        key = tuple(w.oneline)
-        n = len(key)
+    def ell_zero(self):
+        return len([i for i in range(1, self.rank + 1) if self(i) < 0])
 
-        if key not in DEMAZURE_FACTORIZATIONS:
-            dictionary = {}
-            for u in SignedPermutation.all(n):
-                for v in Permutation.all(n):
-                    x = u % SignedPermutation(*[v(i) for i in range(1, 1 + n)])
-                    xkey = tuple(x.reduce().oneline)
-                    if xkey not in dictionary:
-                        dictionary[xkey] = set()
-                    dictionary[xkey].add((u.reduce(), v))
-            for xkey in dictionary:
-                if xkey not in DEMAZURE_FACTORIZATIONS:
-                    DEMAZURE_FACTORIZATIONS[xkey] = dictionary[xkey]
-
-        return DEMAZURE_FACTORIZATIONS[key]
+    @classmethod
+    def one_fpf_d(cls, n):
+        if n % 2 == 0:
+            return cls(*[a for i in range(0, n, 2) for a in [i + 2, i + 1]])
+        else:
+            return cls(*([1] + [a for i in range(1, n, 2) for a in [i + 2, i + 1]]))
 
     def __abs__(self):
         return Permutation(*[abs(self(i)) for i in range(1, self.rank + 1)])
@@ -127,18 +117,6 @@ class SignedMixin:
 
     def length(self):
         return len(self)
-
-    # def dlength(self):
-    #     if self._dlen is None:
-    #         n = self.reduce().rank
-    #         self._dlen = 0
-    #         for i in range(1, n):
-    #             for j in range(i + 1, n + 1):
-    #                 if self(i) > self(j):
-    #                     self._dlen += 1
-    #                 if self(-i) > self(j):
-    #                     self._dlen += 1
-    #     return self._dlen
 
     def dlength(self):
         return len(self) - self.ell_zero()
@@ -451,6 +429,26 @@ class SignedPermutation(SignedMixin):
     def __repr__(self):
         # return 'SignedPermutation(' + ', '.join([repr(i) for i in self.oneline]) + ')'
         return str(self)
+
+    def get_demazure_factorizations(self):
+        w = self.reduce()
+        key = tuple(w.oneline)
+        n = len(key)
+
+        if key not in DEMAZURE_FACTORIZATIONS:
+            dictionary = {}
+            for u in SignedPermutation.all(n):
+                for v in Permutation.all(n):
+                    x = u % SignedPermutation(*[v(i) for i in range(1, 1 + n)])
+                    xkey = tuple(x.reduce().oneline)
+                    if xkey not in dictionary:
+                        dictionary[xkey] = set()
+                    dictionary[xkey].add((u.reduce(), v))
+            for xkey in dictionary:
+                if xkey not in DEMAZURE_FACTORIZATIONS:
+                    DEMAZURE_FACTORIZATIONS[xkey] = dictionary[xkey]
+
+        return DEMAZURE_FACTORIZATIONS[key]
 
     @classmethod
     def get_grassmannians_bc(cls, n):
@@ -1002,9 +1000,6 @@ class SignedPermutation(SignedMixin):
         n = self.rank
         return max(s for s in range(r + 1, n + 1) if self(s) < self(r))
 
-    def ell_zero(self):
-        return len([i for i in range(1, self.rank + 1) if self(i) < 0])
-
     def neg(self):
         n = self.rank
         return [(-a, -a) for a in range(1, n + 1) if self(a) == -a]
@@ -1072,8 +1067,6 @@ class SignedPermutation(SignedMixin):
         o = list(self.inverse().oneline)
         init = [abs(i) for i in o[:offset]]
         ndes, fix, neg = self._ndes(o[offset:])
-        #assert len(fix) == 0
-        #assert len(neg) == 0
         
         desd = [(b, a) for a, b in ndes if a >= -b]
         negd = init + [abs(a) for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
@@ -1446,13 +1439,6 @@ class SignedPermutation(SignedMixin):
                 yield SignedPermutation(*w).inverse()
             add = {new for w in add for new in next(w)}
 
-    @classmethod
-    def one_fpf_d(cls, n):
-        if n % 2 == 0:
-            return SignedPermutation(*[a for i in range(0, n, 2) for a in [i + 2, i + 1]])
-        else:
-            return SignedPermutation(*([1] + [a for i in range(1, n, 2) for a in [i + 2, i + 1]]))
-
     def get_fpf_atoms_d(self):
         n = self.rank
         twisted = n % 2 != 0
@@ -1481,7 +1467,7 @@ class SignedPermutation(SignedMixin):
         oneline = [-i for i in range(1, offset + 1)] + [i for i in range(offset + 1, n + 1)]
         if offset % 2 != 0 and len(oneline) > 0:
             oneline[0] = 1
-        return SignedPermutation(*oneline)
+        return cls(*oneline)
 
     @classmethod
     def bbase_atom(cls, n, k):

@@ -15,6 +15,7 @@ EVEN_SIGNED_REDUCED_COUNTS = {(): 1}
 EVEN_SIGNED_INVOLUTION_WORDS = {}
 EVEN_SIGNED_FPF_INVOLUTION_WORDS = {}
 
+FPF_ATOMS_D_CACHE = {}
 ATOMS_D_CACHE = {}
 SCHURD_STANSYM_CACHE = {}
 
@@ -206,9 +207,6 @@ class EvenSignedPermutation(SignedMixin):
             EVEN_SIGNED_FPF_INVOLUTION_WORDS[key] = sorted(words, key=lambda x: self.flatten(x))
         return EVEN_SIGNED_FPF_INVOLUTION_WORDS[key]
 
-    def fpf_shape(self):
-        raise NotImplementedError
-
     def involution_fixed_points(self, twist=False):
         y = self
         n = y.rank
@@ -229,13 +227,13 @@ class EvenSignedPermutation(SignedMixin):
         assert y.twisted_involution_length() == self.length()
 
         twist = n % 2 == 0
-        w0 = EvenSignedPermutation.longest_element(n)
+        w0 = self.longest_element(n)
         y = w0 * y
         aword = list(reversed(self.get_reduced_word()))
         vprint('word:', aword)
 
         yfixed = y.involution_fixed_points(twist)
-        v = EvenSignedPermutation.identity(n)
+        v = self.identity(n)
         sh = set()
         for a in aword:
             vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh, 'a =', a, 'leads to')
@@ -246,7 +244,7 @@ class EvenSignedPermutation(SignedMixin):
             elif a == 0 and {1, 2}.issubset(y.involution_fixed_points(twist)):
                 e, f = tuple(sorted([abs(v(1)), abs(v(2))]))
                 sh |= {(e, f), (-f, -e)}
-            s = EvenSignedPermutation.s_i(a, n)
+            s = self.s_i(a, n)
             t = s.star() if twist else s
 
             u = v * s
@@ -271,13 +269,13 @@ class EvenSignedPermutation(SignedMixin):
         assert y.involution_length() == self.length()
 
         twist = n % 2 != 0
-        w0 = EvenSignedPermutation.longest_element(n)
+        w0 = self.longest_element(n)
         y = w0 * y
         aword = list(reversed(self.get_reduced_word()))
         vprint('word:', aword)
 
         yfixed = y.involution_fixed_points(twist)
-        v = EvenSignedPermutation.identity(n)
+        v = self.identity(n)
         sh = set()
         for a in aword:
             vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh, 'a =', a, 'leads to')
@@ -288,7 +286,7 @@ class EvenSignedPermutation(SignedMixin):
             elif a == 0 and {1, 2}.issubset(y.involution_fixed_points(twist)):
                 e, f = tuple(sorted([abs(v(1)), abs(v(2))]))
                 sh |= {(e, f), (-f, -e)}
-            s = EvenSignedPermutation.s_i(a, n)
+            s = self.s_i(a, n)
             t = s.star() if twist else s
 
             u = v * s
@@ -412,6 +410,12 @@ class EvenSignedPermutation(SignedMixin):
                 self._involution_length = len(self.get_involution_word())
             return self._involution_length
 
+    def fpf_involution_length(self):
+        n = self.rank
+        one = self.one_fpf_d(n)
+        twist = n % 2 != 0
+        return self.involution_length(twist) - one.involution_length(twist)
+
     @classmethod
     def longest_element(cls, n):
         if n % 2 == 0:
@@ -466,16 +470,17 @@ class EvenSignedPermutation(SignedMixin):
 
     @classmethod
     def get_minimal_fpf_involution(cls, n):
-        if n % 2 == 0:
-            oneline = [i for j in range(2, n + 1, 2) for i in [j, j - 1]]
-        else:
-            oneline = [1] + [i for j in range(3, n + 1, 2) for i in [j, j - 1]]
-        return cls(*oneline)
+        return cls.one_fpf_d(n)
 
     def get_fpf_atoms(self):
-        y = self.get_minimal_fpf_involution(self.rank)
-        twist = self.rank % 2 != 0
-        return self.relative_atoms(y, self, twist)
+        key = self
+        if key not in FPF_ATOMS_D_CACHE:
+            y = self.get_minimal_fpf_involution(self.rank)
+            twist = self.rank % 2 != 0
+            if not twist and self.ell_zero() // 2 % 2 != 0:
+                y = y.star()
+            FPF_ATOMS_D_CACHE[key] = list(self.relative_atoms(y, self, twist))
+        return FPF_ATOMS_D_CACHE[key]
 
     def stanley_schur_decomposition(self,):
         cache = SCHURD_STANSYM_CACHE
@@ -543,12 +548,15 @@ class EvenSignedPermutation(SignedMixin):
 
         if y == z:
             yield EvenSignedPermutation.identity(y.rank)
-        elif y.involution_length(twist) < z.involution_length(twist):
+        elif y.length() < z.length():
             for i in range(y.rank):
                 s = EvenSignedPermutation.s_i(i, y.rank)
                 t = s.star() if twist else s
-                v = t % y % s
-                if v != y:
+
+                ty = t * y
+                if ty.length() > y.length():
+                    ys = y * s
+                    v = ty if ty == ys else ty * s
                     for a in cls.relative_atoms(v, z, twist):
                         yield s * a
 
@@ -581,8 +589,28 @@ class EvenSignedPermutation(SignedMixin):
                     for a in (t * w).get_atoms(twist):
                         yield a * s
     
-    def get_min_fpf_atom(self, matching=None):
-        raise NotImplementedError
+    def get_max_fpf_atom(self, matching=None):
+        assert self.is_fpf_involution()
+        n = self.rank
+
+        if matching is None:
+            g = sorted(self.negated_points() if n % 2 == 0 else self.twisted_negated_points())
+            matching = {(g[i], g[i + 1]) for i in range(0, len(g), 2)}
+
+        neg = [(a,) for (a, b) in matching if a == -b]
+        pair = [(a, b) for a, b in self.pair()]
+        des = [(-b, a) for a, b in matching if -b != a > 0]
+
+        oneline = [
+            i
+            for m in sorted(neg + pair + des, key=operator.itemgetter(-1))
+            for i in m
+        ]
+        if len([i for i in oneline if i < 0]) % 2 != 0:
+            oneline[0] *= -1
+
+        w = EvenSignedPermutation(*oneline).inverse()
+        return w
 
     def get_max_atom(self, matching=None):
         assert self.is_involution()
