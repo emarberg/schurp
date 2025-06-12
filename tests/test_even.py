@@ -211,11 +211,17 @@ def is_min_atom(w):
 def span(v, strong=False):
     v = v.oneline
     level = {(None, v, None)}
+    seen = set()
     while level:
         nextlevel = set()
+        nextseen = set()
         for u, v, label in level:
             if u is not None:
                 yield (u, v, label)
+            
+            assert v not in seen
+            nextseen.add(v)
+            
             for i in range(len(v) - 2):
                 b, c, a = v[i: i + 3]
                 if a < b < c:
@@ -234,6 +240,7 @@ def span(v, strong=False):
                             w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
                             nextlevel.add((v, w, True))
         level = nextlevel
+        seen |= nextseen
 
 
 def print_atoms_span(n=3):
@@ -244,7 +251,7 @@ def print_atoms_span(n=3):
     
     cls = EvenSignedPermutation
     for w in cls.involutions(n):
-        v = w.get_min_atom().inverse()
+        v = w.get_max_atom().inverse()
         edges = list(span(v, True))
         atoms = {a.inverse() for a in w.get_atoms()}
         
@@ -255,7 +262,7 @@ def print_atoms_span(n=3):
         assert len(sources) == 1
         assert next(iter(sources)) == v
         expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
-        minima = {x for x in atoms if x.inverse() == w.get_min_atom(SignedPermutation(*x).inverse().dshape(offset=0))}
+        minima = {x for x in atoms if x.inverse() == w.get_max_atom(SignedPermutation(*x).inverse().dshape(offset=0))}
         assert expected == minima
         
         s = []
@@ -290,9 +297,10 @@ def test_atoms_span(nn=4):
         return SignedPermutation(*u).inverse().dshape()
 
     for n in [nn, nn + 1]:
+        print('n =', n)
         cls = EvenSignedPermutation
         for w in cls.involutions(n):
-            v = w.get_min_atom().inverse()
+            v = w.get_max_atom().inverse()
             test = sorted({v} | {cls(*u) for (_, u, _) in span(v, True)})
             sest = sorted([u.inverse() for u in w.get_atoms()])
             if test != sest:
@@ -323,7 +331,7 @@ def test_shape(nn=4):
             for sh, atoms in shapes.items():
                 minima = [a.inverse() for a in atoms if is_min_atom(a)]
                 maxima = [a.inverse() for a in atoms if is_max_atom(a)]
-                v = w.get_min_atom(sh).inverse()
+                v = w.get_max_atom(sh).inverse()
                 test = {v.inverse()} | {cls(*q).inverse() for (_, q, _) in span(v)}
                 assert sorted(test) == sorted(atoms)
 
@@ -365,52 +373,78 @@ def is_min_twisted_atom(w):
     return True
 
 
+def plusform(w):
+    if type(w) != tuple:
+        return w.__class__(*plusform(w.oneline))
+    if len(w) >= 2:
+        b, a = w[:2]
+        if abs(a) < abs(b) and b < 0:
+            w = (-b, -a) + w[2:]
+    return w 
+
+
+def allforms(w):
+    if type(w) != tuple:
+        return {w.__class__(*o) for o in allforms(w.oneline)}
+    ans = {w}
+    if len(w) >= 2:
+        b, a = w[:2]
+        if abs(a) < b:
+            ans.add((-b, -a) + w[2:])
+    return ans
+
+
 def twisted_span(v, strong=False):
     v = v.oneline
+    v = plusform(v)
+    
     level = {(None, v, None)}
     seen = set()
     while level:
         nextlevel = set()
-        for u, v, label in level:
+        nextseen = set()
+        for u, vv, label in level:
             if u is not None:
-                yield (u, v, label)
+                yield (u, vv, label)
             
-            if v in seen:
-                continue
-            seen.add(v)
+            assert vv not in seen
+            nextseen.add(vv)
             
-            for i in range(1, len(v) - 2):
-                b, c, a = v[i: i + 3]
-                if a < b < c and not (i == 1 and abs(c) < -v[0]):
-                    w = v[:i] + (c, a, b) + v[i + 3:]
-                    nextlevel.add((v, w, False))
+            for v in allforms(vv):
+                for i in range(1, len(v) - 2):
+                    b, c, a = v[i: i + 3]
+                    if a < b < c: # and not (i == 1 and abs(c) < -v[0]):
+                        w = v[:i] + (c, a, b) + v[i + 3:]
+                        nextlevel.add((v, w, False))
 
-            if len(v) >= 2:
-                b, a = v[:2]
-                if abs(a) < abs(b) == b:
-                    w = (-b, -a) + v[2:]
-                    nextlevel.add((v, w, False))
-            if len(v) >= 4:
-                x, b, c, a = v[:4]
-                if a < b < c and abs(c) < -x:
-                    w = (-x, -c, a, b) + v[4:]
-                    nextlevel.add((v, w, False))
-            if strong:
-                for j in [0]:
-                    for k in range(j + 1, len(v) - 1):
-                        a, b, c = v[j], v[k], v[k + 1]
-                        if 0 < abs(a) < b < -c and all(x <= a for x in v[:k]):
-                            w = v[:j] + (-c,) + v[j + 1:k] + (a, -b) + v[k + 2:]
-                            nextlevel.add((v, w, True))
+                #if len(v) >= 2:
+                #    b, a = v[:2]
+                #    if abs(a) < abs(b) == b:
+                #        w = (-b, -a) + v[2:]
+                #        nextlevel.add((v, w, False))
+                #if len(v) >= 4:
+                #    x, b, c, a = v[:4]
+                #    if a < b < c and abs(c) < -x:
+                #        w = (-x, -c, a, b) + v[4:]
+                #        nextlevel.add((v, w, False))
+                if strong:
+                    for j in [0]:
+                        for k in range(j + 1, len(v) - 1):
+                            a, b, c = v[j], v[k], v[k + 1]
+                            if 0 < abs(a) < b < -c and all(x <= a for x in v[:k]):
+                                w = v[:j] + (-c,) + v[j + 1:k] + (a, -b) + v[k + 2:]
+                                nextlevel.add((v, w, True))
 
-                for j in range(2, len(v)):
-                    for k in range(j + 1, len(v) - 1):
-                        b, c, d = v[j], v[k], v[k + 1]
-                        if 0 < -b < c < -d and all(abs(x) <= abs(b) for x in v[:k]):
-                            w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
-                            nextlevel.add((v, w, True))
+                    for j in range(2, len(v)):
+                        for k in range(j + 1, len(v) - 1):
+                            b, c, d = v[j], v[k], v[k + 1]
+                            if 0 < -b < c < -d and all(abs(x) <= abs(b) for x in v[:k]):
+                                w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
+                                nextlevel.add((v, w, True))
 
+        nextlevel = {(plusform(v), plusform(w), b) for (v, w, b) in nextlevel}
         level = nextlevel
+        seen |= nextseen
 
 
 def test_twisted_shape(nn=4):
@@ -428,7 +462,7 @@ def test_twisted_shape(nn=4):
             for sh, atoms in shapes.items():
                 minima = [a.inverse() for a in atoms if is_min_twisted_atom(a)]
                 maxima = [a.inverse() for a in atoms if is_max_twisted_atom(a)]
-                v = w.get_min_twisted_atom(sh).inverse()
+                v = w.get_max_twisted_atom(sh).inverse()
                 test = {v.inverse()} | {cls(*u).inverse() for (_, u, _) in twisted_span(v)}
                 assert sorted(test) == sorted(atoms)
                 assert len([i for i, j in sh if i == -j]) == 1
@@ -440,20 +474,22 @@ def print_twisted_atoms_span(n):
     def printer(oneline):
         w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
         sh = w.inverse().dshape(offset=1)
-        return str(w) + '\n' + str(sh)
+        return '\n'.join([str(ww) for ww in allforms(w)]) + '\n' + str(sh)
 
     cls = EvenSignedPermutation
     for w in cls.twisted_involutions(n):
-        v = w.get_min_twisted_atom().inverse()
-        
+        v = w.get_max_twisted_atom().inverse()
+        assert v == plusform(v)
+
         edges = list(twisted_span(v, True))
         atoms = {a.inverse() for a in w.get_twisted_atoms()}
+        atoms = {plusform(a) for a in atoms}
 
         sources = {x for x in atoms if not any(tuple(x) == tuple(v) for u, v, b in edges)}
         assert len(sources) == 1
         assert next(iter(sources)) == v
         expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
-        minima = {x for x in atoms if x.inverse() == w.get_min_twisted_atom(SignedPermutation(*x).inverse().dshape(offset=1))}
+        minima = {x for x in atoms if x.inverse() == w.get_max_twisted_atom(SignedPermutation(*x).inverse().dshape(offset=1))}
         assert expected == minima
 
         for x, y, b in edges:
@@ -494,21 +530,16 @@ def test_twisted_atoms_span(nn=4):
         return SignedPermutation(*u).inverse().dshape(1)
 
     for n in [nn, nn + 1]:
+        print('n =', n)
         cls = EvenSignedPermutation
         for w in cls.twisted_involutions(n):
-            v = w.get_min_twisted_atom().inverse()
+            v = w.get_max_twisted_atom().inverse()
             test = sorted({v} | {cls(*u) for (_, u, _) in twisted_span(v, True)})
-            sest = sorted([u.inverse() for u in w.get_twisted_atoms()])
+            sest = sorted({plusform(u.inverse()) for u in w.get_twisted_atoms()})
             if test != sest:
                 print(w)
                 print('  ', v, '<', test)
-                x = []
-                for u in sest:
-                    if is_min_twisted_atom(u.inverse()):
-                        x += ['*']
-                    x += [u]
-                print('  ', v, '<', x)
-                print('  ', [u for u in test if u not in sest])
+                print('  ', v, '<', sest)
                 assert False
             assert all(b == (shape(u) != shape(x)) for (u, x, b) in twisted_span(v, True))    
 

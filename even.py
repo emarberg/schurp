@@ -584,7 +584,7 @@ class EvenSignedPermutation(SignedMixin):
     def get_min_fpf_atom(self, matching=None):
         raise NotImplementedError
 
-    def get_min_atom(self, matching=None):
+    def get_max_atom(self, matching=None):
         assert self.is_involution()
         if matching is None:
             g = sorted(self.negated_points())
@@ -614,7 +614,7 @@ class EvenSignedPermutation(SignedMixin):
         assert self.involution_length() == w.length()
         return w
 
-    def get_min_twisted_atom(self, matching=None):
+    def get_max_twisted_atom(self, matching=None):
         assert self.is_twisted_involution()
         if matching is None:
             g = sorted(self.twisted_negated_points())

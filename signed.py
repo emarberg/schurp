@@ -1013,8 +1013,13 @@ class SignedPermutation(SignedMixin):
         n = self.rank
         return [(a, a) for a in range(1, n + 1) if self(a) == a]
 
-    def cyc(self):
-        return sorted(self.pair() + self.neg() + self.fix())
+    def cyc(self, sh=None):
+        pair = self.pair()
+        if sh is not None:
+            pair += [(-b, a) for (a, b) in sh if 0 < a < b]
+        neg = [x for x in self.neg() if sh is None or (x[0], -x[0]) in sh]
+        fix = self.fix()
+        return sorted(pair + neg + fix)
 
     @classmethod
     def ncsp_matchings(cls, base, trivial_allowed=True):
@@ -1281,8 +1286,8 @@ class SignedPermutation(SignedMixin):
     def _min_abs_fpf_inv_atom_oneline(self):
         return tuple(i for p in self.cyc() for i in p)
 
-    def _min_inv_atom_oneline(self):
-        tup = tuple(i for p in self.cyc() for i in reversed(p))
+    @classmethod
+    def _deduplicate_oneline(cls, tup):
         minimum = []
         for i in tup:
             if minimum and minimum[-1] == i:
@@ -1290,13 +1295,26 @@ class SignedPermutation(SignedMixin):
             minimum += [i]
         return tuple(minimum)
 
+    def _min_inv_atom_oneline(self, sh=None):
+        tup = tuple(i for p in self.cyc(sh) for i in reversed(p))
+        return self._deduplicate_oneline(tup)
+
+    def _max_inv_atom_oneline(self, sh=None):
+        cyc = sorted(self.cyc(sh), key=lambda pair: pair[1])
+        tup = tuple(i for p in cyc for i in reversed(p))
+        return self._deduplicate_oneline(tup)
+
     def get_min_abs_fpf_atom(self):
         assert self.is_abs_fpf_involution()
         return SignedPermutation(*self._min_abs_fpf_inv_atom_oneline()).inverse()
 
-    def get_min_atom(self):
+    def get_min_atom(self, sh=None):
         assert self == self.inverse()
         return SignedPermutation(*self._min_inv_atom_oneline()).inverse()
+
+    def get_max_atom(self, sh=None):
+        assert self == self.inverse()
+        return SignedPermutation(*self._max_inv_atom_oneline()).inverse()
 
     @classmethod
     def get_minimal_fpf_involution(cls, n):
