@@ -610,7 +610,6 @@ def test_atoms_d2_refined(nn=4, verbose=False):
                 _test_refinement(clan, atoms_by_shape, expected_shapes)
 
 
-
 def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
     def span(v):
         v = v.oneline

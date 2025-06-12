@@ -232,6 +232,7 @@ def span(v, strong=False):
                 if a < -b < c:
                     w = (-c, a, -b) + v[3:]
                     nextlevel.add((v, w, False))
+
             if strong:
                 for j in range(1, len(v)):
                     for k in range(j + 1, len(v) - 1):
@@ -288,8 +289,6 @@ def print_atoms_span(n=3):
         with open(dotfile, 'w') as f:
             f.write(s)
         subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
-        #subprocess.run(["open", pngfile])
-        #input('')
 
 
 def test_atoms_span(nn=4):
@@ -334,7 +333,6 @@ def test_shape(nn=4):
                 v = w.get_max_atom(sh).inverse()
                 test = {v.inverse()} | {cls(*q).inverse() for (_, q, _) in span(v)}
                 assert sorted(test) == sorted(atoms)
-
                 assert not any(i == j for i, j in sh)
                 assert minima == [v]
 
@@ -380,7 +378,7 @@ def plusform(w):
         b, a = w[:2]
         if abs(a) < abs(b) and b < 0:
             w = (-b, -a) + w[2:]
-    return w 
+    return w
 
 
 def allforms(w):
@@ -413,33 +411,22 @@ def twisted_span(v, strong=False):
             for v in allforms(vv):
                 for i in range(1, len(v) - 2):
                     b, c, a = v[i: i + 3]
-                    if a < b < c: # and not (i == 1 and abs(c) < -v[0]):
+                    if a < b < c:
                         w = v[:i] + (c, a, b) + v[i + 3:]
                         nextlevel.add((v, w, False))
 
-                #if len(v) >= 2:
-                #    b, a = v[:2]
-                #    if abs(a) < abs(b) == b:
-                #        w = (-b, -a) + v[2:]
-                #        nextlevel.add((v, w, False))
-                #if len(v) >= 4:
-                #    x, b, c, a = v[:4]
-                #    if a < b < c and abs(c) < -x:
-                #        w = (-x, -c, a, b) + v[4:]
-                #        nextlevel.add((v, w, False))
                 if strong:
-                    for j in [0]:
+                    if len(v) >= 3:
+                        a, b, c = v[:3]
+                        if 0 < a < b < -c:
+                            w = (c, -a, -b) + v[3:]
+                            nextlevel.add((v, w, True))
+
+                    for j in range(len(v)):
                         for k in range(j + 1, len(v) - 1):
                             a, b, c = v[j], v[k], v[k + 1]
-                            if 0 < abs(a) < b < -c and all(x <= a for x in v[:k]):
-                                w = v[:j] + (-c,) + v[j + 1:k] + (a, -b) + v[k + 2:]
-                                nextlevel.add((v, w, True))
-
-                    for j in range(2, len(v)):
-                        for k in range(j + 1, len(v) - 1):
-                            b, c, d = v[j], v[k], v[k + 1]
-                            if 0 < -b < c < -d and all(abs(x) <= abs(b) for x in v[:k]):
-                                w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
+                            if 0 < -a < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
+                                w = v[:j] + (c,) + v[j + 1:k] + (-a, -b) + v[k + 2:]
                                 nextlevel.add((v, w, True))
 
         nextlevel = {(plusform(v), plusform(w), b) for (v, w, b) in nextlevel}
