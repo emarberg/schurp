@@ -611,9 +611,16 @@ def test_atoms_d2_refined(nn=4, verbose=False):
 
 
 def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
+    def forms(v):
+        yield v
+        if k >= 1 and len(v) > k:
+             b, a = v[0], v[k]
+             if abs(a) < abs(b):
+                yield (-b,) + v[1:k] + (-a,) + v[k + 1:]
+
     def span(v):
         v = v.oneline
-        level = {(None, v)}
+        level = {(None, x) for x in forms(v)}
         while level:
             nextlevel = set()
             for u, v in level:
@@ -621,15 +628,9 @@ def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
 
                 for i in range(k, len(v) - 2):
                     b, c, a = v[i: i + 3]
-                    if a < b < c and not (i == k == 1 and abs(c) < -v[0]):
-                        w = v[:i] + (c, a, b) + v[i + 3:]
-                        nextlevel.add((v, w))
-
-                if len(v) > k > 1:
-                    b, a = v[0], v[k]
-                    if a == abs(a) < abs(b):
-                        w = (-b,) + v[1:k] + (-a,) + v[k + 1:]
-                        nextlevel.add((v, w))
+                    if a < b < c:
+                        for w in forms(v[:i] + (c, a, b) + v[i + 3:]):
+                            nextlevel.add((v, w))
 
                 if k == 0 and len(v) >= 3:
                     b, c, a = v[:3]
@@ -637,24 +638,12 @@ def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
                         w = (-c, a, -b) + v[3:]
                         nextlevel.add((v, w))
 
-                if k == 1 and len(v) >= 2:
-                    b, a = v[:2]
-                    if abs(a) < abs(b) == b:
-                        w = (-b, -a) + v[2:]
-                        nextlevel.add((v, w))
-
-                if k == 1 and len(v) >= 4:
-                    x, b, c, a = v[:4]
-                    if a < b < c and abs(c) < -x:
-                        w = (-x, -c, a, b) + v[4:]
-                        nextlevel.add((v, w))
-
             level = nextlevel
 
     z = EvenSignedPermutation(*z)
     g = EvenSignedPermutation(*g)
     for sh, atoms in atoms_by_shape.items():
-        a = z.get_min_atom(sh) if k % 2 ==0 else z.get_min_twisted_atom(sh)
+        a = z.get_max_atom(sh) if k % 2 ==0 else z.get_max_twisted_atom(sh)
         assert (g.inverse() * a).length() == a.length() - g.length()
         a = a.inverse() * g
         btoms = set(span(a))
