@@ -464,6 +464,7 @@ def test_twisted_shape(nn=4):
                 maxima = [a.inverse() for a in atoms if is_max_twisted_atom(a)]
                 v = w.get_max_twisted_atom(sh).inverse()
                 test = {v.inverse()} | {cls(*u).inverse() for (_, u, _) in twisted_span(v)}
+                atoms = {plusform(a.inverse()).inverse() for a in atoms}
                 assert sorted(test) == sorted(atoms)
                 assert len([i for i, j in sh if i == -j]) == 1
                 assert len(minima) == 1
