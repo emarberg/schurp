@@ -600,22 +600,14 @@ def fpf_span(v, strong, fpfshape, atoms):
                             if a > 0 or k == 1:
                                 w = v[:j] + (-c,) + v[j + 1:k] + (-b, a) + v[k + 2:]
                                 nextlevel.add((v, w, True))
-                                print(v, w, atoms)
-                                fpfshape(w)
+                                # print(v, w, atoms)
+                                # fpfshape(w)
 
                             if a < 0 or k == 1:
                                 w = v[:j] + (c,) + v[j + 1:k] + (-b, -a) + v[k + 2:]
                                 nextlevel.add((v, w, True))
-                                print(v, w, atoms)
-                                fpfshape(w)
-
-                #if n % 2 != 0 and len(v) >= 5:
-                #    b, a, d, c = v[1:5]
-                #    if 0 < abs(v[0]) < a < -b < c < -d:
-                #        w = (v[0], d, a, -c, -b) + v[5:]
-                #        nextlevel.add((v, w, True))
-                #        print(v, w, atoms)
-                #        fpfshape(w)
+                                # print(v, w, atoms)
+                                # fpfshape(w)
 
         level = nextlevel
 
@@ -639,15 +631,9 @@ def print_fpf_atoms_span(n=3):
         atoms = {a.inverse() for a in w.get_fpf_atoms()}
         v = w.get_max_fpf_atom().inverse()
         edges = list(fpf_span(v, True, fpfshape, atoms))
-        print('  ', w, len(atoms), len(edges))
-        print()
-        for a in atoms:
-            print('    ', a, a.inverse().get_reduced_word())
-        print()
+
         if len(edges) == 0:
             continue
-        print()
-        print(edges)
 
         sources = {x for x in atoms if not any(tuple(x) == tuple(v) for u, v, b in edges)}
         assert len(sources) == 1
@@ -655,8 +641,7 @@ def print_fpf_atoms_span(n=3):
         expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
         minima = {x for x in atoms if x.inverse() == w.get_max_fpf_atom(fpfshape(x))}
         assert expected == minima
-        if len(sources) == 1:
-            continue
+
         s = []
         s += ['digraph G {']
         s += ['    overlap=false;']
