@@ -15,6 +15,7 @@ EVEN_SIGNED_REDUCED_COUNTS = {(): 1}
 EVEN_SIGNED_INVOLUTION_WORDS = {}
 EVEN_SIGNED_FPF_INVOLUTION_WORDS = {}
 
+RELATIVE_ATOMS_CACHE = {}
 FPF_ATOMS_D_CACHE = {}
 ATOMS_D_CACHE = {}
 SCHURD_STANSYM_CACHE = {}
@@ -543,22 +544,28 @@ class EvenSignedPermutation(SignedMixin):
 
     @classmethod
     def relative_atoms(cls, y, z, twist=False):
-        assert y.is_involution(twist)
-        assert z.is_involution(twist)
+        key = (y, z, twist)
+        cache = RELATIVE_ATOMS_CACHE
 
-        if y == z:
-            yield EvenSignedPermutation.identity(y.rank)
-        elif y.length() < z.length():
-            for i in range(y.rank):
-                s = EvenSignedPermutation.s_i(i, y.rank)
-                t = s.star() if twist else s
+        if key not in cache:
+            assert y.is_involution(twist)
+            assert z.is_involution(twist)
+            cache[key] = set()
 
-                ty = t * y
-                if ty.length() > y.length():
-                    ys = y * s
-                    v = ty if ty == ys else ty * s
-                    for a in cls.relative_atoms(v, z, twist):
-                        yield s * a
+            if y == z:
+                cache[key].add(EvenSignedPermutation.identity(y.rank))
+            elif y.length() < z.length():
+                for i in range(y.rank):
+                    s = EvenSignedPermutation.s_i(i, y.rank)
+                    t = s.star() if twist else s
+
+                    ty = t * y
+                    if ty.length() > y.length():
+                        ys = y * s
+                        v = ty if ty == ys else ty * s
+                        for a in cls.relative_atoms(v, z, twist):
+                            cache[key].add(s * a)
+        return cache[key]
 
     def get_twisted_atoms(self):
         return self.get_atoms(True)

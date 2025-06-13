@@ -592,37 +592,31 @@ def fpf_span(v, strong, fpfshape, atoms):
                         w = (d, -c, -b, a) + v[4:]
                         nextlevel.add((v, w, True))
 
-                if n % 2 != 0:
-                    for j in [0]:
-                        for k in range(j + 1, len(v) - 1):
-                            a, c, b = v[j], v[k], v[k + 1]
-                            if 0 < abs(a) < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
-                                if a > 0 or k == 1:
-                                    w = v[:j] + (-c,) + v[j + 1:k] + (-b, a) + v[k + 2:]
-                                    nextlevel.add((v, w, True))
-                                    print(v, w, atoms)
-                                    fpfshape(w)
+                
+                for j in [0] + list(range(2 if n % 2 == 0 else 1, len(v), 2)):
+                    for k in range(j + 1, len(v) - 1):
+                        a, c, b = v[j], v[k], v[k + 1]
+                        if 0 < abs(a) < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
+                            if a > 0 or k == 1:
+                                w = v[:j] + (-c,) + v[j + 1:k] + (-b, a) + v[k + 2:]
+                                nextlevel.add((v, w, True))
+                                print(v, w, atoms)
+                                fpfshape(w)
 
-                                if a < 0 or k == 1:
-                                    w = v[:j] + (c,) + v[j + 1:k] + (-b, -a) + v[k + 2:]
-                                    nextlevel.add((v, w, True))
-                                    print(v, w, atoms)
-                                    fpfshape(w)
+                            if a < 0 or k == 1:
+                                w = v[:j] + (c,) + v[j + 1:k] + (-b, -a) + v[k + 2:]
+                                nextlevel.add((v, w, True))
+                                print(v, w, atoms)
+                                fpfshape(w)
 
-                    if len(v) >= 5:
-                        b, a, d, c = v[1:5]
-                        if 0 < abs(v[0]) < a < -b < c < -d:
-                            w = (v[0], d, a, -c, -b) + v[5:]
-                            nextlevel.add((v, w, True))
-                            print(v, w, atoms)
-                            fpfshape(w)
+                #if n % 2 != 0 and len(v) >= 5:
+                #    b, a, d, c = v[1:5]
+                #    if 0 < abs(v[0]) < a < -b < c < -d:
+                #        w = (v[0], d, a, -c, -b) + v[5:]
+                #        nextlevel.add((v, w, True))
+                #        print(v, w, atoms)
+                #        fpfshape(w)
 
-                            #if 0 < -a < b < -c or 0 < a < -b < c:
-                            #    w = (c, -b, -a) + v[3:]
-                            #    nextlevel.add((v, w, True))
-
-                            #    w = (-c, -b, a) + v[3:]
-                            #    nextlevel.add((v, w, True))
         level = nextlevel
 
 
@@ -690,6 +684,7 @@ def print_fpf_atoms_span(n=3):
 
 def test_fpf_atoms_span(nn=4):
     for n in [nn, nn + 1]:
+        print('\nn =', n, '\n')
         g = SignedPermutation.one_fpf_d(n)
 
         def shape(x):
