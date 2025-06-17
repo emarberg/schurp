@@ -239,7 +239,7 @@ class DoubleGrothendieck(Grothendieck):
             a = [v // n for v in a]
             ans = y(0)**0
             for i in range(n):
-                ans *= (1 - y(i + 1))**a[i]
+                ans *= y(i + 1)**a[i]
             return ans
 
         ans = Vector()
@@ -833,14 +833,12 @@ class DoubleGrothendieckB(DoubleGrothendieckMixin,GrothendieckB):
             queue = queue[1:]
             if len(c) == 0:
                 bterm = add(bterm, act(z, rho))
-                print('bterm =', bterm)
                 ans += Vector({z: sgn * reduce(bterm)})
             else:
                 (i, j) = c[0]
                 assert abs(i) <= abs(j) and i + j != 0
                 t = SignedPermutation.reflection_s(abs(i), abs(j), rank) if i * j > 0 else SignedPermutation.reflection_t(abs(i), abs(j), rank)
                 a = act(z, alpha(i, j))
-                print(i, j, alpha(i, j), z, a, bterm, add(a, bterm))
                 queue.append((sgn, add(a, bterm), z, c[1:]))
                 zt = z * t
                 if length(zt) == length(z) - 1:

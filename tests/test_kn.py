@@ -21,7 +21,8 @@ from vectors import Vector
 import itertools
 
 
-def test_b_double_grothendieck_chain(rank=2):
+def test_b_double_grothendieck_chain(m=2, d=1):
+    rank = m + d
     w0 = SignedPermutation.longest_element(rank)
 
     def convert(ans, rank):
@@ -43,8 +44,14 @@ def test_b_double_grothendieck_chain(rank=2):
         chain += [(k, -l) for l in range(n, k, -1)]
         return chain
 
-    for k in range(1, rank):
-        for w in SignedPermutation.all(rank - 1):
+        # chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+        # chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
+        # chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
+        # chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        
+
+    for k in range(1, m + 1):
+        for w in SignedPermutation.all(m):
             w = w.inflate(rank)
             start = w0 * w
             chain = kchain(k, rank)
@@ -59,8 +66,8 @@ def test_b_double_grothendieck_chain(rank=2):
             print()
             print()
             print('n =', rank, 'w =', w, 'k =', k, 'chain =', chain)
-            print()
-            print(ans)
+            #print()
+            #print(ans)
             print()
             print(f)
             print()
@@ -76,44 +83,47 @@ def test_b_double_grothendieck_chain(rank=2):
             #    return f
 
 
-def test_double_grothendieck_chain(rank=2):
+def test_double_grothendieck_chain(m=2, d=1):
+    rank = m + d
+    w0 = SignedPermutation.longest_element(rank)
+
     def convert(ans, rank):
         w0 = Permutation.longest_element(rank)
         return Vector({z * w0: coeff.permute(w0) for z, coeff in ans.dictionary.items()})
 
+    # def evaluate(ans):
+    #     bns = 0
+    #     for z, coeff in ans.dictionary.items():
+    #         bns += coeff * DoubleGrothendieck.get(z)
+    #     return bns
+
     def evaluate(ans):
+        var = {-i - 1 for i in range(rank)}
         bns = 0
         for z, coeff in ans.dictionary.items():
-            bns += coeff * DoubleGrothendieck.get(z)
+            bns += coeff.set_vars(var, 1) * Grothendieck.get(z)
         return bns
+
 
     def kchain(k, n):
         return [(k, j) for j in range(k + 1, n + 1)] + [(k, j) for j in range(1, k)]
 
-    for k in range(2, rank + 1):
-        for w in Permutation.all(rank - 1):
+    for k in range(1 + d, rank + 1):
+        for w in Permutation.all(m):
             start = w * Permutation.longest_element(rank)
             chain = kchain(k, rank)
             ans = DoubleGrothendieck.expand_double_reflection_chain(start, chain, rank)
-            f = evaluate(convert(ans, rank))
-            g = (1 - X(rank + 1 - k)) * DoubleGrothendieck.get(w)
-
-            ff = Grothendieck.decompose(f.set_vars({-i - 1 for i in range(rank)}, 0))
-            gg = Grothendieck.decompose(g.set_vars({-i - 1 for i in range(rank)}, 0))
+            f = convert(ans, rank)
+            ff = evaluate(f)
+            gg = (1 - X(rank + 1 - k)) * Grothendieck.get(w)
             
             print()
             print()
             print('n =', rank, 'w =', w, 'k =', k, 'chain =', chain)
-            print()
-            print(ans)
-            print()
-            print(convert(ans, rank))
+            #print()
+            #print(ans)
             print()
             print(f)
-            print()
-            print(g)
-            print()
-            print(f == g)
             print()
             print(ff)
             print()
@@ -121,7 +131,6 @@ def test_double_grothendieck_chain(rank=2):
             print()
             print(ff == gg)
             print()
-            assert ff == gg
             #i = input('')
             #if i == 'y':
             #    return f
