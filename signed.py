@@ -379,9 +379,9 @@ class SignedMixin:
             s += [str(i) if i < 0 else ('+' + str(i))]
         if s:
             sep = '' if len(self.oneline) < 10 else ' '
-            return sep.join(s)
+            return '[' + sep.join(s) + ']'
         else:
-            return '1'
+            return '[]'
 
     @classmethod
     def permutations(cls, n):

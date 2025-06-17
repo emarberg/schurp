@@ -181,6 +181,15 @@ class MPolynomial:
 
 
     """
+    def permute(self, w):
+        assert type(w) == Permutation
+        winv = w.inverse()
+        coeffs = {}
+        for hd, c in self.coeffs.items():
+            newhd = HashableDict({i if i == 0 else winv(i) if i > 0 else -winv(-i): v for i, v in hd.items()})
+            coeffs[newhd] = c
+        return MPolynomial(coeffs)
+
     @classmethod
     def from_tuple(cls, tuple):
         ans = X(0)**0
@@ -272,6 +281,12 @@ class MPolynomial:
     def zero(cls):
         return cls()
 
+    def set_vars(self, i, e):
+        ans = self
+        for v in i:
+            ans = ans.set(v, e)
+        return ans
+
     def set_variable(self, i, e):
         return self.set(i, e)
 
@@ -285,15 +300,18 @@ class MPolynomial:
         return ans
 
     def substitute(self, i, e):
-        ans = 0
+        ans = self.zero()
         for ind in self.coeffs:
             term = self.one() * self.coeffs[ind]
             for j in ind:
                 if i != j:
                     term *= self.monomial(j, ind[j])
                 else:
-                    assert ind[j] >= 0
-                    term *= e ** ind[j]
+                    if e in [1, -1]:
+                        term *= e ** abs(ind[j])
+                    else:
+                        assert ind[j] >= 0
+                        term *= e ** ind[j]
             ans = ans + term
         return ans
 

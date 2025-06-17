@@ -168,8 +168,8 @@ class Schubert(AbstractSchubert):
 
 class Grothendieck(Schubert):
 
-    # beta = -1
-    beta = x(0)
+    beta = -1
+    # beta = x(0)
 
     @classmethod
     def cache(cls):
@@ -206,6 +206,59 @@ class DoubleGrothendieck(Grothendieck):
         for i, j in w.rothe_diagram():
                 s *= (x(i) + y(j) + cls.beta * x(i) * y(j))
         return s
+
+    @classmethod
+    def expand_double_reflection_chain(cls, start, chain, rank):
+        length = lambda x: x.length()
+        n = rank
+
+        def act(w, a):
+            return tuple(a[w.inverse()(i + 1) - 1] for i in range(n))
+
+        def add(a, b):
+            return tuple(a[i] + b[i] for i in range(n))
+
+        def negate(a):
+            return tuple(-a[i] for i in range(n))
+
+        def alpha(i, j):
+            ans = n * [0]
+            ans[i - 1] = 1
+            ans[j - 1] = -1
+            return tuple(ans)
+
+        rho = tuple(n - i for i in range(n))
+        one = tuple(1 for i in range(n))
+
+        def reduce(a):
+            while min(a) < 0:
+                a = add(one, a)
+            while min(a) > 0:
+                a = add(negate(one), a)
+            assert all(v % n == 0 for v in a)
+            a = [v // n for v in a]
+            ans = y(0)**0
+            for i in range(n):
+                ans *= (1 - y(i + 1))**a[i]
+            return ans
+
+        ans = Vector()
+        queue = [(1, act(start, negate(rho)), start, chain)]
+        while queue:
+            (sgn, bterm, z, c) = queue[0]
+            queue = queue[1:]
+            if len(c) == 0:
+                bterm = add(bterm, act(z, rho))
+                ans += Vector({z: sgn * reduce(bterm)})
+            else:
+                (i, j) = c[0]
+                t = Permutation.t_ij(i, j)
+                a = act(z, alpha(i, j))
+                queue.append((sgn, add(a, bterm), z, c[1:]))
+                zt = z * t
+                if length(zt) == length(z) - 1:
+                    queue.append((sgn if i < j else -sgn, bterm, zt, c[1:]))
+        return ans
 
 
 class FPFSchubert(AbstractSchubert):
@@ -328,7 +381,7 @@ class InvSchubert(AbstractSchubert):
 
         ans = 0
         for tab in Tableau.get_semistandard_shifted(mu, n=max_entry, diagonal_primes=True):
-            summand = X(0)**0
+            summand = MPolynomial.one()
             for (i, j) in tab.mapping:
                 a = abs(tab.get(i, j))
                 b = j - i + 1
@@ -529,7 +582,7 @@ class GrothendieckC(Grothendieck):
         if key not in cache:
             r = [i for i in range(1, n) if w(i) > w(i + 1)]
             if len(r) == 0:
-                ans = X(0)**0
+                ans = MPolynomial.one()
                 for i in range(1, n + 1):
                     if w(i) > 0:
                         break
@@ -540,14 +593,14 @@ class GrothendieckC(Grothendieck):
                 v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
                 chain = []
-                chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-                chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-                chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+                chain += [(SignedPermutation.reflection_s(i, r, n + 1), cls.beta) for i in range(n + 1, 0, -1) if i != r]
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), cls.beta)]
+                chain += [(SignedPermutation.reflection_t(i, r, n + 1), cls.beta) for i in range(1, r)]
         
                 vec = Vector({v: 1}) - cls.expand_reflection_chain(v, chain, lambda x: x.length())
-                vec *= -X(0)**-1
+                vec *= -(cls.beta * MPolynomial.one())**-1
 
-                ans = X(0) * 0
+                ans = MPolynomial.zero()
                 for (u, c) in vec.dictionary.items():
                     ans += cls.symmetric_simple(u) * c
 
@@ -610,7 +663,7 @@ class GrothendieckB(GrothendieckC):
         if key not in cache:
             r = [i for i in range(1, n) if w(i) > w(i + 1)]
             if len(r) == 0:
-                ans = X(0)**0
+                ans = MPolynomial.one()
                 for i in range(1, n + 1):
                     if w(i) > 0:
                         break
@@ -621,15 +674,15 @@ class GrothendieckB(GrothendieckC):
                 v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
                 chain = []
-                chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-                chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-                chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-                chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), cls.beta)]
+                chain += [(SignedPermutation.reflection_s(i, r, n + 1), cls.beta) for i in range(n + 1, 0, -1) if i != r]
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), cls.beta)]
+                chain += [(SignedPermutation.reflection_t(i, r, n + 1), cls.beta) for i in range(1, r)]
             
                 vec = Vector({v: 1}) - cls.expand_reflection_chain(v, chain, lambda x: x.length())
-                vec *= -X(0)**-1
+                vec *= -(cls.beta * MPolynomial.one())**-1
 
-                ans = X(0) * 0
+                ans = MPolynomial.zero()
                 for (u, c) in vec.dictionary.items():
                     ans += cls.symmetric_simple(u) * c
 
@@ -684,7 +737,7 @@ class GrothendieckD(GrothendieckC):
         if key not in cache:
             r = [i for i in range(1, n) if w(i) > w(i + 1)]
             if len(r) == 0:
-                ans = X(0)**0
+                ans = MPolynomial.one()
                 for i in range(1, n + 1):
                     if w(i) >= -1:
                         break
@@ -695,13 +748,13 @@ class GrothendieckD(GrothendieckC):
                 v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
                 chain = []
-                chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-                chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+                chain += [(SignedPermutation.reflection_s(i, r, n + 1), cls.beta) for i in range(n + 1, 0, -1) if i != r]
+                chain += [(SignedPermutation.reflection_t(i, r, n + 1), cls.beta) for i in range(1, r)]
         
                 vec = Vector({v: 1}) - cls.expand_reflection_chain(v, chain, lambda x: x.dlength())
-                vec *= -X(0)**-1
+                vec *= -(cls.beta * MPolynomial.one())**-1
 
-                ans = X(0) * 0
+                ans = MPolynomial.zero()
                 for (u, c) in vec.dictionary.items():
                     ans += cls.symmetric_simple(u) * c
 
@@ -740,6 +793,59 @@ class DoubleGrothendieckB(DoubleGrothendieckMixin,GrothendieckB):
     @classmethod
     def cache(cls):
         return B_DOUBLE_GROTHENDIECK_CACHE
+
+    @classmethod
+    def expand_double_reflection_chain(cls, start, chain, rank):
+        length = lambda x: x.length()
+        n = rank
+
+        def act(w, a):
+            return tuple(a[abs(w.inverse()(i + 1)) - 1] * (-1 if w.inverse()(i + 1) < 0 else 1) for i in range(n))
+
+        def add(a, b):
+            return tuple(a[i] + b[i] for i in range(n))
+
+        def negate(a):
+            return tuple(-a[i] for i in range(n))
+
+        def alpha(i, j):
+            ans = n * [0]
+            ans[abs(i) - 1] += 2 if i > 0 else -2
+            if i != j:
+                ans[abs(j) - 1] += 2 if j > 0 else -2
+            return tuple(ans)
+
+        rho = tuple(reversed([2 * n - 1 - 2 * i for i in range(n)]))
+        one = tuple(1 for i in range(n))
+
+        def reduce(a):
+            assert all(v % (4 * n) == 0 for v in a)
+            a = [v // (4 * n) for v in a]
+            ans = y(0)**0
+            for i in range(n):
+                ans *= y(i + 1)**a[i]
+            return ans
+
+        ans = Vector()
+        queue = [(1, act(start, negate(rho)), start, chain)]
+        while queue:
+            (sgn, bterm, z, c) = queue[0]
+            queue = queue[1:]
+            if len(c) == 0:
+                bterm = add(bterm, act(z, rho))
+                print('bterm =', bterm)
+                ans += Vector({z: sgn * reduce(bterm)})
+            else:
+                (i, j) = c[0]
+                assert abs(i) <= abs(j) and i + j != 0
+                t = SignedPermutation.reflection_s(abs(i), abs(j), rank) if i * j > 0 else SignedPermutation.reflection_t(abs(i), abs(j), rank)
+                a = act(z, alpha(i, j))
+                print(i, j, alpha(i, j), z, a, bterm, add(a, bterm))
+                queue.append((sgn, add(a, bterm), z, c[1:]))
+                zt = z * t
+                if length(zt) == length(z) - 1:
+                    queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
+        return ans
 
 
 class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
