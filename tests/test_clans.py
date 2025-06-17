@@ -393,32 +393,19 @@ def test_atoms_d3(nn=4, verbose=False):
         for clan in Clan.all_d3(n):
             phi = clan.richardson_springer_map()
             z = phi.dtype_longest_element(n) * phi.inverse()
-            g = z.one_fpf_d(n)
-            if verbose:
-                print(' ', clan)
-                print()
+
             atoms = set(clan.get_atoms())
             lengths_a = set()
             for a in atoms:
                 word = a.inverse().get_reduced_word(dtype=True)
-                if verbose:
-                    print('  ', a.inverse(), '->', (g*a).inverse(), (g*a).fpf_dshape())
                 lengths_a.add(len(word))
                 assert clan.weyl_group_weight(a) == 0
-            if verbose:
-                print()
-                print(' ', z)
-                print()
+
             btoms = set(z.get_fpf_atoms_d())
             lengths_b = set()
             for a in btoms:
                 word = a.inverse().get_reduced_word(dtype=True)
-                if verbose:
-                    print('  ', a in atoms, a.inverse(), '->', (g*a).inverse(), (g*a).fpf_dshape())
                 lengths_b.add(len(word))
-            if verbose:
-                print()
-                print()
 
             assert atoms.issubset(btoms)
             assert lengths_a == lengths_b
@@ -610,6 +597,31 @@ def test_atoms_d2_refined(nn=4, verbose=False):
                 _test_refinement(clan, atoms_by_shape, expected_shapes)
 
 
+def test_atoms_d3_refined(nn=4, verbose=False):
+    for n in [nn, nn + 1]:
+        g = SignedPermutation.one_fpf_d(n)
+        print('n =', n)
+        for clan in Clan.all_d3(n):
+            z = clan.richardson_springer_involution()
+            t = SignedPermutation.s_i(0, n) if (n % 2 != 0) else SignedPermutation.identity(n)
+            base = (t * z).negated_points()
+
+            expected_shapes = {
+                m for m in SignedPermutation.ncsp_matchings(base)
+                if clan.is_aligned(m)
+            }
+
+            atoms_by_shape = {}
+            for w in z.get_fpf_atoms_d():
+                assert (g * w).dlength() == g.dlength() + w.dlength()
+                sh = w.fpf_dshape()
+                sh = tuple(sorted(sh))
+                atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
+
+            _test_dtype_fpf_atoms_by_shape(z, atoms_by_shape)
+            _test_refinement(clan, atoms_by_shape, expected_shapes)
+
+
 def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
     def forms(v):
         yield v
@@ -653,31 +665,34 @@ def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
         assert atoms == btoms
 
 
-def test_atoms_d3_refined(nn=4, verbose=False):
-    for n in [nn, nn + 1]:
-        g = SignedPermutation.one_fpf_d(n)    
-        print('n =', n)
-        for clan in Clan.all_d3(n):
-            z = clan.richardson_springer_involution()
-            t = SignedPermutation.s_i(0, n) if (n % 2 != 0) else SignedPermutation.identity(n)
-            base = (t * z).negated_points()
-            
-            expected_shapes = {
-                m for m in SignedPermutation.ncsp_matchings(base)
-                if clan.is_aligned(m)
-            }
-            
-            atoms_by_shape = {}
-            for w in z.get_fpf_atoms_d():
-                assert (g * w).dlength() == g.dlength() + w.dlength()
-                sh = (g * w).fpf_dshape()
-                sh = tuple(sorted(sh))
-                atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
-            for sh, atoms in atoms_by_shape.items():
-                print(z, sh)
-                for w in atoms:
-                    print('  ', w.inverse())
-            _test_refinement(clan, atoms_by_shape, expected_shapes)
+def _test_dtype_fpf_atoms_by_shape(z, atoms_by_shape):
+    n = z.rank
+
+    def span(v):
+        v = v.oneline
+        level = {(None, v)}
+        while level:
+            nextlevel = set()
+            for u, v in level:
+                yield SignedPermutation(*v).inverse()
+
+                for i in range(0 if n % 2 == 0 else 1, len(v) - 3, 2):
+                    b, c, a, d = v[i: i + 4]
+                    if a < b < c < d:
+                        w = v[:i] + (a, d, b, c) + v[i + 4:]
+                        nextlevel.add((v, w))
+
+            level = nextlevel
+
+    z = EvenSignedPermutation(*z)
+    g = EvenSignedPermutation(*g)
+    for sh, atoms in atoms_by_shape.items():
+        a = z.get_max_fpf_atom(sh)
+        btoms = set(span(a.inverse()))
+        #print(z, 'k =', k, a, sh)
+        #print({w.inverse() for w in atoms})
+        #print({w.inverse() for w in btoms})
+        assert atoms == btoms
 
 
 def _test_refinement(clan, atoms_by_shape, expected_shapes):

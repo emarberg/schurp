@@ -501,8 +501,7 @@ class Clan:
             g = w.dbase_atom(n, k)
             sh = (g * w).dshape(k)
         elif self.family == self.TYPE_D3:
-            g = w.one_fpf_d(n) 
-            sh = (g * w).fpf_dshape()
+            sh = w.fpf_dshape()
         else:
             raise Exception
 

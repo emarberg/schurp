@@ -613,10 +613,8 @@ def fpf_span(v, strong, fpfshape, atoms):
 
 
 def print_fpf_atoms_span(n=3):
-    g = SignedPermutation.one_fpf_d(n)
-
     def fpfshape(x):
-        return (g * SignedPermutation(*x).inverse()).fpf_dshape()
+        return SignedPermutation(*x).inverse().fpf_dshape()
 
     def printer(oneline):
         w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
@@ -670,10 +668,9 @@ def print_fpf_atoms_span(n=3):
 def test_fpf_atoms_span(nn=4):
     for n in [nn, nn + 1]:
         print('\nn =', n, '\n')
-        g = SignedPermutation.one_fpf_d(n)
 
         def shape(x):
-            return (g * SignedPermutation(*x).inverse()).fpf_dshape()
+            return SignedPermutation(*x).inverse().fpf_dshape()
 
         cls = EvenSignedPermutation
         for w in cls.fpf_involutions(n):

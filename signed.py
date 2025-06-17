@@ -1060,13 +1060,14 @@ class SignedPermutation(SignedMixin):
 
     def fpf_dshape(self, verbose=False):
         n = self.rank
+        w = self.one_fpf_d(n) * self
         twisted = n % 2 != 0
-        assert self.is_atom_d(twisted)
+        assert w.is_atom_d(twisted)
 
         offset = 1 if twisted else 0
-        o = list(self.inverse().oneline)
+        o = list(w.inverse().oneline)
         init = [abs(i) for i in o[:offset]]
-        ndes, fix, neg = self._ndes(o[offset:])
+        ndes, fix, neg = w._ndes(o[offset:])
         
         desd = [(b, a) for a, b in ndes if a >= -b]
         negd = init + [abs(a) for a, b in ndes if a < -b] + [-b for a, b in ndes if a < -b]
@@ -1082,10 +1083,10 @@ class SignedPermutation(SignedMixin):
         for a in init:
             sh.add((-a, a))
 
-        y = self.dtype_demazure_conjugate(twisted)
+        y = w.dtype_demazure_conjugate(twisted)
         z = SignedPermutation.identity(n)
         if twisted:
-            z = z * SignedPermutation.s_i(0, self.rank)
+            z = z * SignedPermutation.s_i(0, n)
         for i in negd:
             z *= SignedPermutation.t_ij(-i, i, n)
         for a, b in desd:
@@ -1093,7 +1094,7 @@ class SignedPermutation(SignedMixin):
 
         if verbose:
             print()
-            print('*', 'y =', y, 'w =', self.inverse())
+            print('*', 'y =', y, 'w =', w.inverse())
             print(' ', 'z =', z)
             print()
             print(' ndes =', ndes)
