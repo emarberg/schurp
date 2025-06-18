@@ -889,7 +889,6 @@ class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
             queue = queue[1:]
             if len(c) == 0:
                 bterm = add(bterm, act(z, rho))
-                bterm = negate(bterm)
                 ans += Vector({z: sgn * reduce(bterm)})
             else:
                 (i, j) = c[0]
@@ -898,7 +897,7 @@ class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
                 a = act(z, alpha(i, j))
                 queue.append((sgn, add(a, bterm), z, c[1:]))
                 zt = z * t
-                if length(zt) == length(z) + 1:
+                if length(zt) == length(z) - 1:
                     queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
         return ans
 
@@ -947,7 +946,6 @@ class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
             queue = queue[1:]
             if len(c) == 0:
                 bterm = add(bterm, act(z, rho))
-                bterm = act(w0, bterm)
                 ans += Vector({z: sgn * reduce(bterm)})
             else:
                 (i, j) = c[0]
@@ -956,6 +954,6 @@ class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
                 a = act(z, alpha(i, j))
                 queue.append((sgn, add(a, bterm), z, c[1:]))
                 zt = z * t
-                if length(zt) == length(z) + 1:
+                if length(zt) == length(z) - 1:
                     queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
         return ans

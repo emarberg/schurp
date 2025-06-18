@@ -99,18 +99,19 @@ def d_order(n):
 
 def test_d_double_grothendieck_chain(m=2, d=1):
     rank = m + d
+    w0 = SignedPermutation.dtype_longest_element(rank)
 
     def evaluate(ans):
         var = {-i - 1 for i in range(rank)}
         bns = 0
         for z, coeff in ans.dictionary.items():
-            bns += coeff.set_vars(var, 1) * GrothendieckD.get(z)
+            bns += coeff.set_vars(var, 1) * GrothendieckD.get(w0 * z)
         return bns
 
     def evaluateDouble(ans):
         bns = 0
         for z, coeff in ans.dictionary.items():
-            f = DoubleGrothendieckD.get(z)
+            f = DoubleGrothendieckD.get(w0 * z)
             for i in range(1, rank + 1):
                 f = f.set(2 * i, 1 - X(2 * i))
                 coeff = coeff.set(-i, X(2 * i))
@@ -132,7 +133,7 @@ def test_d_double_grothendieck_chain(m=2, d=1):
             chain = kchain(k, rank)
             print('chain =', chain)
 
-            ans = DoubleGrothendieckD.expand_double_reflection_chain(w, chain, rank)
+            ans = DoubleGrothendieckD.expand_double_reflection_chain(w0 * w, chain, rank)
             print()
             print()
             print('n =', rank, 'w =', w, 'k =', k)
@@ -168,18 +169,19 @@ def test_d_double_grothendieck_chain(m=2, d=1):
 
 def test_c_double_grothendieck_chain(m=2, d=1):
     rank = m + d
+    w0 = SignedPermutation.longest_element(rank)
 
     def evaluate(ans):
         var = {-i - 1 for i in range(rank)}
         bns = 0
         for z, coeff in ans.dictionary.items():
-            bns += coeff.set_vars(var, 1) * GrothendieckC.get(z)
+            bns += coeff.set_vars(var, 1) * GrothendieckC.get(w0 * z)
         return bns
 
     def evaluateDouble(ans):
         bns = 0
         for z, coeff in ans.dictionary.items():
-            f = DoubleGrothendieckC.get(z)
+            f = DoubleGrothendieckC.get(w0 * z)
             for i in range(1, rank + 1):
                 f = f.set(2 * i, 1 - X(2 * i))
                 coeff = coeff.set(-i, X(2 * i))
@@ -201,7 +203,7 @@ def test_c_double_grothendieck_chain(m=2, d=1):
             w = w.inflate(rank)
             chain = kchain(k, rank)
             print('chain =', chain)
-            ans = DoubleGrothendieckC.expand_double_reflection_chain(w, chain, rank)
+            ans = DoubleGrothendieckC.expand_double_reflection_chain(w0 * w, chain, rank)
 
             f = evaluate(ans)
             g = (1 - X(k)) * GrothendieckC.get(w)
