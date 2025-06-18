@@ -524,12 +524,12 @@ class GrothendieckC(Grothendieck):
         return (n == 0 and len(w) > 0) or (0 < n < w.min_peaks() + 1)
 
     @classmethod
-    def symmetric_with_unknown_ell(cls, n, w, x_not_y):
-        ans = cls.symmetric(n, w, x_not_y, len(w))
+    def symmetric_with_unknown_ell(cls, n, w, x_not_y, beta):
+        ans = cls.symmetric(n, w, x_not_y, len(w), beta)
         assert ans != 0
         ell = len(w) + 1
         while True:
-            bns = cls.symmetric(n, w, x_not_y, ell)
+            bns = cls.symmetric(n, w, x_not_y, ell, beta)
             if ans == bns:
                 break
             ans = bns
@@ -537,25 +537,26 @@ class GrothendieckC(Grothendieck):
         return ans
 
     @classmethod
-    def symmetric(cls, n, w, x_not_y=True, ell=None):
+    def symmetric(cls, n, w, x_not_y=True, ell=None, beta=None):
         w = w.reduce()
         assert cls.is_valid(w)
 
+        beta = cls.beta if beta is None else beta
         oneline = cls.reduce(w.oneline)
-        key = (n, oneline, x_not_y, ell)
+        key = (n, oneline, x_not_y, ell, beta)
         cache = cls.symmetric_cache()
         
         if key not in cache:
             if cls.symmetric_is_zero(n, w):
                 ans = MPolynomial.zero()
             elif ell is None:
-                ans = cls.symmetric_with_unknown_ell(n, w, x_not_y)
+                ans = cls.symmetric_with_unknown_ell(n, w, x_not_y, beta)
             else:
                 ansdict = {}
                 dictionary = cls.get_hecke_compatible_sequences(n, w, ell)
                 for a in dictionary:
                     for b in dictionary[a]:
-                        term = one() * cls.beta**cls.beta_exponent(a, w) * 2**(len(b) + cls.exponent(a, b))
+                        term = one() * beta**cls.beta_exponent(a, w) * 2**(len(b) + cls.exponent(a, b))
                         for i in b:
                             term *= x(i) if x_not_y else y(i)
                         ansdict[len(b)] = ansdict.get(len(b), 0) + term

@@ -7,6 +7,7 @@ from schubert import (
     GrothendieckD, DoubleGrothendieckD,
 )
 from permutations import Permutation
+from polynomials import MPolynomial
 from signed import SignedPermutation
 from stable.utils import (
     G,
@@ -22,7 +23,7 @@ import itertools
 from schubert import X
 
 
-def d_order(n):
+def lenart_postnikov_ordering_d(n):
     def svec(c, *args):
         ans = n * [0]
         for a in args:
@@ -359,6 +360,8 @@ def expand_reflection_chain(start, chain, length):
 
 
 def test_general_a_grothendieck_transitions(n=4):
+    beta = Grothendieck.beta * MPolynomial.one()
+
     for w in Permutation.all(n):
         for r in range(1, n + 1):
             chain = []
@@ -366,8 +369,8 @@ def test_general_a_grothendieck_transitions(n=4):
             chain += [(Permutation.t_ij(r, j), -1) for j in range(n + 1, r, -1)]
             
             ans = expand_reflection_chain(w, chain, lambda x: x.length())
-            expected = sum([coeff * Grothendieck.get(z).set_variable(0, -1) for (z, coeff) in ans.dictionary.items()])
-            actual = Grothendieck.get(w).set_variable(0, -1) * (1 - X(r))
+            expected = sum([coeff * Grothendieck.get(z) for (z, coeff) in ans.dictionary.items()])
+            actual = Grothendieck.get(w) * (1 + beta * X(r))
 
             print('n =', n, 'w =', w, 'r =', r)
             if expected != actual:
@@ -380,6 +383,8 @@ def test_general_a_grothendieck_transitions(n=4):
 
 
 def test_a_grothendieck_transitions(n=4):
+    beta = Grothendieck.beta * MPolynomial.one()
+
     for w in Permutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if w(1) > 1 or len(r) == 0:
@@ -388,11 +393,11 @@ def test_a_grothendieck_transitions(n=4):
         s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])[1]
         v = w * Permutation.t_ij(r, s)
 
-        chain = [(Permutation.t_ij(i, r), X(0)) for i in range(1, r)]
+        chain = [(Permutation.t_ij(i, r), beta) for i in range(1, r)]
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
-        expected = Grothendieck.get(v) - (X(0) * X(r) + 1) * sum([coeff * Grothendieck.get(z) for (z, coeff) in ans.dictionary.items()])
-        expected *= -X(0)**-1
+        expected = Grothendieck.get(v) - (beta * X(r) + 1) * sum([coeff * Grothendieck.get(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -beta**-1
 
         actual = Grothendieck.get(w)
 
@@ -407,6 +412,8 @@ def test_a_grothendieck_transitions(n=4):
 
 
 def test_double_a_grothendieck_transitions(n=4):
+    beta = DoubleGrothendieck.beta * MPolynomial.one()
+
     for w in Permutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -417,11 +424,11 @@ def test_double_a_grothendieck_transitions(n=4):
         v = w * Permutation.t_ij(r, s)
         t = v(r)
 
-        chain = [(Permutation.t_ij(i, r), X(0)) for i in range(1, r)]
+        chain = [(Permutation.t_ij(i, r), beta) for i in range(1, r)]
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
-        expected = DoubleGrothendieck.get(v) - (X(0) * (X(r) + X(-t) + X(0)*X(r)*X(-t)) + 1) * sum([coeff * DoubleGrothendieck.get(z) for (z, coeff) in ans.dictionary.items()])
-        expected *= -X(0)**-1
+        expected = DoubleGrothendieck.get(v) - (beta * (X(r) + X(-t) + beta*X(r)*X(-t)) + 1) * sum([coeff * DoubleGrothendieck.get(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -beta**-1
 
         actual = DoubleGrothendieck.get(w)
 
@@ -464,6 +471,7 @@ def signed(coll):
 
 
 def test_b_grothendieck_transitions(n=3):
+    beta = GrothendieckB.beta * MPolynomial.one()
     GROTH = GrothendieckB.get
 
     for w in SignedPermutation.all(n):
@@ -475,25 +483,25 @@ def test_b_grothendieck_transitions(n=3):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         chain =  []
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
         
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
-        expected = GROTH(v) - (X(0) * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-        expected *= -X(0)**-1
+        expected = GROTH(v) - (beta * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -beta**-1
 
         actual = GROTH(w)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
             print()
-            print('base:', -X(0)**-1 * GROTH(v))
+            print('base:', -beta**-1 * GROTH(v))
             print()
             for u in sorted(ans, key=len):
-                print(len(u), ':', u, ':', -X(0)**-1 * ans[u] * GROTH(u) * (X(r) - 1))
+                print(len(u), ':', u, ':', -beta**-1 * ans[u] * GROTH(u) * (X(r) - 1))
                 print()
             print('want:', actual)
             print()
@@ -503,6 +511,7 @@ def test_b_grothendieck_transitions(n=3):
 
 
 def test_double_b_grothendieck_transitions(n=3):
+    beta = DoubleGrothendieckB.beta * MPolynomial.one()
     GROTH = DoubleGrothendieckB.get
 
     for w in SignedPermutation.all(n):
@@ -517,20 +526,20 @@ def test_double_b_grothendieck_transitions(n=3):
         adj_s = 2 * abs(v(r)) # = 2 * abs(w(s))
 
         chain =  []
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), 1+X(0)*X(adj_s), X(0))]
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), 1, X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), 1, X(0))]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), 1, X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), 1+beta*X(adj_s), beta)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), 1, beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), 1, beta)]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), 1, beta) for i in range(1, r)]
 
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
         sigma = sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
 
         if v(r) < 0:
-            expected = ((1 + X(0)*X(adj_s)) + X(0)*(X(adj_r) - X(adj_s))) * sigma
-            actual = (1 + X(0)*X(adj_s)) * ((1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v)))
+            expected = ((1 + beta*X(adj_s)) + beta*(X(adj_r) - X(adj_s))) * sigma
+            actual = (1 + beta*X(adj_s)) * ((1 + beta*X(adj_s)) * (beta * GROTH(w) + GROTH(v)))
         else:
-            expected = (1 + X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s))) * sigma
-            actual = (1 + X(0)*X(adj_s)) * (X(0) * GROTH(w) + GROTH(v))
+            expected = (1 + beta * (X(adj_r) + X(adj_s) + beta*X(adj_r)*X(adj_s))) * sigma
+            actual = (1 + beta*X(adj_s)) * (beta * GROTH(w) + GROTH(v))
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
@@ -547,6 +556,7 @@ def test_double_b_grothendieck_transitions(n=3):
 
 
 def test_c_grothendieck_transitions(n=3):
+    beta = GrothendieckC.beta * MPolynomial.one()
     GROTH = GrothendieckC.get
 
     for w in SignedPermutation.all(n):
@@ -558,24 +568,24 @@ def test_c_grothendieck_transitions(n=3):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         chain =  []
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
         
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
-        expected = GROTH(v) - (X(0) * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-        expected *= -X(0)**-1
+        expected = GROTH(v) - (beta * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -beta**-1
 
         actual = GROTH(w)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
             print()
-            print('base:', -X(0)**-1 * GROTH(v))
+            print('base:', -beta**-1 * GROTH(v))
             print()
             for u in sorted(ans, key=len):
-                print(len(u), ':', u, ':', -X(0)**-1 * ans[u] * GROTH(u) * (X(r) - 1))
+                print(len(u), ':', u, ':', -beta**-1 * ans[u] * GROTH(u) * (X(r) - 1))
                 print()
             print('want:', actual)
             print()
@@ -585,6 +595,7 @@ def test_c_grothendieck_transitions(n=3):
 
 
 def test_double_c_grothendieck_transitions(n=3):
+    beta = DoubleGrothendieckC.beta * MPolynomial.one()
     GROTH = DoubleGrothendieckC.get
 
     for w in SignedPermutation.all(n):
@@ -599,19 +610,19 @@ def test_double_c_grothendieck_transitions(n=3):
         adj_s = 2 * abs(v(r))
 
         chain =  []
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
         
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
         sigma = sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
 
         if v(r) < 0:
-            expected = ((1 + X(0)*X(adj_s)) + X(0)*(X(adj_r) - X(adj_s))) * sigma
-            actual = (1 + X(0)*X(adj_s)) * (X(0)*GROTH(w) + GROTH(v))
+            expected = ((1 + beta*X(adj_s)) + beta*(X(adj_r) - X(adj_s))) * sigma
+            actual = (1 + beta*X(adj_s)) * (beta*GROTH(w) + GROTH(v))
         else:
-            expected = (1 + X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s))) * sigma
-            actual = X(0) * GROTH(w) + GROTH(v)
+            expected = (1 + beta * (X(adj_r) + X(adj_s) + beta*X(adj_r)*X(adj_s))) * sigma
+            actual = beta * GROTH(w) + GROTH(v)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
@@ -636,6 +647,7 @@ def test_double_c_grothendieck_transitions(n=3):
 
 
 def test_d_grothendieck_transitions(n=4):
+    beta = GrothendieckD.beta * MPolynomial.one()
     GROTH = GrothendieckD.get
 
     for w in SignedPermutation.all(n, dtype=True):
@@ -647,23 +659,23 @@ def test_d_grothendieck_transitions(n=4):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         chain =  []
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
 
         ans = expand_reflection_chain(v, chain, lambda x: x.dlength())
 
-        expected = GROTH(v) - (X(0) * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
-        expected *= -X(0)**-1
+        expected = GROTH(v) - (beta * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
+        expected *= -beta**-1
 
         actual = GROTH(w)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
             print()
-            print('base:', -X(0)**-1 * GROTH(v))
+            print('base:', -beta**-1 * GROTH(v))
             print()
             for u in sorted(ans, key=len):
-                print(len(u), ':', u, ':', -X(0)**-1 * ans[u] * GROTH(u) * -(X(0) * X(r) - 1))
+                print(len(u), ':', u, ':', -beta**-1 * ans[u] * GROTH(u) * -(beta * X(r) - 1))
                 print()
             print('want:', actual)
             print()
@@ -673,6 +685,7 @@ def test_d_grothendieck_transitions(n=4):
 
 
 def test_double_d_grothendieck_transitions(n=3):
+    beta = DoubleGrothendieckD.beta * MPolynomial.one()
     GROTH = DoubleGrothendieckD.get
 
     for w in SignedPermutation.all(n, dtype=True):
@@ -687,18 +700,18 @@ def test_double_d_grothendieck_transitions(n=3):
         adj_s = 2 * abs(v(r))
 
         chain =  []
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
 
         ans = expand_reflection_chain(v, chain, lambda x: x.dlength())
         sigma = sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
 
         if v(r) < 0:
-            expected = ((1 + X(0)*X(adj_s)) + X(0)*(X(adj_r) - X(adj_s))) * sigma
-            actual = (1 + X(0)*X(adj_s)) * (X(0)*GROTH(w) + GROTH(v))
+            expected = ((1 + beta*X(adj_s)) + beta*(X(adj_r) - X(adj_s))) * sigma
+            actual = (1 + beta*X(adj_s)) * (beta*GROTH(w) + GROTH(v))
         else:
-            expected = (1 + X(0) * (X(adj_r) + X(adj_s) + X(0)*X(adj_r)*X(adj_s))) * sigma
-            actual = X(0) * GROTH(w) + GROTH(v)
+            expected = (1 + beta * (X(adj_r) + X(adj_s) + beta*X(adj_r)*X(adj_s))) * sigma
+            actual = beta * GROTH(w) + GROTH(v)
 
         print('w =', w, 'r =', r, 's =', s, 'v =', v, 'v(r) =', v(r))
         if expected != actual:
@@ -749,6 +762,8 @@ def test_a_symmetric_transitions(n=3, numvars=2):
 
 
 def test_b_symmetric_transitions(n=3, numvars=2):
+    beta = GrothendieckB.beta * MPolynomial.one()
+
     for w in SignedPermutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -758,13 +773,13 @@ def test_b_symmetric_transitions(n=3, numvars=2):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         chain = []
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
         
         ans = Vector({v: 1}) - expand_reflection_chain(v, chain, lambda x: x.length())
-        ans *= -X(0)**-1
+        ans *= -beta**-1
 
         expected = sum([coeff * GrothendieckB.symmetric(numvars, z) for (z, coeff) in ans.dictionary.items()])
         actual = GrothendieckB.symmetric(numvars, w)
@@ -779,6 +794,8 @@ def test_b_symmetric_transitions(n=3, numvars=2):
 
 
 def test_c_symmetric_transitions(n=3, numvars=2):
+    beta = GrothendieckC.beta * MPolynomial.one()
+
     for w in SignedPermutation.all(n):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -788,12 +805,12 @@ def test_c_symmetric_transitions(n=3, numvars=2):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         chain = []
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
         
         ans = Vector({v: 1}) - expand_reflection_chain(v, chain, lambda x: x.length())
-        ans *= -X(0)**-1
+        ans *= -beta**-1
 
         expected = sum([coeff * GrothendieckC.symmetric(numvars, z) for (z, coeff) in ans.dictionary.items()])
         actual = GrothendieckC.symmetric(numvars, w)
@@ -808,6 +825,8 @@ def test_c_symmetric_transitions(n=3, numvars=2):
 
 
 def test_d_symmetric_transitions(n=4, numvars=2):
+    beta = GrothendieckD.beta * MPolynomial.one()
+
     for w in SignedPermutation.all(n, dtype=True):
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
@@ -817,11 +836,11 @@ def test_d_symmetric_transitions(n=4, numvars=2):
         v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
 
         chain =  []
-        chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
+        chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+        chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
         
         ans = Vector({v: 1}) - expand_reflection_chain(v, chain, lambda x: x.dlength())
-        ans *= -X(0)**-1
+        ans *= -beta**-1
 
         expected = sum([coeff * GrothendieckD.symmetric(numvars, z) for (z, coeff) in ans.dictionary.items()])
         actual = GrothendieckD.symmetric(numvars, w)
@@ -839,7 +858,7 @@ def test_b(rank=3, numvars=2):
     for w in SignedPermutation.all(rank):
         print('w =', w)
         for n in range(numvars + 1):
-            fp = GrothendieckB.symmetric(n, w)
+            fp = GrothendieckB.symmetric(n, w, beta=X(0))
             f = SymmetricPolynomial.from_polynomial(fp, n)
             exp = GP_expansion(f)
             if exp != 0:
@@ -853,7 +872,7 @@ def test_c(rank=3, numvars=2):
     for w in SignedPermutation.all(rank):
         print('w =', w)
         for n in range(numvars + 1):
-            fp = GrothendieckC.symmetric(n, w)
+            fp = GrothendieckC.symmetric(n, w, beta=X(0))
             f = SymmetricPolynomial.from_polynomial(fp, n)
             exp = GQ_expansion(f)
             if exp != 0:
@@ -867,7 +886,7 @@ def test_d(rank=4, numvars=2):
     for w in SignedPermutation.all(rank, dtype=True):
         print('w =', w)
         for n in range(numvars + 1):
-            fp = GrothendieckD.symmetric(n, w)
+            fp = GrothendieckD.symmetric(n, w, beta=X(0))
             f = SymmetricPolynomial.from_polynomial(fp, n)
             exp = GP_expansion(f)
             if exp != 0:
@@ -881,7 +900,7 @@ def test_b_grassmannian(rank=3, numvars=2):
     for w, mu in SignedPermutation.get_grassmannians_bc(rank):
         for n in range(numvars + 1):
             f = GrothendieckB.symmetric(n, w)
-            g = GP(n, mu).polynomial()
+            g = GP(n, mu).polynomial().set(0, GrothendieckB.beta)
             print('w =', w, 'mu =', mu, 'n =', n)
             if f != g:
                 print()
@@ -895,7 +914,7 @@ def test_c_grassmannian(rank=3, numvars=2):
     for w, mu in SignedPermutation.get_grassmannians_bc(rank):
         for n in range(numvars + 1):
             f = GrothendieckC.symmetric(n, w)
-            g = GQ(n, mu).polynomial()
+            g = GQ(n, mu).polynomial().set(0, GrothendieckB.beta)
             print('w =', w, 'mu =', mu, 'n =', n)
             if f != g:
                 print()
@@ -909,7 +928,7 @@ def test_d_grassmannian(rank=4, numvars=2):
     for w, mu in SignedPermutation.get_grassmannians_d(rank):
         for n in range(numvars + 1):
             f = GrothendieckD.symmetric(n, w)
-            g = GP(n, mu).polynomial()
+            g = GP(n, mu).polynomial().set(0, GrothendieckB.beta)
             print('w =', w, 'mu =', mu, 'n =', n)
             if f != g:
                 print()
@@ -923,5 +942,5 @@ def test_double_grothendieck(n=4):
     for w in Permutation.all(n):
         f = DoubleGrothendieck.get(w)
         g = DoubleSchubert.get(w)
-        assert f.set_variable(0, 0).negate_vars(range(-1, -n, -1)) == g
+        assert f.set_variable(0, 0).negate_vars(range(-1, -n, -1)).truncate_degree(len(w)) == g
 
