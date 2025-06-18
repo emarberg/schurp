@@ -100,7 +100,8 @@ def lenart_postnikov_ordering_d(n):
 
 def test_d_double_grothendieck_chain(m=2, d=1):
     rank = m + d
-    w0 = SignedPermutation.dtype_longest_element(rank)
+    w0 = SignedPermutation.longest_element(rank)
+    cutoff = rank - 1
 
     def evaluate(ans):
         var = {-i - 1 for i in range(rank)}
@@ -132,12 +133,10 @@ def test_d_double_grothendieck_chain(m=2, d=1):
         for w in SignedPermutation.all(m, dtype=True):
             w = w.inflate(rank)
             chain = kchain(k, rank)
-            print('chain =', chain)
-
             ans = DoubleGrothendieckD.expand_double_reflection_chain(w0 * w, chain, rank)
             print()
             print()
-            print('n =', rank, 'w =', w, 'k =', k)
+            print('n =', rank, 'w =', w, 'k =', k, 'chain =', chain)
             print()
             print(ans)
 
@@ -147,14 +146,14 @@ def test_d_double_grothendieck_chain(m=2, d=1):
             ff = evaluateDouble(ans)
             gg = (1 - X(2 * k - 1)) * DoubleGrothendieckD.get(w)
             
-            test = (ff - gg).truncate_degree(rank)
+            test = (ff - gg).truncate_degree(cutoff)
 
             print()
             print(f)
             print()
             print(g)
             print()
-            print((f - g).truncate_degree(rank))
+            print((f - g).truncate_degree(cutoff))
             print()
             print(ff)
             print()
@@ -164,8 +163,7 @@ def test_d_double_grothendieck_chain(m=2, d=1):
             print()
             print(test == 0)
             print()
-            #assert test == 0
-            i = input('')
+            assert test == 0
 
 
 def test_c_double_grothendieck_chain(m=2, d=1):
