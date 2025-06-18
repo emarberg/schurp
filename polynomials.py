@@ -216,6 +216,9 @@ class MPolynomial:
     def truncate(self, nvar):
         return self.__class__({m: v for m, v in self.coeffs.items() if not any(i > nvar for i in m)})
 
+    def truncate_degree(self, degree):
+        return self.__class__({m: v for m, v in self.coeffs.items() if sum(m.values()) <= degree})
+
     def __bool__(self):
         return not self.is_zero()
 
@@ -309,6 +312,8 @@ class MPolynomial:
                 else:
                     if e in [1, -1]:
                         term *= e ** abs(ind[j])
+                    elif ind[j] < 0 and type(e) == MPolynomial and len(e.coeffs) == 1:
+                        term *= (e**-1) ** abs(ind[j])
                     else:
                         assert ind[j] >= 0
                         term *= e ** ind[j]

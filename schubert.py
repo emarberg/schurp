@@ -816,7 +816,7 @@ class DoubleGrothendieckB(DoubleGrothendieckMixin,GrothendieckB):
             return tuple(ans)
 
         rho = tuple(reversed([2 * n - 1 - 2 * i for i in range(n)]))
-        one = tuple(1 for i in range(n))
+        w0 = SignedPermutation.longest_element(n)
 
         def reduce(a):
             assert all(v % (4 * n) == 0 for v in a)
@@ -852,9 +852,110 @@ class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
     def cache(cls):
         return C_DOUBLE_GROTHENDIECK_CACHE
 
+    @classmethod
+    def expand_double_reflection_chain(cls, start, chain, rank):
+        length = lambda x: x.length()
+        n = rank
+
+        def act(w, a):
+            return tuple(a[abs(w.inverse()(i + 1)) - 1] * (-1 if w.inverse()(i + 1) < 0 else 1) for i in range(n))
+
+        def add(a, b):
+            return tuple(a[i] + b[i] for i in range(n))
+
+        def negate(a):
+            return tuple(-a[i] for i in range(n))
+
+        def alpha(i, j):
+            ans = n * [0]
+            ans[abs(i) - 1] += 1 if i > 0 else -1
+            ans[abs(j) - 1] += 1 if j > 0 else -1
+            return tuple(ans)
+
+        rho = tuple(reversed([n - i for i in range(n)]))
+
+        def reduce(a):
+            assert all(v % (2 * n) == 0 for v in a)
+            a = [v // (2 * n) for v in a]
+            ans = y(0)**0
+            for i in range(n):
+                ans *= y(i + 1)**a[i]
+            return ans
+
+        ans = Vector()
+        queue = [(1, act(start, negate(rho)), start, chain)]
+        while queue:
+            (sgn, bterm, z, c) = queue[0]
+            queue = queue[1:]
+            if len(c) == 0:
+                bterm = add(bterm, act(z, rho))
+                bterm = negate(bterm)
+                ans += Vector({z: sgn * reduce(bterm)})
+            else:
+                (i, j) = c[0]
+                assert abs(i) <= abs(j) and i + j != 0
+                t = SignedPermutation.reflection_s(abs(i), abs(j), rank) if i * j > 0 else SignedPermutation.reflection_t(abs(i), abs(j), rank)
+                a = act(z, alpha(i, j))
+                queue.append((sgn, add(a, bterm), z, c[1:]))
+                zt = z * t
+                if length(zt) == length(z) + 1:
+                    queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
+        return ans
+
 
 class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
 
     @classmethod
     def cache(cls):
         return D_DOUBLE_GROTHENDIECK_CACHE
+
+    @classmethod
+    def expand_double_reflection_chain(cls, start, chain, rank):
+        length = lambda x: x.dlength()
+        n = rank
+
+        def act(w, a):
+            return tuple(a[abs(w.inverse()(i + 1)) - 1] * (-1 if w.inverse()(i + 1) < 0 else 1) for i in range(n))
+
+        def add(a, b):
+            return tuple(a[i] + b[i] for i in range(n))
+
+        def negate(a):
+            return tuple(-a[i] for i in range(n))
+
+        def alpha(i, j):
+            ans = n * [0]
+            ans[abs(i) - 1] += 1 if i > 0 else -1
+            ans[abs(j) - 1] += 1 if j > 0 else -1
+            return tuple(ans)
+
+        rho = tuple(reversed([n - 1 - i for i in range(n)]))
+        w0 = SignedPermutation.dtype_longest_element(n)
+
+        def reduce(a):
+            assert all(v % (2 * n - 2) == 0 for v in a)
+            a = [v // (2 * n - 2) for v in a]
+            ans = y(0)**0
+            for i in range(n):
+                ans *= y(i + 1)**a[i]
+            return ans
+
+        ans = Vector()
+        queue = [(1, act(start, negate(rho)), start, chain)]
+        while queue:
+            (sgn, bterm, z, c) = queue[0]
+            queue = queue[1:]
+            if len(c) == 0:
+                bterm = add(bterm, act(z, rho))
+                bterm = act(w0, bterm)
+                ans += Vector({z: sgn * reduce(bterm)})
+            else:
+                (i, j) = c[0]
+                assert abs(i) < abs(j) and i + j != 0
+                t = SignedPermutation.reflection_s(abs(i), abs(j), rank) if i * j > 0 else SignedPermutation.reflection_t(abs(i), abs(j), rank)
+                a = act(z, alpha(i, j))
+                queue.append((sgn, add(a, bterm), z, c[1:]))
+                zt = z * t
+                if length(zt) == length(z) + 1:
+                    queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
+        return ans

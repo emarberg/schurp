@@ -19,20 +19,241 @@ from stable.utils import (
 )
 from vectors import Vector
 import itertools
+from schubert import X
+
+
+def d_order(n):
+    def svec(c, *args):
+        ans = n * [0]
+        for a in args:
+            if a > 0:
+                ans[a - 1] = c
+            elif a < 0:
+                ans[-a - 1] = -c
+        return tuple(ans)
+
+    def negate(v):
+        return tuple(-a for a in v)
+
+    def dot(v, w):
+        ans = sum([v[i] * w[i] for i in range(n)])
+        assert ans % 2 == 0
+        return ans // 2
+
+    pos = [svec(1, i, j) for i in range(1, n) for j in range(i + 1, n + 1)] + [svec(1, -i, j) for i in range(1, n) for j in range(i + 1, n + 1)] 
+    neg = [negate(v) for v in pos]
+
+    print('positive roots:')
+    for w in pos:
+        print('  ', w)
+    print()
+
+    def rset(lam):
+        ans = []
+        vals = set()
+        for alpha in pos:
+            v = dot(lam, alpha)
+            vals.add(abs(v))
+            if v > 0:
+                ans += [(alpha, k) for k in range(-v + 1, 1)]
+            elif v < 0:
+                ans += [(alpha, k) for k in range(1, -v + 1)]
+        
+        prod = 1
+        for m in vals - {0}:
+            prod *= m
+        return ans, prod
+
+    weights = [
+        svec(1, *range(1, n + 1)),
+        svec(1, *([-1] + list(range(2, n + 1)))),
+    ] + [
+        svec(2, *range(i, n + 1)) for i in range(3, n + 1)
+    ]
+
+    print('weights:')
+    for w in weights:
+        print('  ', w)
+    print()
+
+    def rkey(maximum, lam, pair):
+        alpha, k = pair
+        v = dot(lam, alpha)
+        assert v != 0 and maximum % v == 0
+        v = maximum // v
+        return (-k * v,) + tuple(dot(w, alpha) * v for w in weights)
+
+    for i in range(1, n + 1):
+        lam = svec(2, i)
+        r, maximum = rset(lam)
+        key = lambda pair: rkey(maximum, lam, pair)
+        print('i = ', i)
+        for pair in sorted(r, key=key):
+            alpha, k = pair
+            if k <= 0:
+                print('  ', alpha)
+            else:
+                print('  ', negate(alpha))
+        print()
+
+
+def test_d_double_grothendieck_chain(m=2, d=1):
+    rank = m + d
+
+    def evaluate(ans):
+        var = {-i - 1 for i in range(rank)}
+        bns = 0
+        for z, coeff in ans.dictionary.items():
+            bns += coeff.set_vars(var, 1) * GrothendieckD.get(z)
+        return bns
+
+    def evaluateDouble(ans):
+        bns = 0
+        for z, coeff in ans.dictionary.items():
+            f = DoubleGrothendieckD.get(z)
+            for i in range(1, rank + 1):
+                f = f.set(2 * i, 1 - X(2 * i))
+                coeff = coeff.set(-i, X(2 * i))
+            bns += coeff * f
+        for i in range(1, rank + 1):
+            bns = bns.set(2 * i, 1 - X(2 * i))
+        return bns
+
+    def kchain(k, n):
+        chain =  []
+        chain += [(-i, k) for i in range(k - 1, 0, -1)]
+        chain += [(i, k) if i < k else (k, i) for i in range(1, n + 1) if i != k]
+        chain += [(k, -l) for l in range(n, k, -1)]
+        return chain
+
+    for k in range(1, m + 1):
+        for w in SignedPermutation.all(m, dtype=True):
+            w = w.inflate(rank)
+            chain = kchain(k, rank)
+            print('chain =', chain)
+
+            ans = DoubleGrothendieckD.expand_double_reflection_chain(w, chain, rank)
+            print()
+            print()
+            print('n =', rank, 'w =', w, 'k =', k)
+            print()
+            print(ans)
+
+            f = evaluate(ans)
+            g = (1 - X(k)) * GrothendieckD.get(w)
+
+            ff = evaluateDouble(ans)
+            gg = (1 - X(2 * k - 1)) * DoubleGrothendieckD.get(w)
+            
+            test = (ff - gg).truncate_degree(rank)
+
+            print()
+            print(f)
+            print()
+            print(g)
+            print()
+            print((f - g).truncate_degree(rank))
+            print()
+            print(ff)
+            print()
+            print(gg)
+            print()
+            print(test)
+            print()
+            print(test == 0)
+            print()
+            #assert test == 0
+            i = input('')
+
+
+def test_c_double_grothendieck_chain(m=2, d=1):
+    rank = m + d
+
+    def evaluate(ans):
+        var = {-i - 1 for i in range(rank)}
+        bns = 0
+        for z, coeff in ans.dictionary.items():
+            bns += coeff.set_vars(var, 1) * GrothendieckC.get(z)
+        return bns
+
+    def evaluateDouble(ans):
+        bns = 0
+        for z, coeff in ans.dictionary.items():
+            f = DoubleGrothendieckC.get(z)
+            for i in range(1, rank + 1):
+                f = f.set(2 * i, 1 - X(2 * i))
+                coeff = coeff.set(-i, X(2 * i))
+            bns += coeff * f
+        for i in range(1, rank + 1):
+            bns = bns.set(2 * i, 1 - X(2 * i))
+        return bns
+
+    def kchain(k, n):
+        chain =  []
+        chain += [(-i, k) for i in range(k - 1, 0, -1)]
+        chain += [(k, k)]
+        chain += [(i, k) if i < k else (k, i) for i in range(1, n + 1) if i != k]
+        chain += [(k, -l) for l in range(n, k, -1)]
+        return chain
+
+    for k in range(1, m + 1):
+        for w in SignedPermutation.all(m):
+            w = w.inflate(rank)
+            chain = kchain(k, rank)
+            print('chain =', chain)
+            ans = DoubleGrothendieckC.expand_double_reflection_chain(w, chain, rank)
+
+            f = evaluate(ans)
+            g = (1 - X(k)) * GrothendieckC.get(w)
+
+            ff = evaluateDouble(ans)
+            gg = (1 - X(2 * k - 1)) * DoubleGrothendieckC.get(w)
+            
+            test = (ff - gg).truncate_degree(rank)
+
+            print()
+            print()
+            print('n =', rank, 'w =', w, 'k =', k, 'chain =', chain)
+            print()
+            print(ans)
+            print()
+            print(f)
+            print()
+            print(g)
+            print()
+            print((f - g).truncate_degree(rank))
+            print()
+            print(ff)
+            print()
+            print(gg)
+            print()
+            print(test)
+            print()
+            assert test == 0
+            # i = input('')
 
 
 def test_b_double_grothendieck_chain(m=2, d=1):
     rank = m + d
     w0 = SignedPermutation.longest_element(rank)
 
-    def convert(ans, rank):
-        return Vector({z * w0: coeff for z, coeff in ans.dictionary.items()})
-
     def evaluate(ans):
         var = {-i - 1 for i in range(rank)}
         bns = 0
         for z, coeff in ans.dictionary.items():
-            bns += coeff.set_vars(var, 1) * GrothendieckB.get(z)
+            bns += coeff.set_vars(var, 1) * GrothendieckB.get(w0 *z)
+        return bns
+
+    def evaluateDouble(ans):
+        bns = 0
+        for z, coeff in ans.dictionary.items():
+            f = DoubleGrothendieckB.get(w0 * z)
+            for i in range(1, rank + 1):
+                f = f.set(2 * i, 1 - X(2 * i))
+                coeff = coeff.set(-i, X(2 * i))
+            bns += coeff * f
+        for i in range(1, rank + 1):
+            bns = bns.set(2 * i, 1 - X(2 * i))
         return bns
 
     def kchain(k, n):
@@ -44,43 +265,41 @@ def test_b_double_grothendieck_chain(m=2, d=1):
         chain += [(k, -l) for l in range(n, k, -1)]
         return chain
 
-        # chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        # chain += [(SignedPermutation.reflection_s(i, r, n + 1), X(0)) for i in range(n + 1, 0, -1) if i != r]
-        # chain += [(SignedPermutation.reflection_s(r, r, n + 1), X(0))]
-        # chain += [(SignedPermutation.reflection_t(i, r, n + 1), X(0)) for i in range(1, r)]
-        
-
     for k in range(1, m + 1):
         for w in SignedPermutation.all(m):
             w = w.inflate(rank)
-            start = w0 * w
             chain = kchain(k, rank)
             print('chain =', chain)
-            ans = DoubleGrothendieckB.expand_double_reflection_chain(start, chain, rank)
-            f = convert(ans, rank)
-            # g = (1 - X(k)) * DoubleGrothendieckB.get(w)
+            ans = DoubleGrothendieckB.expand_double_reflection_chain(w0 * w, chain, rank)
 
-            ff = evaluate(f)
-            gg = (1 - X(k)) * GrothendieckB.get(w)
+            f = evaluate(ans)
+            g = (1 - X(k)) * GrothendieckB.get(w)
+
+            ff = evaluateDouble(ans)
+            gg = (1 - X(2 * k - 1)) * DoubleGrothendieckB.get(w)
             
+            test = (ff - gg).truncate_degree(rank)
+
             print()
             print()
             print('n =', rank, 'w =', w, 'k =', k, 'chain =', chain)
-            #print()
-            #print(ans)
+            print()
+            print(ans)
             print()
             print(f)
+            print()
+            print(g)
+            print()
+            print((f - g).truncate_degree(rank))
             print()
             print(ff)
             print()
             print(gg)
             print()
-            print(ff == gg)
+            print(test)
             print()
-            # assert ff == gg
-            i = input('')
-            #if i == 'y':
-            #    return f
+            assert test == 0
+            # i = input('')
 
 
 def test_double_grothendieck_chain(m=2, d=1):
@@ -131,37 +350,6 @@ def test_double_grothendieck_chain(m=2, d=1):
             print()
             print(ff == gg)
             print()
-            #i = input('')
-            #if i == 'y':
-            #    return f
-
-    # start = Permutation(3, 2, 1)
-    # chain = [(1, 2), (1, 3)]
-    # rank = 3
-    # ans = DoubleGrothendieck.expand_reflection_chain(start, chain, rank)
-    # print(ans)
-    # print()
-    # print(convert(ans, rank))
-    # print()
-    # print(evaluate(convert(ans, rank)))
-    # print()
-    # print((1 - X(3)) * DoubleGrothendieck.get(Permutation()))
-    # print()
-    # print()
-
-    # start = Permutation(4, 3, 2, 1)
-    # chain = [(2, 3), (2, 4), (2, 1)]
-    # rank = 4
-    # ans = DoubleGrothendieck.expand_reflection_chain(start, chain, rank)
-    # print(ans)
-    # print()
-    # print(convert(ans, rank))
-    # print()
-    # print(evaluate(convert(ans, rank)))
-    # print()
-    # print((1 - X(3)) * DoubleGrothendieck.get(Permutation()))
-    # print()
-    # print()
 
 
 def expand_reflection_chain(start, chain, length):
