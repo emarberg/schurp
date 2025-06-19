@@ -811,14 +811,13 @@ class DoubleGrothendieckB(DoubleGrothendieckMixin,GrothendieckB):
 
         def alpha(i, j):
             ans = n * [0]
-            ans[abs(i) - 1] += 2 if i > 0 else -2
+            ans[abs(i) - 1] += 2 if i < 0 else -2
             if i != j:
-                ans[abs(j) - 1] += 2 if j > 0 else -2
+                ans[abs(j) - 1] += 2 if j < 0 else -2
             return tuple(ans)
 
         rho = tuple(reversed([2 * n - 1 - 2 * i for i in range(n)]))
-        w0 = SignedPermutation.longest_element(n)
-
+        
         def reduce(a):
             assert all(v % (4 * n) == 0 for v in a)
             a = [v // (4 * n) for v in a]
@@ -828,12 +827,12 @@ class DoubleGrothendieckB(DoubleGrothendieckMixin,GrothendieckB):
             return ans
 
         ans = Vector()
-        queue = [(1, act(start, negate(rho)), start, chain)]
+        queue = [(1, act(start, rho), start, chain)]
         while queue:
             (sgn, bterm, z, c) = queue[0]
             queue = queue[1:]
             if len(c) == 0:
-                bterm = add(bterm, act(z, rho))
+                bterm = add(bterm, act(z, negate(rho)))
                 ans += Vector({z: sgn * reduce(bterm)})
             else:
                 (i, j) = c[0]
@@ -842,7 +841,7 @@ class DoubleGrothendieckB(DoubleGrothendieckMixin,GrothendieckB):
                 a = act(z, alpha(i, j))
                 queue.append((sgn, add(a, bterm), z, c[1:]))
                 zt = z * t
-                if length(zt) == length(z) - 1:
+                if length(zt) == length(z) + 1:
                     queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
         return ans
 
@@ -869,8 +868,8 @@ class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
 
         def alpha(i, j):
             ans = n * [0]
-            ans[abs(i) - 1] += 1 if i > 0 else -1
-            ans[abs(j) - 1] += 1 if j > 0 else -1
+            ans[abs(i) - 1] += 1 if i < 0 else -1
+            ans[abs(j) - 1] += 1 if j < 0 else -1
             return tuple(ans)
 
         rho = tuple(reversed([n - i for i in range(n)]))
@@ -884,12 +883,12 @@ class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
             return ans
 
         ans = Vector()
-        queue = [(1, act(start, negate(rho)), start, chain)]
+        queue = [(1, act(start, rho), start, chain)]
         while queue:
             (sgn, bterm, z, c) = queue[0]
             queue = queue[1:]
             if len(c) == 0:
-                bterm = add(bterm, act(z, rho))
+                bterm = add(bterm, act(z, negate(rho)))
                 ans += Vector({z: sgn * reduce(bterm)})
             else:
                 (i, j) = c[0]
@@ -898,7 +897,7 @@ class DoubleGrothendieckC(DoubleGrothendieckMixin,GrothendieckC):
                 a = act(z, alpha(i, j))
                 queue.append((sgn, add(a, bterm), z, c[1:]))
                 zt = z * t
-                if length(zt) == length(z) - 1:
+                if length(zt) == length(z) + 1:
                     queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
         return ans
 
@@ -925,12 +924,11 @@ class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
 
         def alpha(i, j):
             ans = n * [0]
-            ans[abs(i) - 1] += 1 if i > 0 else -1
-            ans[abs(j) - 1] += 1 if j > 0 else -1
+            ans[abs(i) - 1] += 1 if i < 0 else -1
+            ans[abs(j) - 1] += 1 if j < 0 else -1
             return tuple(ans)
 
         rho = tuple(reversed([n - 1 - i for i in range(n)]))
-        w0 = SignedPermutation.dtype_longest_element(n)
 
         def reduce(a):
             assert all(v % (2 * n - 2) == 0 for v in a)
@@ -941,12 +939,12 @@ class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
             return ans
 
         ans = Vector()
-        queue = [(1, act(start, negate(rho)), start, chain)]
+        queue = [(1, act(start, rho), start, chain)]
         while queue:
             (sgn, bterm, z, c) = queue[0]
             queue = queue[1:]
             if len(c) == 0:
-                bterm = add(bterm, act(z, rho))
+                bterm = add(bterm, act(z, negate(rho)))
                 ans += Vector({z: sgn * reduce(bterm)})
             else:
                 (i, j) = c[0]
@@ -955,6 +953,6 @@ class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
                 a = act(z, alpha(i, j))
                 queue.append((sgn, add(a, bterm), z, c[1:]))
                 zt = z * t
-                if length(zt) == length(z) - 1:
+                if length(zt) == length(z) + 1:
                     queue.append((sgn if j > 0 else -sgn, bterm, zt, c[1:]))
         return ans

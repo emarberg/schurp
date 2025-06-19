@@ -100,20 +100,19 @@ def lenart_postnikov_ordering_d(n):
 
 def test_d_double_grothendieck_chain(m=2, d=1):
     rank = m + d
-    w0 = SignedPermutation.longest_element(rank)
     cutoff = rank - 1
 
     def evaluate(ans):
         var = {-i - 1 for i in range(rank)}
         bns = 0
         for z, coeff in ans.dictionary.items():
-            bns += coeff.set_vars(var, 1) * GrothendieckD.get(w0 * z)
+            bns += coeff.set_vars(var, 1) * GrothendieckD.get(z)
         return bns
 
     def evaluateDouble(ans):
         bns = 0
         for z, coeff in ans.dictionary.items():
-            f = DoubleGrothendieckD.get(w0 * z)
+            f = DoubleGrothendieckD.get(z)
             for i in range(1, rank + 1):
                 f = f.set(2 * i, 1 - X(2 * i))
                 coeff = coeff.set(-i, X(2 * i))
@@ -133,7 +132,7 @@ def test_d_double_grothendieck_chain(m=2, d=1):
         for w in SignedPermutation.all(m, dtype=True):
             w = w.inflate(rank)
             chain = kchain(k, rank)
-            ans = DoubleGrothendieckD.expand_double_reflection_chain(w0 * w, chain, rank)
+            ans = DoubleGrothendieckD.expand_double_reflection_chain(w, chain, rank)
             print()
             print()
             print('n =', rank, 'w =', w, 'k =', k, 'chain =', chain)
@@ -168,19 +167,18 @@ def test_d_double_grothendieck_chain(m=2, d=1):
 
 def test_c_double_grothendieck_chain(m=2, d=1):
     rank = m + d
-    w0 = SignedPermutation.longest_element(rank)
 
     def evaluate(ans):
         var = {-i - 1 for i in range(rank)}
         bns = 0
         for z, coeff in ans.dictionary.items():
-            bns += coeff.set_vars(var, 1) * GrothendieckC.get(w0 * z)
+            bns += coeff.set_vars(var, 1) * GrothendieckC.get(z)
         return bns
 
     def evaluateDouble(ans):
         bns = 0
         for z, coeff in ans.dictionary.items():
-            f = DoubleGrothendieckC.get(w0 * z)
+            f = DoubleGrothendieckC.get(z)
             for i in range(1, rank + 1):
                 f = f.set(2 * i, 1 - X(2 * i))
                 coeff = coeff.set(-i, X(2 * i))
@@ -202,7 +200,7 @@ def test_c_double_grothendieck_chain(m=2, d=1):
             w = w.inflate(rank)
             chain = kchain(k, rank)
             print('chain =', chain)
-            ans = DoubleGrothendieckC.expand_double_reflection_chain(w0 * w, chain, rank)
+            ans = DoubleGrothendieckC.expand_double_reflection_chain(w, chain, rank)
 
             f = evaluate(ans)
             g = (1 - X(k)) * GrothendieckC.get(w)
@@ -231,24 +229,22 @@ def test_c_double_grothendieck_chain(m=2, d=1):
             print(test)
             print()
             assert test == 0
-            # i = input('')
 
 
 def test_b_double_grothendieck_chain(m=2, d=1):
     rank = m + d
-    w0 = SignedPermutation.longest_element(rank)
 
     def evaluate(ans):
         var = {-i - 1 for i in range(rank)}
         bns = 0
         for z, coeff in ans.dictionary.items():
-            bns += coeff.set_vars(var, 1) * GrothendieckB.get(w0 *z)
+            bns += coeff.set_vars(var, 1) * GrothendieckB.get(z)
         return bns
 
     def evaluateDouble(ans):
         bns = 0
         for z, coeff in ans.dictionary.items():
-            f = DoubleGrothendieckB.get(w0 * z)
+            f = DoubleGrothendieckB.get(z)
             for i in range(1, rank + 1):
                 f = f.set(2 * i, 1 - X(2 * i))
                 coeff = coeff.set(-i, X(2 * i))
@@ -271,7 +267,7 @@ def test_b_double_grothendieck_chain(m=2, d=1):
             w = w.inflate(rank)
             chain = kchain(k, rank)
             print('chain =', chain)
-            ans = DoubleGrothendieckB.expand_double_reflection_chain(w0 * w, chain, rank)
+            ans = DoubleGrothendieckB.expand_double_reflection_chain(w, chain, rank)
 
             f = evaluate(ans)
             g = (1 - X(k)) * GrothendieckB.get(w)
