@@ -239,17 +239,26 @@ def test_all_c1():
 def test_atoms_a(n=4):
     for p in range(1, n):
         q = n - p
+        atoms_by_inv = {}
+        extended_atoms = {}
         for clan in Clan.all_a(p, q):
             atoms = set(clan.get_atoms())
-            print(clan)
             for a in atoms:
-                print('  ', a.inverse(), a.inverse().get_reduced_word())
                 assert clan.weyl_group_weight(a) == 0
             btoms = set(clan.get_atoms_extended())
-            for a in btoms:
-                print('  ', a.inverse(), a.inverse().get_reduced_word())
             assert atoms.issubset(btoms)
+            assert (atoms == btoms) == clan.is_alternating()
 
+            z = clan.richardson_springer_involution()
+            atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
+            if z not in extended_atoms:
+                extended_atoms[z] = btoms
+            else:
+                assert extended_atoms[z] == btoms
+
+        unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
+        print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+        assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 def test_atoms_b(n=4, verbose=False):
     for p in range(1, n):
@@ -257,11 +266,13 @@ def test_atoms_b(n=4, verbose=False):
         k = abs(2 * p - 2 * q - 1) // 2
         g = SignedPermutation.bbase_atom(n, k)
 
-        print('n =', n, '(p, q) =', (p, q))
+        atoms_by_inv = {}
+        extended_atoms = {}
+
         for clan in Clan.all_b(p, q):
             z = clan.richardson_springer_involution()
             d = len([i for i in range(1, n + 1) if i > z(i) > 0])
-            print(' ', clan, '  <--->  ', z, '=', z.cycle_repr())
+
             atoms = set(clan.get_atoms())
             lengths_a = set()
             for a in atoms:
@@ -280,38 +291,70 @@ def test_atoms_b(n=4, verbose=False):
             assert atoms.issubset(btoms)
             assert lengths_a == lengths_b
             assert len(lengths_a) == 1
+            assert (atoms == btoms) == clan.is_alternating()
+
+            z = clan.richardson_springer_involution()
+            atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
+            if z not in extended_atoms:
+                extended_atoms[z] = btoms
+            else:
+                assert extended_atoms[z] == btoms
+
+        unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
+        print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+        assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
 def test_atoms_c1(n=4):
     for m in range(n + 1):
-        print()
-        print('n =', n)
-        print()
+        atoms_by_inv = {}
+        extended_atoms = {}
         for clan in Clan.all_c1(m):
-            print(clan)
             z = clan.richardson_springer_involution()
             d = len([i for i in range(1, n + 1) if i > z(i)])
             atoms = set(clan.get_atoms())
-            assert atoms.issubset(set(clan.get_atoms_extended()))
+            btoms = set(clan.get_atoms_extended())
+            assert atoms.issubset(btoms)
             for a in atoms:
-                print('  ', a, clan.weyl_group_weight(a), '==', d - a.ell_zero())
                 assert clan.weyl_group_weight(a) == d - a.ell_zero()
+            assert (atoms == btoms) == clan.is_alternating()
+
+            atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
+            if z not in extended_atoms:
+                extended_atoms[z] = btoms
+            else:
+                assert extended_atoms[z] == btoms
+
+        unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
+        print('n =', m, len(atoms_by_inv), len(unions_match))
+        assert len(atoms_by_inv) == len(unions_match)
 
 
 def test_atoms_c2(n=4):
     for p in range(1, n):
         q = n - p
         
+        atoms_by_inv = {}
+        extended_atoms = {}
+
         for clan in Clan.all_c2(p, q):
             atoms = clan.get_atoms()
-            print(clan)
             for a in atoms:
-                print('  ', a.inverse(), a.inverse().get_reduced_word())
                 assert clan.weyl_group_weight(a) == 0
             btoms = set(clan.get_atoms_extended())
-            for a in btoms:
-                print('  ', a.inverse(), a.inverse().get_reduced_word())
             assert atoms.issubset(btoms)
+            assert (atoms == btoms) == clan.is_alternating()
+
+            z = clan.richardson_springer_involution()
+            atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
+            if z not in extended_atoms:
+                extended_atoms[z] = btoms
+            else:
+                assert extended_atoms[z] == btoms
+
+        unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
+        print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+        assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
 def test_atoms_d1(nn=4, verbose=False):
@@ -321,7 +364,9 @@ def test_atoms_d1(nn=4, verbose=False):
             offset = abs(p - q)
             g = SignedPermutation.dbase_atom(n, offset)
 
-            print('n =', n, '(p, q) =', (p, q))
+            atoms_by_inv = {}
+            extended_atoms = {}
+
             twisted = offset % 2 != 0
             for clan in Clan.all_d1(p, q):
                 z = clan.richardson_springer_involution()
@@ -330,35 +375,36 @@ def test_atoms_d1(nn=4, verbose=False):
                 d = len([i for i in range(-n, n + 1) if i > z(i)]) - offset
                 assert d % 2 == 0
                     
-                if verbose:
-                    print(' ', clan)
-                    print()
                 atoms = set(clan.get_atoms())
                 lengths_a = set()
                 for a in atoms:
                     word = a.inverse().get_reduced_word(dtype=True)
-                    if verbose:
-                        print('  ', a.inverse(), (g*a).dshape(offset))
                     lengths_a.add(len(word))
                     assert g.brion_length_d(twisted) == offset // 2
                     assert clan.weyl_group_weight(a) == (g * a).brion_length_d(twisted) - g.brion_length_d(twisted)
                     assert clan.weyl_group_weight(a) == d // 2
-                    
                 
                 btoms = set(clan.get_atoms_extended())
                 lengths_b = set()
                 for a in btoms:
                     word = a.inverse().get_reduced_word(dtype=True)
-                    if verbose:
-                        print('  ', a.inverse(), (g*a).dshape(offset))
                     lengths_b.add(len(word))
-                if verbose:
-                    print()
-                    print()
 
                 assert atoms.issubset(btoms)
                 assert lengths_a == lengths_b
                 assert len(lengths_a) == 1
+                assert (atoms == btoms) == clan.is_alternating()
+
+                z = clan.richardson_springer_involution()
+                atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
+                if z not in extended_atoms:
+                    extended_atoms[z] = btoms
+                else:
+                    assert extended_atoms[z] == btoms
+
+            unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
+            print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+            assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
 def test_atoms_d2(nn=4, verbose=False):
@@ -368,9 +414,15 @@ def test_atoms_d2(nn=4, verbose=False):
             offset = abs(p - q)
             g = SignedPermutation.dbase_atom(n, offset)
 
-            print('n =', n, '(p, q) =', (p, q))
+            atoms_by_inv = {}
+            extended_atoms = {}
+
             twisted = offset % 2 != 0
-            for clan in Clan.all_d2(p, q):
+
+            equal = set()
+            every = set(Clan.all_d2(p, q))
+            extra = set()
+            for clan in every:
                 z = clan.richardson_springer_involution()
                 if twisted:
                     z = SignedPermutation.s_i(0, n) * z
@@ -378,19 +430,46 @@ def test_atoms_d2(nn=4, verbose=False):
                 assert d % 2 == 0
 
                 atoms = set(clan.get_atoms())
-                if verbose:
-                    print('  ', clan)
                 for a in atoms:
                     assert clan.weyl_group_weight(a) == (g * a).brion_length_d(twisted) - g.brion_length_d(twisted)
                     assert clan.weyl_group_weight(a) == d // 2
                 btoms = set(clan.get_atoms_extended())
                 assert atoms.issubset(btoms)
+                assert (atoms == btoms) == clan.is_alternating()
+
+                z = clan.richardson_springer_involution()
+                if atoms == btoms:
+                    equal.add(z)
+                    # print(clan, clan.is_alternating())
+                else:
+                    extra.add(clan)
+
+                atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
+                if z not in extended_atoms:
+                    extended_atoms[z] = btoms
+                else:
+                    assert extended_atoms[z] == btoms
+
+            #print()
+            #print('extra:')
+            #for clan in extra:
+            #    print(clan, clan.is_alternating())
+
+            unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
+            print()
+            print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match), len(equal))
+            print()
+            assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
 def test_atoms_d3(nn=4, verbose=False):
     for n in [nn, nn + 1]:
-        print('n =', n)
-        for clan in Clan.all_d3(n):
+        atoms_by_inv = {}
+        extended_atoms = {}
+        equal = set()
+        every = set(Clan.all_d3(n))
+        extra = set()
+        for clan in every:
             phi = clan.richardson_springer_map()
             z = phi.dtype_longest_element(n) * phi.inverse()
 
@@ -410,6 +489,31 @@ def test_atoms_d3(nn=4, verbose=False):
             assert atoms.issubset(btoms)
             assert lengths_a == lengths_b
             assert len(lengths_a) == 1
+            assert (atoms == btoms) == clan.is_alternating()
+
+            z = clan.richardson_springer_involution()
+            if atoms == btoms:
+                equal.add(z)
+                # print(clan, clan.is_alternating())
+            else:
+                extra.add(clan)
+
+            atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
+            if z not in extended_atoms:
+                extended_atoms[z] = btoms
+            else:
+                assert extended_atoms[z] == btoms
+
+        # print()
+        # print('extra:')
+        # for clan in extra:
+        #     print(clan, clan.is_alternating())
+
+        unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
+        print()
+        print('n =', n, len(atoms_by_inv), len(unions_match), len(equal))
+        print()
+        assert len(atoms_by_inv) == len(unions_match)
 
 
 def relatom_shape_test(aword, y):

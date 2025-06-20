@@ -168,12 +168,14 @@ class Clan:
 
     def is_alternating(self):
         s = [a for a in self.oneline if type(a) is bool]
-        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1]:
-            return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
+        if self.family in [self.TYPE_A, self.TYPE_C1]:
+            return all(s[i] == s[i + 1] for i in range(len(s) - 1)) or not any(s[i] == s[i + 1] for i in range(len(s) - 1))
+        elif self.family in [self.TYPE_B]:
+            return all(s[i] == s[i + 1] for i in range(len(s)//2 - 1)) or not any(s[i] == s[i + 1] for i in range(len(s) - 1))
         elif self.family in [self.TYPE_C2, self.TYPE_D1, self.TYPE_D2]:
-            return not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
+            return all(s[i] == s[i + 1] for i in range(len(s)//2 - 1)) or not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
         elif self.family == self.TYPE_D3:
-            return len([i for i in self.oneline if type(i) == bool]) <= 2
+            return len([i for i in self.oneline if type(i) == bool]) <= 2 * (2 if self.rank() % 2 == 0 else 1)
         else:
             raise Exception
 
