@@ -1520,6 +1520,9 @@ class SignedPermutation(SignedMixin):
                 oneline[0] *= -1  
         w = cls(*oneline)
 
+        if twisted and k > 0 and k % 2 == 0:
+            w *= cls.ds_i(-1 if k % 4 == 0 else 1, n)
+
         z = cls.dbase(n, k)
         assert w in z.get_atoms_d(twisted=twisted)
 

@@ -5,8 +5,10 @@ from polynomials import X
 
 def test_inclusion_dtwisted(n=4):
     def included(w, k):
-        o = w.inverse().oneline[:k]
-        o = [o[i] * (-1)**(i + k) for i in range(0, k)]
+        o = list(w.inverse().oneline[:k])
+        if k > 0 and k % 2 == 0:
+            o = [o[1], o[0]] + o[2:]
+        o = ([abs(o[0])] if k > 0 else []) + [o[i] * (-1)**(i + k) for i in range(1, k)]
         return all(o[i] < o[i + 1] for i in range(k - 1)) and (k == 0 or o[0] > 0)
         
     for z in SignedPermutation.involutions(n, twisted=True, dtype=True):
@@ -23,8 +25,7 @@ def test_inclusion_dtwisted(n=4):
                 print('expected:', {v.inverse() for v in expected})
                 print('     all:', {v.inverse() for v in b})
                 print()
-                input('')
-            # assert actual == expected
+            assert actual == expected
 
 
 def test_inclusion_d(n=4):
