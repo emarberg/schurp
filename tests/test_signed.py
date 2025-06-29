@@ -3,6 +3,104 @@ from even import EvenSignedPermutation
 from polynomials import X
 
 
+def test_inclusion_dtwisted(n=4):
+    def included(w, k):
+        o = w.inverse().oneline[:k]
+        o = [o[i] * (-1)**(i + k) for i in range(0, k)]
+        return all(o[i] < o[i + 1] for i in range(k - 1)) and (k == 0 or o[0] > 0)
+        
+    for z in SignedPermutation.involutions(n, twisted=True, dtype=True):
+        b = set(z.get_atoms_d(twisted=True))
+        for k in range(n + 1):
+            a = set(z.get_atoms_d(twisted=True, offset=k))
+            g = SignedPermutation.dbase_atom(n, True, k)
+            assert all((g * w).dlength() == w.dlength() + g.dlength() for w in a)
+            actual = {g * w for w in a}
+            expected = {w for w in b if included(w, k)}
+            if actual != expected:
+                print('z =', z, 'k =', k)
+                print('  actual:', {v.inverse() for v in actual})
+                print('expected:', {v.inverse() for v in expected})
+                print('     all:', {v.inverse() for v in b})
+                print()
+                input('')
+            # assert actual == expected
+
+
+def test_inclusion_d(n=4):
+    def included(w, k):
+        o = w.inverse().oneline[:k]
+        o = ([abs(o[0])] if k > 0 else []) + [o[i] * (-1)**(i + k) for i in range(1, k)]
+        return all(o[i] < o[i + 1] for i in range(k - 1)) and (k == 0 or o[0] > 0)
+        
+    for z in SignedPermutation.involutions(n, dtype=True):
+        b = set(z.get_atoms_d())
+        for k in range(n + 1):
+            a = set(z.get_atoms_d(offset=k))
+            g = SignedPermutation.dbase_atom(n, False, k)
+            assert all((g * w).dlength() == w.dlength() + g.dlength() for w in a)
+            actual = {g * w for w in a}
+            expected = {w for w in b if included(w, k)}
+            if actual != expected:
+                print('z =', z, 'k =', k)
+                print('  actual:', {v.inverse() for v in actual})
+                print('expected:', {v.inverse() for v in expected})
+                print('     all:', {v.inverse() for v in b})
+                print()
+            assert actual == expected
+
+
+def test_inclusion_b(n=4):
+    def included(w, k):
+        # winv = w.inverse()
+        # return all(winv(i) < winv(i + 1) for i in range(1, k)) and (k == 0 or winv(k) < 0)
+        o = w.inverse().oneline[:k]
+        o = [o[i] * (-1)**(i + k) for i in range(k)]
+        return all(o[i] < o[i + 1] for i in range(k - 1)) and (k == 0 or o[0] > 0)
+        
+    for z in SignedPermutation.involutions(n):
+        b = set(z.get_atoms())
+        for k in range(n + 1):
+            a = set(z.get_atoms(offset=k))
+            g = SignedPermutation.bbase_atom(n, k)
+            assert all((g * w).length() == w.length() + g.length() for w in a)
+            actual = {g * w for w in a}
+            expected = {w for w in b if included(w, k)}
+            if actual != expected:
+                print('z =', z, 'k =', k)
+                print('  actual:', {v.inverse() for v in actual})
+                print('expected:', {v.inverse() for v in expected})
+                print('     all:', {v.inverse() for v in b})
+                print()
+            assert actual == expected
+
+
+def test_inclusion_b_fpf(n=4):
+    def included(w, k):
+        o = list(reversed(w.inverse().oneline[:k]))
+        o = [o[i] * (-1 if i % 2 != 0 else 1) for i in range(k)]
+        return all(o[i] < o[i + 1] for i in range(k - 1)) and (k == 0 or o[0] > 0)
+        
+    for z in SignedPermutation.fpf_involutions(n):
+        b = set(z.get_fpf_atoms())
+        for k in range(n + 1):
+            if k % 2 != n % 2:
+                continue
+            a = set(z.get_fpf_atoms(offset=k))
+            g = SignedPermutation.bbase_fpf_atom(n, k)
+            assert all((g * w).length() == w.length() + g.length() for w in a)
+            actual = {g * w for w in a}
+            expected = {w for w in b if included(w, k)}
+            if actual != expected:
+                print('z =', z, 'k =', k)
+                print('  actual:', {v.inverse() for v in actual})
+                print('expected:', {v.inverse() for v in expected})
+                print('     all:', {v.inverse() for v in b})
+                print()
+            assert actual == expected
+
+
+
 def test_dshape(n=4):
     for z in SignedPermutation.involutions(n, dtype=True):
         for w in z.get_atoms_d():

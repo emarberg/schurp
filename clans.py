@@ -498,7 +498,7 @@ class Clan:
         elif self.family == self.TYPE_C2:
             sh = w.fpf_shape(offset=k)
         elif self.family in [self.TYPE_D1, self.TYPE_D2]:
-            g = w.dbase_atom(n, k)
+            g = w.dbase_atom(n, k % 2 != 0, k)
             sh = (g * w).dshape(k)
         elif self.family == self.TYPE_D3:
             sh = w.fpf_dshape()

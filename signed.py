@@ -1168,8 +1168,10 @@ class SignedPermutation(SignedMixin):
         assert y == z
         return sh
 
-    def shape(self):
-        ndes, fix, neg = self._ndes()
+    def shape(self, offset=0):
+        o = list(self.inverse().oneline)
+        ndes, fix, neg = self._ndes(o[offset:])
+        neg += tuple(-abs(a) for a in o[:offset])
 
         desb = [(b, a) for a, b in ndes if not (0 < a < -b)]
         negb = [(-i, -i) for i in neg] + [(-a, -a) for a, b in ndes if 0 < a < -b] + [(b, b) for a, b in ndes if 0 < a < -b]
@@ -1454,7 +1456,7 @@ class SignedPermutation(SignedMixin):
                 yield SignedPermutation(*newline).inverse()
 
     def get_atoms_d(self, twisted=False, offset=0):
-        w = self.reduce(limit=2)
+        w = self.reduce(limit=max(2, offset))
         assert w.is_even_signed()
         assert offset <= w.rank
         key = (w, twisted, offset)
@@ -1462,6 +1464,10 @@ class SignedPermutation(SignedMixin):
             atoms_d_cache[key] = list(set(w._get_atoms_d(twisted, offset)))
         ans = atoms_d_cache[key]
         return [x.inflate(self.rank) for x in ans]
+
+    @classmethod
+    def bbase(cls, n, offset):
+        return cls.longest_element(n, offset)
 
     @classmethod
     def dbase(cls, n, offset):
@@ -1475,11 +1481,20 @@ class SignedPermutation(SignedMixin):
         assert k <= n
         oneline = list(range(1, n + 1))
         for i in range(k):
-            oneline[i] = -k + i
+            #oneline[i] = -k + i
+            oneline[i] *= -1 if i % 2 != k % 2 else 1
         return SignedPermutation(*oneline) 
 
     @classmethod
-    def dbase_atom(cls, n, k):
+    def bbase_fpf_atom(cls, n, k):
+        assert k <= n
+        oneline = list(range(1, n + 1))
+        for i in range(k):
+            oneline[i] = (k - i) * (-1 if i % 2 != 0 else 1)
+        return SignedPermutation(*oneline) 
+
+    @classmethod
+    def dbase_atom(cls, n, twisted, k):
         assert k <= n
         # oneline = list(range(1, n + 1))
         # if k % 2 == 0:
@@ -1503,7 +1518,13 @@ class SignedPermutation(SignedMixin):
                 oneline[i] *= -1
             if (k // 2) % 2 != 0:
                 oneline[0] *= -1  
-        return SignedPermutation(*oneline)          
+        w = cls(*oneline)
+
+        z = cls.dbase(n, k)
+        assert w in z.get_atoms_d(twisted=twisted)
+
+        return w
+
 
     def _get_atoms_d(self, twisted, offset):
         n = self.rank
