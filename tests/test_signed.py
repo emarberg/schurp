@@ -3,6 +3,43 @@ from even import EvenSignedPermutation
 from polynomials import X
 
 
+def test_inclusion_a(n=4):
+    def included(w, k):
+        i = (n - k) // 2
+        j = (n + k) // 2
+        a = -((-n) // 2) # ceil(n / 2)
+
+        o = w.inverse()
+        p = [o(t) for t in range(i + 1, a + 1)]
+        q = [o(t) for t in range(a + 1, j + 1)]
+        return all(x > y for x in p for y in q)
+        
+    for z in Permutation.twisted_involutions(n):
+        b = set(z.get_twisted_atoms(n))
+        for k in range(n + 1):
+            if (n - k) % 2 != 0:
+                continue
+            a = set(z.get_twisted_atoms(n, offset=(n - k) // 2))
+            
+            i = (n - k) // 2
+            o = [t for t in range(1, i + 1)]
+            o += [t for t in range(n // 2 + 1, (n + k) // 2 + 1)]
+            o += [t for t in range(i + 1, n // 2 + 1)]
+            g = Permutation(*o).inverse()
+
+            assert all((g * w).length() == w.length() + g.length() for w in a)
+            actual = {g * w for w in a}
+            expected = {w for w in b if included(w, k)}
+            if actual != expected:
+                print('n =', n, 'z =', z, 'k =', k)
+                print('       a:', {v.inverse() for v in a})
+                print('  actual:', {v.inverse() for v in actual})
+                print('expected:', {v.inverse() for v in expected})
+                print('     all:', {v.inverse() for v in b})
+                print()
+            assert actual == expected
+
+
 def test_inclusion_dtwisted(n=4):
     def included(w, k):
         o = list(w.inverse().oneline[:k])
