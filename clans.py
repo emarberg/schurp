@@ -168,12 +168,29 @@ class Clan:
 
     def is_alternating(self):
         s = [a for a in self.oneline if type(a) is bool]
-        if self.family in [self.TYPE_A, self.TYPE_B, self.TYPE_C1]:
+        if self.family == self.TYPE_A:
+            return all(s[i] == s[i + 1] for i in range(len(s) - 1)) or not any(s[i] == s[i + 1] for i in range(len(s) - 1))
+        elif self.family in [self.TYPE_B]:
+            return all(s[i] == s[i + 1] for i in range(len(s)//2 - 1)) or not any(s[i] == s[i + 1] for i in range(len(s) - 1))
+        elif self.family == self.TYPE_C1:
+            return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
+        elif self.family in [self.TYPE_C2, self.TYPE_D1, self.TYPE_D2]:
+            return all(s[i] == s[i + 1] for i in range(len(s)//2 - 1)) or not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
+        elif self.family == self.TYPE_D3:
+            return len([i for i in self.oneline if type(i) == bool]) <= 2 * (2 if self.rank() % 2 == 0 else 1)
+        else:
+            raise Exception
+
+    def is_strongly_alternating(self):
+        s = [a for a in self.oneline if type(a) is bool]
+        if self.family in [self.TYPE_A, self.TYPE_C1]:
+            return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
+        elif self.family in [self.TYPE_B]:
             return not any(s[i] == s[i + 1] for i in range(len(s) - 1))
         elif self.family in [self.TYPE_C2, self.TYPE_D1, self.TYPE_D2]:
             return not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
         elif self.family == self.TYPE_D3:
-            return len([i for i in self.oneline if type(i) == bool]) <= 2
+            return len([i for i in self.oneline if type(i) == bool]) <= 1
         else:
             raise Exception
 
@@ -491,7 +508,8 @@ class Clan:
         k = abs(self.clan_type()) // 2
 
         if self.family == self.TYPE_A:
-            sh = w.twisted_shape(n)
+            k = abs(self.clan_type())
+            sh = w.twisted_shape(n, k)
         elif self.family == self.TYPE_B:
             g = w.bbase_atom(n, k)
             sh = (g * w).shape()
@@ -639,7 +657,7 @@ class Clan:
                 length = lambda x: x.dlength()
                 if n % 2 != 0:
                     t = SignedPermutation.s_i(0, n)
-                translate = lambda x,s: None #x * s # if (t * x*s).is_fpf_involution() else None
+                translate = lambda x,s: x * s #x * s # if (t * x*s).is_fpf_involution() else None
             else:
                 raise Exception
 
@@ -655,7 +673,7 @@ class Clan:
         offset = abs(self.clan_type()) // 2
             
         if self.family == self.TYPE_A:
-            offset = (n - abs(self.clan_type())) // 2
+            offset = abs(self.clan_type())
             return z.get_twisted_atoms(n, offset)
 
         elif self.family == self.TYPE_B:
