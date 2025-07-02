@@ -375,16 +375,23 @@ class Permutation:
             TWISTED_ATOMS_CACHE[key] = list(self._get_twisted_atoms(n, offset))
         return TWISTED_ATOMS_CACHE[key]
 
+    @classmethod
+    def twisted_base(cls, n, offset):
+        k = (n - offset) // 2
+        cyc = []
+        for l in range(k + 1, n):
+            if l >= n + 1 - l:
+                break
+            cyc.append((l, n + 1 - l))
+        base = Permutation.from_cycles(*cyc)
+        return base
+
     def _get_twisted_atoms(self, n, offset):
-        if offset is None:
-            base = Permutation()
-        else:
-            cyc = []
-            for l in range(offset + 1, n):
-                if l >= n + 1 - l:
-                    break
-                cyc.append((l, n + 1 - l))
-            base = Permutation.from_cycles(*cyc)
+        offset = (0 if n % 2 == 0 else 1) if offset is None else offset
+        assert offset % 2 == n % 2
+
+        base = Permutation.twisted_base(n, offset)
+
         if len(self) <= len(base) and self != base:
             return []
         if self == base:
@@ -402,7 +409,10 @@ class Permutation:
     def fixed(self, n):
         return {i for i in range(1, n + 1) if self(i) == i}
 
-    def twisted_shape(self, n):
+    def twisted_shape(self, n, k=None):
+        k = (0 if n % 2 == 0 else 1) if k is None else k
+        assert k % 2 == n % 2
+
         w = self.inverse()
         line = [w(i) for i in range(1, n + 1)]
         pairs = []
@@ -410,7 +420,26 @@ class Permutation:
             pairs += [(line[0], line[-1])]
             line = line[1:-1]
 
-        return {(a, b) for b, a in pairs if a < b}
+        w0 = Permutation.longest_element(n)
+        y = w0
+
+        ans = set()
+        for (i, p) in enumerate(pairs):
+            b, a = p
+            if len(pairs) - i <= (k+1) // 2:
+                assert a >= b
+                ans.add((-a, a))
+                ans.add((-b, b))
+            elif a < b:
+                ans.add((a, b))
+                ans.add((-b, -a))
+            elif a == b:
+                ans.add((-a, a))
+            elif a > b:
+                y *= Permutation.t_ij(b, a)
+
+        assert y == w0 * self.inverse() * w0 % Permutation.twisted_base(n, k) % self
+        return ans
 
     def get_atoms(self):
         if self not in ATOMS_CACHE:
@@ -1291,6 +1320,26 @@ class Permutation:
 
     def __iter__(self):
         return self.oneline.__iter__()
+
+    @classmethod
+    def ncsp_matchings(cls, base, trivial_allowed=True):
+        base = set(base)
+        assert all(a > 0 for a in base)
+
+        if len(base) == 0:
+            yield ()
+            return
+
+        x = min(base)
+        for y in base:
+            left = {z for z in base if x < z < y}
+            right = {z for z in base if y < z}
+            for a in cls.ncsp_matchings(left, False):
+                for b in cls.ncsp_matchings(right, trivial_allowed):
+                    yield tuple(sorted(set(a) | set(b) | {(x, y), (-y, -x)}))
+        if trivial_allowed:
+            for a in cls.ncsp_matchings(base - {x}, trivial_allowed):
+                yield tuple(sorted(set(a) | {(-x, x)}))
 
     @classmethod
     def nc_matchings(cls, base):

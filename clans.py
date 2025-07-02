@@ -197,10 +197,13 @@ class Clan:
             if self.family in [self.TYPE_B, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2] and i + j == 0:
                 continue
             if self.family == self.TYPE_A:
+                if i < 0:
+                    assert j < 0 or i + j == 0
+                    continue
                 pair = (self(i), self(j))
             elif self.family == self.TYPE_B:
                 i, j = self.rank() + 1 + i, self.rank() + 1 + j
-                pair = (self(i), (self(j)))
+                pair = (self(i), self(j))
             elif self.family in [self.TYPE_C1, self.TYPE_C2, self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
                 i = self.rank() + i + (0 if i > 0 else 1)
                 j = self.rank() + j + (0 if j > 0 else 1)
@@ -212,7 +215,7 @@ class Clan:
                 return False
 
         if self.family == self.TYPE_A:
-            support = [a for pair in matching for a in pair]
+            support = [a for pair in matching for a in pair if min(pair) > 0]
             trivial = [a for a in range(1, self.rank() + 1) if type(self(a)) == bool and a not in support]
             signs = [self(i) for i in trivial]
             if any(signs[i] != signs[i + 1] for i in range(len(signs) - 1)):

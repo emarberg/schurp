@@ -19,8 +19,8 @@ def test_inclusion_a(n=4):
         for k in range(n + 1):
             if (n - k) % 2 != 0:
                 continue
-            a = set(z.get_twisted_atoms(n, offset=(n - k) // 2))
-            
+            a = set(z.get_twisted_atoms(n, offset=k))
+
             i = (n - k) // 2
             o = [t for t in range(1, i + 1)]
             o += [t for t in range(n // 2 + 1, (n + k) // 2 + 1)]
@@ -39,6 +39,16 @@ def test_inclusion_a(n=4):
                 print()
             assert actual == expected
 
+            for w in a:
+                sh = (g * w).twisted_shape(n)
+                th = w.twisted_shape(n, k)
+                o = w.inverse()
+                line = [o(i + 1 + t) for t in range(k if k % 2 == 0 else k - 1)]
+                while line:
+                    x, y = line[0], line[-1]
+                    line = line[1:-1]
+                    th = (th - {(-x, x), (-y, y)}) | {(x, y), (-y, -x)}
+                assert sh == th
 
 def test_inclusion_dtwisted(n=4):
     def included(w, k):

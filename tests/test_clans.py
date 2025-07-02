@@ -473,18 +473,18 @@ def test_atoms_a_refined(n=4, verbose=False):
     w0 = Permutation.longest_element(n)
     for p in range(n + 1):
         q = n - p
-        k = (n - abs(p - q)) // 2
+        k = abs(p - q)
         print('n =', n, '(p, q) =', (p, q), 'k =', k)
         for clan in Clan.all_a(p, q):
             z = clan.richardson_springer_map()
             base = z.fixed(n)
             expected_shapes = {
-                m for m in Permutation.nc_matchings(base)
+                m for m in Permutation.ncsp_matchings(base)
                 if clan.is_aligned(m, verbose=verbose)
             }
             atoms_by_shape = {}
             for w in Permutation.get_twisted_atoms(w0 * z, n, k):
-                sh = w.twisted_shape(n)
+                sh = w.twisted_shape(n, k)
                 sh = tuple(sorted(sh))
                 atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
             _test_refinement(clan, atoms_by_shape, expected_shapes)
