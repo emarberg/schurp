@@ -8,6 +8,7 @@ from stable.utils import (
 from stable.polynomials import Polynomial, X
 from stable.vst import combine_str
 from crystals import AbstractGLCrystal, AbstractQCrystal
+import pytest
 import time
 
 
@@ -81,6 +82,7 @@ def test_decomposition_sqrtcrystal(n=3, max_size=5):
         #    input('')
 
 
+@pytest.mark.slow
 def test_sv_decomposition_crystal(n=3, max_size=5):
     for mu in Partition.all(max_size, strict=True):
         c = AbstractQCrystal.setvalued_decomposition_tableaux_from_strict_partition(mu, n)
@@ -131,6 +133,7 @@ def test_setvalued_semistandard_stembridge(n=3, max_size=5):
         print(n, mu, b, u == v)
 
 
+@pytest.mark.slow
 def test_primed_insert(n=5, mu=(3,2)):
     from tableaux import Tableau as T
     from words import decomposition_insert
@@ -211,8 +214,9 @@ def setvalued_decomposition_e(tab, index):
     return tab.e_operator_on_setvalued_decomposition_tableaux(index)
 
 
-def test_setvalued_decomposition(n=3, max_size=5):
-    for mu in [(3,2)]:#Partition.all(max_size, strict=True):
+@pytest.mark.slow
+def test_setvalued_decomposition(n=5, max_size=5):
+    for mu in Partition.all(max_size, strict=True):
         print(n, mu)
         f_seen = set()
         e_seen = set()
@@ -274,7 +278,8 @@ def GQ_decomposition_gf(n, mu):
     return ans
 
 
-def test_GQ_decomposition_gf(max_entry=3, max_size=10):
+@pytest.mark.slow
+def test_GQ_decomposition_gf(max_entry=3, max_size=4):
     for mu in Partition.all(max_size, strict=True):
         for n in range(1, max_entry + 1):
             guess = GQ_decomposition_gf(n, mu)
@@ -294,7 +299,8 @@ def GP_decomposition_gf(n, mu):
     return ans
 
 
-def test_GP_decomposition_gf(max_entry=3, max_size=10):
+@pytest.mark.slow
+def test_GP_decomposition_gf(max_entry=5, max_size=5):
     for mu in Partition.all(max_size, strict=True):
         for n in range(1, max_entry + 1):
             guess = GP_decomposition_gf(n, mu)
