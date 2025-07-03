@@ -1234,10 +1234,12 @@ class Permutation:
             fix = self.twisted_fixed_points(n)
             matching = []
             if len(fix) % 2 != 0:
+                matching.append((-fix[-1], fix[-1]))
                 fix = fix[:-1]
             while len(fix) >= 2:
                 a, b = fix[0], fix[1]
                 matching.append((a, b))
+                matching.append((-b, -a))
                 fix = fix[2:]
         return matching
 
@@ -1246,21 +1248,23 @@ class Permutation:
             fix = self.twisted_fixed_points(n)
             matching = []
             if len(fix) % 2 != 0:
+                matching.append((-fix[-1], fix[-1]))
                 fix = fix[:-1]
             while len(fix) >= 2:
                 a, b = fix[0], fix[1]
                 matching.append((a, b))
+                matching.append((-b, -a))
                 fix = fix[2:]
         return matching
 
     def get_min_twisted_atom(self, n, matching=None):
         assert self.is_twisted_involution(n)
         matching = self._get_min_twisted_matching(n, matching)
-        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching for a in m})
+        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching if 0 < m[0] for a in m})
         assert len(base) <= 1
 
         itemgetter = operator.itemgetter(0)
-        cycles = sorted([(b, a) for (a, b) in matching] + self.twisted_cycles(n), key=itemgetter)
+        cycles = sorted([(b, a) for (a, b) in matching if 0 < a] + self.twisted_cycles(n), key=itemgetter)
         for x, y in reversed(cycles):
             base = [x] + base + [y]
         return Permutation(*base).inverse()
@@ -1268,11 +1272,11 @@ class Permutation:
     def get_max_twisted_atom(self, n, matching=None):
         assert self.is_twisted_involution(n)
         matching = self._get_max_twisted_matching(n, matching)
-        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching for a in m})
+        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching  if 0 < m[0] for a in m})
         assert len(base) <= 1
 
         itemgetter = lambda p: -p[1]  # noqa
-        cycles = sorted([(b, a) for (a, b) in matching] + self.twisted_cycles(n), key=itemgetter)
+        cycles = sorted([(b, a) for (a, b) in matching if 0 < a] + self.twisted_cycles(n), key=itemgetter)
         for x, y in reversed(cycles):
             base = [x] + base + [y]
         return Permutation(*base).inverse()

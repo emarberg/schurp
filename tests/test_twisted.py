@@ -25,22 +25,24 @@ def _test_shape(w, n):
 
     w0 = Permutation.longest_element(n)
     y = w0 * y
+    
     aword = reversed(w.get_reduced_word())
-
-    # yfixed = {i for i in range(1, n + 1) if y(i) == i}
+    yfixed = {i for i in range(1, n + 1) if y(i) == i}
+    
     v = Permutation()
     sh = set()
     for a in aword:
         if a > 0 and y(a) == a and y(a + 1) == a + 1:
             e, f = tuple(sorted([v(a), v(a + 1)]))
             sh |= {(e, f)}
+            sh |= {(-f, -e)}
         s = Permutation.s_i(a)
         v *= s
         z = s % y % s
         assert z.involution_length() == y.involution_length() + 1
         y = z
     f = {i for p in sh for i in p}
-    return sh  # | {(i, i) for i in yfixed - f}
+    return sh  | {(-i, i) for i in yfixed - f}
 
 
 def test_twisted_shape(n=5):
