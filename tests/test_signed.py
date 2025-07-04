@@ -19,13 +19,9 @@ def test_inclusion_a(n=4):
         for k in range(n + 1):
             if (n - k) % 2 != 0:
                 continue
+            
             a = set(z.get_twisted_atoms(n, offset=k))
-
-            i = (n - k) // 2
-            o = [t for t in range(1, i + 1)]
-            o += [t for t in range(n // 2 + 1, (n + k) // 2 + 1)]
-            o += [t for t in range(i + 1, n // 2 + 1)]
-            g = Permutation(*o).inverse()
+            g = Permutation.twisted_base_atom(n, k)
 
             assert all((g * w).length() == w.length() + g.length() for w in a)
             actual = {g * w for w in a}
@@ -39,6 +35,7 @@ def test_inclusion_a(n=4):
                 print()
             assert actual == expected
 
+            i = (n - k) // 2
             for w in a:
                 sh = (g * w).twisted_shape(n)
                 th = w.twisted_shape(n, k)
@@ -315,6 +312,7 @@ def test_brion_length_d(n=4):
                 assert nb == len(uy.neg()) - (1 if twisted else 0)
                 assert w.brion_length_d(twisted=twisted) == d // 2
             print()
+
 
 def test_brion_weight_counts(n=4):
     x = X(0)

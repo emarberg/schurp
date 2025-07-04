@@ -1045,7 +1045,22 @@ class SignedPermutation(SignedMixin):
         oneline = [-k for k in range(offset, 0, -1)]
         for i in range(offset + 1, n, 2):
             oneline += [i + 1, i]
-        return (SignedPermutation(*oneline) * self).shape()
+        ans = (SignedPermutation(*oneline) * self).shape()
+
+        o = list(self.inverse().oneline)
+        sh = {(-abs(a), abs(a)) for a in o[:offset]}
+        
+        o = o[offset:]
+        while o:
+            b, c = o[:2]
+            o = o[2:]
+            if 0 < c < -b:
+                sh.add((c, -b))
+                sh.add((b, -c))
+
+        assert sh == ans
+        return sh
+
 
     def dtype_demazure_conjugate(self, twisted):
         if not twisted:
@@ -1107,6 +1122,25 @@ class SignedPermutation(SignedMixin):
             print('   sh =', sh)
 
         assert y == z
+        ans = sh
+
+        sh = set()
+        o = list(self.inverse().oneline)
+        if n % 2 != 0:
+            a = abs(o[0])
+            sh.add((-a, a))
+            o = o[1:]
+        while o:
+            a, b = o[:2]
+            o = o[2:]
+            if 0 < b < -a:
+                sh.add((a, -b))
+                sh.add((b, -a))
+            elif b < 0 < -a:
+                sh.add((b, -b))
+                sh.add((a, -a))
+        assert ans == sh
+
         return sh
 
     def dshape(self, offset=0, verbose=False):

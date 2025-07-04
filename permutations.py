@@ -386,6 +386,15 @@ class Permutation:
         base = Permutation.from_cycles(*cyc)
         return base
 
+    @classmethod
+    def twisted_base_atom(cls, n, k):
+        i = (n - k) // 2
+        o = [t for t in range(1, i + 1)]
+        o += [t for t in range(n // 2 + 1, (n + k) // 2 + 1)]
+        o += [t for t in range(i + 1, n // 2 + 1)]
+        g = Permutation(*o).inverse()
+        return g
+
     def _get_twisted_atoms(self, n, offset):
         offset = (0 if n % 2 == 0 else 1) if offset is None else offset
         assert offset % 2 == n % 2
@@ -434,7 +443,7 @@ class Permutation:
                 ans.add((a, b))
                 ans.add((-b, -a))
             elif a == b:
-                ans.add((-a, a))
+                raise Exception
             elif a > b:
                 y *= Permutation.t_ij(b, a)
 
@@ -1272,8 +1281,7 @@ class Permutation:
     def get_max_twisted_atom(self, n, matching=None):
         assert self.is_twisted_involution(n)
         matching = self._get_max_twisted_matching(n, matching)
-        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching  if 0 < m[0] for a in m})
-        assert len(base) <= 1
+        base = sorted(set(self.twisted_fixed_points(n)) - {a for m in matching  if 0 < m[0] for a in m})
 
         itemgetter = lambda p: -p[1]  # noqa
         cycles = sorted([(b, a) for (a, b) in matching if 0 < a] + self.twisted_cycles(n), key=itemgetter)

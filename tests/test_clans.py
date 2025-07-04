@@ -576,16 +576,48 @@ def test_atoms_a_refined(n=4, verbose=False):
         for clan in Clan.all_a(p, q):
             z = clan.richardson_springer_map()
             base = z.fixed(n)
+            z = w0 * z
             expected_shapes = {
                 m for m in Permutation.ncsp_matchings(base)
                 if clan.is_aligned(m, verbose=verbose)
             }
             atoms_by_shape = {}
-            for w in Permutation.get_twisted_atoms(w0 * z, n, k):
+            for w in Permutation.get_twisted_atoms(z, n, k):
                 sh = w.twisted_shape(n, k)
                 sh = tuple(sorted(sh))
                 atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
+            _test_atype_atoms_by_shape(z, n, k, atoms_by_shape)
             _test_refinement(clan, atoms_by_shape, expected_shapes)
+
+
+def _test_atype_atoms_by_shape(z, n, k, atoms_by_shape):
+    def span(v):
+        v = tuple(v(i) for i in range(1, n + 1))
+        level = {(None, v)}
+        while level:
+            nextlevel = set()
+            for u, v in level:
+                yield Permutation(*v).inverse()
+
+                for i in range(n):
+                    if (n - i - 3) - (i + 1) < k:
+                        break
+                    b1, a1, a2, b2 = v[i], v[i + 1], v[n - i - 2], v[n - i - 1]
+                    if a1 < b1 and a2 < b2:
+                        w = v[:i] + (a1, b1,) + v[i + 2:n - i - 2] + (b2, a2) + v[n - i:]
+                        nextlevel.add((v, w))
+
+            level = nextlevel
+
+    for sh, atoms in atoms_by_shape.items():
+        a = z.get_max_twisted_atom(n, sh)
+        start = a.inverse()
+        btoms = set(span(start))
+        if atoms != btoms:
+            print('  z =', z, 'a =', a.inverse(), 'k =', k, sh)
+            print('  ', {w.inverse() for w in atoms})
+            print('  ', {w.inverse() for w in btoms})
+        assert atoms == btoms
 
 
 def test_atoms_b_refined(n=3, verbose=False):
@@ -768,9 +800,6 @@ def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
         assert (g.inverse() * a).length() == a.length() - g.length()
         a = a.inverse() * g
         btoms = set(span(a))
-        #print(z, 'k =', k, a, sh)
-        #print({w.inverse() for w in atoms})
-        #print({w.inverse() for w in btoms})
         assert atoms == btoms
 
 
@@ -797,9 +826,6 @@ def _test_dtype_fpf_atoms_by_shape(z, atoms_by_shape):
     for sh, atoms in atoms_by_shape.items():
         a = z.get_max_fpf_atom(sh)
         btoms = set(span(a.inverse()))
-        #print(z, 'k =', k, a, sh)
-        #print({w.inverse() for w in atoms})
-        #print({w.inverse() for w in btoms})
         assert atoms == btoms
 
 
