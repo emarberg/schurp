@@ -1269,8 +1269,7 @@ class Permutation:
     def get_min_twisted_atom(self, n, matching=None):
         assert self.is_twisted_involution(n)
         matching = self._get_min_twisted_matching(n, matching)
-        base = list(set(self.twisted_fixed_points(n)) - {a for m in matching if 0 < m[0] for a in m})
-        assert len(base) <= 1
+        base = sorted(set(self.twisted_fixed_points(n)) - {a for m in matching if 0 < m[0] for a in m})
 
         itemgetter = operator.itemgetter(0)
         cycles = sorted([(b, a) for (a, b) in matching if 0 < a] + self.twisted_cycles(n), key=itemgetter)
