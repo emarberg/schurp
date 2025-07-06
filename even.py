@@ -634,12 +634,11 @@ class EvenSignedPermutation(SignedMixin):
 
         matching = [(a, b) for a, b in matching if a != -b]
         fix = [(i,) for i in self.fixed_points() if i > 0]
-        neg = [(-i,) for i in self.negated_points() if i not in x and i > 0]
         pair = [(b, a) for a, b in self.pair()]
         des = [(a, -b) for a, b in matching if a > 0]
         oneline = init + [
             i
-            for m in sorted(fix + neg + pair + des, key=operator.itemgetter(0))
+            for m in sorted(fix + pair + des, key=operator.itemgetter(0))
             for i in m
         ]
         if len([i for i in oneline if i < 0]) % 2 != 0:
@@ -666,21 +665,20 @@ class EvenSignedPermutation(SignedMixin):
 
         matching = [(a, b) for a, b in matching if a != -b]
         fix = [(i,) for i in self.twisted_fixed_points() if i > 0]
-        neg = [(-i,) for i in self.twisted_negated_points() if i not in x and i > 0]
         pair = [(b, a) for a, b in self.twisted_pair()]
         des = [(a, -b) for a, b in matching if a > 0]
         oneline = init + [
             i
-            for m in sorted(fix + neg + pair + des, key=operator.itemgetter(0))
+            for m in sorted(fix + pair + des, key=operator.itemgetter(0))
             for i in m
         ]
-
         if len([i for i in oneline if i < 0]) % 2 != 0:
             a, b = oneline[:2]
             if abs(a) < abs(b):
                 oneline[0] *= -1
             else:
                 oneline[1] *= -1
+            # oneline[0] *= -1
         
         w = EvenSignedPermutation(*oneline).inverse()
         assert w.inverse().star() % w == self

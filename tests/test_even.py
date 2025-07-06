@@ -391,6 +391,9 @@ def allforms(w):
             ans.add((-b, -a) + w[2:])
     return ans
 
+# ab -- ba -- -a-b: a > b, a > -b: a > abs(b) 
+# ab -- -b-a -- -a-b: -b > a, b > a: a < -abs(b) : -a > abs(b) 
+# -w(2)>w(1) means -1 is descent
 
 def twisted_span(v, strong=False):
     v = v.oneline
@@ -438,6 +441,7 @@ def test_twisted_shape(nn=4):
     for n in [nn, nn + 1]:
         cls = EvenSignedPermutation
         for w in cls.twisted_involutions(n):
+            print('w =', w)
             shapes = {}
             for a in w.get_twisted_atoms():
                 sh = tuple(sorted(a.twisted_shape()))
@@ -450,8 +454,15 @@ def test_twisted_shape(nn=4):
                 minima = [a.inverse() for a in atoms if is_min_twisted_atom(a)]
                 maxima = [a.inverse() for a in atoms if is_max_twisted_atom(a)]
                 v = w.get_max_twisted_atom(sh).inverse()
+                print(v)
+                print(plusform(v))
+                print()
                 test = {v.inverse()} | {cls(*u).inverse() for (_, u, _) in twisted_span(v)}
+                # test = {u for x in test for u in allforms(x)}
                 atoms = {plusform(a.inverse()).inverse() for a in atoms}
+                print(' got', {t.inverse() for t in test})
+                print('want', {t.inverse() for t in atoms})
+                print()
                 assert sorted(test) == sorted(atoms)
                 assert len([i for i, j in sh if i == -j]) == 1
                 assert len(minima) == 1

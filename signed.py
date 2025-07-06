@@ -1061,7 +1061,6 @@ class SignedPermutation(SignedMixin):
         assert sh == ans
         return sh
 
-
     def dtype_demazure_conjugate(self, twisted):
         if not twisted:
             return self.inverse().dtype_demazure(self)
@@ -1325,11 +1324,11 @@ class SignedPermutation(SignedMixin):
             minimum += [i]
         return tuple(minimum)
 
-    def _min_inv_atom_oneline(self, sh=None):
+    def _min_inv_atom_oneline(self, sh):
         tup = tuple(i for p in self.cyc(sh) for i in reversed(p))
         return self._deduplicate_oneline(tup)
 
-    def _max_inv_atom_oneline(self, sh=None):
+    def _max_inv_atom_oneline(self, sh):
         cyc = sorted(self.cyc(sh), key=lambda pair: pair[1])
         tup = tuple(i for p in cyc for i in reversed(p))
         return self._deduplicate_oneline(tup)
@@ -1340,11 +1339,11 @@ class SignedPermutation(SignedMixin):
 
     def get_min_atom(self, sh=None):
         assert self == self.inverse()
-        return SignedPermutation(*self._min_inv_atom_oneline()).inverse()
+        return SignedPermutation(*self._min_inv_atom_oneline(sh)).inverse()
 
     def get_max_atom(self, sh=None):
         assert self == self.inverse()
-        return SignedPermutation(*self._max_inv_atom_oneline()).inverse()
+        return SignedPermutation(*self._max_inv_atom_oneline(sh)).inverse()
 
     @classmethod
     def get_minimal_fpf_involution(cls, n):
@@ -1561,7 +1560,6 @@ class SignedPermutation(SignedMixin):
         assert w in z.get_atoms_d(twisted=twisted)
 
         return w
-
 
     def _get_atoms_d(self, twisted, offset):
         n = self.rank

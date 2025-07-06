@@ -797,6 +797,7 @@ def _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape):
     g = EvenSignedPermutation(*g)
     for sh, atoms in atoms_by_shape.items():
         a = z.get_max_atom(sh) if k % 2 ==0 else z.get_max_twisted_atom(sh)
+        
         assert (g.inverse() * a).length() == a.length() - g.length()
         a = a.inverse() * g
         btoms = set(span(a))

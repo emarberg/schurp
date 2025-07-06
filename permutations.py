@@ -1282,9 +1282,9 @@ class Permutation:
         matching = self._get_max_twisted_matching(n, matching)
         base = sorted(set(self.twisted_fixed_points(n)) - {a for m in matching  if 0 < m[0] for a in m})
 
-        itemgetter = lambda p: -p[1]  # noqa
+        itemgetter = lambda p: p[1]  # noqa
         cycles = sorted([(b, a) for (a, b) in matching if 0 < a] + self.twisted_cycles(n), key=itemgetter)
-        for x, y in reversed(cycles):
+        for x, y in cycles:
             base = [x] + base + [y]
         return Permutation(*base).inverse()
 
