@@ -457,9 +457,10 @@ def test_twisted_shape(nn=4):
                 print(v)
                 print(plusform(v))
                 print()
-                test = {v.inverse()} | {cls(*u).inverse() for (_, u, _) in twisted_span(v)}
-                # test = {u for x in test for u in allforms(x)}
-                atoms = {plusform(a.inverse()).inverse() for a in atoms}
+                v = plusform(v)
+                test = {v} | {cls(*u) for (_, u, _) in twisted_span(v)}
+                test = {u.inverse() for x in test for u in allforms(x)}
+                # atoms = {plusform(a.inverse()).inverse() for a in atoms}
                 print(' got', {t.inverse() for t in test})
                 print('want', {t.inverse() for t in atoms})
                 print()
