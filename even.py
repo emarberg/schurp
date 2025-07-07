@@ -660,8 +660,6 @@ class EvenSignedPermutation(SignedMixin):
         k = len(init)
         for i in range(0, k, 2):
             init[i] *= -1
-        #if len([i for i in init if i < 0]) % 2 != 0:
-        #    init[0] *= -1
 
         matching = [(a, b) for a, b in matching if a != -b]
         fix = [(i,) for i in self.twisted_fixed_points() if i > 0]
@@ -673,11 +671,6 @@ class EvenSignedPermutation(SignedMixin):
             for i in m
         ]
         if len([i for i in oneline if i < 0]) % 2 != 0:
-            #a, b = oneline[:2]
-            #if abs(a) < abs(b):
-            #    oneline[0] *= -1
-            #else:
-            #    oneline[1] *= -1
             oneline[0] *= -1
         
         w = EvenSignedPermutation(*oneline).inverse()

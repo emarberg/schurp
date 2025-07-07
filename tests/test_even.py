@@ -441,7 +441,7 @@ def test_twisted_shape(nn=4):
     for n in [nn, nn + 1]:
         cls = EvenSignedPermutation
         for w in cls.twisted_involutions(n):
-            print('w =', w)
+            # print('w =', w)
             shapes = {}
             for a in w.get_twisted_atoms():
                 sh = tuple(sorted(a.twisted_shape()))
@@ -453,17 +453,9 @@ def test_twisted_shape(nn=4):
             for sh, atoms in shapes.items():
                 minima = [a.inverse() for a in atoms if is_min_twisted_atom(a)]
                 maxima = [a.inverse() for a in atoms if is_max_twisted_atom(a)]
-                v = w.get_max_twisted_atom(sh).inverse()
-                print(v)
-                print(plusform(v))
-                print()
-                v = plusform(v)
+                v = plusform(w.get_max_twisted_atom(sh).inverse())
                 test = {v} | {cls(*u) for (_, u, _) in twisted_span(v)}
                 test = {u.inverse() for x in test for u in allforms(x)}
-                # atoms = {plusform(a.inverse()).inverse() for a in atoms}
-                print(' got', {t.inverse() for t in test})
-                print('want', {t.inverse() for t in atoms})
-                print()
                 assert sorted(test) == sorted(atoms)
                 assert len([i for i, j in sh if i == -j]) == 1
                 assert len(minima) == 1
@@ -478,7 +470,7 @@ def print_twisted_atoms_span(n):
 
     cls = EvenSignedPermutation
     for w in cls.twisted_involutions(n):
-        v = w.get_max_twisted_atom().inverse()
+        v = plusform(w.get_max_twisted_atom().inverse())
         assert v == plusform(v)
 
         edges = list(twisted_span(v, True))
@@ -533,9 +525,10 @@ def test_twisted_atoms_span(nn=4):
         print('n =', n)
         cls = EvenSignedPermutation
         for w in cls.twisted_involutions(n):
-            v = w.get_max_twisted_atom().inverse()
+            v = plusform(w.get_max_twisted_atom().inverse())
             test = sorted({v} | {cls(*u) for (_, u, _) in twisted_span(v, True)})
-            sest = sorted({plusform(u.inverse()) for u in w.get_twisted_atoms()})
+            test = {u.inverse() for x in test for u in allforms(x)}
+            sest = set(w.get_twisted_atoms())
             if test != sest:
                 print(w)
                 print('  ', v, '<', test)
