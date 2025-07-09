@@ -478,8 +478,6 @@ class EvenSignedPermutation(SignedMixin):
         if key not in FPF_ATOMS_D_CACHE:
             y = self.get_minimal_fpf_involution(self.rank)
             twist = self.rank % 2 != 0
-            if not twist and self.ell_zero() // 2 % 2 != 0:
-                y = y.star()
             FPF_ATOMS_D_CACHE[key] = list(self.relative_atoms(y, self, twist))
         return FPF_ATOMS_D_CACHE[key]
 
@@ -602,11 +600,15 @@ class EvenSignedPermutation(SignedMixin):
 
         if matching is None:
             g = sorted(self.negated_points() if n % 2 == 0 else self.twisted_negated_points())
-            matching = {(g[i], g[i + 1]) for i in range(0, len(g), 2)}
+            if self.rank % 2 == 0 and self.ell_zero() % 4 != 0 and len(g) > 0:
+                g = [a for a in g if a > 0]
+                matching = {(-g[0], g[0]), (-g[1], g[1])} | {(g[i], g[i + 1]) for i in range(2, len(g), 2)} | {(-g[i + 1], -g[i]) for i in range(2, len(g), 2)}
+            else:
+                matching = {(g[i], g[i + 1]) for i in range(0, len(g), 2)}
 
         neg = [(a,) for (a, b) in matching if a == -b]
         pair = [(a, b) for a, b in self.pair()]
-        des = [(-b, a) for a, b in matching if -b != a > 0]
+        des = [(-b, a) for a, b in matching if a > 0]
 
         oneline = [
             i

@@ -34,6 +34,14 @@ atoms_d_cache = {}
 
 class SignedMixin:
 
+    def neg(self):
+        n = self.rank
+        return [(-a, -a) for a in range(1, n + 1) if self(a) == -a]
+
+    def fix(self):
+        n = self.rank
+        return [(a, a) for a in range(1, n + 1) if self(a) == a]
+
     def ell_zero(self):
         return len([i for i in range(1, self.rank + 1) if self(i) < 0])
 
@@ -999,14 +1007,6 @@ class SignedPermutation(SignedMixin):
     def last_inversion(self, r):
         n = self.rank
         return max(s for s in range(r + 1, n + 1) if self(s) < self(r))
-
-    def neg(self):
-        n = self.rank
-        return [(-a, -a) for a in range(1, n + 1) if self(a) == -a]
-
-    def fix(self):
-        n = self.rank
-        return [(a, a) for a in range(1, n + 1) if self(a) == a]
 
     def cyc(self, sh=None):
         pair = self.pair()

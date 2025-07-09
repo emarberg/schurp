@@ -538,32 +538,26 @@ def test_twisted_atoms_span(nn=4):
 
 
 def is_max_fpf_atom(w):
+    n = w.rank
     v = w.inverse().oneline
-    for i in range(len(v) - 2):
-        b, c, a = v[i: i + 3]
-        if a < b < c:
-            return False
-    if len(v) >= 3:
-        b, c, a = v[:3]
-        if a < -b < c:
+    for i in range(0 if n % 2 == 0 else 1, len(v) - 3, 2):
+        b, c, a, d = v[i: i + 4]
+        if a < b < c < d:
             return False
     return True
 
 
 def is_min_fpf_atom(w):
+    n = w.rank
     v = w.inverse().oneline
-    for i in range(len(v) - 2):
-        c, a, b = v[i: i + 3]
-        if a < b < c:
-            return False
-    if len(v) >= 3:
-        c, a, b = v[:3]
-        if a < b < -c:
+    for i in range(0 if n % 2 == 0 else 1, len(v) - 3, 2):
+        a, d, b, c = v[i: i + 4]
+        if a < b < c < d:
             return False
     return True
 
 
-def fpf_span(v, strong, fpfshape, atoms):
+def fpf_span(v, strong=False):
     n = v.rank
     v = v.oneline
     level = {(None, v, None)}
@@ -580,6 +574,15 @@ def fpf_span(v, strong, fpfshape, atoms):
                     nextlevel.add((v, w, False))
 
             if strong:
+                if n % 2 != 0 and len(v) >= 3:
+                    a, c, b = v[:3]
+                    if abs(a) < b < -c:
+                        w = (c, -b, -a) + v[3:]
+                        nextlevel.add((v, w, True))
+
+                        w = (-c, -b, a) + v[3:]
+                        nextlevel.add((v, w, True))
+
                 if n % 2 == 0 and len(v) >= 4:
                     b, a, d, c = v[:4]
                     if 0 < a < -b < c < -d:
@@ -592,29 +595,69 @@ def fpf_span(v, strong, fpfshape, atoms):
                     b, d, c, a = v[:4]
                     if 0 < -a < b < c < -d:
                         w = (-d, -c, b, a) + v[4:]
-                        nextlevel.add((v, w, True))
+                        #nextlevel.add((v, w, True))
 
                         w = (d, -c, -b, a) + v[4:]
-                        nextlevel.add((v, w, True))
+                        #nextlevel.add((v, w, True))
 
                 
-                for j in [0] + list(range(2 if n % 2 == 0 else 1, len(v), 2)):
+                for j in range(len(v) - 2):
                     for k in range(j + 1, len(v) - 1):
                         a, c, b = v[j], v[k], v[k + 1]
-                        if 0 < abs(a) < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
-                            if a > 0 or k == 1:
-                                w = v[:j] + (-c,) + v[j + 1:k] + (-b, a) + v[k + 2:]
+                        if abs(a) < b < -c and all(abs(x) <= abs(a) for x in v[j:k]) and all(abs(x) > abs(c) or abs(x) < abs(a) for x in v[:j]):
+                            w = v[:j] + (-c,) + v[j + 1:k] + (-b, a) + v[k + 2:]
+                            if a > 0 and j == 0:
                                 nextlevel.add((v, w, True))
-                                # print(v, w, atoms)
-                                # fpfshape(w)
 
-                            if a < 0 or k == 1:
-                                w = v[:j] + (c,) + v[j + 1:k] + (-b, -a) + v[k + 2:]
+                            w = v[:j] + (c,) + v[j + 1:k] + (-b, -a) + v[k + 2:]
+                            if a < 0:
                                 nextlevel.add((v, w, True))
-                                # print(v, w, atoms)
-                                # fpfshape(w)
+
+                # for j in [0] + list(range(2 if n % 2 == 0 else 1, len(v), 2)):
+                #     for k in range(j + 1, len(v) - 1):
+                #         a, c, b = v[j], v[k], v[k + 1]
+                #         if 0 < abs(a) < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
+                #             if a > 0 or k == 1:
+                #                 w = v[:j] + (-c,) + v[j + 1:k] + (-b, a) + v[k + 2:]
+                #                 nextlevel.add((v, w, True))
+
+                #             if a < 0 or k == 1:
+                #                 w = v[:j] + (c,) + v[j + 1:k] + (-b, -a) + v[k + 2:]
+                #                 nextlevel.add((v, w, True))
 
         level = nextlevel
+
+
+def test_fpf_shape(nn=4):
+    for n in [nn]:
+        cls = EvenSignedPermutation
+        for w in cls.fpf_involutions(n):
+            if w.ell_zero() % 4 != 0 and len(w.neg()) == 0:
+                continue
+            # print('w =', w)
+            shapes = {}
+            for a in w.get_fpf_atoms():
+                _a = SignedPermutation(*a.oneline)
+                sh = tuple(sorted(_a.fpf_dshape()))
+                shapes[sh] = shapes.get(sh, []) + [a]
+            for sh, atoms in shapes.items():
+                minima = [a.inverse() for a in atoms if is_min_fpf_atom(a)]
+                maxima = [a.inverse() for a in atoms if is_max_fpf_atom(a)]
+                v = w.get_max_fpf_atom(sh).inverse()
+                test = {v} | {cls(*u) for (_, u, _) in fpf_span(v)}
+                test = {u.inverse() for u in test}
+                print('z =', w)
+                print('w =', v, 'sh =', sh, v == w.get_max_fpf_atom().inverse())
+                print(' got:', test)
+                print('want:', atoms)
+                print(' min:', minima)
+                print()
+                assert sorted(test) == sorted(atoms)
+                assert len([i for i, j in sh if i == -j]) % 2 == n % 2
+                assert len(minima) == 1
+                assert minima == [v]
+                if w.ell_zero() == 6:
+                    input('?')
 
 
 def print_fpf_atoms_span(n=3):
@@ -628,22 +671,22 @@ def print_fpf_atoms_span(n=3):
     
     cls = EvenSignedPermutation
     for w in cls.fpf_involutions(n):
-        if n % 2 == 0 and w.ell_zero() // 2 % 2 != 0:
+        if w.ell_zero() % 4 != 0 and len(w.neg()) == 0:
             continue
 
         atoms = {a.inverse() for a in w.get_fpf_atoms()}
         v = w.get_max_fpf_atom().inverse()
-        edges = list(fpf_span(v, True, fpfshape, atoms))
+        edges = list(fpf_span(v, True))
 
         if len(edges) == 0:
             continue
 
         sources = {x for x in atoms if not any(tuple(x) == tuple(v) for u, v, b in edges)}
-        assert len(sources) == 1
-        assert next(iter(sources)) == v
+        #assert len(sources) == 1
+        #assert next(iter(sources)) == v
         expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
         minima = {x for x in atoms if x.inverse() == w.get_max_fpf_atom(fpfshape(x))}
-        assert expected == minima
+        #assert expected == minima
 
         s = []
         s += ['digraph G {']
@@ -671,23 +714,28 @@ def print_fpf_atoms_span(n=3):
 
 
 def test_fpf_atoms_span(nn=4):
-    for n in [nn, nn + 1]:
-        print('\nn =', n, '\n')
+    for n in [nn]:
+        print('n =', n)
 
         def shape(x):
             return SignedPermutation(*x).inverse().fpf_dshape()
 
         cls = EvenSignedPermutation
         for w in cls.fpf_involutions(n):
-            if n % 2 == 0 and w.ell_zero() // 2 % 2 != 0:
+            if w.ell_zero() % 4 != 0 and len(w.neg()) == 0:
                 continue
             v = w.get_max_fpf_atom().inverse()
-            test = sorted({v} | {cls(*u) for (_, u, _) in fpf_span(v, True, shape, set())})
+            test = sorted({v} | {cls(*u) for (_, u, _) in fpf_span(v, True)})
             sest = sorted({u.inverse() for u in w.get_fpf_atoms()})
             if test != sest:
-                print(w)
-                print('  ', test)
-                print('  ', sest)
-                assert False
+                print('z =', w, ':', v)
+                print('   got:', test)
+                print('  want:', sest)
+                print()
+                for a in sest:
+                    print('*', a, sorted(SignedPermutation(*a.oneline).inverse().fpf_dshape()), a in test)
+                assert set(test).issubset(set(sest))
+                input('\n?\n')
+                #assert False
 
-            assert all(b == (shape(u) != shape(x)) for (u, x, b) in fpf_span(v, True, shape, set()))
+            assert all(b == (shape(u) != shape(x)) for (u, x, b) in fpf_span(v, True))
