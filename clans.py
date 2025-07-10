@@ -43,6 +43,9 @@ class Clan:
         self.oneline = tuple(oneline)
         self.family = family
 
+    def __len__(self):
+        return len(self.oneline)
+
     @classmethod
     def create_a(cls, oneline):
         return Clan(oneline, cls.TYPE_A)
@@ -205,6 +208,17 @@ class Clan:
 
     def minus(self):
         return len([x for x in self.oneline if x is False])
+
+    def signs(self, omit=()):
+        return tuple(x for i, x in enumerate(self.oneline) if type(x) == bool and (i + 1) not in omit)
+
+    def covers(self, other, *toggle_sign_indices):
+        assert len(self.oneline) == len(other.oneline)
+        for i, a in enumerate(self.oneline):
+            b = other.oneline[i]
+            if type(a) == bool and (type(b) != bool or (a == b if i in toggle_sign_indices else a != b)):
+                return False
+        return True
 
     def clan_type(self):
         return self.plus() - self.minus()

@@ -4,6 +4,208 @@ from signed import SignedPermutation
 from even import EvenSignedPermutation
 
 
+def test_action_a(n=3):
+    for a in Clan.all_a(n):
+        for i in a.generators():
+            b, _ = a.weak_order_action(i)
+            u = a.richardson_springer_map()
+            v = b.richardson_springer_map()
+            signs_a = a.signs()
+            signs_b = b.signs()
+
+            if type(a(i)) == bool and type(a(i + 1)) == bool and a(i) == a(i + 1):
+                assert a == b
+            else:
+                s = a.simple_generator(i)
+                assert s % u % s == v
+                assert len(signs_a) - len(signs_b) in [0, 2]
+                if len(signs_a) == len(signs_b):
+                    assert signs_a == signs_b
+                else:
+                    assert b.covers(a)
+
+
+def test_action_b(n=3):
+    for a in Clan.all_b(n):
+        for i in a.generators():
+            b, _ = a.weak_order_action(i)
+
+            u = a.richardson_springer_map()
+            v = b.richardson_springer_map()
+
+            amap = {i - n: a.oneline[i] for i in range(len(a))}
+            bmap = {i - n: b.oneline[i] for i in range(len(b))}
+
+            signs_a = a.signs()
+            signs_b = b.signs()
+
+            if type(amap[i]) == bool and type(amap[i + 1]) == bool and amap[i] == amap[i + 1]:
+                assert a == b
+            else:
+                s = a.simple_generator(i)
+                assert s % u % s == v
+                assert len(signs_a) - len(signs_b) in [0, 2, 4]
+                if len(signs_a) == len(signs_b):
+                    assert signs_a == signs_b
+                elif len(signs_a) == len(signs_b) + 4:
+                    assert b.covers(a)
+                else:
+                    assert b.covers(a, n)
+
+
+def test_action_c1(n=3):
+    for a in Clan.all_c1(n):
+        for i in a.generators():
+            b, _ = a.weak_order_action(i)
+
+            u = a.richardson_springer_map()
+            v = b.richardson_springer_map()
+
+            amap = {i - n + 1: a.oneline[i] for i in range(len(a))}
+            bmap = {i - n + 1: b.oneline[i] for i in range(len(b))}
+
+            signs_a = a.signs()
+            signs_b = b.signs()
+
+            if type(amap[i]) == bool and type(amap[i + 1]) == bool and amap[i] == amap[i + 1]:
+                assert a == b
+            else:
+                s = a.simple_generator(i)
+                assert s % u % s == v
+                assert len(signs_a) - len(signs_b) in [0, 2, 4]
+                if len(signs_a) == len(signs_b):
+                    assert signs_a == signs_b
+                else:
+                    assert b.covers(a)
+
+
+def test_action_c2(n=3):
+    for a in Clan.all_c2(n):
+        for i in a.generators():
+            b, _ = a.weak_order_action(i)
+
+            u = a.richardson_springer_map()
+            v = b.richardson_springer_map()
+
+            amap = {i - n + 1: a.oneline[i] for i in range(len(a))}
+            bmap = {i - n + 1: b.oneline[i] for i in range(len(b))}
+
+            signs_a = a.signs()
+            signs_b = b.signs()
+
+            if type(amap[i]) == bool and type(amap[i + 1]) == bool and amap[i] == amap[i + 1]:
+                assert a == b
+            else:
+                s = a.simple_generator(i)
+                w = s % u % s
+                if w.negated_points():
+                    assert a == b
+                else:
+                    assert v == w
+                assert len(signs_a) - len(signs_b) in [0, 4]
+                if len(signs_a) == len(signs_b):
+                    assert signs_a == signs_b
+                else:
+                    assert b.covers(a)
+
+
+def test_action_d1(n=3):
+    for a in Clan.all_d1(n):
+        for i in a.generators():
+            b, _ = a.weak_order_action(i)
+
+            u = a.richardson_springer_map()
+            v = b.richardson_springer_map()
+            
+            u = EvenSignedPermutation(*u)
+            v = EvenSignedPermutation(*v)
+
+            amap = {i - n + 1: a.oneline[i] for i in range(len(a))}
+            bmap = {i - n + 1: b.oneline[i] for i in range(len(b))}
+
+            signs_a = a.signs()
+            signs_b = b.signs()
+
+            if type(amap[i]) == bool and type(amap[i + 1]) == bool and amap[i] == amap[i + 1]:
+                assert a == b
+            else:
+                s = EvenSignedPermutation.s_i(max(i, 0), n)
+                assert v == s % u % s
+                assert len(signs_a) - len(signs_b) in [0, 4]
+                if len(signs_a) == len(signs_b):
+                    assert signs_a == signs_b
+                else:
+                    assert b.covers(a)
+
+
+def test_action_d2(n=3):
+    for a in Clan.all_d2(n):
+        for i in a.generators():
+            b, _ = a.weak_order_action(i)
+
+            u = a.richardson_springer_map()
+            v = b.richardson_springer_map()
+            
+            u = EvenSignedPermutation(*u)
+            v = EvenSignedPermutation(*v)
+
+            amap = {i - n + 1: a.oneline[i] for i in range(len(a))}
+            bmap = {i - n + 1: b.oneline[i] for i in range(len(b))}
+
+            signs_a = a.signs()
+            signs_b = b.signs()
+
+            if type(amap[i]) == bool and type(amap[i + 1]) == bool and amap[i] == amap[i + 1]:
+                assert a == b
+            else:
+                s = EvenSignedPermutation.s_i(max(i, 0), n)
+                assert v == s % u % s.star()
+                assert len(signs_a) - len(signs_b) in [0, 4]
+                if len(signs_a) == len(signs_b):
+                    assert signs_a == signs_b
+                else:
+                    assert b.covers(a)
+
+
+def test_action_d3(n=3):
+    for a in Clan.all_d3(n):
+        for i in a.generators():
+            b, _ = a.weak_order_action(i)
+
+            u = a.richardson_springer_map()
+            v = b.richardson_springer_map()
+            
+            u = EvenSignedPermutation(*u)
+            v = EvenSignedPermutation(*v)
+
+            amap = {i - n + 1: a.oneline[i] for i in range(len(a))}
+            bmap = {i - n + 1: b.oneline[i] for i in range(len(b))}
+
+            signs_a = a.signs()
+            signs_b = b.signs()
+
+            j = i + (1 if i > 0 else 2)
+            if type(amap[i]) == bool and type(amap[j]) == bool and amap[i] == amap[j]:
+                assert a == b
+            else:
+                s = EvenSignedPermutation.s_i(max(i, 0), n)
+                w = s % u % s
+                if w.negated_points():
+                    assert a == b
+                else:
+                    assert v == w
+                assert len(signs_a) - len(signs_b) in [0, 4]
+                if len(signs_a) == len(signs_b):
+                    if i == -1 and u != v and (type(amap[1]) == bool or type(amap[2]) == bool):
+                        k = len(signs_a) // 2
+                        signs_a = list(signs_a)
+                        signs_a[k - 1], signs_a[k] = signs_a[k], signs_a[k - 1]
+                        signs_a = tuple(signs_a)
+                    assert signs_a == signs_b
+                else:
+                    assert b.covers(a)
+
+
 def _test_hecke_atoms(cl, dtype=False, verbose=False):
     length = lambda x: cl.weyl_group_length(x)
     get_reduced_word = lambda w: w.get_reduced_word(dtype=dtype) if dtype else w.get_reduced_word()
