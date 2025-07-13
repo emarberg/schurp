@@ -212,14 +212,6 @@ class Clan:
     def signs(self, omit=()):
         return tuple(x for i, x in enumerate(self.oneline) if type(x) == bool and (i + 1) not in omit)
 
-    def covers(self, other, *toggle_sign_indices):
-        assert len(self.oneline) == len(other.oneline)
-        for i, a in enumerate(self.oneline):
-            b = other.oneline[i]
-            if type(a) == bool and (type(b) != bool or (a == b if i in toggle_sign_indices else a != b)):
-                return False
-        return True
-
     def clan_type(self):
         return self.plus() - self.minus()
 
@@ -719,6 +711,23 @@ class Clan:
             if type(a) == int and i + 1 < a:
                 cycles.append((i + 1, a))
         return cycles
+
+    def toggle(self, *args):
+        newline = list(self.oneline)
+        for bit_index in args:
+            if type(newline[bit_index]) == bool:
+                newline[bit_index] = not newline[bit_index]
+        return Clan(newline, self.family)
+
+    def contains(self, other):
+        for i, b in enumerate(other.oneline):
+            a = self.oneline[i]
+            if type(b) == bool and (type(a) != bool or a != b):
+                return False
+        return True
+
+    def congruent(self, other):
+        return self.signs() == other.signs()
 
     def richardson_springer_involution(self):
         w0 = self.weyl_group_longest_element()

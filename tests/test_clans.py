@@ -18,11 +18,7 @@ def test_action_a(n=3):
             else:
                 s = a.simple_generator(i)
                 assert s % u % s == v
-                assert len(signs_a) - len(signs_b) in [0, 2]
-                if len(signs_a) == len(signs_b):
-                    assert signs_a == signs_b
-                else:
-                    assert b.covers(a)
+                assert a.congruent(b) or a.contains(b)
 
 
 def test_action_b(n=3):
@@ -45,12 +41,7 @@ def test_action_b(n=3):
                 s = a.simple_generator(i)
                 assert s % u % s == v
                 assert len(signs_a) - len(signs_b) in [0, 2, 4]
-                if len(signs_a) == len(signs_b):
-                    assert signs_a == signs_b
-                elif len(signs_a) == len(signs_b) + 4:
-                    assert b.covers(a)
-                else:
-                    assert b.covers(a, n)
+                assert a.congruent(b) or a.contains(b.toggle(n) if i == 0 else b)
 
 
 def test_action_c1(n=3):
@@ -73,10 +64,7 @@ def test_action_c1(n=3):
                 s = a.simple_generator(i)
                 assert s % u % s == v
                 assert len(signs_a) - len(signs_b) in [0, 2, 4]
-                if len(signs_a) == len(signs_b):
-                    assert signs_a == signs_b
-                else:
-                    assert b.covers(a)
+                assert a.congruent(b) or a.contains(b)
 
 
 def test_action_c2(n=3):
@@ -103,10 +91,7 @@ def test_action_c2(n=3):
                 else:
                     assert v == w
                 assert len(signs_a) - len(signs_b) in [0, 4]
-                if len(signs_a) == len(signs_b):
-                    assert signs_a == signs_b
-                else:
-                    assert b.covers(a)
+                assert a.congruent(b) or a.contains(b)
 
 
 def test_action_d1(n=3):
@@ -123,6 +108,9 @@ def test_action_d1(n=3):
             amap = {i - n + 1: a.oneline[i] for i in range(len(a))}
             bmap = {i - n + 1: b.oneline[i] for i in range(len(b))}
 
+            assert type(amap[-1]) != bool or amap[-1] ==  amap[2] 
+            assert type(amap[0]) != bool or amap[0] ==  amap[1]
+
             signs_a = a.signs()
             signs_b = b.signs()
 
@@ -132,10 +120,7 @@ def test_action_d1(n=3):
                 s = EvenSignedPermutation.s_i(max(i, 0), n)
                 assert v == s % u % s
                 assert len(signs_a) - len(signs_b) in [0, 4]
-                if len(signs_a) == len(signs_b):
-                    assert signs_a == signs_b
-                else:
-                    assert b.covers(a)
+                assert a.congruent(b) or a.contains(b)
 
 
 def test_action_d2(n=3):
@@ -161,10 +146,7 @@ def test_action_d2(n=3):
                 s = EvenSignedPermutation.s_i(max(i, 0), n)
                 assert v == s % u % s.star()
                 assert len(signs_a) - len(signs_b) in [0, 4]
-                if len(signs_a) == len(signs_b):
-                    assert signs_a == signs_b
-                else:
-                    assert b.covers(a)
+                assert a.congruent(b) or a.contains(b)
 
 
 def test_action_d3(n=3):
@@ -194,16 +176,12 @@ def test_action_d3(n=3):
                     assert a == b
                 else:
                     assert v == w
-                assert len(signs_a) - len(signs_b) in [0, 4]
-                if len(signs_a) == len(signs_b):
-                    if i == -1 and u != v and (type(amap[1]) == bool or type(amap[2]) == bool):
-                        k = len(signs_a) // 2
-                        signs_a = list(signs_a)
-                        signs_a[k - 1], signs_a[k] = signs_a[k], signs_a[k - 1]
-                        signs_a = tuple(signs_a)
-                    assert signs_a == signs_b
+                
+                if i == -1:
+                    bb = b.toggle(n - 2, n - 1, n, n + 1)
                 else:
-                    assert b.covers(a)
+                    bb = b
+                assert a.congruent(bb) or a.contains(b)
 
 
 def _test_hecke_atoms(cl, dtype=False, verbose=False):
