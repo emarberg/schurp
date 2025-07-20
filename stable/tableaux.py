@@ -79,6 +79,7 @@ class Tableau:
 
         assert all(i > 0 and j > 0 for i, j in mapping)
         self.boxes = {(i, j): tuplize(i, j) for i, j in mapping}
+        self.boxes = {b: v for (b, v) in self.boxes.items() if len(v) > 0}
         self._sorting_word = tuple(
             (2 * v if v > 0 else -1 - 2 * v)
             for b in sorted(self.boxes) for v in self.boxes[b]
@@ -2024,6 +2025,60 @@ class Tableau:
                 ans, set_to_insert = ans.forward_row_setvalued_insertion(row_index, set_to_insert)
                 row_index += 1
         return ans
+
+    def reverse_mcnamara_insertion(self, lam):
+        shlam = {(i + 1, j + 1) for i in range(len(lam)) for j in range(lam[i])}
+        shtab = set(self.boxes)
+
+        assert shlam.issubset(shtab)
+        diff = shtab - shlam
+        assert not any(a[0] == b[0] and a[1] != b[1] for a in diff for b in diff)
+        assert not any(a[0] != b[0] and a[1] == b[1] for a in diff for b in diff)
+        special_rows = {a[0] for a in diff}
+
+        ans = self
+        row = max([a[0] for a in shtab])
+        s = set()
+        while row > 0:
+            ans, s = ans.reverse_row_setvalued_insertion(row, s, row in special_rows)
+            row -= 1
+        return ans, s
+
+    def reverse_row_setvalued_insertion(self, row_index, set_to_insert, is_last_box_special):
+        boxes = self.boxes.copy()
+        bumped = set()
+
+        last_column = 0
+        while (row_index, last_column + 1) in boxes:
+            last_column += 1
+
+        insert = {i + 1: set() for i in range(last_column)}
+        eject = {i + 1: set() for i in range(last_column)}
+
+        for s in set_to_insert:
+            for j in range(last_column - (1 if is_last_box_special else 0), 0, -1):
+                if s > max(boxes[row_index, j]):
+                    insert[j].add(s)
+                    ejected = 0
+                    for k in range(j + 1, last_column + 1):
+                        neweject = {v for v in boxes[row_index, k] if v < s}
+                        ejected += len(neweject)
+                        eject[k] |= neweject
+                    if ejected == 0:
+                        eject[j] |= set(boxes[row_index, j])
+                    break
+
+        if is_last_box_special:
+            eject[last_column] |= set(boxes[row_index, last_column])
+
+        for j in range(1, last_column + 1):
+            bumped |= eject[j]
+            newval = set(boxes[row_index, j])
+            newval -= eject[j]
+            newval |= insert[j]
+            boxes[row_index, j] = tuple(sorted(newval))
+
+        return Tableau(boxes), bumped
 
     def forward_row_setvalued_insertion(self, row_index, set_to_insert):
         boxes = self.boxes.copy()
