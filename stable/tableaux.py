@@ -2013,6 +2013,42 @@ class Tableau:
                 return False
         return True
 
+    def forward_row_setvalued_insertion(self, row_index, set_to_insert):
+        boxes = self.boxes.copy()
+        bumped = set()
+
+        first_empty_column = 1
+        while (row_index, first_empty_column) in boxes:
+            first_empty_column += 1
+
+        insert = {i + 1: set() for i in range(first_empty_column)}
+        eject = {i + 1: set() for i in range(first_empty_column)}
+
+        for s in set_to_insert:
+            for j in range(1, first_empty_column + 1):
+                if j == first_empty_column or s < min(boxes[row_index, j]):
+                    insert[j].add(s)
+                    ejected = 0
+                    for k in range(1, j):
+                        neweject = {v for v in boxes[row_index, k] if v > s}
+                        ejected += len(neweject)
+                        eject[k] |= neweject
+                    if j < first_empty_column and ejected == 0:
+                        eject[j] |= set(boxes[row_index, j])
+                    break
+
+        for j in range(1, first_empty_column):
+            bumped |= eject[j]
+            newval = set(boxes[row_index, j])
+            newval -= eject[j]
+            newval |= insert[j]
+            boxes[row_index, j] = tuple(sorted(newval))
+
+        if len(insert[first_empty_column]) > 0:
+            boxes[row_index, first_empty_column] = tuple(sorted(insert[first_empty_column]))
+
+        return Tableau(boxes), bumped
+
     def column_hecke_insert(self, p):
         if type(p) in [list, tuple]:
             ans = self
