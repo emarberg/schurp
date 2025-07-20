@@ -2037,6 +2037,9 @@ class Tableau:
         special_rows = {a[0] for a in diff}
 
         ans = self
+        if len(shtab) == 0:
+            return ans, set()
+
         row = max([a[0] for a in shtab])
         s = set()
         while row > 0:

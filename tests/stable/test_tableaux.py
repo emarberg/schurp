@@ -2,6 +2,17 @@ from stable.tableaux import Tableau, MarkedReversePlanePartition
 from stable.partitions import Partition
 
 
+def test_mcnamara_insertion(max_entry=4, partition_size=10):
+    partitions = sorted(Partition.all(partition_size))
+    print(partitions)
+    for mu in partitions:
+        print('mu =', mu)
+        for t in Tableau.semistandard(max_entry, mu=mu, nu=(), setvalued=True):
+            for lam in Partition.remove_inner_corners(mu):
+                x, a = t.reverse_mcnamara_insertion(lam)
+                assert x.mcnamara_insertion(a) == t
+
+
 def test_sqrt_signature_word():
     t = Tableau({
         (1, 1): 1, 
