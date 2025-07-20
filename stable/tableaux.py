@@ -2013,6 +2013,18 @@ class Tableau:
                 return False
         return True
 
+    def mcnamara_insertion(self, *args):
+        if len(args) == 0:
+            args = self.row_reading_word(setwise=True)
+            return Tableau().mcnamara_insertion(*args)
+        ans = self
+        for set_to_insert in args:
+            row_index = 1
+            while set_to_insert:
+                ans, set_to_insert = ans.forward_row_setvalued_insertion(row_index, set_to_insert)
+                row_index += 1
+        return ans
+
     def forward_row_setvalued_insertion(self, row_index, set_to_insert):
         boxes = self.boxes.copy()
         bumped = set()
