@@ -236,9 +236,9 @@ def span(v, strong=False):
             if strong:
                 for j in range(1, len(v)):
                     for k in range(j + 1, len(v) - 1):
-                        b, c, d = v[j], v[k], v[k + 1]
-                        if 0 < -b < c < -d and all(abs(x) <= abs(b) for x in v[:k]):
-                            w = v[:j] + (d,) + v[j + 1:k] + (-b, -c) + v[k + 2:]
+                        a, b, c = v[j], v[k], v[k + 1]
+                        if 0 < -a < b < -c and all(abs(x) <= abs(a) for x in v[:k]):
+                            w = v[:j] + (c,) + v[j + 1:k] + (-a, -b) + v[k + 2:]
                             nextlevel.add((v, w, True))
         level = nextlevel
         seen |= nextseen
@@ -422,7 +422,7 @@ def twisted_span(v, strong=False):
                     if len(v) >= 3:
                         a, b, c = v[:3]
                         if 0 < a < b < -c:
-                            w = (c, -a, -b) + v[3:]
+                            w = (-c, a, -b) + v[3:]
                             nextlevel.add((v, w, True))
 
                     for j in range(len(v)):
@@ -592,12 +592,12 @@ def fpf_span(v, strong=False):
                         w = (d, a, -c, -b) + v[4:]
                         nextlevel.add((v, w, True))
 
-                    b, d, c, a = v[:4]
-                    if 0 < -a < b < c < -d:
-                        w = (-d, -c, b, a) + v[4:]
+                    #b, d, c, a = v[:4]
+                    #if 0 < -a < b < c < -d:
+                    #    w = (-d, -c, b, a) + v[4:]
                         #nextlevel.add((v, w, True))
 
-                        w = (d, -c, -b, a) + v[4:]
+                    #    w = (d, -c, -b, a) + v[4:]
                         #nextlevel.add((v, w, True))
 
                 

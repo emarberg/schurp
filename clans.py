@@ -258,7 +258,7 @@ class Clan:
             if any(signs[i] == signs[i + 1] for i in range(k, len(signs) - 1)):
                 return False
         if self.family in [self.TYPE_D1, self.TYPE_D2]:
-            if len(trivial) < k:
+            if len(trivial) != k:
                 return False
             signs = [self(self.rank() + 1 + i) for i in reversed(trivial)]
             if any(signs[i] != signs[i + 1] for i in range(0, len(signs) - 1)):

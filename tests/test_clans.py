@@ -882,7 +882,13 @@ def test_atoms_d1_refined(nn=4, verbose=False):
                     sh = (g * w).dshape(k)
                     sh = tuple(sorted(sh))
                     atoms_by_shape[sh] = atoms_by_shape.get(sh, set()) | {w}
-
+                # print()
+                # print()
+                # print(z, base)
+                # print(expected_shapes)
+                # print()
+                # print(set(atoms_by_shape))
+                # print()
                 _test_dtype_atoms_by_shape(z, g, k, atoms_by_shape)
                 _test_refinement(clan, atoms_by_shape, expected_shapes)
 

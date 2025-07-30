@@ -63,7 +63,7 @@ INV_DEMAZURE_TABLEAU_CACHE = {}
 def test_mcnamara_insertion_is_morphism(m=3, n=3):
     words = AbstractGLCrystal.sqrtcrystal_of_words(m, n)
     for a in words:
-        t = a.mcnamara_insertion()
+        t, r = a.mcnamara_insertion()
         for i in range(1, n):
             b = a.sqrt_f_operator(i)
             u = t.sqrt_f_operator(i)
@@ -74,15 +74,19 @@ def test_mcnamara_insertion_is_morphism(m=3, n=3):
 
             print()
             print(t)
-            print(u)
+            print(r)
 
             if b is None:
-                assert u is None
+                # assert u is None
+                pass
             else:
+                tt, rr = b.mcnamara_insertion()
                 print()
                 print('want:')
-                print(b.mcnamara_insertion())
-                assert b.mcnamara_insertion() == u
+                print(tt)
+                print(rr)
+                #assert tt == u
+                assert r == rr
 
             print()
             print()

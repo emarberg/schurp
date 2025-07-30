@@ -86,6 +86,21 @@ class Tableau:
         )
         self._string_array = None
 
+    def marginalize(self, n):
+        rows = self.get_rows(unpack=False)
+        assert len(rows) <= n
+        newrows = []
+        for i in range(len(rows)):
+            newrows.append([x for x in rows[i] if x != (i + 1,)])
+        while len(newrows) < n:
+            newrows.append([])
+        for i in range(n - 1, -1, -1):
+            if i == n - 1:
+                newrows[i] = [(n,)] + newrows[i]
+            else:
+                newrows[i] = [(i + 1,)] * (len(newrows[i + 1]) + 1) + newrows[i]
+        return Tableau.from_rows(newrows)
+
     @classmethod
     def from_rows(cls, rows, shifted=False):
         mapping = {}
@@ -2019,12 +2034,17 @@ class Tableau:
             args = self.row_reading_word(setwise=True)
             return Tableau().mcnamara_insertion(*args)
         ans = self
-        for set_to_insert in args:
+        bns = {b: () for b in ans.boxes}
+        for i, set_to_insert in enumerate(args):
             row_index = 1
             while set_to_insert:
                 ans, set_to_insert = ans.forward_row_setvalued_insertion(row_index, set_to_insert)
                 row_index += 1
-        return ans
+            for b in ans.boxes:
+                if b not in bns:
+                    bns[b] = (i + 1,)
+        bns = Tableau(bns)
+        return ans, bns
 
     def reverse_mcnamara_insertion(self, lam):
         shlam = {(i + 1, j + 1) for i in range(len(lam)) for j in range(lam[i])}
