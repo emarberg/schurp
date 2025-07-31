@@ -12,6 +12,49 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 class InfiniteCrystal:
 
     @classmethod
+    def is_isomorphic(cls, b, b_vertices, c, c_vertices):
+        assert b.indices == c.indices
+        assert b.generator in b_vertices
+        assert c.generator in c_vertices
+        if len(b_vertices) != len(c_vertices):
+            return False
+        q = collections.deque([(b.generator, c.generator)])
+        seen = {None: None}
+        while q:
+            x, y = q.popleft()
+            if x is None and y is not None:
+                return False
+            if x is not None and y is None:
+                return False
+            if x in seen:
+                if y != seen[x]:
+                    return False
+                else:
+                    continue
+            else:
+                seen[x] = y
+            if b.weight(x) != c.weight(y):
+                return False
+            for i in b.indices:
+                if b.f_string(i, x) != c.f_string(i, y):
+                    return False
+                if b.e_string(i, x) != c.e_string(i, y):
+                    return False
+                
+                fx, fy = b.f_operator(i, x), c.f_operator(i, y)
+                ex, ey = b.e_operator(i, x), c.e_operator(i, y)
+
+                fx = fx if fx is b_vertices else None
+                fy = fy if fy is c_vertices else None
+
+                ex = ex if ex is b_vertices else None
+                ey = ey if ey is c_vertices else None
+
+                q.append((fx, fy))
+                q.append((ex, ey))
+        return True
+
+    @classmethod
     def tensor(cls, *args):
         return cls._tensor(1, *args)
 
@@ -178,13 +221,34 @@ class InfiniteCrystal:
     def weight(self, x):
         return self.weight_map(x)
 
-    def filename(self, ts=None):
-        ans = "gl%s_crystal" % str(len(self.indices))
+    def filename(self, vertices, ts=None):
+        n = str(len(self.indices))
+        ell = str(len(vertices))
+        ans = "gl%s_crystal.%s" % (n, ell)
         if ts is not None:
             ans += ".%s" % str(ts)
         return ans
 
-    def draw(self, e_thresh, f_thresh):
+    def draw_demazure(self, thresh, *args):
+        vertices = self.demazure(thresh, *args)
+        self.draw(vertices)
+
+    def demazure(self, thresh, *args):
+        vertices = {(self.generator, 0)}
+        for i in reversed(args):
+            add = set()
+            for (v, h) in vertices:
+                w = v
+                k = h
+                while w is not None and k <= thresh:
+                    if k > h:
+                        add.add((w, h))
+                    w = self.f_operator(i, w)
+                    k += 1
+            vertices |= add
+        return {v for (v, _) in vertices}
+
+    def draw_thresh(self, e_thresh, f_thresh):
         vertices = set()
         q = collections.deque([(self.generator, 0, 0)])
         while q:
@@ -194,7 +258,10 @@ class InfiniteCrystal:
                 for a in self.indices:
                     q.append((self.e_operator(a, g), i + 1, j))
                     q.append((self.f_operator(a, g), i, j + 1))
+        self.draw(vertices)
 
+    def draw(self, vertices):
+        #vertices = {t for t in vertices if all(i == 1 or v == (i,) for i,j,v in t)}
         edges = []
 
         def printer(x):
@@ -220,7 +287,7 @@ class InfiniteCrystal:
         s += ['}']
         s = '\n'.join(s)
         
-        filename = self.filename()
+        filename = self.filename(vertices)
         dot_filename = BASE_DIRECTORY + 'infinite/' + 'dot/' + '%s.dot' % filename
         png_filename = BASE_DIRECTORY + 'infinite/' + 'png/' + '%s.png' % filename
         with open(dot_filename, 'w') as f:
