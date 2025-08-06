@@ -128,6 +128,71 @@ class InfiniteCrystal:
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map, printer)
 
     @classmethod
+    def row(cls, j, n):
+        generator = n * (0,)
+        indices = list(range(1, n))
+
+        def e_operators(i, x):
+            if i < j:
+                return None
+            y = list(x)
+            if i == j and y[i] > 0:
+                y[i] -= 1
+            elif y[i] > 0:
+                y[i] -= 1
+                y[i - 1] += 1
+            else:
+                return None
+            return tuple(y)
+
+        def f_operators(i, x):
+            if i < j:
+                return None
+            y = list(x)
+            if i == j:
+                y[i] += 1
+            elif y[i - 1] > 0:
+                y[i - 1] -= 1
+                y[i] += 1
+            else:
+                return None
+            return tuple(y)
+
+        e_strings = lambda i, x: None if i < j else x[i]
+        f_strings = lambda i, x: None if i < j else -sum(x) if i == j else x[i - 1]
+
+        def weight_map(x):
+            ans = n * [0]
+            for i in range(1, n):
+                ans[0] -= x[i]
+                ans[i] += x[i]
+            return tuple(ans)
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+ 
+    #@classmethod
+    # def sqrt_row(cls, n):
+    #     m = lambda t: None if t is None else t.marginalize(n)
+
+    #     generator = m(Tableau())
+    #     indices = list(range(1, n))
+
+    #     e_operators = lambda i, x: m(x.sqrt_e_operator(i))
+    #     f_operators = lambda i, x: m(x.sqrt_f_operator(i))
+
+    #     e_strings = lambda i, x: None
+    #     f_strings = lambda i, x: None
+
+    #     def weight_map(x):
+    #         tup = x.shape()
+    #         ans = list(x.weight(n))
+    #         for i in range(n):
+    #             ans[i] -= tup[i] if i < len(tup) else 0
+    #         return tuple(ans)
+
+    #     return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+ 
+    @classmethod
     def tableaux(cls, n):
         m = lambda t: None if t is None else t.marginalize(n)
 
@@ -140,7 +205,12 @@ class InfiniteCrystal:
         e_strings = lambda i, x: None
         f_strings = lambda i, x: None
 
-        weight_map = lambda x: tuple(a - (n - i) for (i, a) in enumerate(x.weight(n)))
+        def weight_map(x):
+            tup = x.shape()
+            ans = list(x.weight(n))
+            for i in range(n):
+                ans[i] -= tup[i] if i < len(tup) else 0
+            return tuple(ans)
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
  
@@ -261,7 +331,8 @@ class InfiniteCrystal:
         self.draw(vertices)
 
     def draw(self, vertices):
-        #vertices = {t for t in vertices if all(i == 1 or v == (i,) for i,j,v in t)}
+        #vertices = {t for t in vertices if all(i > 1 or v == (1,) for i,j,v in t)}
+        #vertices = {x for x in vertices if all(self.e_string(i, x) >= 0 for i in self.indices)}
         edges = []
 
         def printer(x):
