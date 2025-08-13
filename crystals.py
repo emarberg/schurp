@@ -997,6 +997,39 @@ class AbstractCCrystal(AbstractCrystalMixin):
 
 class SuperGLCrystal(AbstractCrystalMixin):
 
+    @classmethod
+    def construct_words(cls, length, rank_m, rank_n):
+        if length == 0:
+            return [()]
+        else:
+            ans = cls.construct_words(length - 1, rank_m, rank_n)
+            letters = [i for i in range(-rank_m, rank_n + 1) if i != 0]
+            return [a + (i,) for i in letters for a in ans]
+
+    @classmethod
+    def crystal_of_words(cls, length, rank_m, rank_n):
+        def wt(t):
+            ans = (rank_m + rank_n) * [0]
+            for v in t:
+                if v > 0:
+                    wt[rank_m + v - 1] += 1
+                else:
+                    wt[rank_m + v] += 1
+            return tuple(ans)
+
+        rank = (rank_m, rank_n)
+        vertices = cls.construct_words(length, rank_m, rank_n)
+        edges = []
+        weights = {}
+        for t in vertices:
+            weights[t] = wt(t)
+            for i in range(-rank_m + 1, rank_n):
+                u = cls.f_operator_on_words(i, t)
+                if u is not None:
+                    assert cls.e_operator_on_words(i, u) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights)
+
     @property
     def rank_m(self):
         return self.rank[0]

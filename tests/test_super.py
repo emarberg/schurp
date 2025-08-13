@@ -2,6 +2,7 @@ from crystals import(
     AbstractGLCrystal,
     SuperGLCrystal,
 )
+from stable.tableaux import Tableau
 from stable.symmetric import SymmetricPolynomial
 from stable.polynomials import X, Y, Polynomial
 from stable.utils import hs, HG, hs_expansion, HG_expansion, schur, G
@@ -9,6 +10,51 @@ from stable.vectors import Vector
 from stable.partitions import Partition
 from stable.permutations import Permutation
 
+
+def test_sqrt_connected_lemma(k, *mu):
+    def e(v, *args):
+        ans = v
+        for i in args:
+            if ans is not None:
+                ans = ans.sqrt_super_e_operator(i)
+        return ans
+
+    def f(v, *args):
+        ans = v
+        for i in args:
+            if ans is not None:
+                ans = ans.sqrt_super_f_operator(i)
+        return ans
+
+    def E(v, *args):
+        ans = v
+        for i in args:
+            while True:
+                bns = ans.sqrt_super_e_operator(i)
+                if bns is None:
+                    break
+                ans = bns
+        return ans
+
+    def F(v, *args):
+        ans = v
+        for i in args:
+            while True:
+                bns = ans.sqrt_super_f_operator(i)
+                if bns is None:
+                    break
+                ans = bns
+        return ans
+
+    assert mu[-1] > 0
+    n = len(mu)
+    v = {(1, i): (-1) for i in range(1, k + 1)}
+    v[1, k + 1] = (-1, n)
+    for col in range(len(mu)):
+        for row in range(mu[col]):
+            v[row + 2, col + 1] = col + 1
+    v = Tableau(v)
+    return v, e, f, E, F
 
 def test_super_sergeev_pragacz(m=2, n=2, k=3):
     for i in range(1, m + 1):
