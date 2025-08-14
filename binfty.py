@@ -183,39 +183,29 @@ class InfiniteCrystal:
         indices = list(range(1, n))
 
         def e_operators(i, x):
-            if i < j:
-                return None
             y = list(x)
-            if i == j and y[i] > 0:
-                y[i] -= 1
-            elif y[i] > 0:
-                if y[i] % 2 == 0:
-                    y[i - 1] += 2
-                    y[i] -= 1
-                elif y[i - 1] == 0:
-                    y[i - 1] += 1
-                else:
-                    y[i] -= 1
-            else:
+            if y[i] == 0:
                 return None
+            elif i == j or y[i - 1] > 0 != y[i] % 2:
+                y[i] -= 1
+            elif y[i] % 2 == 0:
+                y[i - 1] += 2
+                y[i] -= 1
+            else:
+                y[i - 1] += 1
             return tuple(y)
 
         def f_operators(i, x):
-            if i < j:
-                return None
             y = list(x)
-            if i == j:
-                y[i] += 1
-            elif y[i - 1] > 0:
-                if y[i] % 2 == 0:
-                    y[i] += 1
-                elif y[i - 1] == 1:
-                    y[i - 1] = 0
-                else:
-                    y[i - 1] -= 2
-                    y[i] += 1
-            else:
+            if i < j or (i > j and y[i - 1] == 0):
                 return None
+            elif i == j or y[i] % 2 == 0:
+                y[i] += 1
+            elif y[i - 1] == 1:
+                y[i - 1] -= 1
+            else:
+                y[i - 1] -= 2
+                y[i] += 1
             return tuple(y)
 
         e_strings = lambda i, x: None if i < j else x[i] + (1 if i > j and x[i] % 2 != 0 and x[i - 1] == 0 else 0)
