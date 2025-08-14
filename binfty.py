@@ -170,7 +170,7 @@ class InfiniteCrystal:
 
         def weight_map(x):
             ans = n * [0]
-            for i in range(1, n):
+            for i in range(j, n):
                 ans[j - 1] -= x[i]
                 ans[i] += x[i]
             return tuple(ans)
@@ -224,12 +224,16 @@ class InfiniteCrystal:
         
         def weight_map(x):
             ans = n * [0]
-            for i in range(1, n):
+            for i in range(j, n):
                 ans[j - 1] -= x[i] // 2
                 ans[i] += (x[i] + 1) // 2
             return tuple(ans)
 
-        f_strings = lambda i, x: None if i < j else e_strings(i, x) + 2 * weight_map(x)[i - 1] - 2 * weight_map(x)[i]
+        def odd(x):
+            return sum(map(lambda i: i % 2, x))
+
+        #f_strings = lambda i, x: None if i < j else e_strings(i, x) + 2 * weight_map(x)[i - 1] - 2 * weight_map(x)[i]
+        f_strings = lambda i, x: None if i < j else (-sum(x) + odd(x[i + 1:])) if i == j else (x[i - 1] + x[i - 1] % 2 - (x[i] % 2) * (x[i - 1] > 0))
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
