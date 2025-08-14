@@ -12,7 +12,7 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 class InfiniteCrystal:
 
     @classmethod
-    def is_isomorphic(cls, b, b_vertices, c, c_vertices):
+    def is_isomorphic(cls, b, b_vertices, c, c_vertices, ignore_strings=False, verbose=False):
         assert b.indices == c.indices
         assert b.generator in b_vertices
         assert c.generator in c_vertices
@@ -22,6 +22,12 @@ class InfiniteCrystal:
         seen = {None: None}
         while q:
             x, y = q.popleft()
+            if verbose:
+                print('b element:', x)
+                print('  weight =', b.weight(x))
+                print('c element:', y)
+                print('  weight =', c.weight(y))
+                print()
             if x is None and y is not None:
                 return False
             if x is not None and y is None:
@@ -36,19 +42,20 @@ class InfiniteCrystal:
             if b.weight(x) != c.weight(y):
                 return False
             for i in b.indices:
-                if b.f_string(i, x) != c.f_string(i, y):
-                    return False
-                if b.e_string(i, x) != c.e_string(i, y):
-                    return False
+                if not ignore_strings:
+                    if b.f_string(i, x) != c.f_string(i, y):
+                        return False
+                    if b.e_string(i, x) != c.e_string(i, y):
+                        return False
                 
                 fx, fy = b.f_operator(i, x), c.f_operator(i, y)
                 ex, ey = b.e_operator(i, x), c.e_operator(i, y)
 
-                fx = fx if fx is b_vertices else None
-                fy = fy if fy is c_vertices else None
+                fx = fx if fx in b_vertices else None
+                fy = fy if fy in c_vertices else None
 
-                ex = ex if ex is b_vertices else None
-                ey = ey if ey is c_vertices else None
+                ex = ex if ex in b_vertices else None
+                ey = ey if ey in c_vertices else None
 
                 q.append((fx, fy))
                 q.append((ex, ey))
@@ -164,7 +171,7 @@ class InfiniteCrystal:
         def weight_map(x):
             ans = n * [0]
             for i in range(1, n):
-                ans[0] -= x[i]
+                ans[j - 1] -= x[i]
                 ans[i] += x[i]
             return tuple(ans)
 
@@ -289,7 +296,7 @@ class InfiniteCrystal:
         return self.f_strings(i, x)
 
     def weight(self, x):
-        return self.weight_map(x)
+        return self.weight_map(x) if x is not None else None
 
     def filename(self, vertices, ts=None):
         n = str(len(self.indices))
@@ -318,7 +325,7 @@ class InfiniteCrystal:
             vertices |= add
         return {v for (v, _) in vertices}
 
-    def draw_thresh(self, e_thresh, f_thresh):
+    def vertices(self, e_thresh, f_thresh):
         vertices = set()
         q = collections.deque([(self.generator, 0, 0)])
         while q:
@@ -328,6 +335,10 @@ class InfiniteCrystal:
                 for a in self.indices:
                     q.append((self.e_operator(a, g), i + 1, j))
                     q.append((self.f_operator(a, g), i, j + 1))
+        return vertices
+
+    def draw_thresh(self, e_thresh, f_thresh):
+        vertices = self.vertices(e_thresh, f_thresh)
         self.draw(vertices)
 
     def draw(self, vertices):
