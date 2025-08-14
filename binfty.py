@@ -209,8 +209,14 @@ class InfiniteCrystal:
         e_operators = lambda i, x: m(AbstractGLCrystal.e_operator_on_semistandard_tableaux(i, x))
         f_operators = lambda i, x: m(AbstractGLCrystal.f_operator_on_semistandard_tableaux(i, x))
 
-        e_strings = lambda i, x: None
-        f_strings = lambda i, x: None
+        def e_strings(i, x):
+            q = []
+            for w in x.row_reading_word():
+                if w == i + 1:
+                    q.append(w)
+                elif w == i and q and q[-1] == i + 1:
+                    q.pop()
+            return len(q)
 
         def weight_map(x):
             tup = x.shape()
@@ -218,6 +224,11 @@ class InfiniteCrystal:
             for i in range(n):
                 ans[i] -= tup[i] if i < len(tup) else 0
             return tuple(ans)
+
+        def f_strings(i, x):
+            eps = e_strings(i, x)
+            wt = weight_map(x)
+            return eps + wt[i - 1] - wt[i]
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
  
