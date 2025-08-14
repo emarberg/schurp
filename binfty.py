@@ -192,11 +192,10 @@ class InfiniteCrystal:
                 if y[i] % 2 == 0:
                     y[i - 1] += 2
                     y[i] -= 1
+                elif y[i - 1] == 0:
+                    y[i - 1] += 1
                 else:
-                    if y[i - 1] == 0:
-                        y[i - 1] += 1
-                    else:
-                        y[i] -= 1
+                    y[i] -= 1
             else:
                 return None
             return tuple(y)
@@ -210,12 +209,11 @@ class InfiniteCrystal:
             elif y[i - 1] > 0:
                 if y[i] % 2 == 0:
                     y[i] += 1
+                elif y[i - 1] == 1:
+                    y[i - 1] = 0
                 else:
-                    if y[i - 1] == 1:
-                        y[i - 1] = 0
-                    else:
-                        y[i - 1] -= 2
-                        y[i] += 1
+                    y[i - 1] -= 2
+                    y[i] += 1
             else:
                 return None
             return tuple(y)
