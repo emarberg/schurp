@@ -221,7 +221,7 @@ class InfiniteCrystal:
             return sum(map(lambda i: i % 2, x))
 
         #f_strings = lambda i, x: None if i < j else e_strings(i, x) + 2 * weight_map(x)[i - 1] - 2 * weight_map(x)[i]
-        f_strings = lambda i, x: None if i < j else (-sum(x) + odd(x[i + 1:])) if i == j else (x[i - 1] + x[i - 1] % 2 - (x[i] % 2) * (x[i - 1] > 0))
+        f_strings = lambda i, x: None if i < j else (-sum(x) + odd(x) - odd([x[j]])) if i == j else (x[i - 1] + x[i - 1] % 2 - (x[i] % 2) * (x[i - 1] > 0))
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
