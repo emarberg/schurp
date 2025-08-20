@@ -20,8 +20,177 @@ from stable.utils import (
 )
 from vectors import Vector
 import itertools
+import collections
 from schubert import X
 
+
+def test_finite_recursion_a(n=4):
+    def oneline(w):
+        if w is None:
+            return
+        return ''.join(map(str, [w(i) for i in range(1, n + 1)]))
+
+    def code(w):
+        c = list(w.code())
+        c += (n - len(c)) * [0]
+        return c
+
+    def printcode(w):
+        if w is None:
+            return 
+        c = code(w)
+        return '[' + ' '.join(map(lambda i: str(i) if i > 0 else ' ', c)) + ']'
+
+    beta = Grothendieck.beta * MPolynomial.one()
+
+    for sigma in Permutation.all(n):
+        q = collections.deque([(sigma, 0, None)])
+        prevlevel = -1
+        while q:
+            w, level, parent = q.popleft()
+
+            if level > prevlevel:
+                print()
+                print()
+                prevlevel = level
+
+            tag = 'level' + (' ' if level < 10 else '')
+            print(tag, level, ':', 'w =', oneline(w), '=', printcode(w))
+            print('          from', oneline(parent), '=', printcode(parent))
+            print()
+            #print()
+            #w.print_rothe_diagram()
+
+            if parent is not None:
+                c = code(parent)
+                d = code(w)
+                i = [i for i in range(n) if c[i] > 0][-1]
+                assert d[i] < c[i]
+
+            r = [i for i in range(1, n) if w(i) > w(i + 1)]
+            if len(r) <= 1:
+                continue
+            r = max(r)
+            s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])[1]
+            v = w * Permutation.t_ij(r, s)
+
+            chain = [(Permutation.t_ij(i, r), beta) for i in range(1, r)]
+            ans = expand_reflection_chain(v, chain, lambda x: x.length())
+            for (z, _) in ans.dictionary.items():
+                q.append((z, level + 1, w))
+
+        print('\n\n==========================\n\n')
+
+
+def _test_finite_recursion_bcd(n, verbose, dtype):
+    def lastdescent(w):
+        if w is None:
+            return
+        ans = (0, 0)
+        for i in range(1, w.rank):
+            if w(i) > w(i + 1):
+                ans = (i, w(i))
+        return ans
+
+    def oneline(w):
+        if w is None:
+            return
+        return str(w.inflate(n + 2))
+
+    def code(w):
+        c = list(w.code())
+        c += (2 * n - len(c)) * [0]
+        return c
+
+    def printcode(w):
+        if w is None:
+            return 
+        c = code(w)
+        return '[' + ' '.join(map(lambda i: str(i) if i > 0 else ' ', c)) + ']'
+
+    beta = Grothendieck.beta * MPolynomial.one()
+
+    group = list(SignedPermutation.all(n, dtype=dtype))
+    seen = set()
+    for e, sigma in enumerate(group):
+
+        if e % 100 == 0:
+            percent = 100 * e / len(group)
+            p = ((2 - len(str(int(percent)))) * '0' + str(percent))[:6]
+            p += (6 - len(p)) * '0'
+            print(p, '%, seen', len(seen), 'of', len(group))
+
+        if sigma in seen:
+            continue
+
+        q = collections.deque([(sigma, 0, None)])
+        prevlevel = -1
+        
+        while q:
+            w, level, parent = q.popleft()
+            n = w.rank
+
+            if w in seen:
+                continue
+            else:
+                seen.add(w)
+
+            if level > prevlevel:
+                if verbose:
+                    print()
+                    print()
+                prevlevel = level
+
+            if parent is not None:
+                (i, val) = lastdescent(parent)
+                (j, ual) = lastdescent(w)
+                check = (j < i or (j == i and ual < val))
+            else:
+                check = True
+
+            tag = 'level' + (' ' if level < 10 else '')
+            if verbose or not check:
+                print(tag, level, ':', 'w =', oneline(w), '=', lastdescent(w))
+                print('          from', oneline(parent), '=', lastdescent(parent))
+                print()
+
+            assert check
+
+            r = [i for i in range(1, n) if w(i) > w(i + 1)]
+            if len(r) == 0:
+                continue
+            r = max(r)
+            s = max([i for i in range(r + 1, n + 1) if w(i) < w(r)])
+            v = (w * SignedPermutation.reflection_t(r, s, n)).inflate(n + 1)
+
+            chain =  []
+            
+            if not dtype:
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+            
+            chain += [(SignedPermutation.reflection_s(i, r, n + 1), beta) for i in range(n + 1, 0, -1) if i != r]
+            
+            if not dtype:
+                chain += [(SignedPermutation.reflection_s(r, r, n + 1), beta)]
+            
+            chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
+        
+            length = lambda x: x.dlength() if dtype else x.length()
+            ans = expand_reflection_chain(v, chain, length)
+
+            for (z, _) in ans.dictionary.items():
+                q.append((z.reduce(), level + 1, w))
+
+        if verbose:
+            print('\n\n==========================\n\n')
+
+
+def test_finite_recursion_bc(n, verbose=False):
+    _test_finite_recursion_bcd(n, verbose, False)
+
+
+def test_finite_recursion_d(n, verbose=False):
+    _test_finite_recursion_bcd(n, verbose, True)
 
 def lenart_postnikov_ordering_d(n):
     def svec(c, *args):

@@ -86,6 +86,12 @@ class SignedMixin:
         oneline = [t(self(i)) for i in range(-n, n + 1) if i != 0]
         return Permutation(*oneline)
 
+    def print_rothe_diagram(self, french=False, sep='.'):
+        self.embedded_permutation().print_rothe_diagram(french, sep)
+
+    def code(self):
+        return self.embedded_permutation().code()
+
     def dbruhat_less_equal(self, other):
         assert self.is_even_signed()
         assert other.is_even_signed()
