@@ -3,7 +3,8 @@ from words import (
     involution_insert,
     fpf_insert,
     Word,
-    get_fpf_involution_words
+    get_fpf_involution_words,
+    column_hecke_insert
 )
 from stable.tableaux import Tableau
 import subprocess
@@ -75,6 +76,18 @@ class AbstractCrystalMixin:
         self.f_strings = {}
         self.s_operators = {}
         self.provided_operators = self.indices if provided_operators is None else provided_operators
+
+    def demazure(self, generator, *args):
+        vertices = {generator}
+        for i in reversed(args):
+            add = set()
+            for v in vertices:
+                w = v
+                while w is not None:
+                    add.add(w)
+                    w = self.f_operator(i, w)
+            vertices |= add
+        return self.truncate(vertices)
 
     def truncate(self, subset):
         edges = []
@@ -204,8 +217,21 @@ class AbstractCrystalMixin:
             self.f_strings[(i, v)] = k
         return self.f_strings[(i, v)]
 
+    def capital_f_operator(self, i, v):
+        return self.fplus_operator(i, v)
+
     def capital_e_operator(self, i, v):
         return self.eplus_operator(i, v)
+
+    def rectify_lowest(self, v, reduced_word=None):
+        assert v in self.vertices
+        n = self.rank
+        if reduced_word is None:
+            reduced_word = [n - i for j in range(1, n) for i in range(j, 0, -1)]
+        ans = v
+        for i in reduced_word:
+            ans = self.capital_f_operator(i, ans)
+        return ans
 
     def rectify(self, v, reduced_word=None):
         assert v in self.vertices
@@ -232,14 +258,10 @@ class AbstractCrystalMixin:
         return self.f_operators.get((i, v), None)
 
     def eprime_operator(self, i, v):
-        if i >= 0:
-            return self.e_operator(i, v)
-        return self.star_operator(self.f_operator(-self.rank - i, self.star_operator(v)))
+        return self.e_operator(i, v)
 
     def fprime_operator(self, i, v):
-        if i >= 0:
-            return self.f_operator(i, v)
-        return self.star_operator(self.e_operator(-self.rank - i, self.star_operator(v)))
+        return self.f_operator(i, v)
 
     def s_operator(self, i, b):
         assert 0 <= i < self.rank
@@ -359,6 +381,9 @@ class AbstractCrystalMixin:
 
     def get_highest_weights(self, indices=None):
         return [(v, self.weight(v)) for v in self if self.is_highest_weight(v, indices)]
+
+    def get_highest_weight_elements(self, indices=None):
+        return [v for v in self if self.is_highest_weight(v, indices)]
 
     def group_highest_weights(self):
         ans = {}
@@ -571,7 +596,7 @@ class AbstractCrystalMixin:
         ans = []
         while elements:
             a = elements.pop()
-            comp = self.from_element(a, rank, indices, e, f, wt)
+            comp = self.from_element(a, rank, indices, e, f, wt, self.printer)
             ans.append(comp)
             elements -= set(ans[-1])
         return ans
@@ -580,7 +605,7 @@ class AbstractCrystalMixin:
         return len(self.get_component(next(iter(self)))) == len(self)
 
     @classmethod
-    def from_element(cls, a, rank, indices, e, f, wt=None):
+    def from_element(cls, a, rank, indices, e, f, wt=None, printer=str):
         if wt is None:
             assert len(a) == rank
             wt = lambda x: tuple(len(_) for _ in x)
@@ -602,7 +627,7 @@ class AbstractCrystalMixin:
                     new_edge = (i, a, b) if fdir else (i, b, a)
                     edges.add(new_edge)
         edges = list(edges)
-        return cls(rank, vertices, edges, weights)
+        return cls(rank, vertices, edges, weights, printer=printer)
 
     def is_stembridge(self, return_counterexample=False):
         def retvalue(x):
@@ -998,37 +1023,119 @@ class AbstractCCrystal(AbstractCrystalMixin):
 class SuperGLCrystal(AbstractCrystalMixin):
 
     @classmethod
-    def construct_words(cls, length, rank_m, rank_n):
+    def svword_diagram(cls, rank_m, rank_n, v):
+        v = v.reverse_row_reading_word(setwise=True)
+        width = len(v)
+        (m, n) = (rank_m, rank_n)
+        top = [['.'] * width for _ in range(n)]
+        bot = [['.'] * width for _ in range(m)]
+
+        for i, e in enumerate(v):
+            col = width - 1 - i
+            for x in e:
+                if x > 0:
+                    row = n - x
+                    top[row][col] = 'X'
+                elif x < 0:
+                    row = -x - 1 
+                    bot[row][col] = 'X'
+        top = '\n'.join([''.join(row) for row in top])
+        bot = '\n'.join([''.join(row) for row in bot])
+        ans = top + '\n' + width * '-' + '\n' + bot
+        return ans
+
+    @classmethod
+    def bihecke(cls, v):
+        s = v.reverse_row_reading_word(setwise=True) if type(v) != tuple else v
+        k = len(s)
+
+        n = max([0] + [x for subset in s for x in subset])
+        words = [
+            tuple(k + 1 - j for j in range(1, k + 1) if i in s[j - 1])
+            for i in range(1, n + 1)
+        ]
+        ptop, qtop = column_hecke_insert(*words)
+
+        m = max([0] + [-x for subset in s for x in subset])
+        words = [
+            tuple(k + 1 - j for j in range(1, k + 1) if -i in s[j - 1])
+            for i in range(1, m + 1)
+        ]
+        pbot, qbot = column_hecke_insert(*words)
+
+        return (ptop, pbot), (qtop, qbot)
+
+    def birectify(self, v):
+        assert v in self.vertices
+        m, n = self.rank
+        rword_m = [-i for j in range(1, m) for i in range(j, 0, -1)]
+        rword_n = [i for j in range(1, n) for i in range(j, 0, -1)]
+        ans = v
+        for i in rword_m:
+            ans = self.capital_f_operator(i, ans)
+        for i in rword_n:
+            ans = self.capital_e_operator(i, ans)
+
+        assert all(self.e_operator(i, ans) is None for i in range(1, n))
+        assert all(self.f_operator(-i, ans) is None for i in range(1, m))
+
+        return ans
+
+    @classmethod
+    def construct_words(cls, length, rank_m, rank_n, setvalued):
+        def wt(t):
+            ans = (rank_m + rank_n) * [0]
+            for values in t:
+                for v in values if setvalued else [values]:
+                    if v > 0:
+                        ans[rank_m + v - 1] += 1
+                    else:
+                        ans[rank_m + v] += 1
+            return tuple(ans)
+
+        letters = [i for i in range(-rank_m, rank_n + 1) if i != 0]
+        if setvalued:
+            letters = [s for k in range(1, len(letters) + 1) for s in itertools.combinations(letters, k)]
+
         if length == 0:
-            return [()]
+            ans = [()]
         else:
-            ans = cls.construct_words(length - 1, rank_m, rank_n)
-            letters = [i for i in range(-rank_m, rank_n + 1) if i != 0]
-            return [a + (i,) for i in letters for a in ans]
+            ans = cls.construct_words(length - 1, rank_m, rank_n, setvalued)
+            ans = [a + (i,) for i in letters for a in ans]
+        return {t: wt(t) for t in ans}
+
+    @classmethod
+    def sqrtcrystal_of_words(cls, length, rank_m, rank_n):
+        rank = (rank_m, rank_n)
+        words = cls.construct_words(length, rank_m, rank_n, True)
+        
+        vertices = []
+        edges = []
+        weights = {}
+        for w in words:
+            t = Tableau.from_rows([list(reversed(w))])
+            vertices += [t]
+            weights[t] = words[w]
+            assert weights[t] == t.superweight(rank_m, rank_n)
+            for i in range(-rank_m + 1, rank_n):
+                u = t.sqrt_super_f_operator(i)
+                if u is not None:
+                    assert u.sqrt_super_e_operator(i) == t
+                    edges += [(i, t, u)]
+        return cls(rank, vertices, edges, weights, printer=lambda x: cls.svword_diagram(rank_m, rank_n, x))
 
     @classmethod
     def crystal_of_words(cls, length, rank_m, rank_n):
-        def wt(t):
-            ans = (rank_m + rank_n) * [0]
-            for v in t:
-                if v > 0:
-                    wt[rank_m + v - 1] += 1
-                else:
-                    wt[rank_m + v] += 1
-            return tuple(ans)
-
         rank = (rank_m, rank_n)
-        vertices = cls.construct_words(length, rank_m, rank_n)
+        weights = cls.construct_words(length, rank_m, rank_n, False)
         edges = []
-        weights = {}
-        for t in vertices:
-            weights[t] = wt(t)
+        for t in weights:
             for i in range(-rank_m + 1, rank_n):
                 u = cls.f_operator_on_words(i, t)
                 if u is not None:
                     assert cls.e_operator_on_words(i, u) == t
                     edges += [(i, t, u)]
-        return cls(rank, vertices, edges, weights)
+        return cls(rank, list(weights), edges, weights)
 
     @property
     def rank_m(self):
@@ -1212,6 +1319,16 @@ class SuperGLCrystal(AbstractCrystalMixin):
 
 
 class AbstractQCrystal(AbstractCrystalMixin):
+
+    def eprime_operator(self, i, v):
+        if i >= 0:
+            return self.e_operator(i, v)
+        return self.star_operator(self.f_operator(-self.rank - i, self.star_operator(v)))
+
+    def fprime_operator(self, i, v):
+        if i >= 0:
+            return self.f_operator(i, v)
+        return self.star_operator(self.e_operator(-self.rank - i, self.star_operator(v)))
 
     @classmethod
     def sqrtcrystal_of_words(cls, length, rank):
@@ -1599,6 +1716,16 @@ class AbstractQCrystal(AbstractCrystalMixin):
 
 class AbstractPrimedQCrystal(AbstractCrystalMixin):
 
+    def eprime_operator(self, i, v):
+        if i >= 0:
+            return self.e_operator(i, v)
+        return self.star_operator(self.f_operator(-self.rank - i, self.star_operator(v)))
+
+    def fprime_operator(self, i, v):
+        if i >= 0:
+            return self.f_operator(i, v)
+        return self.star_operator(self.e_operator(-self.rank - i, self.star_operator(v)))
+
     @classmethod
     def standard_sqrtcrystal(cls, rank):
         n = rank
@@ -1850,7 +1977,6 @@ class AbstractPrimedQCrystal(AbstractCrystalMixin):
             return cl(word)
         elif i < -1:
             return cls.s_operator_on_words(-i - 1, cls.s_operator_on_words(-i, cls.e_operator_on_words(i + 1, cls.s_operator_on_words(-i, cls.s_operator_on_words(-i - 1, word)))))
-
 
     def group_highest_weights(self):
         ans = {}

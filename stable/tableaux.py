@@ -119,6 +119,26 @@ class Tableau:
             rows.append(row)
         return cls.from_rows(rows)
 
+    @classmethod
+    def from_super_svword(cls, s):
+        k = len(s)
+
+        rows = []
+        n = max([0] + [x for subset in s for x in subset])
+        for i in range(1, n + 1):
+            row = [k + 1 - j for j in range(k, 0, -1) if i in s[j - 1]]
+            rows.append(row)
+        top = cls.from_rows(rows)
+
+        rows = []
+        n = max([0] + [-x for subset in s for x in subset])
+        for i in range(1, n + 1):
+            row = [k + 1 - j for j in range(k, 0, -1) if -i in s[j - 1]]
+            rows.append(row)
+        bot = cls.from_rows(rows)
+
+        return (top, bot)
+
     def distribute(self):
         if self.size() == 0:
             yield self

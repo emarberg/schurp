@@ -339,14 +339,17 @@ def test_qnormal_sqrtcrystal_characters(n=3, k=5):
         assert actual == expected
 
 
-def draw_graph(vertices, edges, neato=False):
+def draw_graph(vertices, edges, neato=False, colors=None):
     s = ['digraph G {']
     s += ['    overlap=false;']
     s += ['    splines=true;']
     s += ['    node [shape=box; fontname="courier"; style=filled];']
 
     for x in vertices:
-        s += ['    "%s";' % str(x)]
+        if colors is not None:
+            s += ['    "%s" [fillcolor=%s];' % (str(x), colors(x))]
+        else:
+            s += ['    "%s";' % str(x)]
 
     for i, x, y in edges:
         s += ['    "%s" -> "%s" [label="%s"];' % (str(x), str(y), str(i))]
@@ -462,23 +465,34 @@ def test_rectify(nn=3, kk=5, cls=AbstractGLCrystal):
             print()
             print('n =', n, 'k =', k)
             print()
+            
             b = cls.standard_object(n)
+            
             words = b
             for j in range(k - 1):
                 words = words.tensor(b)
+            sq_words = cls.sqrtcrystal_of_words(k, n)
+            for b in sq_words:
+                assert sq_words.is_highest_weight(sq_words.rectify(b))
+                assert sq_words.is_lowest_weight(sq_words.rectify_lowest(b))
 
             w0 = Permutation.longest_element(n)
             for i in w0.get_reduced_words():
                 for b in words:
                     hw = words.rectify(b, i)
                     assert words.is_highest_weight(hw)
+                    lw = words.rectify_lowest(b, i)
+                    assert words.is_lowest_weight(lw)
 
-                boolean = True
-                sq_words = cls.sqrtcrystal_of_words(k, n)
+                boolean_hw = True
+                boolean_lw = True
+
                 for b in sq_words:
                     hw = sq_words.rectify(b, i)
-                    boolean &= sq_words.is_highest_weight(hw)
-                print('  i =', i, boolean)
+                    boolean_hw &= sq_words.is_highest_weight(hw)
+                    lw = sq_words.rectify_lowest(b, i)
+                    boolean_lw &= sq_words.is_lowest_weight(lw)
+                print('  i =', i, boolean_hw, boolean_lw)
 
 
 
