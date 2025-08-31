@@ -15,6 +15,10 @@ def test_inv_bumpless(n):
         dreams = list(BumplessPipedream.from_involution(w))
         test = sum(d.inv_weight() for d in dreams)
         actual = InvSchubert.get(w)
+        
+        print(dreams)
+        input('')
+
         if test != actual:
             print(w)
             print()
@@ -29,22 +33,7 @@ def test_inv_bumpless(n):
                 print(e)
                 print(e.get_permutation())
                 print(e.is_symmetric(), e.inv_weight())
-            print('\n\n\n*********\n\n\n')
-            for d in BumplessPipedream.from_permutation(w):
-                #if d.symmetrize().get_permutation_from_symmetrized() != w:
-                #    continue
-                #print(d)
-                #print(d.get_permutation())
-                for e in d.symmetrize():
-                    if e.get_permutation() != w:
-                        continue
-                    if e not in seen:
-                        seen.add(e)
-                    else:
-                        continue
-                    print(e)
-                    print(e.get_permutation())
-                    print(e.is_symmetric(), e.inv_weight())
+
         assert test == actual
 
 

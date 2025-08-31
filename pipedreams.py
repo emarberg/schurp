@@ -149,7 +149,6 @@ class BumplessPipedream:
     @classmethod
     def from_involution(cls, w, n=None):
         assert w == w.inverse()
-        # return {e for d in cls.from_permutation(w) for e in d.symmetrize() if e.get_permutation() == w}
         ans = set()
         seed = {cls.rothe(w, n)}
         while seed:
@@ -197,33 +196,6 @@ class BumplessPipedream:
 
     def is_almost_symmetric(self):
         pass
-
-    def symmetrize(self):
-        tiles = {}
-        options = set()
-        for (i, j) in self.tiles:
-            t = self.tiles[i, j]
-            if i > j:
-                u = self.transpose_tile(t)
-                tiles[i, j] = t
-                tiles[j, i] = u
-                if t == self.P_TILE:
-                    options.add((j, i))
-            elif i == j:
-                if t == self.H_TILE:
-                    u = self.J_TILE
-                elif t == self.V_TILE:
-                    u = self.C_TILE
-                else:
-                    u = t
-                tiles[i, j] = u
-
-        for v in range(2**len(options) + 1):
-            for (i, j) in options:
-                tiles[i, j] = self.P_TILE if v % 2 else self.E_TILE
-                v = v // 2
-            yield BumplessPipedream(tiles, self.n)
-
 
     @classmethod
     def from_fpf_involution_slow(cls, z, n=None):

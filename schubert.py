@@ -945,6 +945,7 @@ class DoubleGrothendieckD(DoubleGrothendieckMixin,GrothendieckD):
             queue = queue[1:]
             if len(c) == 0:
                 bterm = add(bterm, act(z, negate(rho)))
+                print('*', sgn, bterm, z, ':', sgn * reduce(bterm))
                 ans += Vector({z: sgn * reduce(bterm)})
             else:
                 (i, j) = c[0]

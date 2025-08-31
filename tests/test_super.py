@@ -29,22 +29,44 @@ def test_tableau_reduction(mm=2, nn=2, k=3):
 
                     diff = lambda p, q: abs(len(p[0]) + len(p[1]) - len(q[0]) - len(q[1])) == 1
 
+                    tab = {}
                     for w in comp:
                         p, q = b.bihecke(w)
-                        if p not in vertices:
-                            vertices.append(p)
-                            weights[p] = b.weight(w)
-                        for i in [0]: #b.indices:
-                             fw = b.f_operator(i, w)
-                             if fw is not None:
-                                 fp, fq = b.bihecke(fw)
-                                 edge = (i, p, fp)
-                                 if p != fp and edge not in edges and diff(p, fp):
-                                     edges.append(edge)
+                        tab[p] = tab.get(p, set()) | {w}
 
-                    colors = lambda p: 'white' if (len(p[0]) + len(p[1])) % 2 else 'cyan'
+                    for p in tab:
+                        vert_a = (tab[p], p)
+                        vertices.append(vert_a)
+                        for w in tab[p]:
+                            for i in [0]: #b.indices:
+                                fw = b.f_operator(i, w)
+                                if fw is not None:
+                                    fp, fq = b.bihecke(fw)
+                                    vert_b = (tab[fp], fp)
+                                    edge = (i, vert_a, vert_b)
+                                    if p != fp and edge not in edges: # and diff(p, fp):
+                                        edges.append(edge)
+  
+                    colors = lambda p: 'white' if (len(p[1][0]) + len(p[1][1])) % 2 else 'cyan'
                     draw_graph(vertices, edges, colors=colors)
                     input('\n')
+
+                    # for w in comp:
+                    #     p, q = b.bihecke(w)
+                    #     if p not in vertices:
+                    #         vertices.append(p)
+                    #         weights[p] = b.weight(w)
+                    #     for i in [0]: #b.indices:
+                    #          fw = b.f_operator(i, w)
+                    #          if fw is not None:
+                    #              fp, fq = b.bihecke(fw)
+                    #              edge = (i, p, fp)
+                    #              if p != fp and edge not in edges: # and diff(p, fp):
+                    #                  edges.append(edge)
+                    # 
+                    # colors = lambda p: 'white' if (len(p[0]) + len(p[1])) % 2 else 'cyan'
+                    # draw_graph(vertices, edges, colors=colors)
+                    # input('\n')
 
 
 def test_sqrt_connected_lemma(k, *mu):

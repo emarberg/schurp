@@ -24,6 +24,274 @@ import collections
 from schubert import X
 
 
+def test_a_operator_formula(rank=2):
+    Groth = lambda w: DoubleGrothendieck.get(w)
+    act = op_act
+
+    def substitute(f):
+        for v in f.variables():
+            if v < 0:
+                f = f.set_variable(v, 1 - X(v))
+        return f
+
+    def gety(tup):
+        ans = X(0)**0
+        for i in range(len(tup)):
+            ans *= X(-1 - i)**tup[i]
+        return ans
+
+    def kchain(k, n):
+        chain =  []
+        chain += [(i, k, 1) for i in range(k - 1, 0, -1)]
+        chain += [(k, l, -1) for l in range(n, k, -1)]
+        return chain
+
+    def expand(w, k):
+        ans = 0
+
+        c = w(k)
+        tup = rank * [0]
+        tup[abs(c) - 1] = -(1 if c > 0 else -1)
+        tup = tuple(tup)
+
+        q = collections.deque([(w, 1, tup, 0)])
+        chain = kchain(k, rank)
+        while q:
+            v, sgn, coeff, i = q.popleft()
+            if i == len(chain):
+                ans += sgn * gety(coeff) * substitute(Groth(v))
+                continue
+            
+            q.append((v, sgn, coeff, i + 1))
+            a, b, e = chain[i]
+            t = Permutation.t_ij(a, b)
+            if (v * t).length() == v.length() + 1:
+                if e == -1:
+                    q.append((v * t, -sgn, coeff, i + 1))
+                else:
+                    q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
+
+        return substitute(ans)
+
+    for k in range(1, rank):
+        for w in Permutation.all(rank - 1):
+            print()
+            print()
+            print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
+            print()
+            
+            actual = (1 - X(k)) * Groth(w)
+            print('want =', actual)
+            print()
+
+            got = expand(w, k)
+            print(' got =', got)
+            print()
+            
+            assert (actual - got) == 0
+
+
+def test_b_operator_formula(rank=2):
+    Groth = lambda w: DoubleGrothendieckB.get(w)
+    substitute = op_substitute
+    act = op_act
+    gety = op_gety
+
+    def kchain(k, n):
+        chain =  []
+        chain += [(i, k, 1) for i in range(k - 1, -n - 1, -1) if i != -k]
+        chain += [(0, k, 0)]
+        chain += [(k, l, -1) for l in range(n, k, -1)]
+        return chain
+
+    def expand(w, k):
+        ans = 0
+
+        c = w(k)
+        tup = rank * [0]
+        tup[abs(c) - 1] = -(1 if c > 0 else -1)
+        tup = tuple(tup)
+
+        q = collections.deque([(w, 1, tup, 0)])
+        chain = kchain(k, rank)
+        while q:
+            v, sgn, coeff, i = q.popleft()
+            if i == len(chain):
+                ans += sgn * gety(coeff) * substitute(Groth(v))
+                continue
+            
+            q.append((v, sgn, coeff, i + 1))
+            a, b, e = chain[i]
+            t = SignedPermutation.reflection_s(b, b, rank) if a == 0 else SignedPermutation.t_ij(a, b, rank)
+            if (v * t).length() == v.length() + 1:
+                if e == -1:
+                    q.append((v * t, -sgn, coeff, i + 1))
+                elif e == 1:
+                    q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
+                else: 
+                    q.append((v * t, sgn, rank * (0,), i + 1))
+        return substitute(ans)
+
+    for k in range(1, rank):
+        for w in SignedPermutation.all(rank - 1):
+            w = w.inflate(rank)
+            print()
+            print()
+            print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
+            print()
+            
+            actual = (1 - X(2 * k - 1)) * Groth(w)
+            print('want =', actual)
+            print()
+
+            got = expand(w, k)
+            print(' got =', got)
+            print()
+            
+            assert (actual - got).truncate_degree(rank - 1) == 0
+
+
+def test_c_operator_formula(rank=2):
+    Groth = lambda w: DoubleGrothendieckC.get(w)
+    substitute = op_substitute
+    act = op_act
+    gety = op_gety
+
+    def kchain(k, n):
+        chain =  []
+        chain += [(i, k, 1) for i in range(k - 1, -n - 1, -1) if i != -k]
+        chain += [(k, l, -1) for l in range(n, k, -1)]
+        return chain
+
+    def expand(w, k):
+        ans = 0
+
+        c = w(k)
+        tup = rank * [0]
+        tup[abs(c) - 1] = -(1 if c > 0 else -1)
+        tup = tuple(tup)
+
+        q = collections.deque([(w, 1, tup, 0)])
+        chain = kchain(k, rank)
+        while q:
+            v, sgn, coeff, i = q.popleft()
+            if i == len(chain):
+                ans += sgn * gety(coeff) * substitute(Groth(v))
+                continue
+            
+            q.append((v, sgn, coeff, i + 1))
+            a, b, e = chain[i]
+            t = SignedPermutation.reflection_s(b, b, rank) if a == 0 else SignedPermutation.t_ij(a, b, rank)
+            if (v * t).length() == v.length() + 1:
+                if e == -1:
+                    q.append((v * t, -sgn, coeff, i + 1))
+                else:
+                    q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
+        return substitute(ans)
+
+    for k in range(1, rank):
+        for w in SignedPermutation.all(rank - 1):
+            w = w.inflate(rank)
+            print()
+            print()
+            print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
+            print()
+            
+            actual = (1 - X(2 * k - 1)) * Groth(w)
+            print('want =', actual)
+            print()
+
+            got = expand(w, k)
+            print(' got =', got)
+            print()
+            
+            assert (actual - got).truncate_degree(rank - 1) == 0
+
+
+def test_d_operator_formula(rank=2):
+    Groth = lambda w: DoubleGrothendieckD.get(w)
+    substitute = op_substitute
+    act = op_act
+    gety = op_gety
+
+    def kchain(k, n):
+        chain =  []
+        chain += [(i, k, 1) for i in range(k - 1, -n - 1, -1) if i != 0 and i != -k]
+        chain += [(k, l, -1) for l in range(n, k, -1)]
+        return chain
+
+    def expand(w, k):
+        ans = 0
+
+        c = w(k)
+        tup = rank * [0]
+        tup[abs(c) - 1] = -(1 if c > 0 else -1)
+        tup = tuple(tup)
+
+        q = collections.deque([(w, 1, tup, 0)])
+        chain = kchain(k, rank)
+        while q:
+            v, sgn, coeff, i = q.popleft()
+            if i == len(chain):
+                # print('*', sgn, coeff, v, ':', sgn * gety(coeff))
+                # print('?', sgn * gety(coeff) * substitute(Groth(v)))
+                ans += sgn * gety(coeff) * substitute(Groth(v))
+                continue
+            
+            q.append((v, sgn, coeff, i + 1))
+            
+            a, b, e = chain[i]
+            t = SignedPermutation.t_ij(a, b, rank)
+            if (v * t).dlength() == v.dlength() + 1:
+                if e == -1:
+                    q.append((v * t, -sgn, coeff, i + 1))
+                else:
+                    q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
+        return substitute(ans)
+
+    for k in range(1, rank):
+        for w in SignedPermutation.all(rank - 1, dtype=True):
+            w = w.inflate(rank)
+            print()
+            print()
+            print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
+            print()
+            
+            actual = (1 - X(2 * k - 1)) * Groth(w)
+            print('want =', actual)
+            print()
+
+            got = expand(w, k)
+            print(' got =', got)
+            print()
+            
+            assert (actual - got).truncate_degree(rank - 1) == 0
+
+
+def op_substitute(f):
+    # print('    ***', f, '\n\n')
+    for v in f.variables():
+        if v % 2 == 0 and v > 0:
+            f = f.set_variable(v, 1 - X(v))
+    return f
+
+
+def op_gety(tup):
+    ans = X(0)**0
+    for i in range(len(tup)):
+        ans *= X(2 + 2*i)**tup[i]
+    return ans
+
+
+def op_act(w, tup):
+    ell = len(tup)
+    ans = ell * [0]
+    for i in range(1, ell + 1):
+        j = w.inverse()(i)
+        ans[i - 1] = tup[abs(j) - 1] * (1 if j > 0 else -1)
+    return tuple(ans)
+
+
 def test_finite_recursion_a(n=4):
     def oneline(w):
         if w is None:
@@ -192,6 +460,7 @@ def test_finite_recursion_bc(n, verbose=False):
 def test_finite_recursion_d(n, verbose=False):
     _test_finite_recursion_bcd(n, verbose, True)
 
+
 def lenart_postnikov_ordering_d(n):
     def svec(c, *args):
         ans = n * [0]
@@ -260,15 +529,11 @@ def lenart_postnikov_ordering_d(n):
         print('i = ', i)
         for pair in sorted(r, key=key):
             alpha, k = pair
-            if k <= 0:
-                print('  ', alpha)
-            else:
-                print('  ', negate(alpha))
+            print('  ', k, ':', alpha, 'h =', key(pair))
         print()
 
 
-def test_d_double_grothendieck_chain(m=2, d=1):
-    rank = m + d
+def test_d_double_grothendieck_chain(rank=2):
     cutoff = rank - 1
 
     def evaluate(ans):
@@ -285,7 +550,9 @@ def test_d_double_grothendieck_chain(m=2, d=1):
             for i in range(1, rank + 1):
                 f = f.set(2 * i, 1 - X(2 * i))
                 coeff = coeff.set(-i, X(2 * i))
-            bns += coeff * f
+            term = coeff * f
+            # print('?', term)
+            bns += term
         for i in range(1, rank + 1):
             bns = bns.set(2 * i, 1 - X(2 * i))
         return bns
@@ -297,8 +564,8 @@ def test_d_double_grothendieck_chain(m=2, d=1):
         chain += [(k, -l) for l in range(n, k, -1)]
         return chain
 
-    for k in range(1, m + 1):
-        for w in SignedPermutation.all(m, dtype=True):
+    for k in range(1, rank):
+        for w in SignedPermutation.all(rank - 1, dtype=True):
             w = w.inflate(rank)
             chain = kchain(k, rank)
             ans = DoubleGrothendieckD.expand_double_reflection_chain(w, chain, rank)
@@ -317,21 +584,20 @@ def test_d_double_grothendieck_chain(m=2, d=1):
             test = (ff - gg).truncate_degree(cutoff)
 
             print()
-            print(f)
+            print(' got (non-equiv) =', f)
             print()
-            print(g)
+            print('want (non-equiv) =', g)
             print()
-            print((f - g).truncate_degree(cutoff))
+            print('diff (truncated) =', (f - g).truncate_degree(cutoff))
             print()
-            print(ff)
+            print(' got =', ff)
             print()
-            print(gg)
+            print('want =', gg)
             print()
-            print(test)
-            print()
-            print(test == 0)
+            print('diff =', test)
             print()
             assert test == 0
+            # input('')
 
 
 def test_c_double_grothendieck_chain(m=2, d=1):
@@ -516,6 +782,7 @@ def test_double_grothendieck_chain(m=2, d=1):
             print()
             print(ff == gg)
             print()
+            input('\n')
 
 
 def expand_reflection_chain(start, chain, length):
