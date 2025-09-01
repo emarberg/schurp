@@ -12,6 +12,47 @@ from stable.permutations import Permutation
 from tests.test_crystals import draw_graph
 
 
+def test_tableau_raising(mm=2, nn=2, k=3):
+    assert mm == 1 or nn == 1
+
+    def operator(b, w):
+        m, n = b.rank
+        ans = w
+        for i in range(m - 1, -1, -1):
+            ans = ans if ans is None else b.capital_e_operator(-i, ans)
+        return ans
+
+    for m in [mm]:
+        for n in [nn]:
+            for l in range(1, k + 1):
+                b = SuperGLCrystal.sqrtcrystal_of_words(l, m, n)
+                for comp in b.get_components():
+                    ch = SymmetricPolynomial.from_super_polynomial(comp.character())
+                    expand = HG_expansion(ch)
+                    print('m =', m, 'n =', n, 'k =', l, ': ch( len', len(comp), ') =', expand)
+                    assert min(expand.values()) > 0
+
+                    vertices = []
+                    edges = []
+                    weights = {}
+
+                    for w in comp:
+                        p, q = b.bihecke(w)
+                        if p not in vertices:
+                            vertices.append(p)
+                            weights[p] = b.weight(w)
+                            fw = operator(b, w)
+                            if fw is not None:
+                                fp, fq = b.bihecke(fw)
+                                edge = (0, p, fp)
+                                if p != fp and edge not in edges:
+                                    edges.append(edge)
+                    
+                    colors = lambda p: 'white' if (len(p[0]) + len(p[1])) % 2 else 'cyan'
+                    draw_graph(vertices, edges, colors=colors)
+                    input('\n')
+
+
 def test_tableau_reduction(mm=2, nn=2, k=3):
     for m in [mm]:
         for n in [nn]:
@@ -29,44 +70,44 @@ def test_tableau_reduction(mm=2, nn=2, k=3):
 
                     diff = lambda p, q: abs(len(p[0]) + len(p[1]) - len(q[0]) - len(q[1])) == 1
 
-                    tab = {}
-                    for w in comp:
-                        p, q = b.bihecke(w)
-                        tab[p] = tab.get(p, set()) | {w}
-
-                    for p in tab:
-                        vert_a = (tab[p], p)
-                        vertices.append(vert_a)
-                        for w in tab[p]:
-                            for i in [0]: #b.indices:
-                                fw = b.f_operator(i, w)
-                                if fw is not None:
-                                    fp, fq = b.bihecke(fw)
-                                    vert_b = (tab[fp], fp)
-                                    edge = (i, vert_a, vert_b)
-                                    if p != fp and edge not in edges: # and diff(p, fp):
-                                        edges.append(edge)
-  
-                    colors = lambda p: 'white' if (len(p[1][0]) + len(p[1][1])) % 2 else 'cyan'
-                    draw_graph(vertices, edges, colors=colors)
-                    input('\n')
-
+                    # tab = {}
                     # for w in comp:
                     #     p, q = b.bihecke(w)
-                    #     if p not in vertices:
-                    #         vertices.append(p)
-                    #         weights[p] = b.weight(w)
-                    #     for i in [0]: #b.indices:
-                    #          fw = b.f_operator(i, w)
-                    #          if fw is not None:
-                    #              fp, fq = b.bihecke(fw)
-                    #              edge = (i, p, fp)
-                    #              if p != fp and edge not in edges: # and diff(p, fp):
-                    #                  edges.append(edge)
-                    # 
-                    # colors = lambda p: 'white' if (len(p[0]) + len(p[1])) % 2 else 'cyan'
+                    #     tab[p] = tab.get(p, set()) | {w}
+
+                    # for p in tab:
+                    #     vert_a = (tab[p], p)
+                    #     vertices.append(vert_a)
+                    #     for w in tab[p]:
+                    #         for i in [0]: #b.indices:
+                    #             fw = b.f_operator(i, w)
+                    #             if fw is not None:
+                    #                 fp, fq = b.bihecke(fw)
+                    #                 vert_b = (tab[fp], fp)
+                    #                 edge = (i, vert_a, vert_b)
+                    #                 if p != fp and edge not in edges: # and diff(p, fp):
+                    #                     edges.append(edge)
+  
+                    # colors = lambda p: 'white' if (len(p[1][0]) + len(p[1][1])) % 2 else 'cyan'
                     # draw_graph(vertices, edges, colors=colors)
                     # input('\n')
+
+                    for w in comp:
+                        p, q = b.bihecke(w)
+                        if p not in vertices:
+                            vertices.append(p)
+                            weights[p] = b.weight(w)
+                        for i in [0]: #b.indices:
+                             fw = b.f_operator(i, w)
+                             if fw is not None:
+                                 fp, fq = b.bihecke(fw)
+                                 edge = (i, p, fp)
+                                 if p != fp and edge not in edges: # and diff(p, fp):
+                                     edges.append(edge)
+                    
+                    colors = lambda p: 'white' if (len(p[0]) + len(p[1])) % 2 else 'cyan'
+                    draw_graph(vertices, edges, colors=colors)
+                    input('\n')
 
 
 def test_sqrt_connected_lemma(k, *mu):
