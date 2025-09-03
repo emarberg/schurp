@@ -13,12 +13,12 @@ from tests.test_crystals import draw_graph
 
 
 def test_tableau_raising(mm=2, nn=2, k=3):
-    assert mm == 1 or nn == 1
+    # assert mm == 1 or nn == 1
 
     def operator(b, w):
         m, n = b.rank
         ans = w
-        for i in range(m - 1, -1, -1):
+        for i in range(m - 1, -n, -1):
             ans = ans if ans is None else b.capital_e_operator(-i, ans)
         return ans
 

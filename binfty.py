@@ -17,7 +17,10 @@ class InfiniteCrystal:
         assert b.generator in b_vertices
         assert c.generator in c_vertices
         if len(b_vertices) != len(c_vertices):
-            return False
+            if verbose:
+                print('b size:', len(b_vertices))
+                print('c size:', len(c_vertices))
+            #return False
         q = collections.deque([(b.generator, c.generator)])
         seen = {None: None}
         while q:
@@ -344,6 +347,13 @@ class InfiniteCrystal:
     def f_operator(self, i, x):
         return self.f_operators(i, x)
 
+    def capital_e_operator(self, i, x):
+        while x is not None:
+            y = self.e_operator(i, x)
+            if y is None:
+                return x
+            x = y
+
     def e_string(self, i, x):
         return self.e_strings(i, x)
 
@@ -365,6 +375,32 @@ class InfiniteCrystal:
         vertices = self.demazure(thresh, *args)
         self.draw(vertices)
 
+    def is_demazure_isomorphic(self, thresh, wa, wb):
+        for (word_a, word_b) in [(wa, wb), (wb, wa)]:
+            vertices = {(self.generator, 0)}
+            for i in reversed(word_a):
+                add = set()
+                for (v, h) in vertices:
+                    w = v
+                    k = h
+                    while w is not None and k <= thresh:
+                        if k > h:
+                            add.add((w, k))
+                        w = self.f_operator(i, w)
+                        k += 1
+                vertices |= add
+
+            def op(w):
+                for i in reversed(word_b):
+                    w = self.capital_e_operator(i, w)
+                return w
+
+            if not all(op(w) == self.generator for (w, h) in vertices):
+                return False
+
+        return True
+        
+
     def demazure(self, thresh, *args):
         vertices = {(self.generator, 0)}
         for i in reversed(args):
@@ -374,11 +410,11 @@ class InfiniteCrystal:
                 k = h
                 while w is not None and k <= thresh:
                     if k > h:
-                        add.add((w, h))
+                        add.add((w, k))
                     w = self.f_operator(i, w)
                     k += 1
             vertices |= add
-        return {v for (v, _) in vertices}
+        return {v for (v, h) in vertices if h <= thresh}
 
     def vertices(self, e_thresh, f_thresh):
         vertices = set()

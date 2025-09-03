@@ -3,8 +3,22 @@ from crystals import (
     AbstractQCrystal,
     AbstractPrimedQCrystal
 )
+from binfty import InfiniteCrystal
+from permutations import Permutation
 from stable.partitions import Partition
 from stable.tableaux import Tableau
+
+
+def test_demazure_braids(n=4, h=8):
+    words = Permutation.longest_element(n).get_reduced_words()
+    y = InfiniteCrystal.sqrt_tableaux(n)
+    for thresh in range(h + 1):
+        boolean = True
+        for a in words:
+            for b in words:
+                if a < b:    
+                    boolean &= y.is_demazure_isomorphic(thresh, a, b)
+        print('rank =', n, 'threshhold =', thresh, boolean)
 
 
 def embed_q(n, mu, tab, extended=False):
