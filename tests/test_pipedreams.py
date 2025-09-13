@@ -7,36 +7,6 @@ from tableaux import Tableau
 import pytest
 
 
-def test_inv_bumpless(n):
-    for w in Permutation.involutions(n):
-        #if not w.is_vexillary():
-        #    continue
-        print('w =', w)
-        dreams = list(BumplessPipedream.from_involution(w))
-        test = sum(d.inv_weight() for d in dreams)
-        actual = InvSchubert.get(w)
-        
-        print(dreams)
-        input('')
-
-        if test != actual:
-            print(w)
-            print()
-            print('  test:', test)
-            print()
-            print('actual:', actual)
-            print()
-            print('  diff:', actual - test)
-            print()
-            seen = set()
-            for e in dreams:
-                print(e)
-                print(e.get_permutation())
-                print(e.is_symmetric(), e.inv_weight())
-
-        assert test == actual
-
-
 def factor(n):
     for i in range(2, n + 1):
         if n % i == 0:

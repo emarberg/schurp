@@ -18,24 +18,16 @@ class BumplessPipedream:
 
     TILES = [J_TILE, C_TILE, P_TILE, H_TILE, V_TILE, B_TILE, E_TILE]
 
-    def __init__(self, tiles, n=None, diagram=None):
+    def __init__(self, tiles, n=None):
         self.tiles = {p: t for p, t in tiles.items()}
         self.n = n if n else max([0] + [max(p) for p in tiles])
-        self.diagram = {
-            (i, j): (i, j)
-            for i in range(1, self.n + 1)
-            for j in range(1, self.n + 1)
-            if (i, j) not in self.tiles
-        } if diagram is None else {b: v for b, v in diagram.items()}
 
     def __repr__(self):
         ans = []
         for i in range(1, self.n + 1):
             row = []
             for j in range(1, self.n + 1):
-                t = self.tiles.get((i, j), self.B_TILE)
-                # if t == self.B_TILE:
-                #    t = str(len({self.follow(i, a) for a in range(1, j)} - {0}))
+                t = self.get_tile(i, j)
                 row += [t]
             ans += [''.join(row)]
         return '\n' + '\n'.join(ans) + '\n'
@@ -48,25 +40,30 @@ class BumplessPipedream:
         return str(self) == str(other)
 
     def weight(self):
-        ans = x_var(0) ** 0
-        for (i, j) in self.diagram:
-            ans *= (x_var(i) - y_var(j))
+        ans = x_var(0)**0
+        for i in range(1, self.n + 1):
+            for j in range(1, self.n + 1):
+                if self.get_tile(i, j) == self.B_TILE:
+                    ans *= (x_var(i) - y_var(j))
         return ans
 
     def fpf_weight(self):
-        ans = x_var(0) ** 0
-        for (i, j) in self.diagram:
-            if i > j:
-                ans *= (x_var(i) + x_var(j))
+        ans = x_var(0)**0
+        for i in range(1, self.n + 1):
+            for j in range(1, self.n + 1):
+                if i > j and self.get_tile(i, j) == self.B_TILE:
+                    ans *= (x_var(i) + x_var(j))
         return ans
 
     def inv_weight(self):
         ans = x_var(0) ** 0
-        for (i, j) in self.diagram:
-            if i > j:
-                ans *= (x_var(i) + x_var(j))
-            elif i == j:
-                ans *= x_var(i)
+        for i in range(1, self.n + 1):
+            for j in range(1, self.n + 1):
+                if self.get_tile(i, j) == self.B_TILE:
+                    if i > j:
+                        ans *= (x_var(i) + x_var(j))
+                    elif i == j:
+                        ans *= x_var(i)
         return ans
 
     @classmethod
@@ -76,30 +73,110 @@ class BumplessPipedream:
         for i in range(1, n + 1):
             j = w(i)
             tiles[(i, j)] = cls.C_TILE
-            for k in range(j + 1, n + 1):
-                if (i, k) in tiles:
-                    assert tiles[(i, k)] == cls.V_TILE
-                    tiles[(i, k)] = cls.P_TILE
-                else:
-                    tiles[(i, k)] = cls.H_TILE
-            for k in range(i + 1, n + 1):
-                if (k, j) in tiles:
-                    assert tiles[(k, j)] == cls.H_TILE
-                    tiles[(k, j)] = cls.P_TILE
-                else:
-                    tiles[(k, j)] = cls.V_TILE
         return cls(tiles, n)
+
+    def kdroop(self, i, j, a, b):
+        p = [p for p in range(j + 1, b) if self.get_tile(a, p) == self.C_TILE]
+        q = [q for q in range(i + 1, a) if self.get_tile(q, b) == self.C_TILE]
+
+        def is_valid():
+            if self.get_tile(i, j) != self.C_TILE:
+                return False
+            if self.get_tile(a, b) != self.J_TILE:
+                return False
+            if len(p) == 0 and len(q) == 0:
+                return False
+            
+            c_count = 0
+            j_count = 0
+            for x in range(i, a + 1):
+                for y in range(j, b + 1):
+                    t = self.get_tile(x, y)
+                    if t == self.C_TILE:
+                        c_count += 1
+                    if t == self.J_TILE:
+                        j_count += 1
+            return c_count == 2 and j_count == 1
+
+        ans = self.droop(i, j, a, b)
+        if ans is not None:
+            return ans
+        elif not is_valid():
+            return None
+        else:
+            tiles = self.tiles.copy()
+
+            del tiles[(i, j)]
+            if p:
+                p = p[0]
+
+                tiles[(i, p)] = self.C_TILE
+                tiles[(a, p)] = self.P_TILE
+                tiles[(a, j)] = self.C_TILE
+
+                for x in range(i + 1, a):
+                    if tiles[(x, j)] == self.P_TILE:
+                        tiles[(x, j)] = self.H_TILE
+                    else:
+                        del tiles[(x, j)]
+                    if (x, p) in tiles:
+                        assert tiles[(x, p)] == self.H_TILE
+                        tiles[(x, p)] = self.P_TILE
+                    else:
+                        tiles[(x, p)] = self.V_TILE
+
+                for y in range(j + 1, p):
+                    if tiles[(i, y)] == self.P_TILE:
+                        tiles[(i, y)] = self.V_TILE
+                    else:
+                        del tiles[(i, y)]
+                    if (a, y) in tiles:
+                        assert tiles[(a, y)] == self.V_TILE
+                        tiles[(a, y)] = self.P_TILE
+                    else:
+                        tiles[(a, y)] = self.H_TILE
+
+            else:
+                q = q[0]
+
+                tiles[(q, j)] = self.C_TILE
+                tiles[(q, b)] = self.P_TILE
+                tiles[(i, b)] = self.C_TILE
+
+                for x in range(i + 1, q):
+                    if tiles[(x, j)] == self.P_TILE:
+                        tiles[(x, j)] = self.H_TILE
+                    else:
+                        del tiles[(x, j)]
+                    if (x, b) in tiles:
+                        assert tiles[(x, b)] == self.H_TILE
+                        tiles[(x, b)] = self.P_TILE
+                    else:
+                        tiles[(x, b)] = self.V_TILE
+
+                for y in range(j + 1, b):
+                    if tiles[(i, y)] == self.P_TILE:
+                        tiles[(i, y)] = self.V_TILE
+                    else:
+                        del tiles[(i, y)]
+                    if (q, y) in tiles:
+                        assert tiles[(q, y)] == self.V_TILE
+                        tiles[(q, y)] = self.P_TILE
+                    else:
+                        tiles[(q, y)] = self.H_TILE
+
+            return BumplessPipedream(tiles, self.n)
 
     def droop(self, i, j, a, b):
         def is_valid(i, j, a, b):
-            if self.tiles[(i, j)] != self.C_TILE:
+            if self.get_tile(i, j) != self.C_TILE:
                 return False
-            if (a, b) not in self.diagram:
+            if self.get_tile(a, b) != self.B_TILE:
                 return False
             for x in range(i, a + 1):
                 for y in range(j, b + 1):
                     if (x, y) != (i, j):
-                        t = self.tiles.get((x, y), self.B_TILE)
+                        t = self.get_tile(x, y)
                         if t in [self.C_TILE, self.J_TILE]:
                             return False
             return True
@@ -138,16 +215,96 @@ class BumplessPipedream:
 
             return BumplessPipedream(tiles, self.n)
 
-    def droops(self):
+    def droops(self, ktheoretic=False):
         for (i, j) in self.tiles:
             for a in range(i + 1, self.n + 1):
                 for b in range(j + 1, self.n + 1):
-                    bpd = self.droop(i, j, a, b)
+                    bpd = self.kdroop(i, j, a, b) if ktheoretic else self.droop(i, j, a, b)
                     if bpd is not None:
                         yield bpd
 
+    def symmetric_droops(self, strict=True):
+        for (i, j) in self.tiles:
+            if i < j or (strict and i == j):
+                continue
+            for a in range(i + 1, self.n + 1):
+                for b in range(j + 1, self.n + 1):
+                    bpd = self.symmetric_droop(i, j, a, b)
+                    if bpd is not None:
+                        yield bpd
+
+    def _symmetric_droops(self, strict=True):
+        for (i, j) in self.tiles:
+            if i < j or (strict and i == j):
+                continue
+            for a in range(i + 1, self.n + 1):
+                for b in range(j + 1, self.n + 1):
+                    bpd = self._symmetric_droop(i, j, a, b)
+                    if bpd is not None:
+                        yield bpd
+
+    def symmetric_droop(self, i, j, a, b):
+        if i == j and a == b:
+            return self.droop(i, j, a, b)
+        elif i == j and a != b:
+            ans = self.droop(i, j, a, b)
+            if ans is None:
+                return None
+            else:
+                return ans.droop(i, b, b, a) if a > b else ans.droop(a, j, b, a)
+        elif i != j:
+            ans = self.droop(i, j, a, b)
+            if ans is None:
+                return None
+            else:
+                return ans.kdroop(j, i, b, a)
+
+    def _symmetric_droop(self, i, j, a, b):
+        if i == j:
+            bpd = self.droop(i, j, a, b)
+            if bpd is not None:
+                bpd = bpd if a == b else bpd.droop(a, i, b, a) if a < b else bpd.droop(i, b, b, a)
+        else:
+            bpd = self.copy()
+            if i < j == a < b and bpd.tiles.get((a, a), None) == bpd.J_TILE:
+                bpd.tiles[a, a] = bpd.E_TILE
+                bpd = bpd.droop(i, j, a, b)
+                if bpd is not None:
+                    bpd.tiles[a, a] = bpd.E_TILE
+                    bpd = bpd.droop(j, i, b, a)
+            elif j < i == b < a  and bpd.tiles.get((b, b), None) == bpd.J_TILE:
+                bpd.tiles[b, b] = bpd.E_TILE
+                bpd = bpd.droop(i, j, a, b)
+                if bpd is not None:
+                    bpd.tiles[b, b] = bpd.E_TILE
+                    bpd = bpd.droop(j, i, b, a)
+            else:
+                bpd = self.droop(i, j, a, b)
+                if bpd is not None:
+                    if a == b:
+                        bpd.tiles[i, a] = bpd.B_TILE
+                        bpd = bpd.droop(j, i, i, a)
+                        bpd.tiles[i, a] = bpd.P_TILE
+                    else:
+                        bpd = bpd.droop(j, i, b, a)
+        if bpd is not None:
+            return self.__class__(bpd.tiles, bpd.n)
+
     @classmethod
-    def from_involution(cls, w, n=None):
+    def _from_involution(cls, w, n=None, reduced=True):
+        assert w == w.inverse()
+        ans = set()
+        seed = {cls.rothe(w, n)}
+        while seed:
+            new_seed = set()
+            for bpd in seed:
+                ans.add(bpd)
+                new_seed |= set(bpd._symmetric_droops(strict=False))
+            seed = new_seed - ans
+        return ans
+
+    @classmethod
+    def from_involution(cls, w, n=None, reduced=True):
         assert w == w.inverse()
         ans = set()
         seed = {cls.rothe(w, n)}
@@ -160,14 +317,14 @@ class BumplessPipedream:
         return ans
 
     @classmethod
-    def from_permutation(cls, w, n=None):
+    def from_permutation(cls, w, n=None, reduced=True):
         ans = set()
         seed = {cls.rothe(w, n)}
         while seed:
             new_seed = set()
             for bpd in seed:
                 ans.add(bpd)
-                new_seed |= set(bpd.droops())
+                new_seed |= set(bpd.droops() if reduced else bpd.kdroops())
             seed = new_seed - ans
         return ans
 
@@ -186,16 +343,10 @@ class BumplessPipedream:
             t = self.tiles[(i, j)]
             u = self.transpose_tile(t)
             tiles[(j, i)] = u
-        if type(self) == BumplessPipedream:
-            return BumplessPipedream(tiles, self.n)
-        elif type(self) == SymmetricBumplessPipedream:
-            return SymmetricBumplessPipedream(tiles, self.n)
+        return self.__class__(tiles, self.n)
 
     def is_symmetric(self):
         return self == self.transpose()
-
-    def is_almost_symmetric(self):
-        pass
 
     @classmethod
     def from_fpf_involution_slow(cls, z, n=None):
@@ -275,7 +426,6 @@ class BumplessPipedream:
         # Test
         return BumplessPipedream(tiles, self.n), x_prime
 
-
     def modify_column_move_rectangle_step_three(self, x, y):
         # do column move on self and determine the third step from P.4
 
@@ -311,7 +461,6 @@ class BumplessPipedream:
 
         return BumplessPipedream(tiles, self.n)
                     
-
     def delta(self):
         D = self
         (x, y) = D.get_minimal_blank_tile()
@@ -338,7 +487,6 @@ class BumplessPipedream:
         
         # step 4
         return D, a, r
-
 
     def symmetric_delta(self, verbose=True):
         D = self
@@ -501,8 +649,7 @@ class BumplessPipedream:
 
     def get_tile(self, i, j):
         assert 1 <= i <= self.n and 1 <= j <= self.n
-        return self.tiles.get((i, j), self.B_TILE)
-        # get((i,j), self.B_TILES) returns the tile at (i,j) or B_TILE if (i,j) is not in self.tiles
+        return self.tiles[i, j]
 
     def is_blank(self, i, j):
         return self.get_tile(i,j) == self.B_TILE
@@ -510,7 +657,7 @@ class BumplessPipedream:
     def get_blank_tiles(self):
         # returns a list with the position of the rightmost tile
         # the list is order such that [row1: rightmost tiles ... leftmost tiles, row2:rightmost tiles ... leftmost tiles,... row n:rightmost tiles ... leftmost tiles] 
-        return [(i,j) for i in range(1,self.n+1) for j in reversed(range(1,self.n+1)) if self.is_blank(i,j)]
+        return [(i,j) for i in range(1, self.n + 1) for j in reversed(range(1, self.n + 1)) if self.is_blank(i,j)]
 
         # the dictionary has order such that {row i: [rightmost tiles (i, y) ... leftmost tiles (i, y0)]}
         # return {i: [(i,j) for i in range(1, self.n + 1) for j in reversed(range(1, self.n + 1)) if self.is_blank(i, j)]}
@@ -527,50 +674,9 @@ class BumplessPipedream:
         #     if len(self.get_blank_tiles()[i]) > 1:
         #         return self.get_blank_tiles()[i][0]
 
-    def symmetric_droops(self, strict=True):
-        for (i, j) in self.tiles:
-            if i < j or (strict and i == j):
-                continue
-            for a in range(i + 1, self.n + 1):
-                for b in range(j + 1, self.n + 1):
-                    bpd = self.symmetric_droop(i, j, a, b)
-                    if bpd is not None:
-                        yield bpd
-            
     def copy(self):
         return self.__class__(self.tiles, self.n)
 
-    def symmetric_droop(self, i, j, a, b):
-        if i == j:
-            bpd = self.droop(i, j, a, b)
-            if bpd is not None:
-                bpd = bpd if a == b else bpd.droop(a, i, b, a) if a < b else bpd.droop(i, b, b, a)
-        else:
-            bpd = self.copy()
-            if i < j == a < b and bpd.tiles.get((a, a), None) == bpd.J_TILE:
-                bpd.tiles[a, a] = bpd.E_TILE
-                bpd = bpd.droop(i, j, a, b)
-                if bpd is not None:
-                    bpd.tiles[a, a] = bpd.E_TILE
-                    bpd = bpd.droop(j, i, b, a)
-            elif j < i == b < a  and bpd.tiles.get((b, b), None) == bpd.J_TILE:
-                bpd.tiles[b, b] = bpd.E_TILE
-                bpd = bpd.droop(i, j, a, b)
-                if bpd is not None:
-                    bpd.tiles[b, b] = bpd.E_TILE
-                    bpd = bpd.droop(j, i, b, a)
-            else:
-                bpd = self.droop(i, j, a, b)
-                if bpd is not None:
-                    if a == b:
-                        bpd.tiles[i, a] = bpd.B_TILE
-                        bpd.diagram[i, a] = (i, a)
-                        bpd = bpd.droop(j, i, i, a)
-                        bpd.tiles[i, a] = bpd.P_TILE
-                    else:
-                        bpd = bpd.droop(j, i, b, a)
-        if bpd is not None:
-            return self.__class__(bpd.tiles, bpd.n)
 
 
 class SymmetricBumplessPipedream(BumplessPipedream):
@@ -604,7 +710,7 @@ class SymmetricBumplessPipedream(BumplessPipedream):
         for i in range(1, self.n + 1):
             row = []
             for j in range(1, self.n + 1):
-                t = self.tiles.get((i, j), self.B_TILE)
+                t = self.get_tile(i, j)
                 if i > j:
                     t = '\033[91m' + t + '\033[0m'
                 # if i == j:

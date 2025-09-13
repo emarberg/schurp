@@ -151,7 +151,7 @@ def test_b_operator_formula(rank=2):
             assert (actual - got).truncate_degree(rank - 1) == 0
 
 
-def test_c_operator_formula(rank=2):
+def test_c_operator_formula(rank=2, dd=2):
     Groth = lambda w: DoubleGrothendieckC.get(w)
     substitute = op_substitute
     act = op_act
@@ -165,47 +165,53 @@ def test_c_operator_formula(rank=2):
 
     def expand(w, k):
         ans = 0
+        bns = Vector(printer=lambda v: 'GC%s' % v)
 
         c = w(k)
-        tup = rank * [0]
+        tup = w.rank * [0]
         tup[abs(c) - 1] = -(1 if c > 0 else -1)
         tup = tuple(tup)
 
         q = collections.deque([(w, 1, tup, 0)])
-        chain = kchain(k, rank)
+        chain = kchain(k, w.rank)
         while q:
             v, sgn, coeff, i = q.popleft()
             if i == len(chain):
                 ans += sgn * gety(coeff) * substitute(Groth(v))
+                bns += Vector({v: sgn * gety(coeff)})
                 continue
             
             q.append((v, sgn, coeff, i + 1))
             a, b, e = chain[i]
-            t = SignedPermutation.reflection_s(b, b, rank) if a == 0 else SignedPermutation.t_ij(a, b, rank)
+            t = SignedPermutation.reflection_s(b, b, w.rank) if a == 0 else SignedPermutation.t_ij(a, b, w.rank)
             if (v * t).length() == v.length() + 1:
                 if e == -1:
                     q.append((v * t, -sgn, coeff, i + 1))
                 else:
                     q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
-        return substitute(ans)
+        return substitute(ans), bns
 
     for k in range(1, rank):
         for w in SignedPermutation.all(rank - 1):
-            w = w.inflate(rank)
-            print()
-            print()
-            print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
-            print()
-            
-            actual = (1 - X(2 * k - 1)) * Groth(w)
-            print('want =', actual)
-            print()
+            for d in range(dd + 1):
+                w = w.inflate(rank + d)
+                print()
+                print()
+                print('n =', rank + d, 'w =', w, 'k =', k, 'chain =', kchain(k, w.rank))
+                print()
+                
+                actual = (1 - X(2 * k - 1)) * Groth(w)
+                print('want =', actual)
+                print()
 
-            got = expand(w, k)
-            print(' got =', got)
-            print()
-            
-            assert (actual - got).truncate_degree(rank - 1) == 0
+                got, vec = expand(w, k)
+                print(' got =', got)
+                print()
+                print('      =', '\n        + '.join(str(vec).split(' + ')))
+                print()
+                
+                assert (actual - got).truncate_degree(rank + d - 1) == 0
+            input('\n')
 
 
 def test_d_operator_formula(rank=2):

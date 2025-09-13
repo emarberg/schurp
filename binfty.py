@@ -331,6 +331,21 @@ class InfiniteCrystal:
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
+    @classmethod
+    def odd_sqrt_elementary(cls, j, n):
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None if i not in [j, j - 1] else (x + 1) if i == j else ((x - 1) if x % 2 != 0 else None)
+        f_operators = lambda i, x: None if i not in [j, j - 1] else (x - 1) if i == j else ((x + 1) if x % 2 == 0 else None)
+
+        e_strings = lambda i, x: None if i not in [j, j - 1] else -x if i == j else (x + 1)
+        f_strings = lambda i, x: None if i not in [j, j - 1] else x if i == j else (0 if x % 2 != 0 else 1)
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
     def __init__(self, generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map, printer=str):
         self.generator = generator
         self.indices = sorted(tuple(indices))
