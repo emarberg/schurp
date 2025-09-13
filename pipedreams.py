@@ -1,4 +1,4 @@
-from schubert import InvSchubert, FPFSchubert, Grothendieck
+from schubert import InvSchubert, FPFSchubert, Grothendieck, AltInvGrothendieck
 from polynomials import x as x_var, one as one_var, y as y_var
 import subprocess
 import os
@@ -107,6 +107,23 @@ class BumplessPipedream:
                         ans *= x_var(i)
         return ans
 
+    def inv_kweight(self):
+        beta = AltInvGrothendieck.beta
+        ans = x_var(0)**0
+        for i in range(1, self.n + 1):
+            for j in range(1, self.n + 1):
+                if self.get_tile(i, j) == self.B_TILE:
+                    if i > j:
+                        ans *= beta * (x_var(i) + x_var(j) + beta * x_var(i) * x_var(j))
+                    elif i == j:
+                        ans *= beta * x_var(i)
+                if self.get_tile(i, j) == self.J_TILE:
+                    if i > j:
+                        ans *= (1 + beta * x_var(i)) * (1 + beta * x_var(j))
+                    elif i == j:
+                        ans *= 1 + beta * x_var(i)
+        return ans
+
     @classmethod
     def rothe(cls, w, n=None):
         n = n if n else w.rank
@@ -116,8 +133,8 @@ class BumplessPipedream:
             bends[(i, j)] = cls.C_TILE
         return cls(bends, n)
 
-    def kdroop(self, i, j, a, b):
-        ans = self.droop(i, j, a, b)
+    def kdroop(self, i, j, a, b, strict=True):
+        ans = self.droop(i, j, a, b, strict=strict)
         if ans is not None:
             return ans
 
@@ -135,6 +152,8 @@ class BumplessPipedream:
         j_count = 0
         for x in range(i, a + 1):
             for y in range(j, b + 1):
+                if not strict and (x, y) in [(i, b), (a, j)] and self.get_tile(x, y) == self.J_TILE:
+                    continue
                 t = self.get_tile(x, y)
                 if t == self.C_TILE:
                     c_count += 1
@@ -144,118 +163,108 @@ class BumplessPipedream:
             return None
 
         bends = self.bends.copy()
-
         del bends[(i, j)]
+
         if p:
             p = p[0]
             bends[i, p] = self.C_TILE
             del bends[(a, p)]
-            bends[a, j] = self.C_TILE
+            if self.get_tile(a, j) == self.J_TILE:
+                del bends[(a, j)]
+            else:
+                bends[(a, j)] = self.C_TILE
         else:
             q = q[0]
             bends[q, j] = self.C_TILE
             del bends[(q, b)]
-            bends[i, b] = self.C_TILE
+            if self.get_tile(i, b) == self.J_TILE:
+                del bends[(i, b)]
+            else:
+                bends[(i, b)] = self.C_TILE
 
         return BumplessPipedream(bends, self.n)
 
-    def droop(self, i, j, a, b):
+    def droop(self, i, j, a, b, strict=True):
         if self.get_tile(i, j) != self.C_TILE:
             return None
         if self.get_tile(a, b) != self.B_TILE:
                 return None
         for x in range(i, a + 1):
             for y in range(j, b + 1):
-                if (x, y) != (i, j):
-                    if self.get_tile(x, y) in [self.C_TILE, self.J_TILE]:
-                        return None
+                if (x, y) == (i, j):
+                    continue
+                if not strict and (x, y) in [(i, b), (a, j)] and self.get_tile(x, y) == self.J_TILE:
+                    continue
+                if self.get_tile(x, y) in [self.C_TILE, self.J_TILE]:
+                    return None
 
         bends = self.bends.copy()
 
         del bends[(i, j)]
         bends[(a, b)] = self.J_TILE
-        bends[(i, b)] = self.C_TILE
-        bends[(a, j)] = self.C_TILE
+        
+        if self.get_tile(i, b) == self.J_TILE:
+            del bends[(i, b)]
+        else:
+            bends[(i, b)] = self.C_TILE
+
+        if self.get_tile(a, j) == self.J_TILE:
+            del bends[(a, j)]
+        else:
+            bends[(a, j)] = self.C_TILE
 
         return BumplessPipedream(bends, self.n)
 
-    def droops(self, ktheoretic=False):
+    def droops(self, strict=True, ktheoretic=False):
         for (i, j) in self.tiles:
             for a in range(i + 1, self.n + 1):
                 for b in range(j + 1, self.n + 1):
-                    bpd = self.kdroop(i, j, a, b) if ktheoretic else self.droop(i, j, a, b)
+                    bpd = (self.kdroop if ktheoretic else self.droop)(i, j, a, b, strict=strict)
                     if bpd is not None:
                         yield bpd
 
-    def symmetric_droops(self, strict=True):
+    def symmetric_droops(self, strict=True, ktheoretic=False):
         for (i, j) in self.tiles:
-            if i < j or (strict and i == j):
+            if i < j:
                 continue
             for a in range(i + 1, self.n + 1):
                 for b in range(j + 1, self.n + 1):
-                    bpd = self.symmetric_droop(i, j, a, b)
+                    bpd = (self.symmetric_kdroop if ktheoretic else self.symmetric_droop)(i, j, a, b, strict=strict)
                     if bpd is not None:
                         yield bpd
 
-    def _symmetric_droops(self, strict=True):
-        for (i, j) in self.tiles:
-            if i < j or (strict and i == j):
-                continue
-            for a in range(i + 1, self.n + 1):
-                for b in range(j + 1, self.n + 1):
-                    bpd = self._symmetric_droop(i, j, a, b)
-                    if bpd is not None:
-                        yield bpd
-
-    def symmetric_droop(self, i, j, a, b):
+    def symmetric_droop(self, i, j, a, b, strict=True):
         if i == j and a == b:
-            return self.droop(i, j, a, b)
+            ans = self.droop(i, j, a, b, strict=strict)
         elif i == j and a != b:
-            ans = self.droop(i, j, a, b)
-            if ans is None:
-                return None
-            else:
-                return ans.droop(i, b, b, a) if a > b else ans.droop(a, j, b, a)
-        elif i != j:
-            ans = self.droop(i, j, a, b)
-            if ans is None:
-                return None
-            else:
-                return ans.kdroop(j, i, b, a)
-
-    def _symmetric_droop(self, i, j, a, b):
-        if i == j:
-            bpd = self.droop(i, j, a, b)
-            if bpd is not None:
-                bpd = bpd if a == b else bpd.droop(a, i, b, a) if a < b else bpd.droop(i, b, b, a)
+            ans = self.droop(i, j, a, b, strict=strict)
+            if ans is not None:
+                ans = ans.droop(i, b, b, a, strict=strict) if a > b else ans.droop(a, j, b, a, strict=strict)
         else:
-            bpd = self.copy()
-            if i < j == a < b and bpd.tiles.get((a, a), None) == bpd.J_TILE:
-                bpd.tiles[a, a] = bpd.E_TILE
-                bpd = bpd.droop(i, j, a, b)
-                if bpd is not None:
-                    bpd.tiles[a, a] = bpd.E_TILE
-                    bpd = bpd.droop(j, i, b, a)
-            elif j < i == b < a  and bpd.tiles.get((b, b), None) == bpd.J_TILE:
-                bpd.tiles[b, b] = bpd.E_TILE
-                bpd = bpd.droop(i, j, a, b)
-                if bpd is not None:
-                    bpd.tiles[b, b] = bpd.E_TILE
-                    bpd = bpd.droop(j, i, b, a)
-            else:
-                bpd = self.droop(i, j, a, b)
-                if bpd is not None:
-                    if a == b:
-                        bpd.tiles[i, a] = bpd.B_TILE
-                        bpd = bpd.droop(j, i, i, a)
-                        bpd.tiles[i, a] = bpd.P_TILE
-                    else:
-                        bpd = bpd.droop(j, i, b, a)
-        if bpd is not None:
-            return self.__class__(bpd.tiles, bpd.n)
+            ans = self.droop(i, j, a, b, strict=False)
+            if ans is not None:
+                ans = ans.kdroop(j, i, b, a, strict=strict)
+        return ans
+
+    def symmetric_kdroop(self, i, j, a, b, strict=True):
+        ans = self.symmetric_droop(i, j, a, b, strict=strict)
+        if ans is not None:
+            return ans
+
+        if i == j and a == b:
+            ans = self.kdroop(i, j, a, b, strict=strict)
+        elif i == j and a != b:
+            ans = self.kdroop(i, j, a, b, strict=strict)
+            if ans is not None:
+                ans = ans.kdroop(i, b, b, a, strict=strict) if a > b else ans.kdroop(a, j, b, a, strict=strict)
+        else:
+            ans = self.kdroop(i, j, a, b, strict=False)
+            if ans is not None:
+                ans = ans.kdroop(j, i, b, a, strict=strict)
+        return ans
 
     @classmethod
-    def _from_involution(cls, w, n=None, reduced=True):
+    def from_involution(cls, w, n=None, reduced=True, strict=True):
         assert w == w.inverse()
         ans = set()
         seed = {cls.rothe(w, n)}
@@ -263,32 +272,19 @@ class BumplessPipedream:
             new_seed = set()
             for bpd in seed:
                 ans.add(bpd)
-                new_seed |= set(bpd._symmetric_droops(strict=False))
+                new_seed |= set(bpd.symmetric_droops(strict=strict, ktheoretic=not reduced))
             seed = new_seed - ans
         return ans
 
     @classmethod
-    def from_involution(cls, w, n=None, reduced=True):
-        assert w == w.inverse()
+    def from_permutation(cls, w, n=None, reduced=True, strict=True):
         ans = set()
         seed = {cls.rothe(w, n)}
         while seed:
             new_seed = set()
             for bpd in seed:
                 ans.add(bpd)
-                new_seed |= set(bpd.symmetric_droops(strict=False))
-            seed = new_seed - ans
-        return ans
-
-    @classmethod
-    def from_permutation(cls, w, n=None, reduced=True):
-        ans = set()
-        seed = {cls.rothe(w, n)}
-        while seed:
-            new_seed = set()
-            for bpd in seed:
-                ans.add(bpd)
-                new_seed |= set(bpd.droops(ktheoretic=not reduced))
+                new_seed |= set(bpd.droops(strict=strict, ktheoretic=not reduced))
             seed = new_seed - ans
         return ans
 
