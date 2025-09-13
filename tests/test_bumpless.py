@@ -1,9 +1,14 @@
 from pipedreams import BumplessPipedream, SymmetricBumplessPipedream
 from permutations import Permutation
-from schubert import DoubleSchubert, FPFSchubert, InvSchubert
+from schubert import (
+    DoubleSchubert, 
+    DoubleGrothendieck,
+    FPFSchubert, 
+    InvSchubert,
+)
 
 
-def test_symmetric_droops(n):
+def test_symmetric_droops(n=5):
     for w in Permutation.involutions(n):
         print('w =', w)
         dreams = set(BumplessPipedream.from_involution(w))
@@ -14,7 +19,7 @@ def test_symmetric_droops(n):
             print(_dreams)
         assert dreams == _dreams
 
-def test_inv_bumpless(n):
+def test_inv_bumpless(n=5):
     for w in Permutation.involutions(n):
         #if not w.is_vexillary():
         #    continue
@@ -24,7 +29,7 @@ def test_inv_bumpless(n):
         actual = InvSchubert.get(w)
         
         print(dreams)
-        input('')
+        #input('')
 
         if test != actual:
             print(w)
@@ -51,9 +56,20 @@ def schubert_via_bumpless(w):
     return ans
 
 
+def grothendieck_via_bumpless(w):
+    ans = 0
+    for bpd in BumplessPipedream.from_permutation(w, reduced=False):
+        if DoubleGrothendieck.beta in [-1, 1]:
+            sgn = DoubleGrothendieck.beta**w.length()
+        else:
+            sgn = DoubleGrothendieck.beta**(-w.length())
+        ans += sgn * bpd.kweight()    
+    return ans
+
+
 def fpf_schubert_via_bumpless(w):
     ans = 0
-    for bpd in BumplessPipedream.from_fpf_involution(w):
+    for bpd in BumplessPipedream.from_fpf_involution_slow(w):
         ans += bpd.fpf_weight()
     return ans
 
@@ -72,15 +88,11 @@ def test_schubert(n=4):
             print()
             print('diff =', expected - frombpd)
             raise Exception
-
-
-def test_fpf_schubert(n=6):
-    for w in Permutation.fpf_involutions(n):
-        expected = FPFSchubert.get(w)
-        frombpd = fpf_schubert_via_bumpless(w)
+        expected = DoubleGrothendieck.get(w)
+        frombpd = grothendieck_via_bumpless(w)
         if expected != frombpd:
             print(w)
-            print(BumplessPipedream.from_fpf_involution(w))
+            print(BumplessPipedream.from_permutation(w, reduced=False))
             print()
             print(' S_w =', expected)
             print()
@@ -90,7 +102,23 @@ def test_fpf_schubert(n=6):
             raise Exception
 
 
-def test_symmetric(n=8):
+def test_fpf_schubert(n=6):
+    for w in Permutation.fpf_involutions(n):
+        expected = FPFSchubert.get(w)
+        frombpd = fpf_schubert_via_bumpless(w)
+        if expected != frombpd:
+            print(w)
+            print(BumplessPipedream.from_fpf_involution_slow(w))
+            print()
+            print(' S_w =', expected)
+            print()
+            print('      ', frombpd)
+            print()
+            print('diff =', expected - frombpd)
+            raise Exception
+
+
+def test_symmetric(n=6):
     for w in Permutation.fpf_involutions(n):
         one = BumplessPipedream.from_fpf_involution_slow(w, n)
         two = SymmetricBumplessPipedream.from_fpf_involution(w, n)

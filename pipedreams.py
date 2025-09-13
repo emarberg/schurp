@@ -1,4 +1,4 @@
-from schubert import InvSchubert, FPFSchubert
+from schubert import InvSchubert, FPFSchubert, Grothendieck
 from polynomials import x as x_var, one as one_var, y as y_var
 import subprocess
 import os
@@ -18,9 +18,40 @@ class BumplessPipedream:
 
     TILES = [J_TILE, C_TILE, P_TILE, H_TILE, V_TILE, B_TILE, E_TILE]
 
-    def __init__(self, tiles, n=None):
-        self.tiles = {p: t for p, t in tiles.items()}
-        self.n = n if n else max([0] + [max(p) for p in tiles])
+    def __init__(self, bends, n=None):
+        self.bends = {p: t for (p, t) in bends.items() if t in [self.J_TILE, self.C_TILE, self.E_TILE]}
+        self.n = n if n else max([0] + [max(p) for p in bends])
+        
+        self.tiles = self.bends.copy()
+        for column in range(1, self.n + 1):
+            south = True
+            i = self.n
+            j = column
+            while i > 0 and j <= self.n:
+                if south:
+                    if (i, j) not in self.tiles:
+                        self.tiles[i, j] = self.V_TILE
+                        i -= 1
+                    elif self.tiles[i, j] == self.H_TILE:
+                        self.tiles[i, j] = self.P_TILE
+                        i -= 1
+                    elif self.tiles[i, j] in [self.C_TILE, self.E_TILE]:
+                        j += 1
+                        south = False
+                    else:
+                        raise Exception
+                else:
+                    if (i, j) not in self.tiles:
+                        self.tiles[i, j] = self.H_TILE
+                        j += 1
+                    elif self.tiles[i, j] == self.V_TILE:
+                        self.tiles[i, j] = self.P_TILE
+                        j += 1
+                    elif self.tiles[i, j] in [self.J_TILE, self.E_TILE]:
+                        i -= 1
+                        south = True
+                    else:
+                        raise Exception
 
     def __repr__(self):
         ans = []
@@ -38,6 +69,16 @@ class BumplessPipedream:
     def __eq__(self, other):
         assert type(other) == type(self)
         return str(self) == str(other)
+
+    def kweight(self):
+        ans = x_var(0)**0
+        for i in range(1, self.n + 1):
+            for j in range(1, self.n + 1):
+                if self.get_tile(i, j) == self.B_TILE:
+                    ans *= Grothendieck.beta * (x_var(i) + y_var(j) + Grothendieck.beta * x_var(i) * y_var(j))
+                if self.get_tile(i, j) == self.J_TILE:
+                    ans *= (1 + Grothendieck.beta * x_var(i)) * (1 + Grothendieck.beta * y_var(j))
+        return ans
 
     def weight(self):
         ans = x_var(0)**0
@@ -69,151 +110,74 @@ class BumplessPipedream:
     @classmethod
     def rothe(cls, w, n=None):
         n = n if n else w.rank
-        tiles = {}
+        bends = {}
         for i in range(1, n + 1):
             j = w(i)
-            tiles[(i, j)] = cls.C_TILE
-        return cls(tiles, n)
+            bends[(i, j)] = cls.C_TILE
+        return cls(bends, n)
 
     def kdroop(self, i, j, a, b):
-        p = [p for p in range(j + 1, b) if self.get_tile(a, p) == self.C_TILE]
-        q = [q for q in range(i + 1, a) if self.get_tile(q, b) == self.C_TILE]
-
-        def is_valid():
-            if self.get_tile(i, j) != self.C_TILE:
-                return False
-            if self.get_tile(a, b) != self.J_TILE:
-                return False
-            if len(p) == 0 and len(q) == 0:
-                return False
-            
-            c_count = 0
-            j_count = 0
-            for x in range(i, a + 1):
-                for y in range(j, b + 1):
-                    t = self.get_tile(x, y)
-                    if t == self.C_TILE:
-                        c_count += 1
-                    if t == self.J_TILE:
-                        j_count += 1
-            return c_count == 2 and j_count == 1
-
         ans = self.droop(i, j, a, b)
         if ans is not None:
             return ans
-        elif not is_valid():
+
+        p = [p for p in range(j + 1, b) if self.get_tile(a, p) == self.C_TILE]
+        q = [q for q in range(i + 1, a) if self.get_tile(q, b) == self.C_TILE]
+
+        if self.get_tile(i, j) != self.C_TILE:
             return None
+        if self.get_tile(a, b) != self.J_TILE:
+            return None
+        if len(p) == 0 and len(q) == 0:
+            return None
+            
+        c_count = 0
+        j_count = 0
+        for x in range(i, a + 1):
+            for y in range(j, b + 1):
+                t = self.get_tile(x, y)
+                if t == self.C_TILE:
+                    c_count += 1
+                if t == self.J_TILE:
+                    j_count += 1
+        if c_count != 2 or j_count != 1:
+            return None
+
+        bends = self.bends.copy()
+
+        del bends[(i, j)]
+        if p:
+            p = p[0]
+            bends[i, p] = self.C_TILE
+            del bends[(a, p)]
+            bends[a, j] = self.C_TILE
         else:
-            tiles = self.tiles.copy()
+            q = q[0]
+            bends[q, j] = self.C_TILE
+            del bends[(q, b)]
+            bends[i, b] = self.C_TILE
 
-            del tiles[(i, j)]
-            if p:
-                p = p[0]
-
-                tiles[(i, p)] = self.C_TILE
-                tiles[(a, p)] = self.P_TILE
-                tiles[(a, j)] = self.C_TILE
-
-                for x in range(i + 1, a):
-                    if tiles[(x, j)] == self.P_TILE:
-                        tiles[(x, j)] = self.H_TILE
-                    else:
-                        del tiles[(x, j)]
-                    if (x, p) in tiles:
-                        assert tiles[(x, p)] == self.H_TILE
-                        tiles[(x, p)] = self.P_TILE
-                    else:
-                        tiles[(x, p)] = self.V_TILE
-
-                for y in range(j + 1, p):
-                    if tiles[(i, y)] == self.P_TILE:
-                        tiles[(i, y)] = self.V_TILE
-                    else:
-                        del tiles[(i, y)]
-                    if (a, y) in tiles:
-                        assert tiles[(a, y)] == self.V_TILE
-                        tiles[(a, y)] = self.P_TILE
-                    else:
-                        tiles[(a, y)] = self.H_TILE
-
-            else:
-                q = q[0]
-
-                tiles[(q, j)] = self.C_TILE
-                tiles[(q, b)] = self.P_TILE
-                tiles[(i, b)] = self.C_TILE
-
-                for x in range(i + 1, q):
-                    if tiles[(x, j)] == self.P_TILE:
-                        tiles[(x, j)] = self.H_TILE
-                    else:
-                        del tiles[(x, j)]
-                    if (x, b) in tiles:
-                        assert tiles[(x, b)] == self.H_TILE
-                        tiles[(x, b)] = self.P_TILE
-                    else:
-                        tiles[(x, b)] = self.V_TILE
-
-                for y in range(j + 1, b):
-                    if tiles[(i, y)] == self.P_TILE:
-                        tiles[(i, y)] = self.V_TILE
-                    else:
-                        del tiles[(i, y)]
-                    if (q, y) in tiles:
-                        assert tiles[(q, y)] == self.V_TILE
-                        tiles[(q, y)] = self.P_TILE
-                    else:
-                        tiles[(q, y)] = self.H_TILE
-
-            return BumplessPipedream(tiles, self.n)
+        return BumplessPipedream(bends, self.n)
 
     def droop(self, i, j, a, b):
-        def is_valid(i, j, a, b):
-            if self.get_tile(i, j) != self.C_TILE:
-                return False
-            if self.get_tile(a, b) != self.B_TILE:
-                return False
-            for x in range(i, a + 1):
-                for y in range(j, b + 1):
-                    if (x, y) != (i, j):
-                        t = self.get_tile(x, y)
-                        if t in [self.C_TILE, self.J_TILE]:
-                            return False
-            return True
-
-        if not is_valid(i, j, a, b):
+        if self.get_tile(i, j) != self.C_TILE:
             return None
-        else:
-            tiles = self.tiles.copy()
+        if self.get_tile(a, b) != self.B_TILE:
+                return None
+        for x in range(i, a + 1):
+            for y in range(j, b + 1):
+                if (x, y) != (i, j):
+                    if self.get_tile(x, y) in [self.C_TILE, self.J_TILE]:
+                        return None
 
-            del tiles[(i, j)]
-            tiles[(a, b)] = self.J_TILE
-            tiles[(i, b)] = self.C_TILE
-            tiles[(a, j)] = self.C_TILE
+        bends = self.bends.copy()
 
-            for x in range(i + 1, a):
-                if tiles[(x, j)] == self.P_TILE:
-                    tiles[(x, j)] = self.H_TILE
-                else:
-                    del tiles[(x, j)]
-                if (x, b) in tiles:
-                    assert tiles[(x, b)] == self.H_TILE
-                    tiles[(x, b)] = self.P_TILE
-                else:
-                    tiles[(x, b)] = self.V_TILE
+        del bends[(i, j)]
+        bends[(a, b)] = self.J_TILE
+        bends[(i, b)] = self.C_TILE
+        bends[(a, j)] = self.C_TILE
 
-            for y in range(j + 1, b):
-                if tiles[(i, y)] == self.P_TILE:
-                    tiles[(i, y)] = self.V_TILE
-                else:
-                    del tiles[(i, y)]
-                if (a, y) in tiles:
-                    assert tiles[(a, y)] == self.V_TILE
-                    tiles[(a, y)] = self.P_TILE
-                else:
-                    tiles[(a, y)] = self.H_TILE
-
-            return BumplessPipedream(tiles, self.n)
+        return BumplessPipedream(bends, self.n)
 
     def droops(self, ktheoretic=False):
         for (i, j) in self.tiles:
@@ -324,7 +288,7 @@ class BumplessPipedream:
             new_seed = set()
             for bpd in seed:
                 ans.add(bpd)
-                new_seed |= set(bpd.droops() if reduced else bpd.kdroops())
+                new_seed |= set(bpd.droops(ktheoretic=not reduced))
             seed = new_seed - ans
         return ans
 
@@ -649,7 +613,7 @@ class BumplessPipedream:
 
     def get_tile(self, i, j):
         assert 1 <= i <= self.n and 1 <= j <= self.n
-        return self.tiles[i, j]
+        return self.tiles.get((i, j), self.B_TILE)
 
     def is_blank(self, i, j):
         return self.get_tile(i,j) == self.B_TILE
