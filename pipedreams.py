@@ -138,6 +138,65 @@ class BumplessPipedream:
         if ans is not None:
             return ans
 
+        p = [p for p in range(b + 1, self.n + 1) if self.get_tile(a, p) == self.J_TILE]
+        q = [q for q in range(a + 1, self.n + 1) if self.get_tile(q, b) == self.J_TILE]
+
+        if self.get_tile(i, j) != self.C_TILE:
+            return None
+        if self.get_tile(a, b) != self.C_TILE:
+            return None
+        if len(p) == 0 and len(q) == 0:
+            return None
+        
+        pbool = len(p) > 0
+        qbool = len(q) > 0
+
+        if pbool:
+            p = p[0]
+            for x in range(i, a + 1):
+                for y in range(j, p + 1):
+                    if (x, y) in [(i, j), (a, b), (a, p)]:
+                        continue
+                    if not strict and (x, y) in [(a, j)] and self.get_tile(x, y) == self.J_TILE:
+                        continue
+                    if self.get_tile(x, y) in [self.C_TILE, self.J_TILE]:
+                        pbool = False
+
+        if qbool:
+            q = q[0]
+            for x in range(i, q + 1):
+                for y in range(j, b + 1):
+                    if (x, y) in [(i, j), (a, b), (q, b)]:
+                        continue
+                    if not strict and (x, y) in [(i, b)] and self.get_tile(x, y) == self.J_TILE:
+                        continue
+                    if self.get_tile(x, y) in [self.C_TILE, self.J_TILE]:
+                        qbool = False
+
+        if not (pbool or qbool):
+            return None
+
+        bends = self.bends.copy()
+        del bends[(i, j)]
+        del bends[(a, b)]
+
+        if self.get_tile(i, b) == self.J_TILE:
+            del bends[(i, b)]
+        else:
+            bends[(i, b)] = self.C_TILE
+
+        if self.get_tile(a, j) == self.J_TILE:
+            del bends[(a, j)]
+        else:
+            bends[(a, j)] = self.C_TILE
+
+        return BumplessPipedream(bends, self.n)
+
+    def _kdroop(self, i, j, a, b, strict=True):
+        ans = self.droop(i, j, a, b, strict=strict)
+        if ans is not None:
+            return ans
+
         p = [p for p in range(j + 1, b) if self.get_tile(a, p) == self.C_TILE]
         q = [q for q in range(i + 1, a) if self.get_tile(q, b) == self.C_TILE]
 
@@ -240,6 +299,18 @@ class BumplessPipedream:
             ans = self.droop(i, j, a, b, strict=strict)
             if ans is not None:
                 ans = ans.droop(i, b, b, a, strict=strict) if a > b else ans.droop(a, j, b, a, strict=strict)
+                assert ans is not None
+        elif i != j and a == b:
+            ans = self.droop(i, j, a, b, strict=False)
+            if ans is not None:
+                ans = ans.kdroop(j, i, i, b, strict=strict) if i > j else ans.kdroop(j, i, a, j, strict=strict)
+                # if not strict and ans is None:
+                #     print(self)
+                #     print(i, j, a, b, strict)
+                #     print(self.droop(i, j, a, b, strict=False))
+                #     print(self.bends)
+                #     input('\n\n\n?\n')
+                assert strict or ans is not None
         else:
             ans = self.droop(i, j, a, b, strict=False)
             if ans is not None:
@@ -257,6 +328,12 @@ class BumplessPipedream:
             ans = self.kdroop(i, j, a, b, strict=strict)
             if ans is not None:
                 ans = ans.kdroop(i, b, b, a, strict=strict) if a > b else ans.kdroop(a, j, b, a, strict=strict)
+                assert ans is not None
+        elif i != j and a == b:
+            ans = self.kdroop(i, j, a, b, strict=False)
+            if ans is not None:
+                ans = ans.kdroop(j, i, i, b, strict=strict) if i > j else ans.kdroop(j, i, a, j, strict=strict)
+                assert strict or ans is not None
         else:
             ans = self.kdroop(i, j, a, b, strict=False)
             if ans is not None:

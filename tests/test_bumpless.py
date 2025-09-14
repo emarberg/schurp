@@ -33,6 +33,16 @@ def test_inv_bumpless(n=6):
             print(w, strict)
             expected = InvSchubert.get(w)
             frombpd = inv_schubert_via_bumpless(w, strict) 
+            if expected != frombpd:
+                print(w)
+                print(BumplessPipedream.rothe(w))
+                print(BumplessPipedream.from_involution(w, reduced=True, strict=strict))
+                print()
+                print(' S_w =', expected)
+                print()
+                print('      ', frombpd)
+                print()
+                print('diff =', expected - frombpd)
             assert expected == frombpd
 
             expected = AltInvGrothendieck.get(w)
@@ -78,6 +88,16 @@ def test_schubert(n=5):
 
             expected = DoubleGrothendieck.get(w)
             frombpd = grothendieck_via_bumpless(w, strict)
+            if expected != frombpd:
+                print(w)
+                print(BumplessPipedream.rothe(w))
+                print(BumplessPipedream.from_permutation(w, reduced=False, strict=strict))
+                print()
+                print(' S_w =', expected)
+                print()
+                print('      ', frombpd)
+                print()
+                print('diff =', expected - frombpd)
             assert expected == frombpd
 
 
