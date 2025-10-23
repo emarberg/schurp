@@ -3,9 +3,10 @@ import math
 
 class Vector:
 
-    def __init__(self, dictionary={}, printer=None):
+    def __init__(self, dictionary={}, printer=None, sorter=None):
         self.dictionary = {key: value for key, value in dictionary.items() if value}
         self.printer = printer
+        self.sorter = sorter
 
     @classmethod
     def base(cls, key, printer=None):
@@ -52,7 +53,7 @@ class Vector:
             return Vector({
                 key: self[key] + other[key]
                 for key in keys if self[key] + other[key]
-            }, self.printer or other.printer)
+            }, self.printer or other.printer, self.sorter or other.sorter)
         else:
             return other.__radd__(self)
 
@@ -62,15 +63,15 @@ class Vector:
             return Vector({
                 key: self[key] - other[key]
                 for key in keys if self[key] - other[key]
-            }, self.printer or other.printer)
+            }, self.printer or other.printer, self.sorter or other.sorter)
         else:
             return other.__rsub__(self)
 
     def __mul__(self, other):
         if self.is_scalar(other):
-            return Vector({key: self[key] * other for key in self.keys()}, self.printer)
+            return Vector({key: self[key] * other for key in self.keys()}, self.printer, self.sorter)
         elif type(other) == Vector:
-            ans = Vector(printer=self.printer or other.printer)
+            ans = Vector(printer=self.printer or other.printer, sorter=self.sorter or other.sorter)
             for a, x in self.items():
                 for b, y in other.items():
                     ans += (x * y) * (a * b)
@@ -86,9 +87,9 @@ class Vector:
 
     def __rmul__(self, other):
         if self.is_scalar(other):
-            return Vector({key: self[key] * other for key in self.keys()}, self.printer)
+            return Vector({key: self[key] * other for key in self.keys()}, self.printer, self.sorter)
         elif type(other) == Vector:
-            ans = Vector(printer=self.printer or other.printer)
+            ans = Vector(printer=self.printer or other.printer, sorter=self.sorter or other.sorter)
             for a, x in other.items():
                 for b, y in self.items():
                     ans += (x * y) * (a * b)
@@ -103,7 +104,7 @@ class Vector:
         assert type(c) == int
         assert c != 0
         assert all(v % c == 0 for v in self.values())
-        return Vector(dictionary={k: v // c for k, v in self.items()}, printer=self.printer)
+        return Vector(dictionary={k: v // c for k, v in self.items()}, printer=self.printer, sorter=self.sorter)
 
     def is_scalar(self, other):
         return type(other) == int or type(other).__name__ == 'MPolynomial'
@@ -125,7 +126,11 @@ class Vector:
 
     def __repr__(self):
         printer = self.printer or repr
-        sorted_items = sorted([(printer(key), value) for key, value in self.items()])
+        if self.sorter is not None:
+            sorted_items = sorted([(key, value) for key, value in self.items()], key=lambda x: self.sorter(x[0]))
+            sorted_items = [(printer(key), value) for key, value in sorted_items]
+        else:   
+            sorted_items = sorted([(printer(key), value) for key, value in self.items()])
         base = ''.join(self._repr_coeff(value) + key for key, value in sorted_items)
         if base.startswith(' + '):
             return base[3:]

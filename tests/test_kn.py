@@ -24,9 +24,48 @@ import collections
 from schubert import X
 
 
-def test_a_operator_formula(rank=2):
+def test_reflection_lemma(q=10):
+    length = lambda x: x.dlength()
+
+    def des(w):
+        return {i for i in range(1, w.rank) if w(i) > w(i + 1)}
+
+    def tfun(i, j, n):
+        if 0 < i:
+            return SignedPermutation.reflection_t(i, j, n)
+        elif i == 0:
+            return SignedPermutation.identity(n)
+            #return SignedPermutation.reflection_s(j, j, n)
+        elif i == -j:
+            return SignedPermutation.identity(n)
+        else:
+            return SignedPermutation.reflection_s(-i, j, n)
+
+    for n in range(q + 1):
+        print('n =', n)
+        for w in SignedPermutation.all(n, dtype=True):
+            w = w.inflate(n + 2)
+            for k in range(1, n + 1):
+                for j in range(-n - 2, k):
+                    t = tfun(j, k, w.rank)
+                    if length(w * t) == length(w) + 1:
+                        # print('  ', w, j, k, w * t, des(w * t), des(w))
+                        assert (des(w * t) - {k - 1, k}).issubset(des(w))
+                        assert (w * t)(k) < w(k)
+                        assert j >= -n - 1
+                        assert j > -n - 1 or k not in des(w * t)
+
+
+def test_a_operator_formula(rank=2, ww=None, wk=None):
     Groth = lambda w: DoubleGrothendieck.get(w)
     act = op_act
+
+    def evaluate(vec):
+        ans = 0 
+        for v in vec:
+            ans += vec[v].substitute(0, -1) * substitute(Groth(v))
+        ans = substitute(ans)
+        return ans
 
     def substitute(f):
         for v in f.variables():
@@ -47,7 +86,11 @@ def test_a_operator_formula(rank=2):
         return chain
 
     def expand(w, k):
-        ans = 0
+        # ans = 0
+        ans = Vector(
+            printer=lambda v: '\\fkG_{%s}' % ' '.join([str(a) for a in v.oneline]),
+            sorter=lambda v: v.length()
+        )
 
         c = w(k)
         tup = rank * [0]
@@ -59,7 +102,8 @@ def test_a_operator_formula(rank=2):
         while q:
             v, sgn, coeff, i = q.popleft()
             if i == len(chain):
-                ans += sgn * gety(coeff) * substitute(Groth(v))
+                #ans += sgn * gety(coeff) * substitute(Groth(v))
+                ans += Vector({v: (-X(0))**(v.length() - w.length()) * sgn * gety(coeff)})
                 continue
             
             q.append((v, sgn, coeff, i + 1))
@@ -71,31 +115,41 @@ def test_a_operator_formula(rank=2):
                 else:
                     q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
 
-        return substitute(ans)
+        # return substitute(ans)
+        return ans
 
-    for k in range(1, rank):
-        for w in Permutation.all(rank - 1):
+    for k in [wk] if wk is not None else range(1, rank):
+        for w in [ww] if ww is not None else Permutation.all(rank - 1):
             print()
             print()
             print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
             print()
-            
+
+            vec = expand(w, k)
+            printvec(vec)
+
+            got = evaluate(vec)
+            print(' got =', str(got)[:100] + ' ... ')
             actual = (1 - X(k)) * Groth(w)
-            print('want =', actual)
-            print()
-
-            got = expand(w, k)
-            print(' got =', got)
+            print('want =', str(actual)[:100] + ' ... ')
             print()
             
-            assert (actual - got) == 0
+            assert actual - got == 0
+            input('\n:::\n')
 
 
-def test_b_operator_formula(rank=2):
+def test_b_operator_formula(rank=2, dd=2, ww=None, wk=None):
     Groth = lambda w: DoubleGrothendieckB.get(w)
     substitute = op_substitute
     act = op_act
     gety = op_gety
+
+    def evaluate(vec):
+        ans = 0 
+        for v in vec:
+            ans += vec[v].substitute(0, -1) * substitute(Groth(v))
+        ans = substitute(ans)
+        return ans
 
     def kchain(k, n):
         chain =  []
@@ -105,67 +159,11 @@ def test_b_operator_formula(rank=2):
         return chain
 
     def expand(w, k):
-        ans = 0
-
-        c = w(k)
-        tup = rank * [0]
-        tup[abs(c) - 1] = -(1 if c > 0 else -1)
-        tup = tuple(tup)
-
-        q = collections.deque([(w, 1, tup, 0)])
-        chain = kchain(k, rank)
-        while q:
-            v, sgn, coeff, i = q.popleft()
-            if i == len(chain):
-                ans += sgn * gety(coeff) * substitute(Groth(v))
-                continue
-            
-            q.append((v, sgn, coeff, i + 1))
-            a, b, e = chain[i]
-            t = SignedPermutation.reflection_s(b, b, rank) if a == 0 else SignedPermutation.t_ij(a, b, rank)
-            if (v * t).length() == v.length() + 1:
-                if e == -1:
-                    q.append((v * t, -sgn, coeff, i + 1))
-                elif e == 1:
-                    q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
-                else: 
-                    q.append((v * t, sgn, rank * (0,), i + 1))
-        return substitute(ans)
-
-    for k in range(1, rank):
-        for w in SignedPermutation.all(rank - 1):
-            w = w.inflate(rank)
-            print()
-            print()
-            print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
-            print()
-            
-            actual = (1 - X(2 * k - 1)) * Groth(w)
-            print('want =', actual)
-            print()
-
-            got = expand(w, k)
-            print(' got =', got)
-            print()
-            
-            assert (actual - got).truncate_degree(rank - 1) == 0
-
-
-def test_c_operator_formula(rank=2, dd=2):
-    Groth = lambda w: DoubleGrothendieckC.get(w)
-    substitute = op_substitute
-    act = op_act
-    gety = op_gety
-
-    def kchain(k, n):
-        chain =  []
-        chain += [(i, k, 1) for i in range(k - 1, -n - 1, -1) if i != -k]
-        chain += [(k, l, -1) for l in range(n, k, -1)]
-        return chain
-
-    def expand(w, k):
-        ans = 0
-        bns = Vector(printer=lambda v: 'GC%s' % v)
+        # ans = 0
+        ans = Vector(
+            printer=lambda v: '\\fkGB_{%s}' % ' '.join([str(a) if a > 0 else '\\overline{%s}' % str(-a) for a in v.reduce().oneline]),
+            sorter=lambda v: v.length()
+        )
 
         c = w(k)
         tup = w.rank * [0]
@@ -177,8 +175,96 @@ def test_c_operator_formula(rank=2, dd=2):
         while q:
             v, sgn, coeff, i = q.popleft()
             if i == len(chain):
-                ans += sgn * gety(coeff) * substitute(Groth(v))
-                bns += Vector({v: sgn * gety(coeff)})
+                # ans += sgn * gety(coeff) * substitute(Groth(v))
+                ans += Vector({v: (-X(0))**(v.length() - w.length()) * sgn * gety(coeff)})
+                continue
+            
+            q.append((v, sgn, coeff, i + 1))
+            a, b, e = chain[i]
+            t = SignedPermutation.reflection_s(b, b, w.rank) if a == 0 else SignedPermutation.t_ij(a, b, w.rank)
+            if (v * t).length() == v.length() + 1:
+                if e == -1:
+                    q.append((v * t, -sgn, coeff, i + 1))
+                elif e == 1:
+                    q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
+                else: 
+                    q.append((v * t, sgn, rank * (0,), i + 1))
+        # return substitute(ans)
+        return ans
+
+    for k in [wk] if wk is not None else range(1, rank):
+        for w in [ww] if ww is not None else SignedPermutation.all(rank - 1):
+            for d in range(dd + 1):
+                w = w.inflate(rank + d)
+                print()
+                print()
+                print('n =', rank + d, 'w =', w, 'k =', k, 'chain =', kchain(k, w.rank))
+                print()
+
+                vec = expand(w, k)
+                printvec(vec)
+
+                got = evaluate(vec)
+                print(' got =', str(got)[:100] + ' ... ')
+                actual = (1 - X(2 * k - 1)) * Groth(w)
+                print('want =', str(actual)[:100] + ' ... ')
+                print()
+                
+                assert (actual - got).truncate_degree(rank + d - 1) == 0
+                input('\n:::\n')
+
+
+
+def printvec(vec):
+    modvec = str(y_substitute(vec))
+    modvec = modvec.replace('β', '\\beta')
+    modvec = modvec.replace('*', ' \\cdot ')
+    for i in range(100, 0, -1):
+        s = str(i)
+        var = 'y_%s' % s
+        modvec = modvec.replace('y_%s' % str(i), '(1 + \\beta y_{%s})' % s)
+        modvec = modvec.replace('^-%s' % s, '^{-%s}' % s)
+    print(' got =', '}\n\\\\&\\quad        + '.join(modvec.split('} + ')))
+    print()
+
+
+def test_c_operator_formula(rank=2, dd=2, ww=None, wk=None):
+    Groth = lambda w: DoubleGrothendieckC.get(w)
+    substitute = op_substitute
+    act = op_act
+    gety = op_gety
+
+    def evaluate(vec):
+        ans = 0 
+        for v in vec:
+            ans += vec[v].substitute(0, -1) * substitute(Groth(v))
+        ans = substitute(ans)
+        return ans
+
+    def kchain(k, n):
+        chain =  []
+        chain += [(i, k, 1) for i in range(k - 1, -n - 1, -1) if i != -k]
+        chain += [(k, l, -1) for l in range(n, k, -1)]
+        return chain
+
+    def expand(w, k):
+        ans = Vector(
+            printer=lambda v: '\\fkGC_{%s}' % ' '.join([str(a) if a > 0 else '\\overline{%s}' % str(-a) for a in v.reduce().oneline]),
+            sorter=lambda v: v.length()
+        )
+
+        c = w(k)
+        tup = w.rank * [0]
+        tup[abs(c) - 1] = -(1 if c > 0 else -1)
+        tup = tuple(tup)
+
+        q = collections.deque([(w, 1, tup, 0)])
+        chain = kchain(k, w.rank)
+        while q:
+            v, sgn, coeff, i = q.popleft()
+            if i == len(chain):
+                # ans += sgn * gety(coeff) * substitute(Groth(v))
+                ans += Vector({v: (-X(0))**(v.length() - w.length()) * sgn * gety(coeff)})
                 continue
             
             q.append((v, sgn, coeff, i + 1))
@@ -189,36 +275,43 @@ def test_c_operator_formula(rank=2, dd=2):
                     q.append((v * t, -sgn, coeff, i + 1))
                 else:
                     q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
-        return substitute(ans), bns
+        # return substitute(ans), bns
+        return ans
 
-    for k in range(1, rank):
-        for w in SignedPermutation.all(rank - 1):
+    for k in [wk] if wk is not None else range(1, rank):
+        for w in [ww] if ww is not None else SignedPermutation.all(rank - 1):
             for d in range(dd + 1):
                 w = w.inflate(rank + d)
                 print()
                 print()
                 print('n =', rank + d, 'w =', w, 'k =', k, 'chain =', kchain(k, w.rank))
                 print()
-                
-                actual = (1 - X(2 * k - 1)) * Groth(w)
-                print('want =', actual)
-                print()
 
-                got, vec = expand(w, k)
-                print(' got =', got)
-                print()
-                print('      =', '\n        + '.join(str(vec).split(' + ')))
+                vec = expand(w, k)
+                printvec(vec)
+
+                got = evaluate(vec)
+                print(' got =', str(got)[:100] + ' ... ')
+                actual = (1 - X(2 * k - 1)) * Groth(w)
+                print('want =', str(actual)[:100] + ' ... ')
                 print()
                 
                 assert (actual - got).truncate_degree(rank + d - 1) == 0
-            input('\n')
+                input('\n:::\n')
 
 
-def test_d_operator_formula(rank=2):
+def test_d_operator_formula(rank=2, dd=2, ww=None, wk=None):
     Groth = lambda w: DoubleGrothendieckD.get(w)
     substitute = op_substitute
     act = op_act
     gety = op_gety
+
+    def evaluate(vec):
+        ans = 0 
+        for v in vec:
+            ans += vec[v].substitute(0, -1) * substitute(Groth(v))
+        ans = substitute(ans)
+        return ans
 
     def kchain(k, n):
         chain =  []
@@ -227,51 +320,66 @@ def test_d_operator_formula(rank=2):
         return chain
 
     def expand(w, k):
-        ans = 0
+        ans = Vector(
+            printer=lambda v: '\\fkGD_{%s}' % ' '.join([str(a) if a > 0 else '\\overline{%s}' % str(-a) for a in v.reduce().oneline]),
+            sorter=lambda v: v.length()
+        )
 
         c = w(k)
-        tup = rank * [0]
+        tup = w.rank * [0]
         tup[abs(c) - 1] = -(1 if c > 0 else -1)
         tup = tuple(tup)
 
         q = collections.deque([(w, 1, tup, 0)])
-        chain = kchain(k, rank)
+        chain = kchain(k, w.rank)
         while q:
             v, sgn, coeff, i = q.popleft()
             if i == len(chain):
-                # print('*', sgn, coeff, v, ':', sgn * gety(coeff))
-                # print('?', sgn * gety(coeff) * substitute(Groth(v)))
-                ans += sgn * gety(coeff) * substitute(Groth(v))
+                # ans += sgn * gety(coeff) * substitute(Groth(v))
+                ans += Vector({v: (-X(0))**(v.length() - w.length()) * sgn * gety(coeff)})
                 continue
             
             q.append((v, sgn, coeff, i + 1))
             
             a, b, e = chain[i]
-            t = SignedPermutation.t_ij(a, b, rank)
+            t = SignedPermutation.t_ij(a, b, w.rank)
             if (v * t).dlength() == v.dlength() + 1:
                 if e == -1:
                     q.append((v * t, -sgn, coeff, i + 1))
                 else:
                     q.append((v * t, sgn, act(v * t * v.inverse(), coeff), i + 1))
-        return substitute(ans)
+        #return substitute(ans)
+        return ans
 
-    for k in range(1, rank):
-        for w in SignedPermutation.all(rank - 1, dtype=True):
-            w = w.inflate(rank)
-            print()
-            print()
-            print('n =', rank, 'w =', w, 'k =', k, 'chain =', kchain(k, rank))
-            print()
-            
-            actual = (1 - X(2 * k - 1)) * Groth(w)
-            print('want =', actual)
-            print()
+    for k in [wk] if wk is not None else range(1, rank):
+            for w in [ww] if ww is not None else SignedPermutation.all(rank - 1, dtype=True):
+                for d in range(dd + 1):
+                    w = w.inflate(rank + d)
+                    print()
+                    print()
+                    print('n =', rank + d, 'w =', w, 'k =', k, 'chain =', kchain(k, w.rank))
+                    print()
 
-            got = expand(w, k)
-            print(' got =', got)
-            print()
-            
-            assert (actual - got).truncate_degree(rank - 1) == 0
+                    vec = expand(w, k)
+                    printvec(vec)
+
+                    got = evaluate(vec)
+                    print(' got =', str(got)[:100] + ' ... ')
+                    actual = (1 - X(2 * k - 1)) * Groth(w)
+                    print('want =', str(actual)[:100] + ' ... ')
+                    print()
+                    
+                    assert (actual - got).truncate_degree(rank + d - 1) == 0
+                    input('\n:::\n')
+
+
+def y_substitute(vec):
+    def sub(f):
+        for v in f.variables():
+            if v % 2 == 0 and v > 0:
+                f = f.set_variable(v, X(-v // 2))
+        return f
+    return Vector({v: sub(vec[v]) for v in vec}, printer=vec.printer, sorter=vec.sorter)
 
 
 def op_substitute(f):
@@ -906,11 +1014,24 @@ def signed(coll):
             yield tuple(zip(sub, signs))
 
 
-def test_b_grothendieck_transitions(n=3):
+def print_transitions(v, ans, letter):
+    vec = Vector(
+            printer=lambda v: '\\cF' + letter + '_{%s}' % ' '.join([str(a) if a > 0 else '\\overline{%s}' % str(-a) for a in v.reduce().oneline]),
+            sorter=lambda v: v.length()
+        )
+    for (z, coeff) in ans.dictionary.items():
+        vec += Vector({z: (-X(0))**(z.length() - v.length()) * coeff})
+    print()
+    print('\n + '.join(str(vec).replace('β', '\\beta').replace('*', ' \\cdot ').split(' + ')))
+
+
+def test_b_grothendieck_transitions(n=3, ww=None):
     beta = GrothendieckB.beta * MPolynomial.one()
     GROTH = GrothendieckB.get
 
-    for w in SignedPermutation.all(n):
+    for w in [ww] if ww is not None else SignedPermutation.all(n):
+        w = w.inflate(n)
+
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
             continue
@@ -926,12 +1047,25 @@ def test_b_grothendieck_transitions(n=3):
         
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
 
+        if ww is not None:
+            ans = beta**-1 * ans + Vector({v: -beta**-1})
+            ans = Vector({a.reduce(): coeff for (a, coeff) in ans.dictionary.items()})
+            while not all(a.is_grassmannian() for a in ans):
+                for a in list(ans):
+                    if not a.is_grassmannian():
+                        coeff = ans.dictionary[a]
+                        ans -= Vector({a: coeff})
+                        ans += coeff * test_b_grothendieck_transitions(a.rank, a)
+                        break
+            return ans
+
+        print('w =', w, 'r =', r, 's =', s, 'v =', v)
+
         expected = GROTH(v) - (beta * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
         expected *= -beta**-1
 
         actual = GROTH(w)
 
-        print('w =', w, 'r =', r, 's =', s, 'v =', v)
         if expected != actual:
             print()
             print('base:', -beta**-1 * GROTH(v))
@@ -991,11 +1125,13 @@ def test_double_b_grothendieck_transitions(n=3):
         assert expected == actual
 
 
-def test_c_grothendieck_transitions(n=3):
+def test_c_grothendieck_transitions(n=3, ww=None):
     beta = GrothendieckC.beta * MPolynomial.one()
     GROTH = GrothendieckC.get
 
-    for w in SignedPermutation.all(n):
+    for w in [ww] if ww is not None else SignedPermutation.all(n):
+        w = w.inflate(n)
+
         r = [i for i in range(1, n) if w(i) > w(i + 1)]
         if len(r) == 0:
             continue
@@ -1009,6 +1145,18 @@ def test_c_grothendieck_transitions(n=3):
         chain += [(SignedPermutation.reflection_t(i, r, n + 1), beta) for i in range(1, r)]
         
         ans = expand_reflection_chain(v, chain, lambda x: x.length())
+
+        if ww is not None:
+            ans = beta**-1 * ans + Vector({v: -beta**-1})
+            ans = Vector({a.reduce(): coeff for (a, coeff) in ans.dictionary.items()})
+            while not all(a.is_grassmannian() for a in ans):
+                for a in list(ans):
+                    if not a.is_grassmannian():
+                        coeff = ans.dictionary[a]
+                        ans -= Vector({a: coeff})
+                        ans += coeff * test_c_grothendieck_transitions(a.rank, a)
+                        break
+            return ans
 
         expected = GROTH(v) - (beta * X(r) + 1) * sum([coeff * GROTH(z) for (z, coeff) in ans.dictionary.items()])
         expected *= -beta**-1
