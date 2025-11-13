@@ -2,7 +2,7 @@ from clans import Clan
 from permutations import Permutation
 
 
-def test():
+def test(slow=False):
     _test_AI(1)
     _test_AI(2)
     _test_AI(3)
@@ -15,10 +15,17 @@ def test():
     _test_AII(5)
     _test_AII(7)
 
+    if slow:
+        _test_AI(7)
+        _test_AI(8)
 
-def precsim(k):
+        _test_AII(9)
+        _test_AII(11)
+
+
+def precsim(k, n):
     def span(w):
-        o = [w(i) for i in range(1, w.rank + 1)]
+        o = [w(i) for i in range(1, n + 1)]
         for i in range(k, len(o) - 2):
             b, c, a = o[i:i + 3]
             if a < b < c:
@@ -27,9 +34,9 @@ def precsim(k):
     return span
 
 
-def precapprox(k):
+def precapprox(k, n):
     def span(w):
-        o = [w(i) for i in range(1, w.rank + 1)]
+        o = [w(i) for i in range(1, n + 1)]
         for i in range(k, len(o) - 3, 2):
             b, c, a, d = o[i:i + 4]
             if a < b < c < d:
@@ -47,7 +54,7 @@ def transitive_closure(*args):
 
 
 def _test_AI(rank=3):
-    print('testing AI, rank =,' rank)
+    print('testing AI, rank =', rank)
     gamma_set = set(Permutation.involutions(rank + 1))
     invol_set = gamma_set
     rs_fn = lambda x: x
@@ -55,13 +62,14 @@ def _test_AI(rank=3):
     extended_brion_fn = brion_fn
     matchings_fn = lambda z: {()}
     shape_fn = lambda w: ()
-    is_aligned_fn = lambda m: True
-    generator_fn = lambda z: z.get_max_atom().inverse()
-    span_fn = precsim(0)
+    is_aligned_fn = lambda gamma, m: True
+    generator_fn = lambda z, m: z.get_max_atom().inverse()
+    span_fn = precsim(0, rank + 1)
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
 def _test_AII(rank=3):
-    print('testing AII, rank =,' rank)
+    print('testing AII, rank =', rank)
     assert rank % 2 != 0
     gamma_set = set(Permutation.fpf_involutions(rank + 1))
     invol_set = gamma_set
@@ -70,9 +78,10 @@ def _test_AII(rank=3):
     extended_brion_fn = brion_fn
     matchings_fn = lambda z: {()}
     shape_fn = lambda w: ()
-    is_aligned_fn = lambda m: True
-    generator_fn = lambda z: z.get_max_fpf_atom().inverse()
-    span_fn = precapprox(0)
+    is_aligned_fn = lambda gamma, m: True
+    generator_fn = lambda z, m: z.get_max_fpf_atom().inverse()
+    span_fn = precapprox(0, rank + 1)
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
 def span(generator, preorder_fn):
@@ -93,7 +102,7 @@ def span(generator, preorder_fn):
 def _generic_test(
         gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, 
         matchings_fn, shape_fn, is_aligned_fn, 
-        generator_fn, span_fn):
+        generator_fn, preorder_fn):
     expected_invol = {rs_fn(gamma) for gamma in gamma_set}
     assert expected_invol == invol_set
 
@@ -102,7 +111,7 @@ def _generic_test(
         extended_brion = extended_brion_fn(z)
 
         expected_matchings = set(matchings_fn(z))
-        actual_matchings = {matchings_fn(w) for w in extended_brion}
+        actual_matchings = {shape_fn(w) for w in extended_brion}
         assert expected_matchings == actual_matchings
 
         matchings[z] = {m: set() for m in actual_matchings}
