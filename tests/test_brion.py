@@ -3,6 +3,17 @@ from permutations import Permutation
 
 
 def test(slow=False):
+    _test_AIII(1)
+    _test_AIII(2)
+    _test_AIII(3)
+    _test_AIII(4)
+    _test_AIII(5)
+
+    _test_AII(1)
+    _test_AII(3)
+    _test_AII(5)
+    _test_AII(7)
+
     _test_AI(1)
     _test_AI(2)
     _test_AI(3)
@@ -10,17 +21,15 @@ def test(slow=False):
     _test_AI(5)
     _test_AI(6)
 
-    _test_AII(1)
-    _test_AII(3)
-    _test_AII(5)
-    _test_AII(7)
-
     if slow:
         _test_AI(7)
         _test_AI(8)
 
         _test_AII(9)
         _test_AII(11)
+        
+        _test_AIII(6)
+        _test_AIII(7)
 
 
 def precsim(k, n):
@@ -31,6 +40,19 @@ def precsim(k, n):
             if a < b < c:
                 new_o = o[:i] + [c, a, b] + o[i + 3:]
                 yield w.__class__(*new_o)
+    return span
+
+
+def precsim_AIII(k, n):
+    def span(w):
+        o = [w(i) for i in range(1, n + 1)]
+        for i in range(len(o) - 1):
+            j = len(o) - 1 - i
+            if (j - 2) - (i + 1) >= k:
+                a1, b1, b2, a2 = o[i], o[i + 1], o[j - 1], o[j]
+                if a1 < b1 and a2 < b2:
+                    new_o = o[:i] + [b1, a1] + o[i + 2:j - 1] + [a2, b2] + o[j + 1:]
+                    yield w.__class__(*new_o)
     return span
 
 
@@ -53,7 +75,7 @@ def transitive_closure(*args):
     return span
 
 
-def _test_AI(rank=3):
+def _test_AI(rank):
     print('testing AI, rank =', rank)
     gamma_set = set(Permutation.involutions(rank + 1))
     invol_set = gamma_set
@@ -68,7 +90,7 @@ def _test_AI(rank=3):
     _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
-def _test_AII(rank=3):
+def _test_AII(rank):
     print('testing AII, rank =', rank)
     assert rank % 2 != 0
     gamma_set = set(Permutation.fpf_involutions(rank + 1))
@@ -82,6 +104,33 @@ def _test_AII(rank=3):
     generator_fn = lambda z, m: z.get_max_fpf_atom().inverse()
     span_fn = precapprox(0, rank + 1)
     _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
+def _test_AIII(rank):
+    n = rank + 1
+    twisted = set(Permutation.twisted_involutions(n))
+
+    print('testing AIII, rank =', rank)
+    for p in range(n + 1):
+        q = n - p
+        k = abs(p - q)
+        print('  ', 'p =', p, 'q =', q)
+        
+        gamma_set = set(Clan.all_a(p, q))
+        invol_set = {z for z in twisted if len(z.twisted_fixed_points(n)) >= k}
+        rs_fn = lambda gamma: gamma.richardson_springer_involution()
+        brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
+        extended_brion_fn = lambda z: {w.inverse() for w in z.get_twisted_atoms(n, offset=k)}
+        
+        base = lambda z: z.twisted_fixed_points(n)
+        triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
+        matchings_fn = lambda z: {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) == k}
+        
+        shape_fn = lambda w: tuple(sorted(w.inverse().twisted_shape(n, k)))
+        is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
+        generator_fn = lambda z, m: z.get_min_twisted_atom(n, m).inverse()
+        span_fn = precsim_AIII(k, n)
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
 def span(generator, preorder_fn):
@@ -110,6 +159,7 @@ def _generic_test(
     for z in invol_set:
         extended_brion = extended_brion_fn(z)
 
+        print('z =', z)
         expected_matchings = set(matchings_fn(z))
         actual_matchings = {shape_fn(w) for w in extended_brion}
         assert expected_matchings == actual_matchings
@@ -120,6 +170,7 @@ def _generic_test(
             matchings[z][m].add(w)
 
         for m in matchings[z]:
+            print('  ', 'm =', m)
             gen = generator_fn(z, m)
             expected_block = span(gen, preorder_fn)
             actual_block = matchings[z][m]
