@@ -4,6 +4,15 @@ from signed import SignedPermutation
 
 
 def test(slow=False):
+    _test_DI(1)
+    _test_DI(2)
+    _test_DI(3)
+    _test_DI(4)
+    _test_DI(5)
+    _test_DI(6)
+    _test_DI(7)
+    _test_DI(8)
+
     _test_CII(1)
     _test_CII(2)
     _test_CII(3)
@@ -83,6 +92,38 @@ def precsim_AIII(k, n):
                     new_o = o[:i] + [b1, a1] + o[i + 2:j - 1] + [a2, b2] + o[j + 1:]
                     yield w.__class__(*new_o)
     return span
+
+
+def approx_D(k, n):
+    def span(w):
+        o = [w(i) for i in range(1, n + 1)]
+        if k == 0 and len(o) >= 3:
+            b, c, a = o[:3]
+            if a < -b < c:
+                new_o = [-c, a, -b] + o[3:]
+                yield w.__class__(*new_o)
+
+            # neg_c, a, neg_b = o[:3]
+            # c = -neg_c
+            # b = -neg_b
+            # if a < -b < c:
+            #     new_o = [b, c, a] + o[3:]
+            #     yield w.__class__(*new_o)
+
+        elif k > 0 and len(o) > k:
+            b, a = o[0], o[k]
+            if abs(a) < abs(b):
+                new_o = [-b] + o[1:k] + [-a] + o[k + 1:]
+                yield w.__class__(*new_o)
+    return span
+
+
+def es(w):
+    o = list(w.oneline)
+    c = len([a for a in o if a < 0])
+    if c % 2 != 0:
+        w = w.__class__(*([-o[0]] + o[1:]))
+    return w
 
 
 def precapprox(k, n):
@@ -331,6 +372,53 @@ def _test_CII(rank):
             return SignedPermutation(*(u + v))
 
         span_fn = precapprox(k, n)
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
+def _test_DI(rank):
+    n = rank
+    invol = set(SignedPermutation.involutions(n, dtype=True, twisted=False))
+
+    print('testing DI, rank =', rank)
+    for p in range(2 * n + 1):
+        if (p + n) % 2 != 0:
+            continue
+        q = 2 * n - p
+        k = abs(p - q) // 2
+        print('  ', 'p =', p, 'q =', q)
+        
+        gamma_set = {Clan(oneline, Clan.TYPE_D1 if p % 2 == 0 else Clan.TYPE_D2) for oneline in Clan.symmetric_clans(p, q)}
+        invol_set = {z for z in invol if len(z.neg()) >= k}
+        rs_fn = lambda gamma: gamma.richardson_springer_involution()
+        brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
+        extended_brion_fn = lambda z: {w.inverse() for w in z.get_atoms_d(twisted=False, offset=k)}
+        
+        base = lambda z: [i for i in range(1, n + 1) if z(i) == -i]
+        triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
+        matchings_fn = lambda z: {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) == k}
+        
+        def shape_fn(w):
+            ans = []
+            o = [w(i) for i in range(1, n + 1)]
+            ndes, nres = nest(o[k:])
+            for (a, b) in ndes:
+                if 0 < abs(a) < -b:
+                    ans.append((abs(a), -b))
+                    ans.append((b, -abs(a)))
+            for a in o[:k]:
+                b = abs(a)
+                ans.append((-b, b))
+            return tuple(sorted(ans))
+
+        is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
+        
+        def generator_fn(z, m):
+            c = sorted([b for (a, b) in m if a + b == 0])
+            u = c
+            v = desword(cyc_pm(z, m, n))
+            return es(SignedPermutation(*(u + v)))
+
+        span_fn = transitive_closure(precsim(k, n), approx_D(k, n))
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
