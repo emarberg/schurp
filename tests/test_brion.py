@@ -1,8 +1,15 @@
 from clans import Clan
 from permutations import Permutation
+from signed import SignedPermutation
 
 
 def test(slow=False):
+    _test_BI(1)
+    _test_BI(2)
+    _test_BI(3)
+    _test_BI(4)
+    _test_BI(5)
+
     _test_AIII(1)
     _test_AIII(2)
     _test_AIII(3)
@@ -30,6 +37,9 @@ def test(slow=False):
         
         _test_AIII(6)
         _test_AIII(7)
+
+        _test_BI(6)
+        _test_BI(7)
 
 
 def precsim(k, n):
@@ -130,6 +140,83 @@ def _test_AIII(rank):
         is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
         generator_fn = lambda z, m: z.get_min_twisted_atom(n, m).inverse()
         span_fn = precsim_AIII(k, n)
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
+def nest(o):
+    ndes = []
+    while True:
+        i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]]
+        if len(i) == 0:
+            break
+        i = i[0]
+        ndes.append((o[i], o[i + 1]))
+        o = o[:i] + o[i + 2:]
+    nres = o
+    return ndes, nres
+
+
+def cycpm(z, m, n):
+    ans = [(a, b) for a in range(-n, n + 1) for b in range(1, n + 1) if a != 0 and (abs(a) < z(a) == b or a == z(a) == b)]
+    ans += [(-b, a) for (a, b) in m if 0 < a < b]
+    return sorted(ans, key=lambda pair: pair[1])
+
+
+def desword(p):
+    ans = []
+    for a, b in p:
+        if a == b:
+            ans.append(a)
+        else:
+            ans += [b, a]
+    return ans
+
+
+def _test_BI(rank):
+    n = rank
+    invol = set(SignedPermutation.involutions(n))
+
+    print('testing BI, rank =', rank)
+    for p in range(2 * n + 2):
+        q = 2 * n + 1 - p
+        k = (abs(p - q) - 1) // 2
+        print('  ', 'p =', p, 'q =', q)
+        
+        gamma_set = {Clan(oneline, Clan.TYPE_B) for oneline in Clan.symmetric_clans(p, q)}
+        invol_set = {z for z in invol if len(z.neg()) >= k}
+        rs_fn = lambda gamma: gamma.richardson_springer_involution()
+        brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
+        extended_brion_fn = lambda z: {w.inverse() for w in z.get_atoms(offset=k)}
+        
+        base = lambda z: [i for i in range(1, n + 1) if z(i) == -i]
+        triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
+        matchings_fn = lambda z: {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) >= k}
+        
+        def shape_fn(w):
+            ans = []
+            o = [w(i) for i in range(1, n + 1)]
+            ndes, nres = nest(o[k:])
+            for (a, b) in ndes:
+                if 0 < a < -b:
+                    ans.append((a, -b))
+                    ans.append((b, -a))
+            for a in nres:
+                if a < 0:
+                    ans.append((a, -a))
+            for a in o[:k]:
+                b = abs(a)
+                ans.append((-b, b))
+            return tuple(sorted(ans))
+
+        is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
+        
+        def generator_fn(z, m):
+            c = sorted([b for (a, b) in m if a + b == 0], reverse=True)
+            u = list(reversed(c[:k])) + [-b for b in c[k:]]
+            v = desword(cycpm(z, m, n))
+            return SignedPermutation(*(u + v))
+
+        span_fn = precsim(k, n)
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 

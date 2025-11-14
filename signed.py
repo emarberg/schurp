@@ -1474,7 +1474,7 @@ class SignedPermutation(SignedMixin):
                     if z and y == z:
                         yield newline
 
-        minimum = self._min_inv_atom_oneline()
+        minimum = self._min_inv_atom_oneline(sh=None)
         add = {minimum}
         while add:
             for w in add:
