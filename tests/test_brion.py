@@ -4,14 +4,19 @@ from signed import SignedPermutation
 
 
 def test(slow=False):
+    _test_DII(1)
+    _test_DII(2)
+    _test_DII(3)
+    _test_DII(4)
+    _test_DII(5)
+    _test_DII(6)
+
     _test_DI(1)
     _test_DI(2)
     _test_DI(3)
     _test_DI(4)
     _test_DI(5)
     _test_DI(6)
-    _test_DI(7)
-    _test_DI(8)
 
     _test_CII(1)
     _test_CII(2)
@@ -68,6 +73,12 @@ def test(slow=False):
 
         _test_CII(6)
         _test_CII(7)
+
+        _test_DI(7)
+        _test_DI(8)
+
+        _test_DII(7)
+        _test_DII(8)
 
 
 def precsim(k, n):
@@ -416,6 +427,54 @@ def _test_DI(rank):
             c = sorted([b for (a, b) in m if a + b == 0])
             u = c
             v = desword(cyc_pm(z, m, n))
+            return es(SignedPermutation(*(u + v)))
+
+        span_fn = transitive_closure(precsim(k, n), approx_D(k, n))
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
+def _test_DII(rank):
+    n = rank
+    t = SignedPermutation.s_i(0, n)
+    invol = set(SignedPermutation.involutions(n, dtype=True, twisted=True))
+
+    print('testing DII, rank =', rank)
+    for p in range(2 * n + 1):
+        if (p + n) % 2 == 0:
+            continue
+        q = 2 * n - p
+        k = abs(p - q) // 2
+        print('  ', 'p =', p, 'q =', q)
+        
+        gamma_set = {Clan(oneline, Clan.TYPE_D1 if p % 2 == 0 else Clan.TYPE_D2) for oneline in Clan.symmetric_clans(p, q)}
+        invol_set = {z for z in invol if len((t * z).neg()) >= k}
+        rs_fn = lambda gamma: gamma.richardson_springer_involution()
+        brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
+        extended_brion_fn = lambda z: {w.inverse() for w in z.get_atoms_d(twisted=True, offset=k)}
+        
+        base = lambda z: [i for i in range(1, n + 1) if (t * z)(i) == -i]
+        triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
+        matchings_fn = lambda z: {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) == k}
+        
+        def shape_fn(w):
+            ans = []
+            o = [w(i) for i in range(1, n + 1)]
+            ndes, nres = nest(o[k:])
+            for (a, b) in ndes:
+                if 0 < abs(a) < -b:
+                    ans.append((abs(a), -b))
+                    ans.append((b, -abs(a)))
+            for a in o[:k]:
+                b = abs(a)
+                ans.append((-b, b))
+            return tuple(sorted(ans))
+
+        is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
+        
+        def generator_fn(z, m):
+            c = sorted([b for (a, b) in m if a + b == 0])
+            u = c
+            v = desword(cyc_pm(t * z, m, n))
             return es(SignedPermutation(*(u + v)))
 
         span_fn = transitive_closure(precsim(k, n), approx_D(k, n))
