@@ -522,7 +522,7 @@ def _test_DIII(rank):
         if n % 2 != 0:
             return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 2 != 0}
         else:
-            return {m for m in Permutation.ncsp_matchings(base(z)) if len(z.neg()) == 0 or triv(m) % 4 == z.ell_zero() % 4}
+            return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 4 == z.ell_zero() % 4}
 
     
     def shape_fn(w):
