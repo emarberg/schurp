@@ -4,6 +4,19 @@ from signed import SignedPermutation
 
 
 def test(slow=False):
+    _test_CII(1)
+    _test_CII(2)
+    _test_CII(3)
+    _test_CII(4)
+    _test_CII(5)
+    _test_CII(6)
+
+    _test_CI(1)
+    _test_CI(2)
+    _test_CI(3)
+    _test_CI(4)
+    _test_CI(5)
+
     _test_BI(1)
     _test_BI(2)
     _test_BI(3)
@@ -40,6 +53,12 @@ def test(slow=False):
 
         _test_BI(6)
         _test_BI(7)
+
+        _test_CI(6)
+        _test_CI(7)
+
+        _test_CII(6)
+        _test_CII(7)
 
 
 def precsim(k, n):
@@ -156,7 +175,7 @@ def nest(o):
     return ndes, nres
 
 
-def cycpm(z, m, n):
+def cyc_pm(z, m, n):
     ans = [(a, b) for a in range(-n, n + 1) for b in range(1, n + 1) if a != 0 and (abs(a) < z(a) == b or a == z(a) == b)]
     ans += [(-b, a) for (a, b) in m if 0 < a < b]
     return sorted(ans, key=lambda pair: pair[1])
@@ -169,6 +188,16 @@ def desword(p):
             ans.append(a)
         else:
             ans += [b, a]
+    return ans
+
+
+def ascword(p):
+    ans = []
+    for a, b in p:
+        if a == b:
+            ans.append(a)
+        else:
+            ans += [a, b]
     return ans
 
 
@@ -213,10 +242,95 @@ def _test_BI(rank):
         def generator_fn(z, m):
             c = sorted([b for (a, b) in m if a + b == 0], reverse=True)
             u = list(reversed(c[:k])) + [-b for b in c[k:]]
-            v = desword(cycpm(z, m, n))
+            v = desword(cyc_pm(z, m, n))
             return SignedPermutation(*(u + v))
 
         span_fn = precsim(k, n)
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
+def _test_CI(rank):
+    n = rank
+    print('testing CI, rank =', rank)
+
+    gamma_set = set(Clan.all_c1(n))
+    invol_set = set(SignedPermutation.involutions(n))
+    rs_fn = lambda gamma: gamma.richardson_springer_involution()
+    brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
+    extended_brion_fn = lambda z: {w.inverse() for w in z.get_atoms()}
+    
+    base = lambda z: [i for i in range(1, n + 1) if z(i) == -i]
+    matchings_fn = lambda z: set(Permutation.ncsp_matchings(base(z)))
+    
+    def shape_fn(w):
+        ans = []
+        o = [w(i) for i in range(1, n + 1)]
+        ndes, nres = nest(o)
+        for (a, b) in ndes:
+            if 0 < a < -b:
+                ans.append((a, -b))
+                ans.append((b, -a))
+        for a in nres:
+            if a < 0:
+                ans.append((a, -a))
+        return tuple(sorted(ans))
+
+    is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
+    
+    def generator_fn(z, m):
+        c = sorted([b for (a, b) in m if a + b == 0], reverse=True)
+        u = [-b for b in c]
+        v = desword(cyc_pm(z, m, n))
+        return SignedPermutation(*(u + v))
+
+    span_fn = precsim(0, n)
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
+def _test_CII(rank):
+    n = rank
+    invol = set(SignedPermutation.fpf_involutions(n))
+
+    print('testing CII, rank =', rank)
+    for p in range(0, 2 * n + 1, 2):
+        q = 2 * n - p
+        k = abs(p - q) // 2
+        print('  ', 'p =', p, 'q =', q)
+        
+        gamma_set = {Clan(oneline, Clan.TYPE_C2) for oneline in Clan.symmetric_clans(p, q, disallow_negations=True)}
+        invol_set = {z for z in invol if len(z.neg()) >= k}
+        rs_fn = lambda gamma: gamma.richardson_springer_involution()
+        brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
+        extended_brion_fn = lambda z: {w.inverse() for w in z.get_fpf_atoms(offset=k)}
+        
+        base = lambda z: [i for i in range(1, n + 1) if z(i) == -i]
+        triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
+        matchings_fn = lambda z: {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) == k}
+        
+        def shape_fn(w):
+            ans = []
+            o = [w(i) for i in range(1, n + 1)]
+            for a in o[:k]:
+                b = abs(a)
+                ans.append((-b, b))
+            o = o[k:]
+            while o:
+                b, c = o[:2]
+                if 0 < c < -b:
+                    ans.append((c, -b))
+                    ans.append((b, -c))
+                o = o[2:]
+            return tuple(sorted(ans))
+
+        is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
+        
+        def generator_fn(z, m):
+            c = sorted([b for (a, b) in m if a + b == 0])
+            u = c
+            v = ascword(cyc_pm(z, m, n))
+            return SignedPermutation(*(u + v))
+
+        span_fn = precapprox(k, n)
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
