@@ -4,6 +4,13 @@ from signed import SignedPermutation
 
 
 def test(slow=False):
+    _test_DIII(1)
+    _test_DIII(2)
+    _test_DIII(3)
+    _test_DIII(4)
+    _test_DIII(5)
+    _test_DIII(6)
+
     _test_DII(1)
     _test_DII(2)
     _test_DII(3)
@@ -79,6 +86,9 @@ def test(slow=False):
 
         _test_DII(7)
         _test_DII(8)
+
+        _test_DIII(7)
+        _test_DIII(8)
 
 
 def precsim(k, n):
@@ -481,6 +491,70 @@ def _test_DII(rank):
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
+def _test_DIII(rank):
+    n = rank
+    t = SignedPermutation.s_i(0, n)
+    
+    if n % 2 == 0:
+        invol = {
+            z for z in SignedPermutation.fpf_involutions(n)
+            if z.is_even_signed()
+            and (len(z.neg()) > 0 or z.ell_zero() % 4 == 0)
+        }
+    else:
+        invol = {
+            t * z for z in SignedPermutation.fpf_involutions(n)
+            if not z.is_even_signed()
+        }
+
+    print('testing DIII, rank =', rank)
+
+    gamma_set = set(Clan.all_d3(n))
+    invol_set = invol
+    rs_fn = lambda gamma: gamma.richardson_springer_involution()
+    brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
+    extended_brion_fn = lambda z: {w.inverse() for w in z.get_fpf_atoms_d()}
+    
+    base = lambda z: [i for i in range(1, n + 1) if (t * z if n % 2 != 0 else z)(i) == -i]
+    triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
+    
+    def matchings_fn(z):
+        if n % 2 != 0:
+            return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 2 != 0}
+        else:
+            return {m for m in Permutation.ncsp_matchings(base(z)) if len(z.neg()) == 0 or triv(m) % 4 == z.ell_zero() % 4}
+
+    
+    def shape_fn(w):
+        ans = []
+        o = [w(i) for i in range(1, n + 1)]
+        if n % 2 != 0:
+            a = abs(o[0])
+            ans.append((-a, a))
+            o = o[1:]
+        while o:
+            b, c = o[:2]
+            if 0 < c < -b:
+                ans.append((c, -b))
+                ans.append((b, -c))
+            elif c < 0 < -b:
+                ans.append((c, -c))
+                ans.append((b, -b))
+            o = o[2:]
+        return tuple(sorted(ans))
+
+    is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
+    
+    def generator_fn(z, m):
+        c = sorted([b for (a, b) in m if a + b == 0])
+        u = [-b for b in reversed(c)]
+        v = ascword(cyc_pm(z if n % 2 == 0 else (t * z), m, n))
+        return es(SignedPermutation(*(u + v)))
+
+    span_fn = precapprox(0 if n % 2 == 0 else 1, n)
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
 def span(generator, preorder_fn):
     ans = set()
     add = {generator}
@@ -507,18 +581,16 @@ def _generic_test(
     for z in invol_set:
         extended_brion = extended_brion_fn(z)
 
-        print('z =', z)
         expected_matchings = set(matchings_fn(z))
         actual_matchings = {shape_fn(w) for w in extended_brion}
         assert expected_matchings == actual_matchings
-
+    
         matchings[z] = {m: set() for m in actual_matchings}
         for w in extended_brion:
             m = shape_fn(w)
             matchings[z][m].add(w)
 
         for m in matchings[z]:
-            print('  ', 'm =', m)
             gen = generator_fn(z, m)
             expected_block = span(gen, preorder_fn)
             actual_block = matchings[z][m]
