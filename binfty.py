@@ -11,6 +11,21 @@ BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
 class InfiniteCrystal:
 
+    @classmethod 
+    def binfty(cls, n):
+        elem = {i: cls.elementary(i, n) for i in range(1, n)}
+        return cls.tensor(*[elem[i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
+
+    @classmethod 
+    def sqrt_binfty(cls, n):
+        elem = {i: cls.sqrt_elementary(i, n) for i in range(1, n)}
+        return cls.sqrt_tensor(*[elem[i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
+
+    @classmethod 
+    def simple_sqrt_binfty(cls, n):
+        elem = {i: cls.simple_sqrt_elementary(i, n) for i in range(1, n)}
+        return cls.sqrt_tensor(*[elem[i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
+
     @classmethod
     def is_isomorphic(cls, b, b_vertices, c, c_vertices, ignore_strings=False, verbose=False):
         assert b.indices == c.indices
@@ -317,21 +332,6 @@ class InfiniteCrystal:
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
-    def alt_sqrt_elementary(cls, j, n):
-        generator = 0
-        indices = list(range(1, n))
-
-        e_operators = lambda i, x: None if i not in [j, j + 1] else (x + 1) if i == j else ((x - 1) if x % 2 == 0 else None)
-        f_operators = lambda i, x: None if i not in [j, j + 1] else (x - 1) if i == j else ((x + 1) if x % 2 != 0 else None)
-
-        e_strings = lambda i, x: None if i not in [j, j + 1] else -x if i == j else (0 if x % 2 == 0 else -1)
-        f_strings = lambda i, x: None if i not in [j, j + 1] else x if i == j else -x
-
-        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
-
-        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
- 
-    @classmethod
     def sqrt_elementary(cls, j, n):
         generator = 0
         indices = list(range(1, n))
@@ -347,6 +347,36 @@ class InfiniteCrystal:
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
+    def simple_sqrt_elementary(cls, j, n):
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None if i not in [j] else (x + 1)
+        f_operators = lambda i, x: None if i not in [j] else (x - 1)
+
+        e_strings = lambda i, x: None if i not in [j] else -x
+        f_strings = lambda i, x: None if i not in [j] else x
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def alt_sqrt_elementary(cls, j, n):
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None if i not in [j, j + 1] else (x + 1) if i == j else ((x - 1) if x % 2 == 0 else None)
+        f_operators = lambda i, x: None if i not in [j, j + 1] else (x - 1) if i == j else ((x + 1) if x % 2 != 0 else None)
+
+        e_strings = lambda i, x: None if i not in [j, j + 1] else -x if i == j else (0 if x % 2 == 0 else -1)
+        f_strings = lambda i, x: None if i not in [j, j + 1] else x if i == j else -x
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+ 
+    @classmethod
     def odd_sqrt_elementary(cls, j, n):
         generator = 0
         indices = list(range(1, n))
@@ -360,6 +390,49 @@ class InfiniteCrystal:
         # f_strings = lambda i, x: None if i not in [j, j - 1] else x if i == j else -x
 
         weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def r_lambda(cls, lam, n=None):
+        if n is None:
+            n = len(lam)
+
+        assert len(lam) <= n
+        lam = tuple(lam)
+        while len(lam) < n:
+            lam += (0,)
+
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None
+        f_operators = lambda i, x: None
+
+        e_strings = lambda i, x: lam[i] - lam[i - 1]
+        f_strings = lambda i, x: 0
+
+        weight_map = lambda x: lam
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def sqrt_r_lambda(cls, lam, n):
+        assert len(lam) <= n
+        lam = tuple(lam)
+        while len(lam) < n:
+            lam += (0,)
+
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None
+        f_operators = lambda i, x: None
+
+        e_strings = lambda i, x: 2 * (lam[i] - lam[i - 1])
+        f_strings = lambda i, x: 0
+
+        weight_map = lambda x: lam
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
@@ -432,7 +505,6 @@ class InfiniteCrystal:
 
         return True
         
-
     def demazure(self, thresh, *args):
         vertices = {(self.generator, 0)}
         for i in reversed(args):
@@ -448,7 +520,24 @@ class InfiniteCrystal:
             vertices |= add
         return {v for (v, h) in vertices if h <= thresh}
 
-    def vertices(self, e_thresh, f_thresh):
+    def finitize(self, e_thresh=None, f_thresh=None):
+        rank = len(self.indices) + 1
+        vertices = self.vertices(e_thresh, f_thresh)
+        edges = {(i, v, self.f_operator(i, v)) for i in self.indices for v in vertices if self.f_operator(i, v) in vertices}
+        weights = {v: self.weight(v) for v in vertices}
+        return AbstractGLCrystal(rank, vertices, edges, weights, self.printer)
+
+    def vertices(self, e_thresh=None, f_thresh=None):
+        if e_thresh is None or f_thresh is None:
+            ans = None
+            thresh = 0
+            while True:
+                bns = self.vertices(thresh if e_thresh is None else e_thresh, thresh if f_thresh is None else f_thresh)
+                if ans is not None and len(bns) == len(ans):
+                    return ans
+                ans = bns
+                thresh += 1
+
         vertices = set()
         q = collections.deque([(self.generator, 0, 0)])
         while q:
@@ -460,7 +549,7 @@ class InfiniteCrystal:
                     q.append((self.f_operator(a, g), i, j + 1))
         return vertices
 
-    def draw_thresh(self, e_thresh, f_thresh):
+    def draw_thresh(self, e_thresh=None, f_thresh=None):
         vertices = self.vertices(e_thresh, f_thresh)
         self.draw(vertices)
 

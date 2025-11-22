@@ -376,6 +376,8 @@ class Partition:
 
     @classmethod
     def generate(cls, n, max_part=None, max_row=None, strict=False, even_parts=False):
+        # max_part = largest allowed part 
+        # max_row  = largest allowed number of nonzero parts 
         if n == 0:
             yield ()
         else:
