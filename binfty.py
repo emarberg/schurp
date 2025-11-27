@@ -19,12 +19,19 @@ class InfiniteCrystal:
     @classmethod 
     def sqrt_binfty(cls, n):
         elem = {i: cls.sqrt_elementary(i, n) for i in range(1, n)}
+        print([i for j in range(n - 1, 0, -1) for i in range(j, n)])
         return cls.sqrt_tensor(*[elem[i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
 
     @classmethod 
     def simple_sqrt_binfty(cls, n):
         elem = {i: cls.simple_sqrt_elementary(i, n) for i in range(1, n)}
         return cls.sqrt_tensor(*[elem[i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
+
+    @classmethod 
+    def odd_sqrt_binfty(cls, n):
+        elem = {i: cls.odd_sqrt_elementary(i, n) for i in range(1, n)}
+        print([n - i for j in range(n - 1, 0, -1) for i in range(j, n)])
+        return cls.sqrt_tensor(*[elem[n - i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
 
     @classmethod
     def is_isomorphic(cls, b, b_vertices, c, c_vertices, ignore_strings=False, verbose=False):
@@ -332,21 +339,6 @@ class InfiniteCrystal:
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
-    def sqrt_elementary(cls, j, n):
-        generator = 0
-        indices = list(range(1, n))
-
-        e_operators = lambda i, x: None if i not in [j, j + 1] else (x + 1) if i == j else ((x - 1) if x % 2 == 0 else None)
-        f_operators = lambda i, x: None if i not in [j, j + 1] else (x - 1) if i == j else ((x + 1) if x % 2 != 0 else None)
-
-        e_strings = lambda i, x: None if i not in [j, j + 1] else -x if i == j else x
-        f_strings = lambda i, x: None if i not in [j, j + 1] else x if i == j else (0 if x % 2 == 0 else 1)
-
-        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
-
-        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
-
-    @classmethod
     def simple_sqrt_elementary(cls, j, n):
         generator = 0
         indices = list(range(1, n))
@@ -362,7 +354,26 @@ class InfiniteCrystal:
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
+    def sqrt_elementary(cls, j, n):
+        # opposite arrows indexed by j + 1
+
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None if i not in [j, j + 1] else (x + 1) if i == j else ((x - 1) if x % 2 == 0 else None)
+        f_operators = lambda i, x: None if i not in [j, j + 1] else (x - 1) if i == j else ((x + 1) if x % 2 != 0 else None)
+
+        e_strings = lambda i, x: None if i not in [j, j + 1] else -x if i == j else x
+        f_strings = lambda i, x: None if i not in [j, j + 1] else x if i == j else (0 if x % 2 == 0 else 1)
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
     def alt_sqrt_elementary(cls, j, n):
+        # different string lengths
+
         generator = 0
         indices = list(range(1, n))
 
@@ -378,6 +389,7 @@ class InfiniteCrystal:
  
     @classmethod
     def odd_sqrt_elementary(cls, j, n):
+        # opposite arrows indexed by j - 1
         generator = 0
         indices = list(range(1, n))
 
@@ -389,9 +401,26 @@ class InfiniteCrystal:
         f_strings = lambda i, x: None if i not in [j, j - 1] else x if i == j else (-1 if x % 2 != 0 else 0)
         # f_strings = lambda i, x: None if i not in [j, j - 1] else x if i == j else -x
 
-        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+        # weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2) if i == j - 1 else (-(x // 2) - int(x % 2)) for i in range(n))
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    # @classmethod
+    # def odd_sqrt_elementary(cls, j, n):
+    #     # opposite arrows indexed by j - 1
+    #     generator = 0
+    #     indices = list(range(1, n))
+
+    #     e_operators = lambda i, x: None if i not in [j, j - 1] else (x + 1) if i == j else ((x - 1) if x % 2 == 0 else None)
+    #     f_operators = lambda i, x: None if i not in [j, j - 1] else (x - 1) if i == j else ((x + 1) if x % 2 != 0 else None)
+
+    #     e_strings = lambda i, x: None if i not in [j, j - 1] else -x if i == j else x
+    #     f_strings = lambda i, x: None if i not in [j, j - 1] else x if i == j else (1 if x % 2 != 0 else 0)
+        
+    #     weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2) if i == j - 1 else (-(x // 2) - int(x % 2)) for i in range(n))
+
+    #     return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
     def r_lambda(cls, lam, n=None):

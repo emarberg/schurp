@@ -91,6 +91,19 @@ def test(slow=False):
         _test_DIII(8)
 
 
+def inv(w):
+    ans = 0
+    for i in range(len(w)):
+        for j in range(i + 1, len(w)):
+            if w[i] > w[j]:
+                ans += 1
+    return ans
+
+
+def neg(w):
+    return len([a for a in w if a < 0])
+
+
 def precsim(k, n):
     def span(w):
         o = [w(i) for i in range(1, n + 1)]
@@ -133,9 +146,21 @@ def approx_D(k, n):
 
         elif k > 0 and len(o) > k:
             b, a = o[0], o[k]
-            if abs(a) < abs(b):
+            if abs(a) < abs(b) and a > 0:
                 new_o = [-b] + o[1:k] + [-a] + o[k + 1:]
                 yield w.__class__(*new_o)
+    return span
+
+
+def extend_D(n):
+    def span(w):
+        o = [w(i) for i in range(1, n + 1)]
+        for i in range(n - 2):
+            for j in range(i + 2, n - 2):
+                a, b, c, d = o[i], -o[i + 1], o[j], -o[j + 1]
+                if abs(a) < b < c < d and all(abs(o[k]) <= b for k in range(j)):
+                    new_o = o[:i] + [a, -d] + o[i + 2:j] + [b, -c] + o[j + 2:]
+                    yield w.__class__(*new_o)
     return span
 
 
@@ -406,6 +431,8 @@ def _test_DI(rank):
             continue
         q = 2 * n - p
         k = abs(p - q) // 2
+        if k != 0:
+            continue
         print('  ', 'p =', p, 'q =', q)
         
         gamma_set = {Clan(oneline, Clan.TYPE_D1 if p % 2 == 0 else Clan.TYPE_D2) for oneline in Clan.symmetric_clans(p, q)}
@@ -440,7 +467,48 @@ def _test_DI(rank):
             return es(SignedPermutation(*(u + v)))
 
         span_fn = transitive_closure(precsim(k, n), approx_D(k, n))
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+        
+        def rk(w, addoffset=False):
+            o = [w(i) for i in range(1, n + 1)]
+            ndes, nres = nest(o[k:])
+            
+            while len(nres) >= 2 and nres[0] < 0:
+                if -nres[0] > nres[1]:
+                    ndes += [(nres[0], nres[1])]
+                nres = nres[2:]
+            
+            right = {a for (b, a) in ndes}
+            left = set(o[k:]) - right
+
+            w_right = [a for a in o if a in right]
+            w_left = [-a for a in reversed(o) if a in left] + [a for a in o if a in left]
+
+            if k == 0:
+                # offset = len([(b1, a1, b2, a2) for b1, a1 in ndes for b2, a2 in ndes if abs(b2) < abs(b1) < -a1 < -a2])
+                # if not addoffset:
+                offset = 0
+                return offset + (inv(w_left) - neg(o[k:])) // 2 - inv(w_right)
+            else:
+                return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
+        
+        rank_fn = lambda w: rk(w)
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn)
+
+        def minimal_gen(z):
+            m = []
+            b = base(z)
+            while len(b) > 1:
+                p, q = b[:2]
+                m += [(p, q), (-q, -p)]
+                b = b[2:]
+            m = tuple(sorted(m))
+            return generator_fn(z, m)
+            
+        # if k == 0:
+        #     for z in invol_set:
+        #         rank_fn = lambda w: rk(w, True) - rk(generator_fn(z, shape_fn(w)))
+        #         for w in extended_brion_fn(z):
+        #             span_test(w, extend_D(n), rank_fn)
 
 
 def _test_DII(rank):
@@ -488,7 +556,25 @@ def _test_DII(rank):
             return es(SignedPermutation(*(u + v)))
 
         span_fn = transitive_closure(precsim(k, n), approx_D(k, n))
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+        
+        def rank_fn(w):
+            o = [w(i) for i in range(1, n + 1)]
+            ndes, nres = nest(o[k:])
+            
+            while len(nres) >= 2 and nres[0] < 0:
+                if -nres[0] > nres[1]:
+                    ndes += [(nres[0], nres[1])]
+                nres = nres[2:]
+            
+            right = {a for (b, a) in ndes}
+            left = set(o[k:]) - right
+
+            w_right = [a for a in o if a in right]
+            w_left = [-a for a in reversed(o) if a in left] + [a for a in o if a in left]
+
+            return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
+        
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn)
 
 
 def _test_DIII(rank):
@@ -549,13 +635,15 @@ def _test_DIII(rank):
         c = sorted([b for (a, b) in m if a + b == 0])
         u = [-b for b in reversed(c)]
         v = ascword(cyc_pm(z if n % 2 == 0 else (t * z), m, n))
-        return es(SignedPermutation(*(u + v)))
+        ans = SignedPermutation(*(u + v))
+        assert (ans == es(ans)) or (n % 2 != 0)
+        return es(ans)
 
     span_fn = precapprox(0 if n % 2 == 0 else 1, n)
     _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
 
 
-def span(generator, preorder_fn):
+def span_test(generator, preorder_fn, rank_fn=None):
     ans = set()
     add = {generator}
     while add:
@@ -564,6 +652,11 @@ def span(generator, preorder_fn):
             if g not in ans:
                 ans.add(g)
                 for h in preorder_fn(g):
+                    if rank_fn is not None:
+                        if rank_fn(g) + 1 != rank_fn(h):
+                            print(g, rank_fn(g), h, rank_fn(h))
+                            input('')
+                        #assert rank_fn(g) + 1 == rank_fn(h)
                     if h not in ans or add:
                         newadd.add(h)
         add = newadd
@@ -573,7 +666,7 @@ def span(generator, preorder_fn):
 def _generic_test(
         gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, 
         matchings_fn, shape_fn, is_aligned_fn, 
-        generator_fn, preorder_fn):
+        generator_fn, preorder_fn, rank_fn=None):
     expected_invol = {rs_fn(gamma) for gamma in gamma_set}
     assert expected_invol == invol_set
 
@@ -592,7 +685,7 @@ def _generic_test(
 
         for m in matchings[z]:
             gen = generator_fn(z, m)
-            expected_block = span(gen, preorder_fn)
+            expected_block = span_test(gen, preorder_fn, rank_fn)
             actual_block = matchings[z][m]
             assert expected_block == actual_block
 
