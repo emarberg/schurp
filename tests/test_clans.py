@@ -498,6 +498,11 @@ def test_atoms_c1(n=4):
                 assert clan.weyl_group_weight(a) == d - a.ell_zero()
             assert (atoms == btoms) == clan.is_alternating()
 
+            if all(clan.weyl_group_weight(a) == 0 for a in atoms):
+                print(clan, z)
+                for a in atoms:
+                    print('  ', a)
+
             atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
             if z not in extended_atoms:
                 extended_atoms[z] = btoms

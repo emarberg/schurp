@@ -530,6 +530,14 @@ def _test_DII(rank):
         brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
         extended_brion_fn = lambda z: {w.inverse() for w in z.get_atoms_d(twisted=True, offset=k)}
         
+        embed_z = lambda z: SignedPermutation(*((t * z).oneline + (-n - 1,)))
+        embed_w = lambda w: SignedPermutation(*(w.oneline[:k] + (n + 1,) + w.oneline[k:]))
+        for z in invol_set:
+            upz = embed_z(z)
+            atoms = {embed_w(w) for w in extended_brion_fn(z)}
+            btoms = {w.inverse() for w in upz.get_atoms_d(twisted=False, offset=k + 1) if w.inverse()(k + 1) == n + 1}
+            assert atoms == btoms
+
         base = lambda z: [i for i in range(1, n + 1) if (t * z)(i) == -i]
         triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
         matchings_fn = lambda z: {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) == k}
@@ -600,7 +608,16 @@ def _test_DIII(rank):
     rs_fn = lambda gamma: gamma.richardson_springer_involution()
     brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
     extended_brion_fn = lambda z: {w.inverse() for w in z.get_fpf_atoms_d()}
-    
+
+    if n % 2 != 0:
+        embed_z = lambda z: SignedPermutation(*((t * z).oneline + (-n - 1,)))
+        embed_w = lambda w: SignedPermutation(*((-n - 1, -w(1)) + w.oneline[1:]))
+        for z in invol_set:
+            upz = embed_z(z)
+            atoms = {embed_w(w) for w in extended_brion_fn(z)}
+            btoms = {w.inverse() for w in upz.get_fpf_atoms_d() if w.inverse()(1) == -n - 1}
+            assert atoms == btoms
+
     base = lambda z: [i for i in range(1, n + 1) if (t * z if n % 2 != 0 else z)(i) == -i]
     triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
     
@@ -610,7 +627,6 @@ def _test_DIII(rank):
         else:
             return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 4 == z.ell_zero() % 4}
 
-    
     def shape_fn(w):
         ans = []
         o = [w(i) for i in range(1, n + 1)]
