@@ -4,28 +4,52 @@ from signed import SignedPermutation
 from even import EvenSignedPermutation
 
 
+def setact(pi, s):
+    return {pi(i) for i in s}
+
 def test_action_a(n=3):
     for a in Clan.all_a(n):
         for i in a.generators():
             b, _ = a.weak_order_action(i)
+
+            s = a.simple_generator(i)
             u = a.richardson_springer_map()
             v = b.richardson_springer_map()
-            signs_a = a.signs()
-            signs_b = b.signs()
 
             if type(a(i)) == bool and type(a(i + 1)) == bool and a(i) == a(i + 1):
                 assert a == b
             else:
-                s = a.simple_generator(i)
                 assert s % u % s == v
                 assert a.congruent(b) or a.contains(b)
 
+            c = a.simple_generator_cycles(i)
+            m = b.matching_sets()
+            a_plus, a_minus = a.sign_sets()
+            b_plus, b_minus = b.sign_sets()
+            if s % u % s == u:
+                assert a == b
+            else:
+                # print(a, a_plus, a_minus)
+                # print('  ', s, '= s(', i, ') :', c, 'contained in', m)
+                # print(b, b_plus, b_minus)
+                # print()
+                if {i, abs(i) + 1}.issubset(a_plus) or {i, abs(i) + 1}.issubset(a_minus):
+                    assert a == b
+                elif c.issubset(m):
+                    assert s % u % s == v
+                    assert a.matching_sets() == m - c
+                    assert a.contains(b)
+                else:
+                    assert s % u % s == v
+                    assert b_plus == setact(s, a_plus)
+                    assert b_minus == setact(s, a_minus)
+                    
 
 def test_action_b(n=3):
     for a in Clan.all_b(n):
         for i in a.generators():
             b, _ = a.weak_order_action(i)
-
+            bb = b.toggle(n) if i == 0 else b
             u = a.richardson_springer_map()
             v = b.richardson_springer_map()
 
@@ -41,7 +65,29 @@ def test_action_b(n=3):
                 s = a.simple_generator(i)
                 assert s % u % s == v
                 assert len(signs_a) - len(signs_b) in [0, 2, 4]
-                assert a.congruent(b) or a.contains(b.toggle(n) if i == 0 else b)
+                assert a.congruent(b) or a.contains(bb)
+
+            c = a.simple_generator_cycles(i)
+            m = b.matching_sets()
+            a_plus, a_minus = a.sign_sets()
+            b_plus, b_minus = b.sign_sets()
+            if s % u % s == u:
+                assert a == b
+            else:
+                # print(a, a_plus, a_minus)
+                # print('  ', s, '= s(', i, ') :', c, 'contained in', m)
+                # print(b, b_plus, b_minus)
+                # print()
+                if {i, abs(i) + 1}.issubset(a_plus) or {i, abs(i) + 1}.issubset(a_minus):
+                    assert a == b
+                elif c.issubset(m):
+                    assert s % u % s == v
+                    assert a.matching_sets() == m - c
+                    assert a.contains(bb)
+                else:
+                    assert s % u % s == v
+                    assert b_plus == setact(s, a_plus)
+                    assert b_minus == setact(s, a_minus)
 
 
 def test_action_c1(n=3):
@@ -65,6 +111,28 @@ def test_action_c1(n=3):
                 assert s % u % s == v
                 assert len(signs_a) - len(signs_b) in [0, 2, 4]
                 assert a.congruent(b) or a.contains(b)
+
+            c = a.simple_generator_cycles(i)
+            m = b.matching_sets()
+            a_plus, a_minus = a.sign_sets()
+            b_plus, b_minus = b.sign_sets()
+            if s % u % s == u:
+                assert a == b
+            else:
+                # print(a, a_plus, a_minus)
+                # print('  ', s, '= s(', i, ') :', c, 'contained in', m)
+                # print(b, b_plus, b_minus)
+                # print()
+                if {i, abs(i) + 1}.issubset(a_plus) or {i, abs(i) + 1}.issubset(a_minus):
+                    assert a == b
+                elif c.issubset(m):
+                    assert s % u % s == v
+                    assert a.matching_sets() == m - c
+                    assert a.contains(b)
+                else:
+                    assert s % u % s == v
+                    assert b_plus == setact(s, a_plus)
+                    assert b_minus == setact(s, a_minus)
 
 
 def test_action_c2(n=3):
@@ -92,6 +160,28 @@ def test_action_c2(n=3):
                     assert v == w
                 assert len(signs_a) - len(signs_b) in [0, 4]
                 assert a.congruent(b) or a.contains(b)
+
+            c = a.simple_generator_cycles(i)
+            m = b.matching_sets()
+            a_plus, a_minus = a.sign_sets()
+            b_plus, b_minus = b.sign_sets()
+            if s % u % s == u:
+                assert a == b
+            else:
+                # print(a, a_plus, a_minus)
+                # print('  ', s, '= s(', i, ') :', c, 'contained in', m)
+                # print(b, b_plus, b_minus)
+                # print()
+                if {i, abs(i) + 1}.issubset(a_plus) or {i, abs(i) + 1}.issubset(a_minus):
+                    assert a == b
+                elif c.issubset(m):
+                    assert s % u % s == v
+                    assert a.matching_sets() == m - c
+                    assert a.contains(b)
+                else:
+                    assert s % u % s == v
+                    assert b_plus == setact(s, a_plus)
+                    assert b_minus == setact(s, a_minus)
 
 
 def test_action_d1(n=3):
@@ -122,6 +212,28 @@ def test_action_d1(n=3):
                 assert len(signs_a) - len(signs_b) in [0, 4]
                 assert a.congruent(b) or a.contains(b)
 
+            c = a.simple_generator_cycles(i)
+            m = b.matching_sets()
+            a_plus, a_minus = a.sign_sets()
+            b_plus, b_minus = b.sign_sets()
+            if s % u % s == u:
+                assert a == b
+            else:
+                # print(a, a_plus, a_minus)
+                # print('  ', s, '= s(', i, ') :', c, 'contained in', m)
+                # print(b, b_plus, b_minus)
+                # print()
+                if {i, abs(i) + 1}.issubset(a_plus) or {i, abs(i) + 1}.issubset(a_minus):
+                    assert a == b
+                elif c.issubset(m):
+                    assert s % u % s == v
+                    assert a.matching_sets() == m - c
+                    assert a.contains(b)
+                else:
+                    assert s % u % s == v
+                    assert b_plus == setact(s, a_plus)
+                    assert b_minus == setact(s, a_minus)
+
 
 def test_action_d2(n=3):
     for a in Clan.all_d2(n):
@@ -147,6 +259,28 @@ def test_action_d2(n=3):
                 assert v == s % u % s.star()
                 assert len(signs_a) - len(signs_b) in [0, 4]
                 assert a.congruent(b) or a.contains(b)
+
+            c = a.simple_generator_cycles(i)
+            m = b.matching_sets()
+            a_plus, a_minus = a.sign_sets()
+            b_plus, b_minus = b.sign_sets()
+            if s % u % s.star() == u:
+                assert a == b
+            else:
+                # print(a, a_plus, a_minus)
+                # print('  ', s, '= s(', i, ') :', c, 'contained in', m)
+                # print(b, b_plus, b_minus)
+                # print()
+                if {i, abs(i) + 1}.issubset(a_plus) or {i, abs(i) + 1}.issubset(a_minus):
+                    assert a == b
+                elif c.issubset(m):
+                    assert s % u % s.star() == v
+                    assert a.matching_sets() == m - c
+                    assert a.contains(b)
+                else:
+                    assert s % u % s.star() == v
+                    assert b_plus == setact(s, a_plus)
+                    assert b_minus == setact(s, a_minus)
 
 
 def test_action_d3(n=3):
@@ -182,6 +316,35 @@ def test_action_d3(n=3):
                 else:
                     bb = b
                 assert a.congruent(bb) or a.contains(b)
+
+            c = a.simple_generator_cycles(i)
+            m = b.matching_sets()
+            a_plus, a_minus = a.sign_sets()
+            b_plus, b_minus = b.sign_sets()
+
+            u = a.richardson_springer_involution()
+            v = b.richardson_springer_involution()
+            
+            u = EvenSignedPermutation(*u)
+            v = EvenSignedPermutation(*v)
+            ss = s if n % 2 == 0 else s.star()
+            if v == ss % v % s or ss % v % s != u:
+                assert a == b
+            else:
+                # print(a, a_plus, a_minus)
+                # print('  ', s, '= s(', i, ') :', c, 'contained in', m)
+                # print(b, b_plus, b_minus)
+                # print()
+                if {i, abs(i) + 1}.issubset(a_plus) or {i, abs(i) + 1}.issubset(a_minus):
+                    assert a == b
+                elif c.issubset(m):
+                    assert ss % v % s == u
+                    assert a.matching_sets() == m - c
+                    assert a.contains(b)
+                else:
+                    assert ss % v % s == u
+                    assert b_plus == setact(s, a_plus)
+                    assert b_minus == setact(s, a_minus)
 
 
 def _test_hecke_atoms(cl, dtype=False, verbose=False):

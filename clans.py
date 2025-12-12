@@ -212,6 +212,38 @@ class Clan:
     def signs(self, omit=()):
         return tuple(x for i, x in enumerate(self.oneline) if type(x) == bool and (i + 1) not in omit)
 
+    def sign_sets(self):
+        n = len(self.oneline) // 2
+
+        if self.family == self.TYPE_A:
+            plus = {i + 1 for i, x in enumerate(self.oneline) if type(x) == bool and x}
+            minus = {i + 1 for i, x in enumerate(self.oneline) if type(x) == bool and not x}
+
+        elif self.family == self.TYPE_B:
+            plus = {i - n for i, x in enumerate(self.oneline) if type(x) == bool and x}
+            minus = {i - n for i, x in enumerate(self.oneline) if type(x) == bool and not x}
+
+        else:
+            adjust = lambda i: (i - n) if i < n else (i - n + 1)
+            plus = {adjust(i) for i, x in enumerate(self.oneline) if type(x) == bool and x}
+            minus = {adjust(i) for i, x in enumerate(self.oneline) if type(x) == bool and not x}
+
+        return plus, minus
+
+    def matching_sets(self):
+        n = len(self.oneline) // 2
+        
+        if self.family == self.TYPE_A:
+            adjust = lambda x: x
+
+        elif self.family == self.TYPE_B:
+            adjust = lambda x: x - n - 1
+
+        else:
+            adjust = lambda i: (i - n - 1) if i <= n else (i - n)
+
+        return {(adjust(i + 1), adjust(self.oneline[i])) for i in range(len(self.oneline)) if type(self.oneline[i]) == int and i + 1 < self.oneline[i]}
+
     def clan_type(self):
         return self.plus() - self.minus()
 
@@ -461,6 +493,16 @@ class Clan:
             return SignedPermutation.s_i(i, self.rank())
         elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
             return SignedPermutation.ds_i(i, self.rank())
+        else:
+            raise Exception
+
+    def simple_generator_cycles(self, i):
+        if self.family == self.TYPE_A:
+            return {(i, i + 1)}
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return {(i, i + 1), (-i - 1, -i)} if i > 0 else {(-1, 1)}
+        elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            return {(i, i + 1), (-i - 1, -i)} if i > 0 else {(-1, 2), (-2, 1)}
         else:
             raise Exception
 
