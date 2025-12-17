@@ -283,10 +283,14 @@ class EvenSignedPermutation(SignedMixin):
 
             if a > 0 and {a, a + 1}.issubset(y.involution_fixed_points(twist)):
                 e, f = tuple(sorted([abs(v(a)), abs(v(a + 1))]))
+                # print('a =', a, ':', e, f, v(a), v(a+1))
                 sh |= {(e, f), (-f, -e)}
+                # input('\n')
             elif a == 0 and {1, 2}.issubset(y.involution_fixed_points(twist)):
                 e, f = tuple(sorted([abs(v(1)), abs(v(2))]))
+                # print('a =', a, ':', e, f, v(1), v(2))
                 sh |= {(e, f), (-f, -e)}
+                # input('\n')
             s = self.s_i(a, n)
             t = s.star() if twist else s
 

@@ -609,25 +609,8 @@ def _test_DIII(rank):
     brion_fn = lambda gamma: {w.inverse() for w in gamma.get_atoms()}
     extended_brion_fn = lambda z: {w.inverse() for w in z.get_fpf_atoms_d()}
 
-    if n % 2 != 0:
-        embed_z = lambda z: SignedPermutation(*((t * z).oneline + (-n - 1,)))
-        embed_w = lambda w: SignedPermutation(*((-n - 1, -w(1)) + w.oneline[1:]))
-        for z in invol_set:
-            upz = embed_z(z)
-            atoms = {embed_w(w) for w in extended_brion_fn(z)}
-            btoms = {w.inverse() for w in upz.get_fpf_atoms_d() if w.inverse()(1) == -n - 1}
-            assert atoms == btoms
-
-    base = lambda z: [i for i in range(1, n + 1) if (t * z if n % 2 != 0 else z)(i) == -i]
-    triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
-    
-    def matchings_fn(z):
-        if n % 2 != 0:
-            return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 2 != 0}
-        else:
-            return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 4 == z.ell_zero() % 4}
-
     def shape_fn(w):
+        n = len(w.oneline)
         ans = []
         o = [w(i) for i in range(1, n + 1)]
         if n % 2 != 0:
@@ -644,6 +627,28 @@ def _test_DIII(rank):
                 ans.append((b, -b))
             o = o[2:]
         return tuple(sorted(ans))
+
+    if n % 2 != 0:
+        embed_z = lambda z: SignedPermutation(*((t * z).oneline + (-n - 1,)))
+        embed_w = lambda w: SignedPermutation(*((-n - 1, -w(1)) + w.oneline[1:]))
+        for z in invol_set:
+            upz = embed_z(z)
+            atoms = {embed_w(w) for w in extended_brion_fn(z)}
+            btoms = {w.inverse() for w in upz.get_fpf_atoms_d() if w.inverse()(1) == -n - 1}
+            #print(z)
+            #for w in extended_brion_fn(z):
+            #    print('  ', w, shape_fn(w), embed_w(w), shape_fn(embed_w(w)))
+            #    input('\n')
+            assert atoms == btoms
+
+    base = lambda z: [i for i in range(1, n + 1) if (t * z if n % 2 != 0 else z)(i) == -i]
+    triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
+    
+    def matchings_fn(z):
+        if n % 2 != 0:
+            return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 2 != 0}
+        else:
+            return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 4 == z.ell_zero() % 4}
 
     is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
     

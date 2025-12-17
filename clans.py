@@ -273,9 +273,9 @@ class Clan:
             support = [a for pair in matching for a in pair if min(pair) > 0]
             trivial = [a for a in range(1, self.rank() + 1) if type(self(a)) == bool and a not in support]
             signs = [self(i) for i in trivial]
-            if any(signs[i] != signs[i + 1] for i in range(len(signs) - 1)):
-                return False
-            return True
+            #if any(signs[i] != signs[i + 1] for i in range(len(signs) - 1)):
+            #    return False
+            # return True
 
         trivial = [a for (a, b) in sorted(matching) if -a == b]
         k = abs(self.clan_type()) // 2
@@ -293,8 +293,8 @@ class Clan:
             if len(trivial) != k:
                 return False
             signs = [self(self.rank() + 1 + i) for i in reversed(trivial)]
-            if any(signs[i] != signs[i + 1] for i in range(0, len(signs) - 1)):
-                return False
+            # if any(signs[i] != signs[i + 1] for i in range(0, len(signs) - 1)):
+            #     return False
         if self.family == self.TYPE_D3:
             if len(trivial) % 2 != self.rank() % 2:
                 return False
