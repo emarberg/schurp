@@ -431,8 +431,6 @@ def _test_DI(rank):
             continue
         q = 2 * n - p
         k = abs(p - q) // 2
-        if k != 0:
-            continue
         print('  ', 'p =', p, 'q =', q)
         
         gamma_set = {Clan(oneline, Clan.TYPE_D1 if p % 2 == 0 else Clan.TYPE_D2) for oneline in Clan.symmetric_clans(p, q)}
@@ -456,7 +454,28 @@ def _test_DI(rank):
             for a in o[:k]:
                 b = abs(a)
                 ans.append((-b, b))
-            return tuple(sorted(ans))
+            ans = tuple(sorted(ans))
+            if k == 0:
+                z = SignedPermutation.identity(n)
+                bns = [] 
+                word = reversed(w.get_reduced_word(dtype=True))
+                u = w
+                for i in word:
+                    s = SignedPermutation.ds_i(i, n)
+                    u = u * s
+                    if i == -1 and z(1) == 2:
+                        (a, b) = tuple(sorted([abs(u(-1)), abs(u(2))]))
+                        bns.append((a, b))
+                        bns.append((-b, -a))
+                    elif i > 0 and z(-i) == i + 1:
+                        (a, b) = tuple(sorted([abs(u(i)), abs(u(i + 1))]))
+                        bns.append((a, b))
+                        bns.append((-b, -a))
+                    z = s.dtype_demazure(z.dtype_demazure(s))
+                bns = tuple(sorted(bns))
+                # print(w, ans, bns)
+                assert ans == bns
+            return ans
 
         is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
         

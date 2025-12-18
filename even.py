@@ -278,6 +278,7 @@ class EvenSignedPermutation(SignedMixin):
         yfixed = y.involution_fixed_points(twist)
         v = self.identity(n)
         sh = set()
+        th = set()
         for a in aword:
             vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh, 'a =', a, 'leads to')
 
@@ -285,11 +286,13 @@ class EvenSignedPermutation(SignedMixin):
                 e, f = tuple(sorted([abs(v(a)), abs(v(a + 1))]))
                 # print('a =', a, ':', e, f, v(a), v(a+1))
                 sh |= {(e, f), (-f, -e)}
+                th |= {(v(a), v(a + 1)), (v(-a-1), v(-a))}
                 # input('\n')
             elif a == 0 and {1, 2}.issubset(y.involution_fixed_points(twist)):
                 e, f = tuple(sorted([abs(v(1)), abs(v(2))]))
                 # print('a =', a, ':', e, f, v(1), v(2))
                 sh |= {(e, f), (-f, -e)}
+                th |= {(v(-1), v(2)), (v(-2), v(1))}
                 # input('\n')
             s = self.s_i(a, n)
             t = s.star() if twist else s
@@ -304,7 +307,13 @@ class EvenSignedPermutation(SignedMixin):
         vprint('  v =', v, 'y =', y.cycle_repr(), 'shape =', sh)
         vprint()
         f = {i for p in sh for i in p}
-        return sh | {(-i, i) for i in yfixed - f if i > 0}
+        sh = sh | {(-i, i) for i in yfixed - f if i > 0}
+        #print(self.inverse() % self, '~', w0 * (self.inverse() % self))
+        #print('w =', self.inverse())
+        #print(sh)
+        #print(th)
+        #input('\n')
+        return sh
 
     def twisted_pair(self):
         def y(i):
