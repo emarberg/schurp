@@ -576,6 +576,25 @@ def test_all_c1():
             assert cl.clan_type() == 0
 
 
+def test_atoms(nn=6):
+    for n in range(1, nn + 1):
+        print('n =', n)
+        print('  AIII')
+        test_atoms_a(n)
+        print('  BI')
+        test_atoms_b(n)
+        print('  CI')
+        test_atoms_c1(n)
+        print('  CII')
+        test_atoms_c2(n)
+        print('  DI')
+        test_atoms_d1(n)
+        print('  DII')
+        test_atoms_d2(n)
+        print('  DIII')
+        test_atoms_d3(n)
+    
+    
 def test_atoms_a(n=4):
     for p in range(1, n):
         q = n - p
@@ -597,7 +616,7 @@ def test_atoms_a(n=4):
                 assert extended_atoms[z] == btoms
 
         unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
-        print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+        # print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
         assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 def test_atoms_b(n=4, verbose=False):
@@ -643,7 +662,7 @@ def test_atoms_b(n=4, verbose=False):
                 assert extended_atoms[z] == btoms
 
         unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
-        print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+        # print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
         assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
@@ -661,10 +680,10 @@ def test_atoms_c1(n=4):
                 assert clan.weyl_group_weight(a) == d - a.ell_zero()
             assert (atoms == btoms) == clan.is_alternating()
 
-            if all(clan.weyl_group_weight(a) == 0 for a in atoms):
-                print(clan, z)
-                for a in atoms:
-                    print('  ', a)
+            #if all(clan.weyl_group_weight(a) == 0 for a in atoms):
+            #    print(clan, z)
+            #    for a in atoms:
+            #        print('  ', a)
 
             atoms_by_inv[z] = atoms_by_inv.get(z, set()) | atoms
             if z not in extended_atoms:
@@ -673,7 +692,7 @@ def test_atoms_c1(n=4):
                 assert extended_atoms[z] == btoms
 
         unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
-        print('n =', m, len(atoms_by_inv), len(unions_match))
+        # print('n =', m, len(atoms_by_inv), len(unions_match))
         assert len(atoms_by_inv) == len(unions_match)
 
 
@@ -700,7 +719,7 @@ def test_atoms_c2(n=4):
                 assert extended_atoms[z] == btoms
 
         unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
-        print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+        # print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
         assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
@@ -712,7 +731,7 @@ def test_atoms_d1(nn=4, verbose=False):
             twisted = offset % 2 != 0
             g = SignedPermutation.dbase_atom(n, twisted, offset)
 
-            print('n =', n, '(p, q) =', (p, q))
+            # print('n =', n, '(p, q) =', (p, q))
             atoms_by_inv = {}
             extended_atoms = {}
 
@@ -755,7 +774,7 @@ def test_atoms_d1(nn=4, verbose=False):
                     assert extended_atoms[z] == btoms
 
             unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
-            print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
+            # print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match))
             assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
@@ -767,7 +786,7 @@ def test_atoms_d2(nn=4, verbose=False):
             twisted = offset % 2 != 0
             g = SignedPermutation.dbase_atom(n, twisted, offset)
 
-            print('n =', n, '(p, q) =', (p, q))
+            # print('n =', n, '(p, q) =', (p, q))
 
             atoms_by_inv = {}
             extended_atoms = {}
@@ -803,15 +822,10 @@ def test_atoms_d2(nn=4, verbose=False):
                 else:
                     assert extended_atoms[z] == btoms
 
-            #print()
-            #print('extra:')
-            #for clan in extra:
-            #    print(clan, clan.is_alternating())
-
             unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
-            print()
-            print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match), len(equal))
-            print()
+            #print()
+            #print('p =', p, 'q =', q, len(atoms_by_inv), len(unions_match), len(equal))
+            #print()
             assert abs(p - q) > 1 or len(atoms_by_inv) == len(unions_match)
 
 
@@ -863,9 +877,9 @@ def test_atoms_d3(nn=4, verbose=False):
         #     print(clan, clan.is_alternating())
 
         unions_match = [z for z in atoms_by_inv if atoms_by_inv[z] == extended_atoms[z]]
-        print()
-        print('n =', n, len(atoms_by_inv), len(unions_match), len(equal))
-        print()
+        #print()
+        #print('n =', n, len(atoms_by_inv), len(unions_match), len(equal))
+        #print()
         assert len(atoms_by_inv) == len(unions_match)
 
 

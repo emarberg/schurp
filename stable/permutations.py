@@ -12,6 +12,7 @@ ORTHOGONAL_HECKE_CACHE = defaultdict(list)
 
 FPF_INVOLUTION_WORDS = {(): {()}}
 INVOLUTION_WORDS = {(): {()}}
+TWISTED_INVOLUTION_WORDS_CACHE = {}
 
 SIGNED_REDUCED_WORDS = {(): {()}}
 
@@ -44,9 +45,12 @@ class Permutation:
         self._ldes = None
         self._len = None
 
-    def star(self):
-        n = self.rank
-        return Permutation(*[n + 1 - i for i in reversed(self.oneline)])
+    def star(self, n=None):
+        n = self.rank if n is None else n
+        o = list(self.oneline)
+        while len(o) < n:
+            o.append(len(o) + 1)
+        return Permutation(*[n + 1 - i for i in reversed(o)])
 
     @property
     def oneline(self):
@@ -680,6 +684,21 @@ class Permutation:
             )
         return ans
 
+    def twisted_involution_stanley_symmetric_function(self, n, nvars):
+        assert self.is_unsigned()
+        assert self.star(n) == self.inverse()
+        ans = Vector()
+        for w in self.get_twisted_involution_words(n):
+            ans += Word.quasisymmetrize(w, Word.decreasing_zeta)
+        return self._symmetrize(ans, nvars)
+
+    def stanley_symmetric_function(self, n):
+        assert self.is_unsigned()
+        ans = Vector()
+        for w in self.get_reduced_words():
+            ans += Word.quasisymmetrize(w, Word.decreasing_zeta)
+        return self._symmetrize(ans, n)
+
     def stable_grothendieck(self, n, degree_bound=None):
         assert self.is_unsigned()
         ans = Vector()
@@ -790,6 +809,28 @@ class Permutation:
         else:
             for word in INVOLUTION_WORDS[oneline]:
                 yield word
+
+    def is_twisted_involution(self, n):
+        return self.is_unsigned() and n >= len(self.oneline) and self.inverse() == self.star(n)
+
+    def get_twisted_involution_words(self, n):
+        assert self.is_twisted_involution(n)
+        if self not in TWISTED_INVOLUTION_WORDS_CACHE:
+            TWISTED_INVOLUTION_WORDS_CACHE[(self, n)] = list(self._get_twisted_involution_words(n))
+        return TWISTED_INVOLUTION_WORDS_CACHE[(self, n)]
+
+    def _get_twisted_involution_words(self, n):
+        if self.is_identity():
+            return [()]
+        ans = []
+        for i in self.right_descent_set:
+            s = Permutation.s_i(i)
+            t = Permutation.s_i(n - i)
+            w = t * self * s
+            if self == w:
+                w = self * s
+            ans += [e + (i,) for e in w.get_twisted_involution_words(n)]
+        return ans
 
     @property
     def fpf_involution_words(self):

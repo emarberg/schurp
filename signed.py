@@ -869,6 +869,40 @@ class SignedPermutation(SignedMixin):
             ans += x.stanley_schur_q_decomposition()
         return ans
 
+    def dfpf_stanley_schur_s_decomposition(self):
+        ans = Vector()
+        for x in self.get_fpf_atoms_d():
+            ans += 2**((self.rank - 1)//2) * x.stanley_schur_d_decomposition()
+        return SchurQ.decompose_s_lambda(SchurP.to_q_basis(ans))
+
+    def dfpf_stanley_schur_p_decomposition(self):
+        ans = Vector()
+        for x in self.get_fpf_atoms_d():
+            ans += x.stanley_schur_d_decomposition()
+        return ans
+
+    def dinv_stanley_schur_s_decomposition(self, twisted=False):
+        tz = self.s_i(0, self.rank) * self if twisted else self
+        assert tz == tz.inverse()
+        
+        coeff = 2**(len([i for i in range(-self.rank, self.rank + 1) if i != 0 and tz(i) < i]) // 2)
+        
+        ans = Vector()
+        for x in self.get_atoms_d(twisted):
+            ans += coeff * x.stanley_schur_d_decomposition()
+        return SchurQ.decompose_s_lambda(SchurP.to_q_basis(ans))
+
+    def dinv_stanley_schur_p_decomposition(self, twisted=False):
+        tz = self.s_i(0, self.rank) * self if twisted else self
+        assert tz == tz.inverse()
+        
+        coeff = 2**(len([i for i in range(-self.rank, self.rank + 1) if i != 0 and tz(i) < i]) // 2)
+        
+        ans = Vector()
+        for x in self.get_atoms_d(twisted):
+            ans += coeff * x.stanley_schur_d_decomposition()
+        return ans
+
     def inv_stanley_schur_s_decomposition(self):
         assert self == self.inverse()
         ans = Vector()
@@ -924,6 +958,8 @@ class SignedPermutation(SignedMixin):
         return caches[bcd_type]
 
     def stanley_schur_decomposition(self, bcd_type):
+        assert bcd_type in ['B', 'C', 'D']
+        length = lambda w: w.dlength() if bcd_type == 'D' else w.length()
         cache = self._get_cache(bcd_type)
         w = self.reduce()
         n = w.rank
@@ -931,7 +967,7 @@ class SignedPermutation(SignedMixin):
         if w in cache:
             return cache[w]
 
-        sh = w.increasing_shape()
+        sh = w.increasing_shape(dtype=(bcd_type == 'D'))
         if sh is not None:
             return {sh: 1}
 
@@ -939,8 +975,8 @@ class SignedPermutation(SignedMixin):
         s = w.last_inversion(r)
         v = w * self.reflection_t(r, s, n)
 
-        v_len = len(v)
-        assert v_len + 1 == len(w)
+        v_len = length(v)
+        assert v_len + 1 == length(w)
 
         indices = []
         if bcd_type == 'C':
@@ -954,7 +990,7 @@ class SignedPermutation(SignedMixin):
         newline = v.oneline + (n + 1,)
         v = SignedPermutation(*newline)
         indices += [v * self.reflection_s(i, r, n + 1) for i in range(1, n + 2) if i != r]
-        indices = [x.reduce() for x in indices if v_len + 1 == len(x)]
+        indices = [x.reduce() for x in indices if v_len + 1 == length(x)]
 
         ans = defaultdict(int)
         for x in indices:
@@ -1000,9 +1036,12 @@ class SignedPermutation(SignedMixin):
     def is_grassmannian(self):
         return self.increasing_shape() is not None
 
-    def increasing_shape(self):
+    def increasing_shape(self, dtype=False):
         if all(self(i) < self(i + 1) for i in range(1, self.rank)):
-            return tuple(abs(i) for i in self.oneline if i < 0)
+            ans = tuple(abs(i) for i in self.oneline if i < 0)
+            if dtype:
+                ans = tuple(a - 1 for a in ans if a > 1)
+            return ans
 
     def last_descent(self):
         n = self.rank
