@@ -1,3 +1,13 @@
+def t(n):
+    for z in SignedPermutation.involutions(n, dtype=True):
+        print(z)
+        for w in z.get_atoms_d():
+            o = w.oneline
+            ndes, fix, neg = w._ndes()
+            print('  ', w.inverse(), ndes, neg+fix)
+            if len(neg) >= 2 and len(fix) >= 2 and not all(a < -b for (a,b) in ndes):
+                input('')
+
 
 from crystals import *
 c = AbstractPrimedQCrystal.from_strict_partition((2,1), 3)
