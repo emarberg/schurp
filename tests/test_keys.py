@@ -4,7 +4,7 @@ from keys import (
     sorting_permutation,
     symmetric_weak_compositions,
     skew_symmetric_weak_compositions,
-    key, atom, lascoux,
+    key, atom, lascoux, lascoux_atom,
     q_power,
     p_key, p_atom, p_lascoux, p_lascoux_atom,
     q_key, q_atom, q_lascoux, q_lascoux_atom,
@@ -90,6 +90,17 @@ def test_qkey_products(m=4, l=4):
                     dec = try_to_decompose_q(f * g)
                     print(dec and min(dec[0].values(), default=0) >= 0, alpha, beta)
 
+
+
+def test_lascoux_atom_expansion(m=4, l=4):
+    for n in range(m + 1):
+        for k in range(l + 1):
+            for alpha in weak_compositions(n, k, reduced=True):
+                f = lascoux_atom(alpha, 1)
+                dec = decompose_into_atoms(f)
+                val = set(dec.values())
+                print(alpha, val)
+                assert min(val) > 0
 
 
 def test_key_products(m=4, l=4):
@@ -426,6 +437,7 @@ def test_distinct_q_key(m=4, l=4):
     for k in seen:
         if len(seen[k]) > 1:
             print(seen[k], len(seen[k]), len({q_lascoux(v) for v in seen[k]}))
+    print('total instances seen:', len(seen))
 
 
 def test_distinct_p_lascoux(m=4, l=4):
