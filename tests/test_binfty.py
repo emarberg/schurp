@@ -12,39 +12,44 @@ from stable.vectors import Vector
 
 
 def test_r_lambda(n=3, k=10):
-    b = InfiniteCrystal.binfty(n)
-    for mu in Partition.all(k, max_row=n):
-        print(n, ':', 'mu =', mu)
-        r = InfiniteCrystal.r_lambda(mu, n)
-        t = InfiniteCrystal.tensor(r, b).finitize(0)
-        u = AbstractGLCrystal.from_partition(mu, n)
-        assert AbstractGLCrystal.find_isomorphism(t, u) is not None
+    for w in Permutation.longest_element(n).get_reduced_words():
+        b = InfiniteCrystal.binfty(n, w)
+        for mu in Partition.all(k, max_row=n):
+            print(n, ':', 'mu =', mu)
+            r = InfiniteCrystal.r_lambda(mu, n)
+            t = InfiniteCrystal.tensor(r, b).finitize(0)
+            u = AbstractGLCrystal.from_partition(mu, n)
+            assert AbstractGLCrystal.find_isomorphism(t, u) is not None
 
 
 def test_sqrt_r_lambda(n=3, k=10):
-    b = InfiniteCrystal.sqrt_binfty(n)
-    for mu in Partition.all(k, max_row=n):
-        print(n, ':', 'mu =', mu)
-        r = InfiniteCrystal.sqrt_r_lambda(mu, n)
-        top = InfiniteCrystal.sqrt_tensor(r, b)
-        t = top.finitize(0)
-        #u = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
-        #assert AbstractGLCrystal.find_isomorphism(t, u) is not None
-        try:
-            ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(t.character()))
-            assert ch == Vector({mu: 1})
-        except:
-            f = G(n, mu).polynomial().set_variable(0, 1)
-            g = t.character()
-            print('  ', f)
-            print()
-            print('  ', g)
-            print()
-            print('  ', g - f)
-            print()
-            top.draw_thresh(0)
-            # return top
-            input('')
+    for w in Permutation.longest_element(n).get_reduced_words():
+        b = InfiniteCrystal.sqrt_binfty(n, w)
+        for mu in Partition.all(k, max_row=n):
+            print(n, ':', 'mu =', mu)
+            r = InfiniteCrystal.sqrt_r_lambda(mu, n)
+            top = InfiniteCrystal.sqrt_tensor(r, b)
+            t = top.finitize(0)
+            try:
+                u = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
+                assert AbstractGLCrystal.find_isomorphism(t, u) is not None
+                ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(t.character()))
+                assert ch == Vector({mu: 1})
+            except:
+                f = G(n, mu).polynomial().set_variable(0, 1)
+                g = t.character()
+                print()
+                print('  ', g)
+                print()
+                try:
+                    print('  ', G_expansion_no_beta(SymmetricPolynomial.from_polynomial(g)))
+                except:
+                    print('  ', 'not symmetric')
+                print()
+                #t.draw()
+                # return top
+                # input('')
+        input('\n\n[continue]\n\n')
 
 
 def test_odd_sqrt_r_lambda(n=3, k=10):
