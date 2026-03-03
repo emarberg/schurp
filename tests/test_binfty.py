@@ -1,3 +1,4 @@
+from keys import decompose_into_lascoux
 from crystals import (
     AbstractGLCrystal, 
     AbstractQCrystal,
@@ -22,34 +23,80 @@ def test_r_lambda(n=3, k=10):
             assert AbstractGLCrystal.find_isomorphism(t, u) is not None
 
 
-def test_sqrt_r_lambda(n=3, k=10):
+def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
+    gp = set()
+    ngp = set()
+
+    lp = set()
+    nlp = set()
+
     for w in Permutation.longest_element(n).get_reduced_words():
+        gp.add(w)
+        lp.add(w)
+
         b = InfiniteCrystal.sqrt_binfty(n, w)
         for mu in Partition.all(k, max_row=n):
             print(n, ':', 'mu =', mu)
+            
             r = InfiniteCrystal.sqrt_r_lambda(mu, n)
             top = InfiniteCrystal.sqrt_tensor(r, b)
+            
             t = top.finitize(0)
+            g = t.character()
+
             try:
-                u = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
-                assert AbstractGLCrystal.find_isomorphism(t, u) is not None
-                ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(t.character()))
-                assert ch == Vector({mu: 1})
+                # u = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
+                # assert AbstractGLCrystal.find_isomorphism(t, u) is not None
+                ch = G_expansion_no_beta(SymmetricPolynomial.from_polynomial(g))
             except:
-                f = G(n, mu).polynomial().set_variable(0, 1)
-                g = t.character()
-                print()
-                print('  ', g)
-                print()
-                try:
-                    print('  ', G_expansion_no_beta(SymmetricPolynomial.from_polynomial(g)))
-                except:
-                    print('  ', 'not symmetric')
-                print()
-                #t.draw()
-                # return top
-                # input('')
-        input('\n\n[continue]\n\n')
+                ch = None
+                gp = gp - {w}
+                ngp |= {w}
+
+                #print()
+                #print('  ', g)
+                #print()
+                #print('  ', 'not symmetric')
+                #print()
+                
+                if test_lasc:
+                    lasc = decompose_into_lascoux(g)
+                    # print('  ', lasc)
+                    # print()
+                    try:
+                        assert min(set(lasc.values())) == 1
+                    except:
+                        # print('  ', 'not lascoux positive:', w)
+                        if w in lp:
+                            lp.remove(w)
+                            nlp.add(w)
+                        break
+                else:
+                    break
+            
+            if ch is not None:
+                assert ch == Vector({mu: 1})
+
+        print()
+        print('groth works:')
+        for a in gp:
+            print('  ', a)
+        print('groth fails:')
+        for a in ngp:
+            print('  ', a)
+        print()
+
+        if test_lasc:
+            print()
+            print('lasc works:')
+            for a in lp:
+                print('  ', a)
+            print('lasc fails:')
+            for a in nlp:
+                print('  ', a)
+            print()
+
+        print('\n\n[continue]\n\n')
 
 
 def test_odd_sqrt_r_lambda(n=3, k=10):

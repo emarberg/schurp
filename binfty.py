@@ -46,15 +46,23 @@ class InfiniteCrystal:
                 print('b size:', len(b_vertices))
                 print('c size:', len(c_vertices))
             #return False
-        q = collections.deque([(b.generator, c.generator)])
+        q = collections.deque([(b.generator, c.generator, [])])
         seen = {None: None}
         while q:
-            x, y = q.popleft()
+            x, y, seq = q.popleft()
             if verbose:
+                print(' sequence:', seq)
+                print()
                 print('b element:', x)
                 print('  weight =', b.weight(x))
+                if x is not None:
+                    for i in b.indices:
+                        print('  strings', i, ':', b.e_string(i, x), b.f_string(i, x))
                 print('c element:', y)
                 print('  weight =', c.weight(y))
+                if y is not None:
+                    for i in c.indices:
+                        print('  strings', i, ':', c.e_string(i, y), c.f_string(i, y))
                 print()
             if x is None and y is not None:
                 return False
@@ -85,8 +93,8 @@ class InfiniteCrystal:
                 ex = ex if ex in b_vertices else None
                 ey = ey if ey in c_vertices else None
 
-                q.append((fx, fy))
-                q.append((ex, ey))
+                q.append((fx, fy, seq + ['f_%s' % i]))
+                q.append((ex, ey, seq + ['e_%s' % i]))
         return True
 
     @classmethod
@@ -363,33 +371,75 @@ class InfiniteCrystal:
         generator = 0
         indices = list(range(1, n))
 
-        e_operators = lambda i, x: None if i not in [j, j + 1] else (x + 1) if i == j else ((x - 1) if x % 2 == 0 else None)
-        f_operators = lambda i, x: None if i not in [j, j + 1] else (x - 1) if i == j else ((x + 1) if x % 2 != 0 else None)
+        def e_operators(i, x):
+            if i == j:
+                return x + 1
+            if i == j + 1:
+                return (x - 1) if x % 2 == 0 else None
 
-        e_strings = lambda i, x: None if i not in [j, j + 1] else -x if i == j else x
-        f_strings = lambda i, x: None if i not in [j, j + 1] else x if i == j else (0 if x % 2 == 0 else 1)
+        def f_operators(i, x):
+            if i == j:
+                return x - 1
+            if i == j + 1:
+                return (x + 1) if x % 2 != 0 else None
+
+        def e_strings(i, x):
+            if i == j:
+                return -x
+            if i == j + 1:
+                return x
+
+        def f_strings(i, x):
+            if i == j:
+                return x
+            if i == j + 1:
+                return 0 if x % 2 == 0 else 1
 
         weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
-
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
     def alt_sqrt_elementary(cls, j, n):
-        # different string lengths
+        # opposite arrows indexed by j - 1 and j + 1
 
         generator = 0
         indices = list(range(1, n))
 
-        e_operators = lambda i, x: None if i not in [j, j + 1] else (x + 1) if i == j else ((x - 1) if x % 2 == 0 else None)
-        f_operators = lambda i, x: None if i not in [j, j + 1] else (x - 1) if i == j else ((x + 1) if x % 2 != 0 else None)
+        def e_operators(i, x):
+            if i == j:
+                return x + 1
+            if i == j + 1:
+                return (x - 1) if x % 2 == 0 else None
+            if i == j - 1:
+                return (x - 1) if x % 2 != 0 else None
 
-        e_strings = lambda i, x: None if i not in [j, j + 1] else -x if i == j else (0 if x % 2 == 0 else -1)
-        f_strings = lambda i, x: None if i not in [j, j + 1] else x if i == j else -x
+        def f_operators(i, x):
+            if i == j:
+                return x - 1
+            if i == j + 1:
+                return (x + 1) if x % 2 != 0 else None
+            if i == j - 1:
+                return (x + 1) if x % 2 == 0 else None
+
+        def e_strings(i, x):
+            if i == j:
+                return -x
+            if i == j + 1:
+                return x
+            if i == j - 1:
+                return 0 if x % 2 == 0 else 1 
+
+        def f_strings(i, x):
+            if i == j:
+                return x
+            if i == j + 1:
+                return 0 if x % 2 == 0 else 1
+            if i == j - 1:
+                return -x
 
         weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
-
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
- 
+
     @classmethod
     def odd_sqrt_elementary(cls, j, n):
         # opposite arrows indexed by j - 1
@@ -479,9 +529,21 @@ class InfiniteCrystal:
         self.printer = printer
 
     def e_operator(self, i, x):
+        if type(i) in [tuple, list]:
+            ans = x
+            while i and ans is not None:
+                ans = self.e_operator(i[-1], ans)
+                i = i[:-1]
+            return ans
         return self.e_operators(i, x)
 
     def f_operator(self, i, x):
+        if type(i) in [tuple, list]:
+            ans = x
+            while i and ans is not None:
+                ans = self.f_operator(i[-1], ans)
+                i = i[:-1]
+            return ans
         return self.f_operators(i, x)
 
     def capital_e_operator(self, i, x):
