@@ -86,6 +86,23 @@ class Tableau:
         )
         self._string_array = None
 
+    @classmethod
+    def union(cls, *args):
+        ans = cls()
+        for t in args:
+            for ij in t:
+                if len(ij) == 2:
+                    i, j = ij
+                    v = t[i, j] 
+                else:
+                    i, j, v = ij
+                if hasattr(v, 'number'):
+                    v = [v.number]
+                for x in v:
+                    if ans.get(i, j) is None or x not in ans.get(i, j, unpack=False):
+                        ans = ans.add(i, j, x)
+        return ans
+
     def marginalize(self, n):
         rows = self.get_rows(unpack=False)
         assert len(rows) <= n
