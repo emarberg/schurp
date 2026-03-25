@@ -15,8 +15,14 @@ class InfiniteCrystal:
     def binfty(cls, n, word=None):
         elem = {i: cls.elementary(i, n) for i in range(1, n)}
         word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
-        print(word)
         return cls.tensor(*[elem[i] for i in word])
+
+    @classmethod 
+    def binfty_squared(cls, n, word=None):
+        elem = {i: cls.elementary_squared(i, n) for i in range(1, n)}
+        word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
+        return cls.tensor(*[elem[i] for i in word])
+
 
     @classmethod 
     def sqrt_binfty(cls, n, word=None):
@@ -350,6 +356,33 @@ class InfiniteCrystal:
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
+    def elementary_squared(cls, j, n):
+        generator = 0
+        indices = list(range(1, n))
+
+        def e_operators(i, x):
+            if i == j:
+                return x + 1
+        def f_operators(i, x):
+            if i == j:
+                return x - 1
+
+        def e_strings(i, x):
+            if i == j:
+                return -x
+            if i == j + 1:
+                return x
+
+        def f_strings(i, x):
+            if i == j:
+                return x
+            if i == j + 1:
+                return 0
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else x if i == j - 1 else -x for i in range(n))
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
     def simple_sqrt_elementary(cls, j, n):
         generator = 0
         indices = list(range(1, n))
@@ -361,6 +394,75 @@ class InfiniteCrystal:
         f_strings = lambda i, x: None if i not in [j] else x
 
         weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def odd_simple_sqrt_elementary(cls, j, n):
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None if i not in [j] else (x + 1)
+        f_operators = lambda i, x: None if i not in [j] else (x - 1)
+
+        e_strings = lambda i, x: None if i not in [j] else -x
+        f_strings = lambda i, x: None if i not in [j] else x
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2) - (1 if x % 2 != 0 else 0)) if i == j - 1 else (-(x // 2) - (1 if x % 2 != 0 else 0)) for i in range(n))
+
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def sse(cls, j, n):
+        return cls.simple_sqrt_elementary(j, n)
+
+    @classmethod
+    def osse(cls, j, n):
+        return cls.odd_simple_sqrt_elementary(j, n)
+
+    @classmethod
+    def sqrt_grid(cls, j, n):
+        generator = n * (0,)
+        indices = list(range(1, n))
+
+        def e_operators(i, x):
+            if i not in [j, j + 1]:
+                return None
+            y = list(x)
+            if sum(x) == 0:
+                y[i - 1] += 1
+            else:
+                y[i] -= 1
+            return tuple(y)
+
+        def f_operators(i, x):
+            if i not in [j, j + 1]:
+                return None
+            y = list(x)
+            if sum(x) == 0:
+                y[i] += 1
+            else:
+                y[i - 1] -= 1
+            return tuple(y)
+
+        def e_strings(i, x):
+            if i < j:
+                return None
+            y = list(x) + [0]
+            a = y[j - 1] - y[j] - y[j + 1]
+            b = y[j + 1]
+            return -a if i == j else (a + 2 * b)
+
+        def f_strings(i, x):
+            if i < j:
+                return None
+            y = list(x) + [0]
+            a = y[j - 1] - y[j] - y[j + 1]
+            b = y[j + 1] 
+            return a if i == j else (-2 * b + (0 if a % 2 == 0 else 1))
+
+        def weight_map(x):
+            return x
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 

@@ -12,6 +12,15 @@ from stable.utils import G, G_expansion_no_beta, SymmetricPolynomial
 from stable.vectors import Vector
 
 
+def test_elementary_squared(n=3, p=3, q=3):
+    b = InfiniteCrystal.binfty(n)
+    for w in Permutation.longest_element(n).get_reduced_words():
+        c = InfiniteCrystal.binfty_squared(n, w)
+        boolean = InfiniteCrystal.is_isomorphic(b, b.vertices(p,q), c, c.vertices(p,q))
+        if boolean:
+            print(w)
+
+
 def test_r_lambda(n=3, k=10):
     for w in Permutation.longest_element(n).get_reduced_words():
         b = InfiniteCrystal.binfty(n, w)
