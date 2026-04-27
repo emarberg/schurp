@@ -201,6 +201,16 @@ class Permutation:
     def reduced_word(self):
         return self.get_reduced_word()
 
+    def reduced_expr(self):
+        return self.get_reduced_word()
+
+    @classmethod
+    def expr_to_involution(cls, expr):
+        w = Permutation()
+        for i in expr:
+            w = Permutation.s_i(i) % w % Permutation.s_i(i)
+        return w
+
     def get_reduced_word(self):
         w = self
         ans = ()
