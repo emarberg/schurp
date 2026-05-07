@@ -1,4 +1,5 @@
 from crystals import AbstractGLCrystal
+from polynomials import X
 from stable.tableaux import Tableau
 import subprocess
 import time
@@ -6,8 +7,15 @@ import collections
 import itertools
 
 
+
 BASE_DIRECTORY = '/Users/emarberg/examples/crystals/'
 
+
+def monomial_from_tuple(tup):
+    ans = X(0)**0
+    for i, a in enumerate(tup):
+        ans *= X(i + 1)**a
+    return ans
 
 class InfiniteCrystal:
 
@@ -630,6 +638,33 @@ class InfiniteCrystal:
         self.weight_map = weight_map
         self.printer = printer
 
+    def temper(self, vertices):
+        def e(i, x):
+            y = self.e_operator(i, x)
+            return y if (y is not None and y in vertices) else None
+
+        def f(i, x):
+            y = self.f_operator(i, x)
+            return y if (y is not None and y in vertices) else None
+
+        return InfiniteCrystal(
+            self.generator,
+            self.indices,
+            e,
+            f,
+            self.e_strings,
+            self.f_strings,
+            self.weight_map,
+            self.printer
+        )
+
+    def verbose_printer(self, x):
+        s = [self.printer(x)]
+        s += [str(monomial_from_tuple(self.weight(x)))]
+        s += ['ε = ' + ', '.join([str(self.e_string(i, x)) for i in self.indices])]
+        s += ['φ = ' + ', '.join([str(self.f_string(i, x)) for i in self.indices])]
+        return '\n'.join(s)
+
     def e_operator(self, i, x):
         if type(i) in [tuple, list]:
             ans = x
@@ -721,7 +756,7 @@ class InfiniteCrystal:
         vertices = self.vertices(e_thresh, f_thresh)
         edges = {(i, v, self.f_operator(i, v)) for i in self.indices for v in vertices if self.f_operator(i, v) in vertices}
         weights = {v: self.weight(v) for v in vertices}
-        return AbstractGLCrystal(rank, vertices, edges, weights, self.printer)
+        return AbstractGLCrystal(rank, vertices, edges, weights, self.verbose_printer)
 
     def vertices(self, e_thresh=None, f_thresh=None):
         if e_thresh is None or f_thresh is None:
