@@ -82,11 +82,25 @@ def grothendieck_P(num_variables, mu, nu=(), degree_bound=None): # noqa
         return SymmetricPolynomial.stable_grothendieck_p(num_variables, mu, nu, degree_bound)
 
 
+def involution_P(num_variables, z, degree_bound=None):
+    ans = 0
+    for w in z.get_atoms():
+        ans += w.stanley_symmetric_function(num_variables)
+    return ans
+
+
 def involution_GP(num_variables, z, degree_bound=None):
     ans = 0
     for w in z.get_involution_hecke_atoms():
         ans += grothendieck(num_variables, w, degree_bound=degree_bound) * beta**(w.length() - z.involution_length())
     return ans
+
+
+def get_P_expansion(f):
+    try:
+        return P_expansion(f)
+    except AssertionError:
+        return None
 
 
 def grothendieck_S(num_variables, mu, nu=(), degree_bound=None): # noqa

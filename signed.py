@@ -25,6 +25,10 @@ PEAK_CSEQ_CACHE = {}
 SIGNED_INVOLUTION_WORDS = {}
 SIGNED_FPF_INVOLUTION_WORDS = {}
 
+inv_stanley_schur_s_cache = {}
+inv_stanley_schur_p_cache = {}
+inv_stanley_schur_q_cache = {}
+
 schurp_stansym_cache = {}
 schurq_stansym_cache = {}
 schurd_stansym_cache = {}
@@ -905,24 +909,30 @@ class SignedPermutation(SignedMixin):
 
     def inv_stanley_schur_s_decomposition(self):
         assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_q_decomposition()
-        return SchurQ.decompose_s_lambda(ans)
+        if self not in inv_stanley_schur_s_cache:
+            ans = Vector()
+            for x in self.get_atoms():
+                ans += x.stanley_schur_q_decomposition()
+            inv_stanley_schur_s_cache[self] = SchurQ.decompose_s_lambda(ans)
+        return inv_stanley_schur_s_cache[self]
 
     def inv_stanley_schur_p_decomposition(self):
         assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_p_decomposition()
-        return ans
+        if self not in inv_stanley_schur_p_cache:
+            ans = Vector()
+            for x in self.get_atoms():
+                ans += x.stanley_schur_p_decomposition()
+            inv_stanley_schur_p_cache[self] = ans
+        return inv_stanley_schur_p_cache[self]
 
     def inv_stanley_schur_q_decomposition(self):
         assert self == self.inverse()
-        ans = Vector()
-        for x in self.get_atoms():
-            ans += x.stanley_schur_q_decomposition()
-        return ans
+        if self not in inv_stanley_schur_q_cache:
+            ans = Vector()
+            for x in self.get_atoms():
+                ans += x.stanley_schur_q_decomposition()
+            inv_stanley_schur_q_cache[self] = ans
+        return inv_stanley_schur_q_cache[self]
 
     def stanley_schur_p_decomposition(self):
         ans = Vector()
