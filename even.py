@@ -132,6 +132,10 @@ class EvenSignedPermutation(SignedMixin):
     def flatten(cls, word):
         return tuple(i + (i == 0) for i in word)
 
+    def is_atom(self):
+        y = self.inverse() % self
+        return self.length() == y.involution_length()
+
     def get_flattened_reduced_words(self):
         prev = None
         for word in self.get_reduced_words():
@@ -452,7 +456,7 @@ class EvenSignedPermutation(SignedMixin):
             self._rdes = set()
             for i in range(self.rank):
                 s = EvenSignedPermutation.s_i(i, self.rank)
-                if len(self * s) < len(self):
+                if self.rank > 1 and len(self * s) < len(self):
                     self._rdes.add(i)
         return self._rdes
 

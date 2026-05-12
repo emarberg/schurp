@@ -32,6 +32,19 @@ def test_r_lambda(n=3, k=10):
             assert AbstractGLCrystal.find_isomorphism(t, u) is not None
 
 
+def sqrt_r_tensor(mu, n, b):
+    r = InfiniteCrystal.sqrt_r_lambda(mu, n)
+    h = 0
+    ans = []
+    while True:
+        h += 1
+        print('  h = ', h)
+        bns = InfiniteCrystal.sqrt_tensor(r, b.temper(b.vertices(0, h))).finitize()
+        if len(bns) > len(ans):
+            ans = bns
+        else:
+            return ans
+
 def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
     gp = set()
     ngp = set()
@@ -47,10 +60,17 @@ def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
         for mu in Partition.all(k, max_row=n):
             print(n, ':', 'mu =', mu)
             
+            t = sqrt_r_tensor(mu, n, b)
+
             r = InfiniteCrystal.sqrt_r_lambda(mu, n)
             top = InfiniteCrystal.sqrt_tensor(r, b)
+            tnaive = top.finitize(0)
             
-            t = top.finitize(0)
+            if len(t) != len(tnaive):
+                t.draw()
+                tnaive.draw()
+                input('')
+            # t = top.finitize(0)
             g = t.character()
 
             try:
@@ -62,12 +82,14 @@ def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
                 gp = gp - {w}
                 ngp |= {w}
 
-                #print()
-                #print('  ', g)
-                #print()
-                #print('  ', 'not symmetric')
-                #print()
+                print()
+                print('  ', w, ':', len(t))
+                print()
+                print('  ', 'not symmetric')
+                print()
                 
+                yield (w, mu, t)
+
                 if test_lasc:
                     lasc = decompose_into_lascoux(g)
                     # print('  ', lasc)
@@ -81,7 +103,8 @@ def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
                             nlp.add(w)
                         break
                 else:
-                    break
+                    pass
+                    #break
             
             if ch is not None:
                 assert ch == Vector({mu: 1})
