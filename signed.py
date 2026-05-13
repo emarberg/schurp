@@ -468,6 +468,71 @@ class SignedPermutation(SignedMixin):
 
         return DEMAZURE_FACTORIZATIONS[key]
 
+    def dtransition_graph(self, j, draw=False, flip=False):
+        n = self.rank + 1
+        w = self.inflate(n)
+
+        bot = {}
+        for k in range(j + 1, n + 1):
+            t = SignedPermutation.t_ij(j, k, n)
+            if (w * t).dlength() == w.dlength() + 1:
+                bot[(w * t).reduce()] = (j, k)
+
+        top = {}
+        for i in range(1, j):
+            t = SignedPermutation.t_ij(i, j, n)
+            if (w * t).dlength() == w.dlength() + 1:
+                top[(w * t).reduce()] = (j, i)
+        for i in range(1, n):
+            if i != j:
+                t = SignedPermutation.t_ij(-i, j, n)
+                if (w * t).dlength() == w.dlength() + 1:
+                    top[(w * t).reduce()] = (j, -i)
+
+        if flip:
+            top, bot = bot, top
+
+        e = {(i, v, w.reduce()) for (v, i) in top.items()} | {(i, w.reduce(), v) for (v, i) in bot.items()}
+
+        v = set(top) | {w.reduce()} | set(bot)
+
+        if draw:
+            from tests.test_crystals import draw_graph
+            draw_graph(v, e)
+        return top, bot, v, e
+
+    def transition_graph(self, j, draw=False, flip=False):
+        n = self.rank + 1
+        w = self.inflate(n)
+
+        bot = {}
+        for k in range(j + 1, n + 1):
+            t = SignedPermutation.t_ij(j, k, n)
+            if (w * t).length() == w.length() + 1:
+                bot[(w * t).reduce()] = (j, k)
+
+        top = {}
+        for i in range(1, j):
+            t = SignedPermutation.t_ij(i, j, n)
+            if (w * t).length() == w.length() + 1:
+                top[(w * t).reduce()] = (j, i)
+        for i in range(1, n):
+            t = SignedPermutation.t_ij(-i, j, n)
+            if (w * t).length() == w.length() + 1:
+                top[(w * t).reduce()] = (j, -i)
+
+        if flip:
+            top, bot = bot, top
+
+        e = {(i, v, w.reduce()) for (v, i) in top.items()} | {(i, w.reduce(), v) for (v, i) in bot.items()}
+
+        v = set(top) | {w.reduce()} | set(bot)
+
+        if draw:
+            from tests.test_crystals import draw_graph
+            draw_graph(v, e)
+        return top, bot, v, e
+
     @classmethod
     def get_grassmannians_bc(cls, n):
         for k in range(n + 1):
