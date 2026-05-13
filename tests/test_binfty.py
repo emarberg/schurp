@@ -38,7 +38,7 @@ def sqrt_r_tensor(mu, n, b):
     ans = []
     while True:
         h += 1
-        print('  h = ', h)
+        # print('  h = ', h)
         bns = InfiniteCrystal.sqrt_tensor(r, b.temper(b.vertices(0, h))).finitize()
         if len(bns) > len(ans):
             ans = bns

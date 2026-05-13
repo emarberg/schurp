@@ -910,6 +910,28 @@ class SignedPermutation(SignedMixin):
             ans += x.stanley_schur_q_decomposition()
         return SchurQ.decompose_s_lambda(ans)
 
+    def inv_stanley_CI(self, n=None):
+        if n is None:
+            n = self.involution_length()
+        from stable.utils import P
+        ans = 0
+        for f, c in self.inv_stanley_schur_p_decomposition().items():
+            mu = f.mu.tuple()
+            ans += P(n, mu) * c
+        kappa = len([i for i in range(1, self.rank + 1) if self(i) < i])
+        return ans * 2**kappa
+
+    def inv_stanley_BI(self, n=None):
+        if n is None:
+            n = self.involution_length()
+        from stable.utils import Q
+        ans = 0
+        for f, c in self.inv_stanley_schur_q_decomposition().items():
+            mu = f.mu.tuple()
+            ans += Q(n, mu) * c
+        nu = len([i for i in range(1, self.rank + 1) if 0 < self(i) < i])
+        return ans * 2**nu
+
     def inv_stanley_schur_p_decomposition(self):
         assert self == self.inverse()
         ans = Vector()

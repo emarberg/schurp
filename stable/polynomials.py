@@ -95,6 +95,14 @@ class Polynomial:
         ind = HashableDict({index: power})
         return cls({ind: 1})
 
+    def square_free_coefficient(self, n=None):
+        if n is None:
+            n = self.total_degree()
+        if n is None:
+            return 0
+        ind = HashableDict({i: 1 for i in range(1, n + 1)})
+        return self.coeffs.get(ind, 0)
+
     def coefficient(self, index, power):
         x = Polynomial()
         for term in self.coeffs:
