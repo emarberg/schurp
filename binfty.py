@@ -40,9 +40,11 @@ class InfiniteCrystal:
         return cls.sqrt_tensor(*[elem[i] for i in word])
 
     @classmethod 
-    def simple_sqrt_binfty(cls, n):
+    def simple_sqrt_binfty(cls, n, word=None):
         elem = {i: cls.simple_sqrt_elementary(i, n) for i in range(1, n)}
-        return cls.sqrt_tensor(*[elem[i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
+        word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
+        print('\n\n\n', word, '\n\n\n')
+        return cls.sqrt_tensor(*[elem[i] for i in word])
 
     @classmethod 
     def odd_sqrt_binfty(cls, n):

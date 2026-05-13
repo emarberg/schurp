@@ -70,9 +70,10 @@ def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
                 t.draw()
                 tnaive.draw()
                 input('')
+            
             # t = top.finitize(0)
             g = t.character()
-
+            yield (w, mu, t)
             try:
                 # u = AbstractGLCrystal.sqrtcrystal_from_partition(mu, n)
                 # assert AbstractGLCrystal.find_isomorphism(t, u) is not None
@@ -88,7 +89,7 @@ def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
                 print('  ', 'not symmetric')
                 print()
                 
-                yield (w, mu, t)
+                #yield (w, mu, t)
 
                 if test_lasc:
                     lasc = decompose_into_lascoux(g)
