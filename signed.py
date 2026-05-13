@@ -468,6 +468,71 @@ class SignedPermutation(SignedMixin):
 
         return DEMAZURE_FACTORIZATIONS[key]
 
+    def dtransition_graph(self, j, draw=False, flip=False):
+        n = self.rank + 1
+        w = self.inflate(n)
+
+        bot = {}
+        for k in range(j + 1, n + 1):
+            t = SignedPermutation.t_ij(j, k, n)
+            if (w * t).dlength() == w.dlength() + 1:
+                bot[(w * t).reduce()] = (j, k)
+
+        top = {}
+        for i in range(1, j):
+            t = SignedPermutation.t_ij(i, j, n)
+            if (w * t).dlength() == w.dlength() + 1:
+                top[(w * t).reduce()] = (j, i)
+        for i in range(1, n):
+            if i != j:
+                t = SignedPermutation.t_ij(-i, j, n)
+                if (w * t).dlength() == w.dlength() + 1:
+                    top[(w * t).reduce()] = (j, -i)
+
+        if flip:
+            top, bot = bot, top
+
+        e = {(i, v, w.reduce()) for (v, i) in top.items()} | {(i, w.reduce(), v) for (v, i) in bot.items()}
+
+        v = set(top) | {w.reduce()} | set(bot)
+
+        if draw:
+            from tests.test_crystals import draw_graph
+            draw_graph(v, e)
+        return top, bot, v, e
+
+    def transition_graph(self, j, draw=False, flip=False):
+        n = self.rank + 1
+        w = self.inflate(n)
+
+        bot = {}
+        for k in range(j + 1, n + 1):
+            t = SignedPermutation.t_ij(j, k, n)
+            if (w * t).length() == w.length() + 1:
+                bot[(w * t).reduce()] = (j, k)
+
+        top = {}
+        for i in range(1, j):
+            t = SignedPermutation.t_ij(i, j, n)
+            if (w * t).length() == w.length() + 1:
+                top[(w * t).reduce()] = (j, i)
+        for i in range(1, n):
+            t = SignedPermutation.t_ij(-i, j, n)
+            if (w * t).length() == w.length() + 1:
+                top[(w * t).reduce()] = (j, -i)
+
+        if flip:
+            top, bot = bot, top
+
+        e = {(i, v, w.reduce()) for (v, i) in top.items()} | {(i, w.reduce(), v) for (v, i) in bot.items()}
+
+        v = set(top) | {w.reduce()} | set(bot)
+
+        if draw:
+            from tests.test_crystals import draw_graph
+            draw_graph(v, e)
+        return top, bot, v, e
+
     @classmethod
     def get_grassmannians_bc(cls, n):
         for k in range(n + 1):
@@ -915,6 +980,28 @@ class SignedPermutation(SignedMixin):
                 ans += x.stanley_schur_q_decomposition()
             inv_stanley_schur_s_cache[self] = SchurQ.decompose_s_lambda(ans)
         return inv_stanley_schur_s_cache[self]
+
+    def inv_stanley_CI(self, n=None):
+        if n is None:
+            n = self.involution_length()
+        from stable.utils import P
+        ans = 0
+        for f, c in self.inv_stanley_schur_p_decomposition().items():
+            mu = f.mu.tuple()
+            ans += P(n, mu) * c
+        kappa = len([i for i in range(1, self.rank + 1) if self(i) < i])
+        return ans * 2**kappa
+
+    def inv_stanley_BI(self, n=None):
+        if n is None:
+            n = self.involution_length()
+        from stable.utils import Q
+        ans = 0
+        for f, c in self.inv_stanley_schur_q_decomposition().items():
+            mu = f.mu.tuple()
+            ans += Q(n, mu) * c
+        nu = len([i for i in range(1, self.rank + 1) if 0 < self(i) < i])
+        return ans * 2**nu
 
     def inv_stanley_schur_p_decomposition(self):
         assert self == self.inverse()
