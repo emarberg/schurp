@@ -394,21 +394,7 @@ def _test_CII(rank):
         triv = lambda m: len([(a, b) for (a, b) in m if a + b == 0])
         matchings_fn = lambda z: {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) == k}
         
-        def shape_fn(w):
-            ans = []
-            o = [w(i) for i in range(1, n + 1)]
-            for a in o[:k]:
-                b = abs(a)
-                ans.append((-b, b))
-            o = o[k:]
-            while o:
-                b, c = o[:2]
-                if 0 < c < -b:
-                    ans.append((c, -b))
-                    ans.append((b, -c))
-                o = o[2:]
-            return tuple(sorted(ans))
-
+        shape_fn = shape_CII(p, q)
         is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
         
         def generator_fn(z, m):
@@ -419,6 +405,28 @@ def _test_CII(rank):
 
         span_fn = precapprox(k, n)
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+
+
+def shape_CII(p, q):
+    n = (p + q) // 2
+    k = abs(p - q) // 2
+
+    def ansfn(w):
+        ans = []
+        o = [w(i) for i in range(1, n + 1)]
+        for a in o[:k]:
+            b = abs(a)
+            ans.append((-b, b))
+        o = o[k:]
+        while o:
+            b, c = o[:2]
+            if 0 < c < -b:
+                ans.append((c, -b))
+                ans.append((b, -c))
+            o = o[2:]
+        return tuple(sorted(ans))
+
+    return ansfn
 
 
 def _test_DI(rank):

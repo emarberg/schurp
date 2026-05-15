@@ -50,6 +50,13 @@ class SignedMixin:
         return len([i for i in range(1, self.rank + 1) if self(i) < 0])
 
     @classmethod
+    def one_fpf(cls, n):
+        if n % 2 == 0:
+            return cls(*[a for i in range(0, n, 2) for a in [i + 2, i + 1]])
+        else:
+            return cls(*([-1] + [a for i in range(1, n, 2) for a in [i + 2, i + 1]]))
+
+    @classmethod
     def one_fpf_d(cls, n):
         if n % 2 == 0:
             return cls(*[a for i in range(0, n, 2) for a in [i + 2, i + 1]])

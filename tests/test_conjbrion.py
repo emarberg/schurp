@@ -1,5 +1,7 @@
 from signed import SignedPermutation
 from tests.test_crystals import draw_graph
+from tests.test_brion import shape_CII
+
 
 def vzero(n):
     assert n >= 0
@@ -22,6 +24,9 @@ def vzero_plus(n):
         return vzero(n) * SignedPermutation.t_ij(1, -1, n) * SignedPermutation.t_ij(2, -2, n)
     else:
         return vzero(n) * SignedPermutation.t_ij(2, -2, n)
+
+
+colorfn = lambda x: 'white' if x.length() % 2 ==0 else 'gray'
 
 
 def test(n, levels):
@@ -52,6 +57,8 @@ def test(n, levels):
     print('q  =', w0(n - 1), ':', {v.reduce() for v in w0(n - 1).get_atoms()})
     print()
     print('w =', w, ':', atoms)
+    print()
+    print('missing:', atoms - sources)
 
 
 def test_v(n, levels):
@@ -74,7 +81,7 @@ def test_v(n, levels):
         levels -= 1
         sources |= add
 
-    draw_graph(gv, ge, colors=lambda x: 'white' if x.length() %2 ==0 else 'gray')
+    draw_graph(gv, ge, colors=colorfn)
 
     w0 = SignedPermutation.longest_element
     v0 = vzero
@@ -84,6 +91,8 @@ def test_v(n, levels):
     print('q  =', w0(n - 1), ':', {v.reduce() for v in w0(n - 1).get_atoms()})
     print()
     print('w =', w, ':', atoms)
+    print()
+    print('missing:', atoms - sources)
 
 
 def test_fpf(n, levels):
@@ -92,6 +101,7 @@ def test_fpf(n, levels):
     atoms = {v.reduce() for v in w.get_fpf_atoms()}
 
     sources = atoms.copy()
+    sinks = set()
     gv = set()
     ge = set()
     while levels > 0:
@@ -104,15 +114,22 @@ def test_fpf(n, levels):
                     add |= set(top)
                     gv |= v
                     ge |= e
+                    sinks |= set(bot)
         levels -= 1
         sources |= add
 
-    draw_graph(gv, ge)
+    p = n if n % 2 == 0 else n - 1
+    q = 2 * n - p
+    shape = shape_CII(p, q)
+    printer = lambda v: str(v) + '\n' + str(shape(v.inflate(n).inverse()))
+    draw_graph(gv, ge, colors=colorfn, printer=printer)
 
     print()
     print('p  =', wp, ':', {v.reduce() for v in wp.get_fpf_atoms()})
     print()
     print('w =', w, ':', atoms)
+    print()
+    print('missing:', atoms - sinks)
 
 
 def test_fpf_v(n, levels):

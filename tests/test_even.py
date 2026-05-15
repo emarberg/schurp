@@ -3,6 +3,89 @@ from even import EvenSignedPermutation
 import subprocess
 
 
+def test_nested(n=5):
+    assert n >= 2
+
+    def ndes(w):
+        if type(w) != list:
+            r = w.rank
+            w = [w(i) for i in range(1, r + 1)]
+        for i in range(len(w) - 1):
+            if w[i] > w[i + 1]:
+                return [(w[i], w[i + 1])] + ndes(w[:i] + w[i + 2:])
+        return []
+
+    def nres(w):
+        if type(w) != list:
+            r = w.rank
+            w = [w(i) for i in range(1, r + 1)]
+        for i in range(len(w) - 1):
+            if w[i] > w[i + 1]:
+                return nres(w[:i] + w[i + 2:])
+        return w
+
+    def nres_pm(w):
+        res = nres(w)
+        a = [i for i in res if i < 0]
+        b = [i for i in res if i > 0]
+        if len(a) % 2 != 0 and b and abs(a[-1]) > b[0]:
+            return b[1:]
+        elif len(a) % 2 != 0:
+            return [abs(a[-1])] + b
+        else:
+            return b
+
+    def ndes_pm(w):
+        des = ndes(w)
+        res = nres(w)
+        a = [i for i in res if i < 0]
+        b = [i for i in res if i > 0]
+        ans = des
+        while len(a) >= 2:
+            ans.append((a[0], a[1]))
+            a = a[2:]
+        if a and b and abs(a[0]) > b[0]:
+            ans.append((a[0], b[0]))
+        return set(ans)
+
+    def cyc_pm(z):
+        r = z.rank
+        cyc = {(a, z(a)) for a in range(-r, r + 1) if a != 0 and abs(a) < z(a)}
+        f = {(c, c) for c in range(1, r + 1) if z(c) == c}
+        return cyc | f
+
+    def neg(z):
+        r = z.rank
+        return {i for i in range(1 , r + 1) if z(i) == -i}
+
+    def shape(w):
+        ans = set()
+        for (a, b) in ndes_pm(w):
+            if abs(a) < -b:
+                ans.add((abs(a), -b))
+                ans.add((b, -abs(a)))
+        return ans
+                
+    for z in EvenSignedPermutation.involutions(n):
+        cyc = cyc_pm(z)
+        nnn = neg(z)
+        a = {w.inverse() for w in z.get_atoms()}
+        for w in a:
+            cyc_expected = {(b, abs(a)) for (a, b) in ndes_pm(w) if abs(a) > -b} | {(c, c) for c in nres_pm(w)}
+            neg_expected = {abs(a) for (a, b) in ndes_pm(w) if abs(a) < -b} | {abs(b) for (a, b) in ndes_pm(w) if abs(a) < -b}
+            print()
+            print('z =', z)
+            print('w =', w)
+            print()
+            print('shape =', shape(w))
+            print()
+            print(' cyc_pm =', cyc_pm(z))
+            print('ndes_pm =', ndes_pm(w))
+            print('nres_pm =', nres_pm(w))
+            assert cyc == cyc_expected
+            assert nnn == neg_expected
+
+
 def test_is_perfect(m=5):
     def is_perfect(w, n):
         for t in EvenSignedPermutation.reflections(n):

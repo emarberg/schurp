@@ -339,7 +339,7 @@ def test_qnormal_sqrtcrystal_characters(n=3, k=5):
         assert actual == expected
 
 
-def draw_graph(vertices, edges, neato=False, colors=None):
+def draw_graph(vertices, edges, neato=False, colors=None, printer=str):
     s = ['digraph G {']
     s += ['    overlap=false;']
     s += ['    splines=true;']
@@ -347,12 +347,12 @@ def draw_graph(vertices, edges, neato=False, colors=None):
 
     for x in vertices:
         if colors is not None:
-            s += ['    "%s" [fillcolor=%s];' % (str(x), colors(x))]
+            s += ['    "%s" [fillcolor=%s];' % (printer(x), colors(x))]
         else:
-            s += ['    "%s";' % str(x)]
+            s += ['    "%s";' % printer(x)]
 
     for i, x, y in edges:
-        s += ['    "%s" -> "%s" [label="%s"];' % (str(x), str(y), str(i))]
+        s += ['    "%s" -> "%s" [label="%s"];' % (printer(x), printer(y), str(i))]
 
     s += ['}']
     s = '\n'.join(s)
