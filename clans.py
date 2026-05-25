@@ -1,5 +1,6 @@
 from signed import SignedPermutation
 from permutations import Permutation
+from vectors import Vector
 import itertools
 import subprocess
 
@@ -157,6 +158,15 @@ class Clan:
         folder = 'D3'
         filename = folder + '_'+ 'n' + str(n) + '_' + str(len(clans))
         cls._draw(clans, folder, filename)
+
+    def stanley(self): 
+        ans = Vector()
+        for w in self.get_atoms():
+            d = self.weyl_group_weight(w)
+            for f, c in w.stanley_schur_q_decomposition().items():
+                mu = f.mu.tuple()
+                ans += Vector({mu: c * 2**d})
+        return ans
 
     def __repr__(self):
         l = [str(min(i, self(i))) if type(i) == int else '+' if i else '-' for i in self.oneline]

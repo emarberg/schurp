@@ -4,6 +4,33 @@ from signed import SignedPermutation
 from even import EvenSignedPermutation
 
 
+def test_stanley_c1(n=4):
+    from stable.utils import Q, Q_expansion
+
+    def stanley(m, a):
+        ans = 0
+        for mu, c in a.stanley().items():
+            ans += Q(m, mu) * c
+        return ans
+
+    c = [x for x in Clan.all_c1(n) if x.is_matchless()]
+    for a in c:
+        s = a.signs()[n:]
+        mu = tuple(i + 1 for i in range(len(s) - 1, -1, -1) if s[i])
+        nu = tuple(i + 1 for i in range(len(s) - 1, -1, -1) if not s[i])
+        m = max([n, len(mu), len(nu)])
+
+        got = stanley(m, a)
+        expected = Q(m, mu) * Q(m, nu)
+
+        print(a, '->', mu, '*', nu)
+        if got != expected:
+            print()
+            print('  ', Q_expansion(got), '=?=', Q_expansion(expected))
+            print()
+        assert got == expected
+
+
 def setact(pi, s):
     return {pi(i) for i in s}
 
