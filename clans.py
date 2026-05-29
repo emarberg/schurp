@@ -163,9 +163,20 @@ class Clan:
         ans = Vector()
         for w in self.get_atoms():
             d = self.weyl_group_weight(w)
-            for f, c in w.stanley_schur_q_decomposition().items():
-                mu = f.mu.tuple()
-                ans += Vector({mu: c * 2**d})
+            if self.family == self.TYPE_B:
+                for f, c in w.stanley_schur_p_decomposition().items():
+                    mu = f.mu.tuple()
+                    ans += Vector({mu: c * 2**d})
+            elif self.family == self.TYPE_C1:
+                for f, c in w.stanley_schur_q_decomposition().items():
+                    mu = f.mu.tuple()
+                    ans += Vector({mu: c * 2**d})
+            elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+                for f, c in w.stanley_schur_d_decomposition().items():
+                    mu = f.mu.tuple()
+                    ans += Vector({mu: c * 2**d})
+            else:
+                raise Exception
         return ans
 
     def __repr__(self):
@@ -209,6 +220,11 @@ class Clan:
 
     def is_signless(self):
         return not any(type(i) == bool for i in self.oneline)
+
+    def is_almost_matchless(self):
+        assert self.family == self.TYPE_D2
+        n = len(self.oneline) // 2
+        return not any(type(i) == int for i in self.oneline[:n - 1] + self.oneline[n + 1:])
 
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)

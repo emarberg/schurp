@@ -630,6 +630,8 @@ class SymmetricPolynomial(Vector):
                 input('\n\n')
                 raise Exception
 
+            if c % d != 0:
+                print(c, d)
             assert c % d == 0
             c = c // d * BETA**cdeg
             g *= c
@@ -854,7 +856,16 @@ class SymmetricPolynomial(Vector):
 
     @classmethod
     def S_expansion(cls, f):  # noqa
-        return cls._expansion(f, cls.schur_s, cls._get_term_from_lowest_degree)
+        if f != 0:
+            n = min(f).n
+        ans = Vector()
+        while f != 0:
+            exp = cls.Q_expansion(f)
+            mu = min(exp)
+            c = exp[mu]
+            ans += Vector({mu: c})
+            f -= cls.schur_s(n, mu) * c
+        return ans
 
     @classmethod
     def _slow_vectorize(cls, n, tableaux, signs=None, check=True):

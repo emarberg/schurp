@@ -4,6 +4,39 @@ from signed import SignedPermutation
 from even import EvenSignedPermutation
 
 
+def test_stanley_b(n=4):
+    from stable.utils import P, P_expansion, Q, Q_expansion, S, S_expansion
+
+    def stanley(m, a):
+        ans = 0
+        for mu, c in a.stanley().items():
+            ans += P(m, mu) * c
+        return ans
+
+    c = [x for x in Clan.all_b(n) if x.is_matchless()]
+    for a in c:
+        s = a.signs()
+
+        pbool = any(s[i] == s[i + 1] == True for i in range(len(s) - 1))
+        qbool = any(s[i] == s[i + 1] == False for i in range(len(s) - 1))
+
+        got = stanley(n, a)
+        expected = 0
+
+        ss = S_expansion(got)
+
+        print(a, '::')
+        if got != expected:
+            print()
+            print('  Q:', Q_expansion(got))
+            print('  S:', ss)
+            print()
+        #assert got == expected
+        if not (pbool and qbool):
+            assert len(ss) == 1
+            assert ss[list(ss)[0]] == 1
+
+
 def test_stanley_c1(n=4):
     from stable.utils import Q, Q_expansion
 
@@ -27,6 +60,99 @@ def test_stanley_c1(n=4):
         if got != expected:
             print()
             print('  ', Q_expansion(got), '=?=', Q_expansion(expected))
+            print()
+        assert got == expected
+
+
+def test_stanley_d1(n=4):
+    from stable.utils import P, P_expansion, Q, Q_expansion, S, S_expansion
+
+    def stanley(m, a):
+        ans = 0
+        for mu, c in a.stanley().items():
+            ans += P(m, mu) * c
+        return ans
+
+    c = [x for x in Clan.all_d1(n) if x.is_matchless()]
+    for a in c:
+        s = a.signs()
+
+        pbool = any(s[i] == s[i + 1] == True for i in range(len(s) - 1))
+        qbool = any(s[i] == s[i + 1] == False for i in range(len(s) - 1))
+
+        got = stanley(n, a)
+        expected = 0
+
+        ss = S_expansion(got)
+
+        print(a, '::')
+        if got != expected:
+            print()
+            print('  Q:', Q_expansion(got))
+            print('  S:', ss)
+            print()
+        #assert got == expected
+        if not (pbool and qbool):
+            assert len(ss) == 1
+            assert ss[list(ss)[0]] == 1
+
+
+def test_stanley_d2(n=4):
+    from stable.utils import P, P_expansion, Q, Q_expansion, S, S_expansion
+
+    def stanley(m, a):
+        ans = 0
+        for mu, c in a.stanley().items():
+            ans += P(m, mu) * c
+        return ans
+
+    c = [x for x in Clan.all_d2(n) if x.is_almost_matchless()]
+    for a in c:
+        s = a.signs()
+
+        pbool = any(s[i] == s[i + 1] == True for i in range(len(s) - 1))
+        qbool = any(s[i] == s[i + 1] == False for i in range(len(s) - 1))
+
+        got = stanley(n, a)
+        expected = 0
+
+        ss = S_expansion(got)
+
+        print(a, '::')
+        if got != expected:
+            print()
+            print('  Q:', Q_expansion(got))
+            print('  S:', ss)
+            print()
+        #assert got == expected
+        if not (pbool and qbool):
+            assert len(ss) == 1
+            assert ss[list(ss)[0]] == 1
+
+
+def test_stanley_d3(n=4):
+    from stable.utils import P, P_expansion
+
+    def stanley(m, a):
+        ans = 0
+        for mu, c in a.stanley().items():
+            ans += P(m, mu) * c
+        return ans
+
+    c = [x for x in Clan.all_d3(n) if x.is_matchless()]
+    for a in c:
+        s = a.signs()[n:]
+        mu = tuple(i for i in range(len(s) - 1, -1, -1) if s[i])
+        nu = tuple(i for i in range(len(s) - 1, -1, -1) if not s[i])
+        m = max([n, len(mu), len(nu)])
+
+        got = stanley(m, a)
+        expected = P(m, mu) * P(m, nu)
+
+        print(a, '->', mu, '*', nu)
+        if got != expected:
+            print()
+            print('  ', P_expansion(got), '=?=', P_expansion(expected))
             print()
         assert got == expected
 
