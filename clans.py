@@ -160,23 +160,51 @@ class Clan:
         cls._draw(clans, folder, filename)
 
     def stanley(self): 
+
+        def getitems(w):
+            if self.family == self.TYPE_B:
+                return w.stanley_schur_p_decomposition().items()
+            elif self.family in [self.TYPE_C1, self.TYPE_C2]:
+                return w.stanley_schur_q_decomposition().items()
+            elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+                return w.stanley_schur_d_decomposition().items()
+            else:
+                raise Exception
+
         ans = Vector()
         for w in self.get_atoms():
             d = self.weyl_group_weight(w)
-            if self.family == self.TYPE_B:
-                for f, c in w.stanley_schur_p_decomposition().items():
-                    mu = f.mu.tuple()
-                    ans += Vector({mu: c * 2**d})
-            elif self.family == self.TYPE_C1:
-                for f, c in w.stanley_schur_q_decomposition().items():
-                    mu = f.mu.tuple()
-                    ans += Vector({mu: c * 2**d})
+            for f, c in getitems(w):
+                mu = f.mu.tuple()
+                ans += Vector({mu: c * 2**d})
+        return ans
+
+    def grothendieck(self): 
+        from schubert import GrothendieckB, GrothendieckC, GrothendieckD
+        from stable.polynomials import beta
+
+        def gettup(hd):
+            return tuple(hd[i] for i in sorted(hd, reverse=True))
+
+        def getitems(w):
+            if self.family in [self.TYPE_B, self.TYPE_C2]:
+                return GrothendieckC.symmetric_simple(w).coeffs.items()
+            elif self.family in [self.TYPE_C1]:
+                return GrothendieckB.symmetric_simple(w).coeffs.items()
             elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
-                for f, c in w.stanley_schur_d_decomposition().items():
-                    mu = f.mu.tuple()
-                    ans += Vector({mu: c * 2**d})
+                return GrothendieckD.symmetric_simple(w).coeffs.items()
             else:
                 raise Exception
+
+        ans = Vector()
+        a = list(self.get_atoms())[0]
+        for w in self.get_hecke_atoms():
+            # d = self.weyl_group_weight(w)
+            for hd, c in getitems(w):
+                mu = gettup(hd)
+                c *= (-beta)**(sum(mu) - self.weyl_group_length(w))
+                d = beta**(self.weyl_group_length(w) - self.weyl_group_length(a))
+                ans += Vector({mu: c * d})
         return ans
 
     def __repr__(self):

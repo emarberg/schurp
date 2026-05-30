@@ -4,13 +4,19 @@ from signed import SignedPermutation
 from even import EvenSignedPermutation
 
 
-def test_stanley_b(n=4):
-    from stable.utils import P, P_expansion, Q, Q_expansion, S, S_expansion
+def test_stanley_b(n=4, testhecke=True):
+    from stable.utils import P, P_expansion, Q, Q_expansion, S, S_expansion, GS, GQ
 
     def stanley(m, a):
         ans = 0
         for mu, c in a.stanley().items():
             ans += P(m, mu) * c
+        return ans
+
+    def grothendieck(m, a):
+        ans = 0
+        for mu, c in a.grothendieck().items():
+            ans += GQ(m, mu) * c
         return ans
 
     c = [x for x in Clan.all_b(n) if x.is_matchless()]
@@ -35,15 +41,27 @@ def test_stanley_b(n=4):
         if not (pbool and qbool):
             assert len(ss) == 1
             assert ss[list(ss)[0]] == 1
+            
+            if testhecke:
+                mu = list(ss)[0]
+                assert grothendieck(n, a) == GS(n, mu)
+        else:
+            assert len(ss) > 1
 
 
-def test_stanley_c1(n=4):
-    from stable.utils import Q, Q_expansion
+def test_stanley_c1(n=4, testhecke=True):
+    from stable.utils import Q, Q_expansion, GQ_expansion, GP_expansion, GP, GQ
 
     def stanley(m, a):
         ans = 0
         for mu, c in a.stanley().items():
             ans += Q(m, mu) * c
+        return ans
+
+    def grothendieck(m, a):
+        ans = 0
+        for mu, c in a.grothendieck().items():
+            ans += GP(m, mu) * c
         return ans
 
     c = [x for x in Clan.all_c1(n) if x.is_matchless()]
@@ -56,12 +74,59 @@ def test_stanley_c1(n=4):
         got = stanley(m, a)
         expected = Q(m, mu) * Q(m, nu)
 
-        print(a, '->', mu, '*', nu)
+        print(a, '::', mu, '*', nu)
         if got != expected:
             print()
             print('  ', Q_expansion(got), '=?=', Q_expansion(expected))
             print()
         assert got == expected
+
+        if testhecke:
+            got = grothendieck(m, a)
+            expected = GP(m, mu) * GP(m, nu)
+            if got != expected:
+                print()
+                print('! ', GP_expansion(got))
+                print()
+                print('! ', GP_expansion(expected))
+                print()
+            assert got == expected
+
+
+def test_stanley_c2(n=4):
+    from stable.utils import P, P_expansion, Q, Q_expansion, S, S_expansion
+
+    def stanley(m, a):
+        ans = 0
+        for mu, c in a.stanley().items():
+            ans += Q(m, mu) * c
+        return ans
+
+    c = [x for x in Clan.all_c2(n) if x.is_matchless()]
+    for a in c:
+        s = a.signs()[n:]
+        s = a.signs()
+
+        pbool = any(s[i] == s[i + 1] == True for i in range(len(s) - 1))
+        qbool = any(s[i] == s[i + 1] == False for i in range(len(s) - 1))
+
+        got = stanley(n, a)
+        expected = 0
+
+        ss = S_expansion(got)
+
+        print(a, '::')
+        if got != expected:
+            print()
+            print('  Q:', Q_expansion(got))
+            print('  S:', ss)
+            print()
+        #assert got == expected
+        if not (pbool and qbool):
+            assert len(ss) == 1
+            assert ss[list(ss)[0]] == 1
+        else:
+            assert len(ss) > 1
 
 
 def test_stanley_d1(n=4):
@@ -95,6 +160,8 @@ def test_stanley_d1(n=4):
         if not (pbool and qbool):
             assert len(ss) == 1
             assert ss[list(ss)[0]] == 1
+        else:
+            assert len(ss) > 1
 
 
 def test_stanley_d2(n=4):
@@ -128,15 +195,23 @@ def test_stanley_d2(n=4):
         if not (pbool and qbool):
             assert len(ss) == 1
             assert ss[list(ss)[0]] == 1
+        else:
+            assert len(ss) > 1
 
 
-def test_stanley_d3(n=4):
-    from stable.utils import P, P_expansion
+def test_stanley_d3(n=4, testhecke=True):
+    from stable.utils import P, P_expansion, GP, GP_expansion
 
     def stanley(m, a):
         ans = 0
         for mu, c in a.stanley().items():
             ans += P(m, mu) * c
+        return ans
+
+    def grothendieck(m, a):
+        ans = 0
+        for mu, c in a.grothendieck().items():
+            ans += GP(m, mu) * c
         return ans
 
     c = [x for x in Clan.all_d3(n) if x.is_matchless()]
@@ -155,6 +230,19 @@ def test_stanley_d3(n=4):
             print('  ', P_expansion(got), '=?=', P_expansion(expected))
             print()
         assert got == expected
+
+        if testhecke:
+            got = grothendieck(m, a)
+            expected = GP(m, mu) * GP(m, nu)
+
+            print(a, '->', mu, '*', nu)
+            if got != expected:
+                print()
+                print('! ', GP_expansion(got))
+                print()
+                print('! ', GP_expansion(expected))
+                print()
+            assert got == expected
 
 
 def setact(pi, s):
@@ -542,6 +630,8 @@ def _test_hecke_atoms(cl, dtype=False, verbose=False):
 
     if cl.is_strongly_alternating():
         assert hecke == expected
+    else:
+        assert hecke != expected
 
 
 def test_hecke_atoms_a(n=3, verbose=False):
