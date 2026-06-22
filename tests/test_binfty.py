@@ -12,6 +12,56 @@ from stable.utils import G, G_expansion_no_beta, SymmetricPolynomial
 from stable.vectors import Vector
 
 
+def test_lp(n, thresh=10):
+    lp = InfiniteCrystal.sqrt_LP(n)
+    elems = lp.vertices(thresh, thresh)
+
+    def floor(x):
+        return 2 * (x // 2)
+
+    def ceil(x):
+        return 2 * ((x + 1) // 2)
+
+    def get(i, x):
+        return x[i - 1]
+
+    def sub(i, x):
+        x = list(x)
+        x[i - 1] -= 1
+        return tuple(x)
+
+    def add(i, x):
+        x = list(x)
+        x[i - 1] += 1
+        return tuple(x)
+
+    for i in range(1, n):
+        for v in elems:
+            # test e
+            ev = lp.e_operator(i, v)
+            if get(i, v) == 0: 
+                case = 'a'
+                expected = None
+            elif i > 1 and get(i - 1, v) > get(i, v):
+                case = 'b'
+                expected = sub(i - 1, v)
+            elif get(i, v) < 0:
+                case = 'c'
+                expected = add(i, v)
+            else:
+                raise Exception
+            print('case', case, '| e_%s' % i, ':', v, '=', ev, '=?=', expected)
+            if expected != ev:
+                assert get(i, expected) > ceil(get(i + 1, expected))
+                print()
+            #assert expected == ev
+            
+            # test f
+
+            # test eps
+
+            # test phi
+
 def test_elementary_squared(n=3, p=3, q=3):
     b = InfiniteCrystal.binfty(n)
     for w in Permutation.longest_element(n).get_reduced_words():

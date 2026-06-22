@@ -31,7 +31,6 @@ class InfiniteCrystal:
         word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
         return cls.tensor(*[elem[i] for i in word])
 
-
     @classmethod 
     def sqrt_binfty(cls, n, word=None):
         elem = {i: cls.sqrt_elementary(i, n) for i in range(1, n)}
@@ -350,6 +349,68 @@ class InfiniteCrystal:
 
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
  
+    @classmethod
+    def one(cls, n):
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None
+        f_operators = lambda i, x: None
+
+        e_strings = lambda i, x: 0
+        f_strings = lambda i, x: 0
+
+        weight_map = lambda x: tuple(n * [0,])
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def one_gt(cls, n):
+        generator = 0
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: None
+        f_operators = lambda i, x: None
+
+        e_strings = lambda i, x: 0 if i > 1 else None
+        f_strings = lambda i, x: 0 if i > 1 else None
+
+        weight_map = lambda x: tuple(n * [0,])
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def sqrt_LP(cls, n):
+        def elem_LP(args):
+            args = [0] + list(args) + [0]
+            ans = (args[0], args[1])
+            args = args[2:]
+            while args:
+                ans = (ans, args[0])
+                args = args[1:]
+            return ans
+    
+        def tuple_LP(elem):
+            if elem is None:
+                return None
+            while type(elem[0]) == tuple:
+                elem = elem[0] + elem[1:]
+            return elem[1:-1]
+
+        factors = [cls.one_gt(n)] + [cls.sqrt_elementary(j, n) for j in range(1, n)] + [cls.one(n)]
+        b = cls.sqrt_tensor(*factors)
+
+        generator = tuple_LP(b.generator)
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: tuple_LP(b.e_operator(i, elem_LP(x)))
+        f_operators = lambda i, x: tuple_LP(b.f_operator(i, elem_LP(x)))
+
+        e_strings = lambda i, x: b.e_string(i, elem_LP(x))
+        f_strings = lambda i, x: b.f_string(i, elem_LP(x))
+
+        weight_map = lambda x: b.weight(elem_LP(x))
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+
     @classmethod
     def elementary(cls, j, n):
         generator = 0

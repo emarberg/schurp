@@ -1,4 +1,5 @@
 from signed import SignedPermutation
+from symmetric import StanleyExpander
 from permutations import Permutation
 from vectors import Vector
 import itertools
@@ -43,6 +44,13 @@ class Clan:
 
         self.oneline = tuple(oneline)
         self.family = family
+
+    def pairs(self):
+        ans = set()
+        for i in range(1, 1 + len(self.oneline)):
+            if type(self.oneline[i - 1]) == int and i < self.oneline[i - 1]:
+                ans.add((i, self.oneline[i - 1]))
+        return ans
 
     def __len__(self):
         return len(self.oneline)
@@ -162,7 +170,9 @@ class Clan:
     def stanley(self): 
 
         def getitems(w):
-            if self.family == self.TYPE_B:
+            if self.family == self.TYPE_A:
+                return StanleyExpander(w).expand().items()
+            elif self.family == self.TYPE_B:
                 return w.stanley_schur_p_decomposition().items()
             elif self.family in [self.TYPE_C1, self.TYPE_C2]:
                 return w.stanley_schur_q_decomposition().items()
@@ -179,7 +189,7 @@ class Clan:
                 ans += Vector({mu: c * 2**d})
         return ans
 
-    def grothendieck(self): 
+    def grothendieck(self):
         from schubert import GrothendieckB, GrothendieckC, GrothendieckD
         from stable.polynomials import beta
 
@@ -187,7 +197,9 @@ class Clan:
             return tuple(hd[i] for i in sorted(hd, reverse=True))
 
         def getitems(w):
-            if self.family in [self.TYPE_B, self.TYPE_C2]:
+            if self.family == self.TYPE_A:
+                raise Exception
+            elif self.family in [self.TYPE_B, self.TYPE_C2]:
                 return GrothendieckC.symmetric_simple(w).coeffs.items()
             elif self.family in [self.TYPE_C1]:
                 return GrothendieckB.symmetric_simple(w).coeffs.items()
@@ -253,6 +265,14 @@ class Clan:
         assert self.family == self.TYPE_D2
         n = len(self.oneline) // 2
         return not any(type(i) == int for i in self.oneline[:n - 1] + self.oneline[n + 1:])
+
+    def is_noncrossing(self):
+        pairs = self.pairs()
+        for (a, c) in pairs:
+            for (b, d) in pairs:
+                if a < b < c < d:
+                    return False
+        return True
 
     def is_matchless(self):
         return not any(type(i) == int for i in self.oneline)
@@ -440,7 +460,7 @@ class Clan:
     def all_b(cls, p, q=None):
         if q is None:
             n = p
-            for p in range(1, n):
+            for p in range(0, n + 1):
                 for clan in cls.all_b(p, n - p):
                     yield clan
         else:
@@ -479,7 +499,7 @@ class Clan:
     def all_c2(cls, p, q=None):
         if q is None:
             n = p
-            for p in range(1, n):
+            for p in range(0, n + 1):
                 for clan in cls.all_c2(p, n - p):
                     yield clan
         else:
@@ -490,7 +510,7 @@ class Clan:
     def all_d1(cls, p, q=None):
         if q is None:
             n = p
-            for p in range(1, n):
+            for p in range(0, n + 1):
                 for clan in cls.all_d1(p, n - p):
                     yield clan
         else:
@@ -503,7 +523,7 @@ class Clan:
     def all_d2(cls, p, q=None):
         if q is None:
             n = p
-            for p in range(1, n + 1):
+            for p in range(0, n + 2):
                 q = n + 1 - p
                 for clan in cls.all_d2(p, q):
                     yield clan

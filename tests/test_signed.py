@@ -189,7 +189,8 @@ def test_d_bruhat_order(n=4):
         for u in SignedPermutation.all(n, dtype=True):
             expected = v.dbruhat_less_equal(u)
             actual = u in bruhat[v]
-            print(v, '<=', u, ':', expected, actual)
+            if expected != actual:
+                print(v, '<=', u, ':', expected, actual)
             assert expected == actual
 
 
