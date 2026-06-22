@@ -56,8 +56,22 @@ def test_lp(n, thresh=10):
             assert len(case) == 1
             assert expected == ev
             
-            
             # test f
+            fv = lp.f_operator(i, v)
+            case = ''
+            if (i > 1 and get(i - 1, v) >= get(i, v) and get(i - 1, v) % 2 == 0):
+                case += 'a'
+                expected = None
+            if (i > 1 and get(i - 1, v) == get(i, v) and get(i, v) % 2 != 0):
+                case += 'b'
+                expected = add(i - 1, v)
+            if case == '':
+                case += 'c'
+                expected = sub(i, v)
+            if expected != fv:
+                print('case', case, '| f_%s' % i, ':', v, '=', fv, '=?=', expected)
+            assert len(case) == 1
+            assert expected == fv
 
             # test eps
 
