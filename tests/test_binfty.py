@@ -23,7 +23,7 @@ def test_lp(n, thresh=10):
         return 2 * ((x + 1) // 2)
 
     def get(i, x):
-        return x[i - 1]
+        return 0 if i == n else x[i - 1]
 
     def sub(i, x):
         x = list(x)
@@ -39,22 +39,23 @@ def test_lp(n, thresh=10):
         for v in elems:
             # test e
             ev = lp.e_operator(i, v)
-            if get(i, v) == 0: 
-                case = 'a'
+            case = ''
+            if get(i, v) >= ceil(get(i + 1, v)):
+                case += 'a'
                 expected = None
-            elif i > 1 and get(i - 1, v) > get(i, v):
-                case = 'b'
+            if (i > 1 and get(i - 1, v) > get(i, v)) and get(i, v) < ceil(get(i + 1, v)):
+                case += 'b'
                 expected = sub(i - 1, v)
-            elif get(i, v) < 0:
-                case = 'c'
+            if (i == 1 or get(i - 1, v) <= get(i, v)) and get(i, v) < ceil(get(i + 1, v)):
+                case += 'c'
                 expected = add(i, v)
-            else:
-                raise Exception
-            print('case', case, '| e_%s' % i, ':', v, '=', ev, '=?=', expected)
             if expected != ev:
-                assert get(i, expected) > ceil(get(i + 1, expected))
-                print()
-            #assert expected == ev
+                print('case', case, '| e_%s' % i, ':', v, '=', ev, '=?=', expected)
+                #assert get(i, expected) > ceil(get(i + 1, expected))
+                #assert ev is None
+            assert len(case) == 1
+            assert expected == ev
+            
             
             # test f
 
