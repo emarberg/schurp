@@ -44,7 +44,7 @@ def test_lp(n, thresh=10):
             # test e
             ev = lp.e_operator(i, v)
             case = ''
-            if get(i, v) >= ceil(get(i + 1, v)):
+            if get(i, v) == ceil(get(i + 1, v)):
                 case += 'a'
                 expected = None
             if (i > 1 and get(i - 1, v) > get(i, v)) and get(i, v) < ceil(get(i + 1, v)):
@@ -63,7 +63,7 @@ def test_lp(n, thresh=10):
             # test f
             fv = lp.f_operator(i, v)
             case = ''
-            if (i > 1 and get(i - 1, v) >= get(i, v) and get(i - 1, v) % 2 == 0):
+            if (i > 1 and get(i - 1, v) == ceil(get(i, v))):
                 case += 'a'
                 expected = None
             if (i > 1 and get(i - 1, v) == get(i, v) and get(i, v) % 2 != 0):
