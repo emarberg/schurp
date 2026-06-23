@@ -23,6 +23,7 @@ def test_lp(n, thresh=10):
         return 2 * ((x + 1) // 2)
 
     def get(i, x):
+        assert 1 <= i <= n
         return 0 if i == n else x[i - 1]
 
     def sub(i, x):
@@ -35,8 +36,11 @@ def test_lp(n, thresh=10):
         x[i - 1] += 1
         return tuple(x)
 
-    for i in range(1, n):
-        for v in elems:
+    for v in elems:
+        for i in range(1, n):
+            assert get(i, v) <= 0
+            assert get(i, v) <= ceil(get(i + 1, v))
+
             # test e
             ev = lp.e_operator(i, v)
             case = ''
@@ -74,8 +78,36 @@ def test_lp(n, thresh=10):
             assert expected == fv
 
             # test eps
-
+            eps = lp.e_string(i, v)
+            case = ''
+            if i > 1 and get(i - 1, v) > get(i, v):
+                case += 'a'
+                expected = -get(i, v) + get(i + 1, v) + 1 + (0 if get(i + 1, v) % 2 == 0 else 1)
+            if case == '':
+                case += 'b'
+                expected = -get(i, v) + get(i + 1, v) + (0 if get(i + 1, v) % 2 == 0 else 1)
+            if expected != eps:
+                print('case', case, '| eps_%s' % i, ':', v, '=', eps, '=?=', expected)
+                input('\n')
+            assert len(case) == 1
+            assert expected == eps
             # test phi
+            phi = lp.f_string(i, v)
+            case = ''
+            if i == 1:
+                case += 'a'
+                expected = get(i, v)
+            if i > 1 and get(i - 1, v) <= get(i, v) and get(i - 1, v) % 2 == 0:
+                case += 'b'
+                expected = -get(i - 1, v) + get(i, v)
+            if case == '':
+                case += 'c'
+                expected = -get(i - 1, v) + get(i, v) + 1
+            if expected != phi:
+                print('case', case, '| phi_%s' % i, ':', v, '=', phi, '=?=', expected)
+                input('\n')
+            assert len(case) == 1
+            assert expected == phi
 
 def test_elementary_squared(n=3, p=3, q=3):
     b = InfiniteCrystal.binfty(n)
