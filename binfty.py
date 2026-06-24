@@ -381,7 +381,7 @@ class InfiniteCrystal:
     def sqrt_LP(cls, n):
         def elem_LP(args):
             args = [0] + list(args) + [0]
-            ans = (args[0], args[1])
+            ans = tuple(args[:2])
             args = args[2:]
             while args:
                 ans = (ans, args[0])
@@ -410,6 +410,38 @@ class InfiniteCrystal:
         weight_map = lambda x: b.weight(elem_LP(x))
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
+    @classmethod
+    def sqrt_LP_no_gt(cls, n):
+        def elem_LP(args):
+            args = list(args) + [0]
+            ans = tuple(args[:2])
+            args = args[2:]
+            while args:
+                ans = (ans, args[0])
+                args = args[1:]
+            return ans
+    
+        def tuple_LP(elem):
+            if elem is None:
+                return None
+            while type(elem[0]) == tuple:
+                elem = elem[0] + elem[1:]
+            return elem[:-1]
+
+        factors = [cls.sqrt_elementary(j, n) for j in range(1, n)] + [cls.one(n)]
+        b = cls.sqrt_tensor(*factors)
+
+        generator = tuple_LP(b.generator)
+        indices = list(range(1, n))
+
+        e_operators = lambda i, x: tuple_LP(b.e_operator(i, elem_LP(x)))
+        f_operators = lambda i, x: tuple_LP(b.f_operator(i, elem_LP(x)))
+
+        e_strings = lambda i, x: b.e_string(i, elem_LP(x))
+        f_strings = lambda i, x: b.f_string(i, elem_LP(x))
+
+        weight_map = lambda x: b.weight(elem_LP(x))
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
     def elementary(cls, j, n):

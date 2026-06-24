@@ -37,6 +37,13 @@ def test_lp(n, thresh=10):
         return tuple(x)
 
     for v in elems:
+        weight = n * [0]
+        for i in range(1, n):
+            weight[i - 1] += ceil(get(i, v)) // 2
+            weight[i] -= floor(get(i, v)) // 2
+        weight = tuple(weight)
+        assert weight == lp.weight(v)
+
         for i in range(1, n):
             assert get(i, v) <= 0
             assert get(i, v) <= ceil(get(i + 1, v))
@@ -91,6 +98,7 @@ def test_lp(n, thresh=10):
                 input('\n')
             assert len(case) == 1
             assert expected == eps
+            
             # test phi
             phi = lp.f_string(i, v)
             case = ''
