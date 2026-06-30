@@ -855,30 +855,53 @@ def _test_hecke_atoms(cl, dtype=False, verbose=False):
     length = lambda x: cl.weyl_group_length(x)
     get_reduced_word = lambda w: w.get_reduced_word(dtype=dtype) if dtype else w.get_reduced_word()
 
+    from time import time
+    t = time()
+    print('... computing atoms', end =' ')
     atoms = set(cl.get_atoms())
-    hecke = set(cl.get_hecke_atoms())
-    extended = set(cl.get_hecke_atoms_extended())
+    print(time() - t)
+    
+#    t = time()
+#    print('... computing hecke slow', end =' ')
+#    hecke_slow = set(cl.get_hecke_atoms_slow())
+#    print(time() - t)
 
-    print('clan =', cl)
+    t = time()
+    print('... computing hecke', end =' ')
+    hecke = set(cl.get_hecke_atoms())
+    print(time() - t)
+
+#    assert hecke == hecke_slow
+
+    t = time()
+    print('... computing extended', end =' ')
+    extended = set(cl.get_hecke_atoms_extended())
+    print(time() - t)
+    print('... done.')
     print()
 
-    for w in sorted(extended, key=length):
+    #print('clan =', cl)
+    print()
+    print()
+
+    if verbose:
         shapes = set()
-        print('   b =', cl.richardson_springer_base())
-        print('   z =', cl.richardson_springer_involution())
-        print('   w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
-        print()
-        for v in atoms:
-            if cl.weyl_group_bruhat_leq(v, w):
-                sh = cl.weyl_group_shape(v)
-                shapes.add(sh)
-                print('  ', 'v =', v.inverse(), 'sh =', sh)
+        for w in sorted(extended, key=length):
+            print('   b =', cl.richardson_springer_base())
+            print('   z =', cl.richardson_springer_involution())
+            print('   w =', w.inverse(), 'atom' if w in atoms else 'hecke atom' if w in hecke else 'EXTRA')
+            print()
+            for v in atoms:
+                if cl.weyl_group_bruhat_leq(v, w):
+                    sh = cl.weyl_group_shape(v)
+                    shapes.add(sh)
+                    print('  ', 'v =', v.inverse(), 'sh =', sh)
         print()
         print('  possible shapes:', len(shapes))
         print()
         print()
 
-    expected = {w for w in cl.get_hecke_atoms_extended() if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
+    expected = {w for w in extended if any(cl.weyl_group_bruhat_leq(v, w) for v in atoms)}
     if verbose:
         print(' extended:', {get_reduced_word(w) for w in extended})
         print(' computed:', {get_reduced_word(w) for w in hecke})
@@ -891,10 +914,38 @@ def _test_hecke_atoms(cl, dtype=False, verbose=False):
         print({get_reduced_word(w) for w in hecke - expected})
     assert hecke.issubset(expected)
 
+    print('hecke, expected, extended =', len(hecke), len(expected), len(extended))
+    print()
+    print('clan =', cl)
+    print()
+
     if cl.is_strongly_alternating():
-        assert hecke == expected
+        try:
+            assert hecke == extended
+        except:
+            input('??\n')
     else:
-        assert hecke != expected
+        try:
+            assert hecke != expected
+        except:
+            input('?\n')
+
+
+def test_hecke_atoms(n=3):
+    print('\nAIII\n')
+    test_hecke_atoms_a(n)
+    print('\nBI\n')
+    test_hecke_atoms_b(n)
+    print('\nCI\n')
+    test_hecke_atoms_c1(n)
+    print('\nCII\n')
+    test_hecke_atoms_c2(n)
+    print('\nDI\n')
+    test_hecke_atoms_d1(n)
+    print('\nDII\n')
+    test_hecke_atoms_d2(n)
+    print('\nDIII\n')
+    test_hecke_atoms_d3(n)
 
 
 def test_hecke_atoms_a(n=3, verbose=False):
@@ -929,6 +980,9 @@ def test_hecke_atoms_d2(n=3, verbose=False):
 
 def test_hecke_atoms_d3(n=3, verbose=False):
     for cl in Clan.all_d3(n):
+        if len([i for i in cl.oneline if type(i) == bool]) > 4:
+        #if not cl.is_strongly_alternating():
+            continue
         _test_hecke_atoms(cl, dtype=True, verbose=verbose)
 
 

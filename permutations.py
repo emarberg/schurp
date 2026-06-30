@@ -1529,6 +1529,9 @@ class Permutation:
     def length(self):
         return len(self)
 
+    def absolute_involution_length(self):
+        return len([i for i in range(1, len(self.oneline) + 1) if -i <= self(i) < i])
+
     def __call__(self, i):
         if i < 1:
             return i

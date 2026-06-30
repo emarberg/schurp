@@ -12,6 +12,7 @@ BASE_DIRECTORY = '/Users/emarberg/examples/clans/'
 CLAN_WORDS_CACHE = {}
 CLAN_ATOMS_CACHE = {}
 CLAN_HECKE_ATOMS_CACHE = {}
+CLAN_HECKE_ATOMS_CACHE_SLOW = {}
 CLAN_HECKE_ATOMS_EXTENDED_CACHE = {}
 
 
@@ -44,6 +45,7 @@ class Clan:
 
         self.oneline = tuple(oneline)
         self.family = family
+        self.bruhat_cache = {}
 
     def pairs(self):
         ans = set()
@@ -254,7 +256,12 @@ class Clan:
         elif self.family in [self.TYPE_C2, self.TYPE_D1, self.TYPE_D2]:
             return not any(s[i] == s[i + 1] for i in range(len(s)//2 - 1))
         elif self.family == self.TYPE_D3:
-            return len([i for i in self.oneline if type(i) == bool]) <= 1
+            return len([i for i in self.oneline if type(i) == bool]) <= 2
+            #
+            # hecke atoms for clan = (1 1 + 4 5 - + 4 5 - 11 11)
+            # not given by extended hecke atoms
+            #
+            #return not any(s[i] == s[i + 1] for i in range(len(s) - 1)) and len([i for i in self.oneline if type(i) == bool]) <= 4 and not any(i for i in range(len(self.oneline) - 3) if all(type(self.oneline[j]) == bool for j in range(i, i + 4)))
         else:
             raise Exception
 
@@ -570,6 +577,33 @@ class Clan:
         else:
             raise Exception
 
+    def reflections(self):
+        n = self.rank()
+        if self.family == self.TYPE_A:
+            return list(Permutation.reflections(n))
+        elif self.family in [self.TYPE_B, self.TYPE_C1, self.TYPE_C2]:
+            return list(SignedPermutation.reflections(n))
+        elif self.family in [self.TYPE_D1, self.TYPE_D2, self.TYPE_D3]:
+            return list(SignedPermutation.reflections(n, dtype=True))
+        else:
+            raise Exception
+
+    def bruhat_covers(self, *elems):
+        ans = set()
+        ref = None
+        for e in elems:
+            if e not in self.bruhat_cache:
+                self.bruhat_cache[e] = set()
+                if ref is None:
+                    ref = self.reflections()
+                ell = self.weyl_group_length(e)
+                for t in ref:
+                    et = e * t
+                    if self.weyl_group_length(et) == ell + 1:
+                        self.bruhat_cache[e].add(et)
+            ans |= self.bruhat_cache[e]
+        return ans
+
     def simple_generator_cycles(self, i):
         if self.family == self.TYPE_A:
             return {(i, i + 1)}
@@ -676,6 +710,41 @@ class Clan:
 
     def get_hecke_atoms(self):
         if self not in CLAN_HECKE_ATOMS_CACHE:
+            atoms = list(self.get_atoms())
+
+            upper_poset = {a: {a} for a in atoms}
+            level = atoms
+            while level:
+                newlevel = set()
+                for x in level:
+                    for y in self.bruhat_covers(x):
+                        if y not in upper_poset:
+                            newlevel.add(y)
+                            upper_poset[y] = {y}
+                        upper_poset[y] |= upper_poset[x]
+                level = newlevel
+
+            ans = {}
+            def mobius(x):
+                if x not in ans:
+                    mu = 0
+                    for z in upper_poset[x] - {x}:
+                        mu += mobius(z)
+                    ans[x] = 1 - mu
+                return ans[x]
+
+            a = next(iter(atoms))
+            CLAN_HECKE_ATOMS_CACHE[self] = set()
+            for w in upper_poset:
+                mu = mobius(w)
+                if mu == 0:
+                    continue
+                assert mu == (-1)**(self.weyl_group_length(w) - self.weyl_group_length(a))
+                CLAN_HECKE_ATOMS_CACHE[self].add(w)
+        return CLAN_HECKE_ATOMS_CACHE[self]
+
+    def get_hecke_atoms_slow(self):
+        if self not in CLAN_HECKE_ATOMS_CACHE_SLOW:
             atoms = self.get_atoms()
             upper_poset = {}
             for w in self.weyl_group():
@@ -684,7 +753,7 @@ class Clan:
                         upper_poset[w] = set()
             for x in upper_poset:
                 for y in upper_poset:
-                    if self. weyl_group_bruhat_leq(x, y):
+                    if self.weyl_group_bruhat_leq(x, y):
                         upper_poset[y].add(x)
 
             ans = {}
@@ -699,13 +768,13 @@ class Clan:
                 mobius(x)
 
             a = next(iter(atoms))
-            CLAN_HECKE_ATOMS_CACHE[self] = set()
+            CLAN_HECKE_ATOMS_CACHE_SLOW[self] = set()
             for w in ans:
                 if ans[w] == 0:
                     continue
                 assert ans[w] == (-1)**(self.weyl_group_length(w) - self.weyl_group_length(a))
-                CLAN_HECKE_ATOMS_CACHE[self].add(w)
-        return CLAN_HECKE_ATOMS_CACHE[self]
+                CLAN_HECKE_ATOMS_CACHE_SLOW[self].add(w)
+        return CLAN_HECKE_ATOMS_CACHE_SLOW[self]
 
     def get_atoms(self):
         if self not in CLAN_ATOMS_CACHE:
@@ -779,7 +848,7 @@ class Clan:
                 length = lambda x: x.dlength()
                 if n % 2 != 0:
                     t = SignedPermutation.s_i(0, n)
-                translate = lambda x,s: x * s #x * s # if (t * x*s).is_fpf_involution() else None
+                translate = lambda x,s: x * s if (t * x*s).is_fpf_involution() else None
             else:
                 raise Exception
 

@@ -203,8 +203,8 @@ def _test_AI(rank):
     is_aligned_fn = lambda gamma, m: True
     generator_fn = lambda z, m: z.get_max_atom().inverse()
     span_fn = precsim(0, rank + 1)
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
-
+    degree_fn = lambda z: (z.length() + z.absolute_involution_length()) // 2
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
 def _test_AII(rank):
     print('testing AII, rank =', rank)
@@ -219,7 +219,8 @@ def _test_AII(rank):
     is_aligned_fn = lambda gamma, m: True
     generator_fn = lambda z, m: z.get_max_fpf_atom().inverse()
     span_fn = precapprox(0, rank + 1)
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+    degree_fn = lambda z: (z.length() - z.absolute_involution_length()) // 2
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
 
 def _test_AIII(rank):
@@ -246,7 +247,13 @@ def _test_AIII(rank):
         is_aligned_fn = lambda gamma, m: gamma.is_aligned(m)
         generator_fn = lambda z, m: z.get_min_twisted_atom(n, m).inverse()
         span_fn = precsim_AIII(k, n)
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+        
+        w0 = Permutation.longest_element(n)
+        def degree_fn(z):
+            assert (z.length() - (w0*z).absolute_involution_length() + (n - k**2) // 2) % 2 == 0
+            return (z.length() - (w0*z).absolute_involution_length() + (n - k**2) // 2) // 2
+
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
 
 def nest(o):
@@ -333,7 +340,9 @@ def _test_BI(rank):
             return SignedPermutation(*(u + v))
 
         span_fn = precsim(k, n)
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+        degree_fn = lambda z: (z.length() + z.absolute_involution_length() - k * (k + 1)) // 2
+
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
 
 def _test_CI(rank):
@@ -371,7 +380,9 @@ def _test_CI(rank):
         return SignedPermutation(*(u + v))
 
     span_fn = precsim(0, n)
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+    degree_fn = lambda z: (z.length() + z.absolute_involution_length()) // 2
+
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
 
 def _test_CII(rank):
@@ -404,7 +415,9 @@ def _test_CII(rank):
             return SignedPermutation(*(u + v))
 
         span_fn = precapprox(k, n)
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+        degree_fn = lambda z: (z.length() + z.absolute_involution_length() - k**2 - n) // 2
+
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
 
 def shape_CII(p, q):
@@ -519,7 +532,9 @@ def _test_DI(rank):
                 return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
         
         rank_fn = lambda w: rk(w)
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn)
+        degree_fn = lambda z: (z.dlength() + z.absolute_involution_length() - k**2) // 2
+
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn)
 
         def minimal_gen(z):
             m = []
@@ -609,7 +624,9 @@ def _test_DII(rank):
 
             return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
         
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn)
+        degree_fn = lambda z: (z.dlength() + (t*z).absolute_involution_length() - k**2 + 1) // 2
+
+        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn)
 
 
 def _test_DIII(rank):
@@ -688,7 +705,9 @@ def _test_DIII(rank):
         return es(ans)
 
     span_fn = precapprox(0 if n % 2 == 0 else 1, n)
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn)
+    degree_fn = lambda z: (z.dlength() + z.absolute_involution_length()) // 2 - z.rank // 2
+
+    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
 
 def span_test(generator, preorder_fn, rank_fn=None):
@@ -714,7 +733,7 @@ def span_test(generator, preorder_fn, rank_fn=None):
 def _generic_test(
         gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, 
         matchings_fn, shape_fn, is_aligned_fn, 
-        generator_fn, preorder_fn, rank_fn=None):
+        generator_fn, preorder_fn, rank_fn, degree_fn):
     expected_invol = {rs_fn(gamma) for gamma in gamma_set}
     assert expected_invol == invol_set
 
@@ -745,4 +764,5 @@ def _generic_test(
                 expected_brion |= matchings[z][m]
         actual_brion = brion_fn(gamma)
         assert expected_brion == actual_brion
+        assert all((gamma.weyl_group_length(w) if type(gamma) == Clan else w.length()) == degree_fn(z) for w in actual_brion)
 

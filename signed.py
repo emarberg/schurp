@@ -561,12 +561,13 @@ class SignedPermutation(SignedMixin):
                 yield (cls(*oneline), mu)
 
     @classmethod
-    def reflections(cls, n):
+    def reflections(cls, n, dtype=False):
         for i in range(1, n + 1):
             for j in range(i + 1, n + 1):
                 yield cls.reflection_t(i, j, n)
                 yield cls.reflection_s(i, j, n)
-            yield cls.reflection_s(i, i, n)
+            if not dtype:
+                yield cls.reflection_s(i, i, n)
 
     @classmethod
     def all(cls, n, dtype=False):
@@ -603,6 +604,9 @@ class SignedPermutation(SignedMixin):
                     yield w
                 elif dtype and twisted and not w.is_even_signed():
                     yield cls.s_i(0, n) * w
+
+    def absolute_involution_length(self):
+        return len([i for i in range(1, self.rank + 1) if -i <= self(i) < i])
 
     @classmethod
     def abs_fpf_involutions(cls, n):
