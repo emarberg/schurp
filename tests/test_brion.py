@@ -250,8 +250,8 @@ def _test_AIII(rank):
         
         w0 = Permutation.longest_element(n)
         def degree_fn(z):
-            assert (z.length() - (w0*z).absolute_involution_length() + (n - k**2) // 2) % 2 == 0
-            return (z.length() - (w0*z).absolute_involution_length() + (n - k**2) // 2) // 2
+            assert (2 * z.length() - 2 * (w0*z).absolute_involution_length() + (n - k**2)) % 4 == 0
+            return (2 * z.length() - 2 * (w0*z).absolute_involution_length() + (n - k**2)) // 4
 
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
@@ -340,7 +340,9 @@ def _test_BI(rank):
             return SignedPermutation(*(u + v))
 
         span_fn = precsim(k, n)
-        degree_fn = lambda z: (z.length() + z.absolute_involution_length() - k * (k + 1)) // 2
+        def degree_fn(z):
+            assert (z.length() + z.absolute_involution_length() - k * (k + 1)) % 2 == 0
+            return (z.length() + z.absolute_involution_length() - k * (k + 1)) // 2
 
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
@@ -380,7 +382,9 @@ def _test_CI(rank):
         return SignedPermutation(*(u + v))
 
     span_fn = precsim(0, n)
-    degree_fn = lambda z: (z.length() + z.absolute_involution_length()) // 2
+    def degree_fn(z):
+        assert (z.length() + z.absolute_involution_length()) % 2 == 0
+        return (z.length() + z.absolute_involution_length()) // 2
 
     _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
@@ -415,7 +419,9 @@ def _test_CII(rank):
             return SignedPermutation(*(u + v))
 
         span_fn = precapprox(k, n)
-        degree_fn = lambda z: (z.length() + z.absolute_involution_length() - k**2 - n) // 2
+        def degree_fn(z):
+            assert (z.length() + z.absolute_involution_length() - k**2 - n) % 2 == 0
+            return (z.length() + z.absolute_involution_length() - k**2 - n) // 2
 
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
@@ -532,7 +538,9 @@ def _test_DI(rank):
                 return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
         
         rank_fn = lambda w: rk(w)
-        degree_fn = lambda z: (z.dlength() + z.absolute_involution_length() - k**2) // 2
+        def degree_fn(z):
+            assert (z.dlength() + z.absolute_involution_length() - k**2) % 2 == 0
+            return (z.dlength() + z.absolute_involution_length() - k**2) // 2
 
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn)
 
@@ -624,7 +632,9 @@ def _test_DII(rank):
 
             return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
         
-        degree_fn = lambda z: (z.dlength() + (t*z).absolute_involution_length() - k**2 + 1) // 2
+        def degree_fn(z):
+            assert (z.dlength() + (t*z).absolute_involution_length() - k**2) % 2 == 0
+            return (z.dlength() + (t*z).absolute_involution_length() - k**2) // 2
 
         _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn)
 
@@ -705,7 +715,9 @@ def _test_DIII(rank):
         return es(ans)
 
     span_fn = precapprox(0 if n % 2 == 0 else 1, n)
-    degree_fn = lambda z: (z.dlength() + z.absolute_involution_length()) // 2 - z.rank // 2
+    def degree_fn(z):
+        assert (z.dlength() + (z if n %2 == 0 else t* z).absolute_involution_length() - z.rank) % 2 ==0
+        return (z.dlength() + (z if n %2 == 0 else t* z).absolute_involution_length() - z.rank) // 2
 
     _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
 
@@ -765,4 +777,12 @@ def _generic_test(
         actual_brion = brion_fn(gamma)
         assert expected_brion == actual_brion
         assert all((gamma.weyl_group_length(w) if type(gamma) == Clan else w.length()) == degree_fn(z) for w in actual_brion)
+
+
+def dcompare(n):
+    f = lambda w: SignedPermutation(*((SignedPermutation.s_i(0, n) * w).oneline + (-n - 1,)))
+    a = list(SignedPermutation.involutions(n,dtype=True,twisted=True))
+    rho = lambda w, b: w.involution_length(dtype=True, twisted=b)
+    for w in a:
+        print(-w.dlength() + f(w).dlength(), -rho(w, True) + rho(f(w), False), -(SignedPermutation.s_i(0, n) * w).absolute_involution_length() + f(w).absolute_involution_length())
 
