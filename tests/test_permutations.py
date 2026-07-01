@@ -1,5 +1,118 @@
 from permutations import Permutation
+import subprocess
 
+
+
+
+def span(v):
+    v = tuple(v.oneline)
+    level = {(None, v)}
+    seen = set()
+    while level:
+        nextlevel = set()
+        nextseen = set()
+        for u, v in level:
+            if u is not None:
+                yield (u, v)
+            assert v not in seen
+            nextseen.add(v)
+            for i in range(len(v) - 2):
+                b, c, a = v[i: i + 3]
+                if a < b < c:
+                    w = v[:i] + (c, a, b) + v[i + 3:]
+                    nextlevel.add((v, w))
+        level = nextlevel
+        seen |= nextseen
+
+
+def is_lattice(vertices, edges, upper_only=False, lower_only=False):
+    atoms = vertices
+    upper_covers = {x: set() for x in atoms}
+    lower_covers = {x: set() for x in atoms}
+    for x, y in edges:
+        upper_covers[x].add(y)
+        lower_covers[y].add(x)
+
+    top = {x for x in upper_covers if len(upper_covers[x]) == 0}
+    bot = [x for x in lower_covers if len(lower_covers[x]) == 0]
+
+    lower = {x: {x} for x in atoms}
+    level = bot
+    while level:
+        nextlevel = set()
+        for x in level:
+            for y in upper_covers[x]:
+                lower[y] |= lower[x]
+                nextlevel.add(y)
+        level = nextlevel
+
+    upper = {x: {x} for x in atoms}
+    level = top
+    while level:
+        nextlevel = set()
+        for y in level:
+            for x in lower_covers[y]:
+                upper[x] |= upper[y]
+                nextlevel.add(x)
+        level = nextlevel
+
+    for x in atoms:
+        for y in atoms:
+            if not lower_only:
+                ubset = upper[x] & upper[y]
+                ublist = list(ubset)
+                for u in ublist:
+                    ubset -= upper_covers[u]
+                if len(ubset) != 1:
+                    return False
+
+            if not upper_only:
+                lbset = lower[x] & lower[y]
+                lblist = list(lbset)
+                for u in lblist:
+                    lbset -= lower_covers[u]
+                if len(lbset) != 1:
+                    return False
+    return True   
+
+
+def print_atoms_span(n=3):
+    def printer(oneline):
+        w = Permutation(*oneline.oneline) if type(oneline) == Permutation else Permutation(*oneline)
+        return str(w)
+    
+    cls = Permutation
+    for w in cls.involutions(n):
+        v = w.get_max_atom().inverse()
+        edges = list(span(v))
+
+        if len(edges) == 0:
+            continue
+
+        atoms = {x for (x, y) in edges} | {y for (x, y) in edges}
+        
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        for x in atoms:
+            s += ['    "%s" [fillcolor=white];' % printer(x)]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'bold') for (x, y) in edges]
+        s += ['}']
+        s = '\n'.join(s)
+
+        name = ''.join([str(w(i)) for i in range(1, n + 1)])
+        name = 'n' + str(n) + '_' + str(len(atoms)) + '_' + name
+
+        file = '/Users/emarberg/examples/atoms/'
+        dotfile = file + 'dot/AI/' + name + '.dot'
+        pngfile = file + 'png/AI/' + name + '.png'
+        with open(dotfile, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+
+        assert is_lattice(atoms, edges)
 
 
 def test_inversions_commutations(n=5):

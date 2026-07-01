@@ -4,7 +4,58 @@ from schubert import InvSchubert, FPFSchubert
 from partitions import Partition, StrictPartition
 from words import fpf_insert, eg_insert, involution_insert
 from tableaux import Tableau
+from tests.test_permutations import is_lattice
 import pytest
+import subprocess
+
+
+def draw_graph(n, w, pd, edges, folder):
+    def printer(x):
+        s = str(x).split('\n')
+        m = max([len(r) for r in s])
+        s = [r + (m - len(r)) * ' ' for r in s]
+        return '\n'.join(s)
+
+    s = []
+    s += ['digraph G {']
+    s += ['    overlap=false;']
+    s += ['    splines=spline;']
+    s += ['    node [shape=box; fontname="courier"; style=filled];']
+    for x in pd:
+        s += ['    "%s" [fillcolor=white];' % printer(x)]
+    s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'bold') for (x, y) in edges]
+    s += ['}']
+    s = '\n'.join(s)
+
+    name = ''.join([str(w(i)) for i in range(1, n + 1)])
+    name = 'n' + str(n) + '_' + str(len(pd)) + '_' + name
+
+    dotfile = folder + '/dot/' + name + '.dot'
+    pngfile = folder + '/png/' + name + '.png'
+    with open(dotfile, 'w') as f:
+        f.write(s)
+    subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+    return name
+
+
+def test_lattice(n):
+    for w in Permutation.all(n):
+        pd = set(w.get_pipe_dreams())
+        edges = {(a, b) for a in pd for b in a.generalized_ladder_moves()}
+        folder = '/Users/emarberg/examples/pipedreams/permutations'
+        name = draw_graph(n, w, pd, edges, folder)
+        assert is_lattice(pd, edges)
+
+
+def test_inv_lattice(n):
+    for w in Permutation.involutions(n):
+        pd = set(w.get_involution_pipe_dreams(True))
+        edges = {(a, b) for a in pd for b in a.generalized_involution_ladder_moves()}
+        folder = '/Users/emarberg/examples/pipedreams/involutions'
+        name = draw_graph(n, w, pd, edges, folder)
+        if not is_lattice(pd, edges, lower_only=True):
+            print(name)
+            input('?')
 
 
 def factor(n):

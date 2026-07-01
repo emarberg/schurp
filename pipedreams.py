@@ -1004,6 +1004,23 @@ class Pipedream:
                 continue
             yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
 
+    def generalized_ladder_moves(self):
+        for (i, j) in self.crossings:
+            for x in range(1, i):
+                for y in range(j + 1, self.n - x + 1):
+                    rect = {(a, b) for a in range(x, i + 1) for b in range(j, y + 1)} - {(x, j), (x, y), (i, y)}
+                    if (x, j) not in self.crossings and (x, y) not in self.crossings and (i, y) not in self.crossings and all((a, b) in self.crossings for (a, b) in rect):
+                        yield Pipedream((self.crossings - {(i, j)}) | {(x, y)})
+
+    def generalized_involution_ladder_moves(self):
+        ans = set()
+        for move in self.generalized_ladder_moves():
+            ans.add(move)
+        for move in self.involution_ladder_moves(extended=True):
+            ans.add(move)
+        for move in ans:
+            yield move
+
     def upper_ladder_interval(self):
         level = {self}
         while level:

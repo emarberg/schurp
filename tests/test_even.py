@@ -327,7 +327,7 @@ def span(v, strong=False):
         seen |= nextseen
 
 
-def print_atoms_span(n=3):
+def print_atoms_span(n=3, draw_strong=False):
     def printer(oneline):
         w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
         sh = w.inverse().dshape()
@@ -359,7 +359,7 @@ def print_atoms_span(n=3):
                 s += ['    "%s";' % printer(x)]
             else:
                 s += ['    "%s" [fillcolor=white];' % printer(x)]
-        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges if (not b or draw_strong)]
         s += ['}']
         s = '\n'.join(s)
 
