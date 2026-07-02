@@ -191,6 +191,16 @@ GP = grothendieck_P
 GQ = SymmetricPolynomial.stable_grothendieck_q
 GS = grothendieck_S
 
+
+def GSP(n, mu):
+    mu = Partition.trim(mu)
+    r = len(mu)
+    delta = tuple(r - i for i in range(1, r + 1))
+    lam = tuple(delta[i] + mu[i] for i in range(r))
+    delta = Partition.trim(delta)
+    return GP(n, lam, delta)
+
+
 mn_G = SymmetricPolynomial.mn_stable_grothendieck
 mn_GP = SymmetricPolynomial.mn_stable_grothendieck_p
 mn_GQ = SymmetricPolynomial.mn_stable_grothendieck_q

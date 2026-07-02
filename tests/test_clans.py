@@ -270,7 +270,7 @@ def test_stanley_c2(n=4, testhecke=True):
 
 
 def test_stanley_d1(n=4, testhecke=True):
-    from stable.utils import P, P_expansion, Q, GQ, Q_expansion, GQ_expansion, GP_expansion, S, S_expansion, GP, GS
+    from stable.utils import P, P_expansion, Q, GQ, Q_expansion, GQ_expansion, GP_expansion, S, S_expansion, GP, GS, GSP
     from stable.polynomials import beta
     from schubert import GrothendieckD, GrothendieckC
     from vectors import Vector
@@ -340,13 +340,15 @@ def test_stanley_d1(n=4, testhecke=True):
                     print('  ', ' '.join(word))
                 print('hecke:')
                 hecke = a.get_hecke_atoms()
-                for w in sorted(a.get_upper_poset(), key=lambda w: (w.dlength(),) + tuple(map(abs, w.get_reduced_word(dtype=True)))):
+                for w in sorted(hecke, key=lambda w: (w.dlength(),) + tuple(map(abs, w.get_reduced_word(dtype=True)))):
                     word = w.get_reduced_word(dtype=True)
                     word = [('+' if i > 0 else '') + str(i) for i in word]
-                    print('*' if w in hecke else ' ', ' '.join(word), ':', GP_expansion(hecke_atom_term(n, w, a)))
+                    print('* ' if w in hecke else '  ', ' '.join(word), ':', GP_expansion(hecke_atom_term(n, w, a)))
                 print()
                 print('got =', GP_expansion(got))
                 print('exp =', GP_expansion(exp))
+                print()
+                print('dif =', GP_expansion(got) - GP_expansion(exp))
                 print()
                 input('')
 
