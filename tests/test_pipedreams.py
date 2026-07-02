@@ -38,7 +38,7 @@ def draw_graph(n, w, pd, edges, folder):
     return name
 
 
-def test_lattice(n):
+def ttest_lattice(n):
     for w in Permutation.all(n):
         pd = set(w.get_pipe_dreams())
         edges = {(a, b) for a in pd for b in a.generalized_ladder_moves()}
@@ -47,11 +47,14 @@ def test_lattice(n):
         assert is_lattice(pd, edges)
 
 
-def test_inv_lattice(n):
+def ttest_inv_lattice(n, extended):
     for w in Permutation.involutions(n):
-        pd = set(w.get_involution_pipe_dreams(True))
-        edges = {(a, b) for a in pd for b in a.generalized_involution_ladder_moves()}
-        folder = '/Users/emarberg/examples/pipedreams/involutions'
+        pd = set(w.get_involution_pipe_dreams(extended))
+        edges = {(a, b) for a in pd for b in a.generalized_involution_ladder_moves(extended)}
+        if extended:
+            folder = '/Users/emarberg/examples/pipedreams/involutions_extended'
+        else:
+            folder = '/Users/emarberg/examples/pipedreams/involutions'
         name = draw_graph(n, w, pd, edges, folder)
         if not is_lattice(pd, edges, lower_only=True):
             print(name)

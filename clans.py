@@ -708,21 +708,24 @@ class Clan:
             CLAN_WORDS_CACHE[self] = ans if len(ans) > 0 else [()]
         return CLAN_WORDS_CACHE[self]
 
+    def get_upper_poset(self):
+        atoms = list(self.get_atoms())
+        upper_poset = {a: {a} for a in atoms}
+        level = atoms
+        while level:
+            newlevel = set()
+            for x in level:
+                for y in self.bruhat_covers(x):
+                    if y not in upper_poset:
+                        newlevel.add(y)
+                        upper_poset[y] = {y}
+                    upper_poset[y] |= upper_poset[x]
+            level = newlevel
+        return upper_poset
+
     def get_hecke_atoms(self):
         if self not in CLAN_HECKE_ATOMS_CACHE:
-            atoms = list(self.get_atoms())
-
-            upper_poset = {a: {a} for a in atoms}
-            level = atoms
-            while level:
-                newlevel = set()
-                for x in level:
-                    for y in self.bruhat_covers(x):
-                        if y not in upper_poset:
-                            newlevel.add(y)
-                            upper_poset[y] = {y}
-                        upper_poset[y] |= upper_poset[x]
-                level = newlevel
+            upper_poset = self.get_upper_poset()
 
             ans = {}
             def mobius(x):
@@ -733,7 +736,7 @@ class Clan:
                     ans[x] = 1 - mu
                 return ans[x]
 
-            a = next(iter(atoms))
+            a = min(upper_poset, key=lambda x: self.weyl_group_length(x))
             CLAN_HECKE_ATOMS_CACHE[self] = set()
             for w in upper_poset:
                 mu = mobius(w)

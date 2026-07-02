@@ -320,6 +320,7 @@ def test_stanley_d1(n=4, testhecke=True):
                 mu = list(ss)[0]
                 print('  S:', mu)
                 failed = False
+                rc = ss
             else:
                 print('! S:', ss)
         print()
@@ -327,15 +328,22 @@ def test_stanley_d1(n=4, testhecke=True):
 
         if testhecke:
             got = grothendieck(n, a)
-            exp = GS(n, list(exps[0])[0])
+            exp = GS(n, list(rc)[0])
             try:
                 assert got == exp
             except:
                 print()
-                for w in sorted(a.get_hecke_atoms(), key=lambda w: (w.dlength(),) + tuple(map(abs, w.get_reduced_word(dtype=True)))):
+                print('atoms:')
+                for w in list(a.get_atoms()):
                     word = w.get_reduced_word(dtype=True)
                     word = [('+' if i > 0 else '') + str(i) for i in word]
-                    print(' '.join(word), ':', GP_expansion(hecke_atom_term(n, w, a)))
+                    print('  ', ' '.join(word))
+                print('hecke:')
+                hecke = a.get_hecke_atoms()
+                for w in sorted(a.get_upper_poset(), key=lambda w: (w.dlength(),) + tuple(map(abs, w.get_reduced_word(dtype=True)))):
+                    word = w.get_reduced_word(dtype=True)
+                    word = [('+' if i > 0 else '') + str(i) for i in word]
+                    print('*' if w in hecke else ' ', ' '.join(word), ':', GP_expansion(hecke_atom_term(n, w, a)))
                 print()
                 print('got =', GP_expansion(got))
                 print('exp =', GP_expansion(exp))

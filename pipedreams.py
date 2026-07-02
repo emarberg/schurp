@@ -1012,11 +1012,12 @@ class Pipedream:
                     if (x, j) not in self.crossings and (x, y) not in self.crossings and (i, y) not in self.crossings and all((a, b) in self.crossings for (a, b) in rect):
                         yield Pipedream((self.crossings - {(i, j)}) | {(x, y)})
 
-    def generalized_involution_ladder_moves(self):
+    def generalized_involution_ladder_moves(self, extended):
         ans = set()
         for move in self.generalized_ladder_moves():
-            ans.add(move)
-        for move in self.involution_ladder_moves(extended=True):
+            if extended or move.is_weakly_lower_triangular():
+                ans.add(move)
+        for move in self.involution_ladder_moves(extended=extended):
             ans.add(move)
         for move in ans:
             yield move
@@ -1033,6 +1034,9 @@ class Pipedream:
 
     def is_symmetric(self):
         return all((j, i) in self.crossings for (i, j) in self.crossings)
+
+    def is_weakly_lower_triangular(self):
+        return self == self.lower_part()
 
     def lower_part(self):
         return Pipedream({(i, j) for (i, j) in self.crossings if i >= j})
