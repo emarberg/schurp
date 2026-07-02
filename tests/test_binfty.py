@@ -89,10 +89,10 @@ def test_lp(n, thresh=10):
             case = ''
             if i > 1 and get(i - 1, v) > get(i, v):
                 case += 'a'
-                expected = -get(i, v) + get(i + 1, v) + 1 + (0 if get(i + 1, v) % 2 == 0 else 1)
+                expected = -get(i, v) + ceil(get(i + 1, v)) + 1
             if case == '':
                 case += 'b'
-                expected = -get(i, v) + get(i + 1, v) + (0 if get(i + 1, v) % 2 == 0 else 1)
+                expected = -get(i, v) + ceil(get(i + 1, v))
             if expected != eps:
                 print('case', case, '| eps_%s' % i, ':', v, '=', eps, '=?=', expected)
                 input('\n')
@@ -105,10 +105,10 @@ def test_lp(n, thresh=10):
             if i == 1:
                 case += 'a'
                 expected = get(i, v)
-            if i > 1 and get(i - 1, v) <= get(i, v) and get(i - 1, v) % 2 == 0:
+            if i > 1 and get(i - 1, v) <= get(i, v):
                 case += 'b'
-                expected = -get(i - 1, v) + get(i, v)
-            if case == '':
+                expected = -floor(get(i - 1, v)) + get(i, v)
+            if i > 1 and get(i - 1, v) > get(i, v):
                 case += 'c'
                 expected = -get(i - 1, v) + get(i, v) + 1
             if expected != phi:
