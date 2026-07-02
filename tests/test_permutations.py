@@ -4,10 +4,13 @@ import subprocess
 
 
 
-def span(v):
+def span(v, verbose=False):
+    if verbose:
+        print()
     v = tuple(v.oneline)
     level = {(None, v)}
     seen = set()
+    ranks = []
     while level:
         nextlevel = set()
         nextseen = set()
@@ -23,6 +26,9 @@ def span(v):
                     nextlevel.add((v, w))
         level = nextlevel
         seen |= nextseen
+        ranks += [len(nextseen)]
+    if verbose:
+        print(ranks)
 
 
 def is_lattice(vertices, edges, upper_only=False, lower_only=False):
@@ -77,42 +83,57 @@ def is_lattice(vertices, edges, upper_only=False, lower_only=False):
 
 
 def print_atoms_span(n=3):
-    def printer(oneline):
-        w = Permutation(*oneline.oneline) if type(oneline) == Permutation else Permutation(*oneline)
-        return str(w)
-    
+    # bca < cab poset is not graded on all of S_n
+    #
+    # consider component of Permutation(7, 6, 3, 5, 4, 1, 2)
+    #
     cls = Permutation
     for w in cls.involutions(n):
         v = w.get_max_atom().inverse()
         edges = list(span(v))
 
+        #edges = set()
+        #for v in Permutation.all(n):
+        #    edges |= set(span(v))
+
         if len(edges) == 0:
             continue
 
+        #atoms = set(Permutation.all(n))
         atoms = {x for (x, y) in edges} | {y for (x, y) in edges}
-        
-        s = []
-        s += ['digraph G {']
-        s += ['    overlap=false;']
-        s += ['    splines=spline;']
-        s += ['    node [shape=box; fontname="courier"; style=filled];']
-        for x in atoms:
-            s += ['    "%s" [fillcolor=white];' % printer(x)]
-        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'bold') for (x, y) in edges]
-        s += ['}']
-        s = '\n'.join(s)
 
         name = ''.join([str(w(i)) for i in range(1, n + 1)])
         name = 'n' + str(n) + '_' + str(len(atoms)) + '_' + name
-
-        file = '/Users/emarberg/examples/atoms/'
-        dotfile = file + 'dot/AI/' + name + '.dot'
-        pngfile = file + 'png/AI/' + name + '.png'
-        with open(dotfile, 'w') as f:
-            f.write(s)
-        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
+        draw(atoms, edges, name)
 
         assert is_lattice(atoms, edges)
+
+
+def draw(atoms, edges, name):
+    if atoms is None:
+        atoms = {x for (x, y) in edges} | {y for (x, y) in edges}
+
+    def printer(oneline):
+        w = Permutation(*oneline.oneline) if type(oneline) == Permutation else Permutation(*oneline)
+        return str(w)
+
+    s = []
+    s += ['digraph G {']
+    s += ['    overlap=false;']
+    s += ['    splines=spline;']
+    s += ['    node [shape=box; fontname="courier"; style=filled];']
+    for x in atoms:
+        s += ['    "%s" [fillcolor=white];' % printer(x)]
+    s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'bold') for (x, y) in edges]
+    s += ['}']
+    s = '\n'.join(s)
+
+    file = '/Users/emarberg/examples/atoms/'
+    dotfile = file + 'dot/AI/' + name + '.dot'
+    pngfile = file + 'png/AI/' + name + '.png'
+    with open(dotfile, 'w') as f:
+        f.write(s)
+    subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
 
 def test_inversions_commutations(n=5):
