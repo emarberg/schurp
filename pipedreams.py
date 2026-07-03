@@ -53,6 +53,37 @@ class BumplessPipedream:
                     else:
                         raise Exception
 
+    def bpd_word(self):
+        return self._bpd_word(False)
+
+    def inv_bpd_word(self):
+        return self._bpd_word(True)
+
+    def _bpd_word(self, invword):
+        diag = lambda x: x[1] + self.n - x[0] - 1
+
+        tiles = [(i, j) for i in range(1, self.n + 1) for j in range(1, self.n + 1)]
+        if invword:
+            tiles = [(i, j) for (i, j) in tiles if i >= j]
+        tiles = sorted(tiles, key=lambda x: (diag(x), x[0]))
+
+        ans = []
+        prev = None
+        for x in tiles:
+            if prev is None or diag(x) != diag(prev):
+                wires = 0
+            if x not in self.tiles or self.tiles[x] == self.B_TILE:
+                wires += 0
+            elif self.tiles[x] == self.B_TILE:
+                wires += 2
+            elif self.tiles[x] in [self.J_TILE, self.C_TILE, self.H_TILE, self.V_TILE]:
+                wires += 1
+            elif self.tiles[x] == self.P_TILE:
+                ans.append(wires + 1)
+                wires += 2
+            prev = x
+        return ans
+
     def __repr__(self):
         ans = []
         for i in range(1, self.n + 1):
@@ -244,6 +275,13 @@ class BumplessPipedream:
         return BumplessPipedream(bends, self.n)
 
     def droop(self, i, j, a, b, strict=True):
+        #
+        # strict controls whether can droop from
+        #
+        #  ┌──┘
+        #  │
+        #  ┘  B
+        #
         if self.get_tile(i, j) != self.C_TILE:
             return None
         if self.get_tile(a, b) != self.B_TILE:

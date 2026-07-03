@@ -9,6 +9,25 @@ from schubert import (
 )
 
 
+def test_word(n=4):
+    for w in Permutation.all(n):
+        for bpd in BumplessPipedream.from_permutation(w):
+            print(bpd)
+            word = bpd.bpd_word()
+            print(w, word)
+            assert w == Permutation.from_hecke_word(word)
+
+
+def test_inv_word(n=4):
+    for w in Permutation.involutions(n):
+        for bpd in BumplessPipedream.from_involution(w):
+            print(bpd)
+            word = bpd.inv_bpd_word()
+            print(w, word)
+            v = Permutation.from_hecke_word(word)
+            assert w == v % v.inverse()
+
+
 def inv_schubert_via_bumpless(w, strict):
     ans = 0
     for bpd in BumplessPipedream.from_involution(w, strict=strict):

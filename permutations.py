@@ -1630,6 +1630,25 @@ class Permutation:
         return self if (n == 0 or self(n - 1) != n) else (self * self.s_i(n - 1)).fpf_trim()
 
     @classmethod
+    def from_hecke_word(cls, *args):
+        if len(args) == 1 and type(args[0]) in [list, tuple]:
+            args = args[0]
+        w = Permutation()
+        for i in args:
+            w = w % Permutation.s_i(i)
+        return w
+
+    @classmethod
+    def from_involution_hecke_word(cls, *args):
+        if len(args) == 1 and type(args[0]) in [list, tuple]:
+            args = args[0]
+        w = Permutation()
+        for i in args:
+            s = Permutation.s_i(i)
+            w = s % w % s
+        return w
+
+    @classmethod
     def from_word(cls, *args):
         if len(args) == 1 and type(args[0]) in [list, tuple]:
             args = args[0]
