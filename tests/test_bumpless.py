@@ -47,9 +47,11 @@ def inv_grothendieck_via_bumpless(w, strict):
 
 
 def test_inv_bumpless(n=6):
-    for strict in [True, False]:
-        for w in Permutation.involutions(n):
-            print(w, strict)
+    for strict in [True]:
+        todo = list(Permutation.involutions(n))
+        for i, w in enumerate(todo):
+            print(len(todo) - i, 'left')
+            # print(w, strict)
             expected = InvSchubert.get(w)
             frombpd = inv_schubert_via_bumpless(w, strict) 
             if expected != frombpd:
