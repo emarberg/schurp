@@ -329,6 +329,14 @@ class Word:
             raise Exception
 
     @classmethod
+    def decreasing_factorizations(cls, w, k):
+        assert all(a > 0 for a in w)
+        m = max(list(w) + [0]) + 1
+        v = tuple(m - a for a in w)
+        for a in cls.increasing_factorizations(v, k):
+            return tuple(b.translate(m) for b in a)
+
+    @classmethod
     def increasing_factorizations(cls, w, k):
         if k < 0:
             return
@@ -358,6 +366,9 @@ class Word:
 
     def tuple(self):
         return self.elements
+
+    def translate(self, m):
+        return Word(*tuple(m - a for a in self.elements))
 
     @property
     def permutation_sequence(self):

@@ -1018,6 +1018,65 @@ class Tableau:
             ans += [len([j for i_, j, v in self if i == i_])]
         return tuple(ans)
 
+    def is_ejectable(self, n, from_row=1):
+        rows = self.get_rows()
+        row = rows[from_row - 1] if from_row <= len(rows) else []
+        if n in row:
+            if n - 1 not in row:
+                return True
+            else:
+                return self.is_ejectable(n - 1, from_row + 1)
+
+    def row_hecke_insert_sequence(self, *args):
+        ans = self
+        for a in args:
+            ans = ans.row_hecke_insert(a)[0]
+        return ans
+
+    def row_hecke_insert(self, N, from_row=1):
+        rows = self.get_rows()
+        row = rows[from_row - 1] if from_row <= len(rows) else []
+        
+        n1 = None
+        c = 1
+        while c <= len(row):
+            if row[c - 1] <= N:
+                n1 = row[c - 1]
+                break
+            c += 1
+
+        if n1 is None:
+            r, c = from_row, len(row) + 1
+            t = self.add(r, c, N)
+            alpha = 1
+            return (t, (r, c), alpha)
+
+        t = self.replace(from_row, c, N)
+        if n1 == N and N - 1 in row:
+            return t.row_hecke_insert(N - 1, from_row + 1)
+        elif n1 < N and not t.is_ejectable(n1, from_row + 1):
+            return t.row_hecke_insert(n1, from_row + 1)
+        else:
+            y = None
+            n2 = row[c] if c < len(row) else 0
+            
+            # find largest ejectable below
+            for (i, j) in t.boxes:
+                if i > from_row:
+                    z = t.get(i, j)
+                    if n1 > z > n2 and t.is_ejectable(z, from_row + 1) and (y is None or z > y):
+                        y = z
+
+            if y is not None:
+                return t.row_hecke_insert(y, from_row + 1)
+            elif y is None and n2 > 0:
+                return t.row_hecke_insert(n2, from_row + 1)
+            else:
+                r = from_row
+                alpha = 0
+                return (t, (r, c), alpha)
+
+
     def setvalued_excess(self):
         return sum([len(v) - 1 for _, _, v in self])
 
