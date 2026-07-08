@@ -1027,11 +1027,19 @@ class Tableau:
             else:
                 return self.is_ejectable(n - 1, from_row + 1)
 
-    def row_hecke_insert_sequence(self, *args):
+    def row_hecke(self, word, index=None):
+        if index is None:
+            index = list(range(1, len(word) + 1))
+        assert len(word) == len(index)
+
         ans = self
-        for a in args:
-            ans = ans.row_hecke_insert(a)[0]
-        return ans
+        rec = Tableau()
+        for i in range(len(word) -1, -1, -1):
+            a = word[i]
+            (ans, box, alpha) = ans.row_hecke_insert(a)
+            x, y = box
+            rec = rec.add(x, y, index[i])
+        return ans, rec
 
     def row_hecke_insert(self, N, from_row=1):
         rows = self.get_rows()
@@ -2234,6 +2242,20 @@ class Tableau:
             boxes[row_index, first_empty_column] = tuple(sorted(insert[first_empty_column]))
 
         return Tableau(boxes), bumped
+
+    def column_hecke(self, word, index=None):
+        if index is None:
+            index = list(range(1, len(word) + 1))
+        assert len(word) == len(index)
+
+        ans = self
+        rec = Tableau()
+        for i in range(len(word) -1, -1, -1):
+            a = word[i]
+            (ans, box,) = ans.column_hecke_insert(a)
+            x, y = box
+            rec = rec.add(x, y, index[i])
+        return ans, rec
 
     def column_hecke_insert(self, p):
         if type(p) in [list, tuple]:
