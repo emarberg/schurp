@@ -756,6 +756,9 @@ class Tableau:
     def transpose(self):
         return Tableau({(j, i): v for i, j, v in self})
 
+    def upper_half(self):
+        return Tableau({(i, j): v for i, j, v in self if i <= j})
+
     def standardize(self):
         entries = sorted(
             [(v, i, j) for i, j, value in self for v in value],
@@ -2287,6 +2290,22 @@ class Tableau:
                 while (i, j + 1) in boxes:
                     j += 1
                 return Tableau(boxes), (i, j)
+
+    def shifted_hecke(self, word, index=None):
+        if index is None:
+            index = list(range(1, len(word) + 1))
+        assert len(word) == len(index)
+
+        ans = self
+        rec = Tableau()
+        for i in range(len(word) -1, -1, -1):
+            a = word[i]
+            (ans, box) = ans.shifted_hecke_insert(a)
+            print('inserting', a)
+            print(ans)
+            x, y, sign = box
+            rec = rec.add(x, y, sign * index[i])
+        return ans, rec
 
     def shifted_hecke_insert(self, p):
         if type(p) in [list, tuple]:

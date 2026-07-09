@@ -78,6 +78,52 @@ class BumplessPipedream:
         return ans
 
     @classmethod
+    def random(cls, n, pipedream, bumpless, reduced):
+        base = set(cls.TILES)
+        if bumpless:
+            base.remove(cls.E_TILE)
+
+        tiles = {}
+        positions = [(i + 1, j + 1) for i in range(n) for j in range(n)]
+        positions = sorted(positions, key=lambda x: (x[1] - x[0], x[0]))
+        for (i, j) in positions:
+            available = base.copy()
+            
+            if pipedream and j == 1:
+                available -= {cls.J_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}
+
+            if pipedream and i == n:
+                available -= {cls.H_TILE, cls.J_TILE, cls.B_TILE}
+
+            if pipedream and i == 1:
+                available -= {cls.V_TILE, cls.J_TILE, cls.P_TILE, cls.E_TILE}
+
+            if pipedream and j == n:
+                available -= {cls.V_TILE, cls.J_TILE, cls.B_TILE}
+
+            if i < n and tiles[i + 1, j] in {cls.J_TILE, cls.V_TILE, cls.P_TILE, cls.E_TILE}:
+                available -= {cls.J_TILE, cls.H_TILE, cls.B_TILE}
+            elif i < n and tiles[i + 1, j] in {cls.C_TILE, cls.H_TILE, cls.B_TILE}:
+                available -= {cls.C_TILE, cls.V_TILE, cls.P_TILE, cls.E_TILE}
+            
+            if j > 1 and tiles[i, j - 1] in {cls.C_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}:
+                available -= {cls.C_TILE, cls.V_TILE, cls.B_TILE}
+            elif j > 1 and tiles[i, j - 1] in {cls.J_TILE, cls.V_TILE, cls.B_TILE}:
+                available -= {cls.J_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}
+
+            if len(available) == 0:
+                return cls.random(n, pipedream, bumpless, reduced)
+            tiles[i, j] = random.choice(list(available))
+
+        ans = cls({}, n)
+        ans.tiles = tiles
+        
+        if pipedream:
+            if (reduced and not ans.is_reduced()) or (not reduced and ans.is_reduced()):
+                return cls.random(n, pipedream, bumpless, reduced)
+        return ans
+
+    @classmethod
     def halfrandom(cls, n, pipedream, bumpless, reduced):
         base = set(cls.TILES)
         if bumpless:
@@ -186,8 +232,35 @@ class BumplessPipedream:
         s += ['%% recreate: pd = BumplessPipedream({}, %s); pd.tiles = %s; pd = pd.symmetrize()' % (self.n, str(self.tiles))]
         return '\n'.join(s)
 
-    def tex(self):
-        pass
+    def tex(self, numbers=False):
+        n = self.n
+        if numbers:
+            assert n < 10
+
+        s = []
+        
+        s += ['\\begin{tikzpicture}[x=\\bpdwidth,y=\\bpdwidth,line cap=round,line join=round,baseline=(z.base)]']
+        s += ['\\node at (0,%s) (z) {};' % (n / 2)]
+        
+        for i in range(0, n + 1):
+            s += ['\\draw[gray!70, line width=0.7pt](0,%s)--(%s,%s);' % (i, n, i)]
+            s += ['\\draw[gray!70, line width=0.7pt](%s,0)--(%s,%s);' % (i, i, n)]
+        
+        for (i, j) in self.tiles:
+            s += self.tex_tile(n, i, j, self.tiles[i, j])
+        
+        s += ['\\draw[black, line width=1.6pt] (0,%s)--(%s,%s)--(%s,0)--(0,0)--(0,%s);' % (n, n, n, n, n)]
+
+        if numbers:
+            for i in range(1, n + 1):
+                s += ['\\draw[](%s,%s) node {%s};' % (i - 0.5, -0.4, i)]
+            for i in range(1, n + 1):
+                v = self.get_pipe(i, n, 'H')
+                s += ['\\draw[](%s,%s) node {%s};' % (n + 0.4, n + 1 - i - 0.5, v)]
+
+        s += ['\\end{tikzpicture}']
+        s += ['%% recreate: pd = BumplessPipedream({}, %s); pd.tiles = %s' % (self.n, str(self.tiles))]
+        return '\n'.join(s)
 
     def is_reduced(self):
         w = self.bpd_word()
