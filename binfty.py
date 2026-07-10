@@ -35,7 +35,14 @@ class InfiniteCrystal:
     def sqrt_binfty(cls, n, word=None):
         elem = {i: cls.sqrt_elementary(i, n) for i in range(1, n)}
         word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
-        print('\n\n\n', word, '\n\n\n')
+        #print('\n\n\n', word, '\n\n\n')
+        return cls.sqrt_tensor(*[elem[i] for i in word])
+
+    @classmethod 
+    def dual_sqrt_binfty(cls, n, word=None):
+        elem = {i: cls.dual_sqrt_elementary(i, n) for i in range(1, n)}
+        word = word if word is not None else [n - i for j in range(n - 1, 0, -1) for i in range(j, n)]
+        #print('\n\n\n', word, '\n\n\n')
         return cls.sqrt_tensor(*[elem[i] for i in word])
 
     @classmethod 
@@ -604,6 +611,101 @@ class InfiniteCrystal:
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod
+    def dual_sqrt_elementary(cls, j, n):
+        # opposite arrows indexed by j - 1
+
+        generator = 0
+        indices = list(range(1, n))
+
+        def e_operators(i, x):
+            if i == j:
+                return x + 1
+            if i == j - 1:
+                return (x - 1) if x % 2 == 0 else None
+
+        def f_operators(i, x):
+            if i == j:
+                return x - 1
+            if i == j - 1:
+                return (x + 1) if x % 2 != 0 else None
+
+        def e_strings(i, x):
+            if i == j:
+                return -x
+            if i == j - 1:
+                return x
+
+        def f_strings(i, x):
+            if i == j:
+                return x
+            if i == j - 1:
+                return 0 if x % 2 == 0 else 1
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else -(x // 2 + int(x % 2)) if i == j else (x // 2) for i in range(n))
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    def test_sqrt_thresh(self, m, n, verbose=False):
+        def vprint(*args):
+            if verbose:
+                print(*args)
+
+        v = self.vertices(m, n)
+        weightdiff = lambda x, y : tuple(a - b for (a, b) in zip(self.weight(x), self.weight(y)))
+
+        roots = {}
+        for i in self.indices:
+            even_weights = set()
+            odd_weights = set()
+            for b in v:
+                c = self.e_operator(i, b)
+                if c is not None and b != self.f_operator(i, c):
+                    vprint('a')
+                    return False
+                c = self.f_operator(i, b)
+                if c is not None and b != self.e_operator(i, c):
+                    vprint('b')
+                    return False
+
+                if self.e_string(i, b) is None and self.f_string(i, b) is None:
+                    if self.e_operator(i, b) is not None or self.f_operator(i, b) is not None:
+                        vprint('c')
+                        return False
+                elif self.e_string(i, b) is not None and self.f_string(i, b) is not None:
+                    c = self.e_operator(i, b)
+                    if c is not None:
+                        if self.e_string(i, c) is None:
+                            vprint('d')
+                            return False
+                        elif self.e_string(i, c) - self.e_string(i, b) != -1:
+                            vprint('e')
+                            return False
+                        
+                        if self.f_string(i, c) is None:
+                            vprint('f')
+                            return False
+                        elif self.f_string(i, c) - self.f_string(i, b) != 1:
+                            vprint('g')
+                            return False
+                        
+                        if self.e_string(i, b) % 2 == 0:
+                            even_weights.add(weightdiff(c, b))
+                            vprint('even', even_weights)
+                        else:
+                            odd_weights.add(weightdiff(c, b))
+                            vprint('odd', odd_weights)
+                        if len(even_weights) > 1:
+                            vprint('h')
+                            return False
+                        if len(odd_weights) > 1:
+                            vprint('i')
+                            return False  
+                else:
+                    vprint('j')
+                    return False
+            roots[i] = (next(iter(even_weights)) if even_weights else None, next(iter(odd_weights)) if odd_weights else None)
+        return roots
+
+    @classmethod
     def alt_sqrt_elementary(cls, j, n):
         # opposite arrows indexed by j - 1 and j + 1
 
@@ -767,7 +869,7 @@ class InfiniteCrystal:
                 ans = self.e_operator(i[-1], ans)
                 i = i[:-1]
             return ans
-        return self.e_operators(i, x)
+        return None if x is None else self.e_operators(i, x)
 
     def f_operator(self, i, x):
         if type(i) in [tuple, list]:
@@ -776,7 +878,7 @@ class InfiniteCrystal:
                 ans = self.f_operator(i[-1], ans)
                 i = i[:-1]
             return ans
-        return self.f_operators(i, x)
+        return None if x is None else self.f_operators(i, x)
 
     def capital_e_operator(self, i, x):
         while x is not None:

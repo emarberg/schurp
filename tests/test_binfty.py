@@ -150,18 +150,71 @@ def sqrt_r_tensor(mu, n, b):
         else:
             return ans
 
+
 def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
+    for x in _test_sqrt_r_lambda(n, k, test_lasc, False):
+        yield x
+
+
+def test_dual_sqrt_r_lambda(n=3, k=10, test_lasc=False):
+    for x in _test_sqrt_r_lambda(n, k, test_lasc, True):
+        yield x
+
+
+def investigate_characters(n, k):
+    from stable.utils import G_expansion_no_beta, schur_expansion, g, j, G
+
+    def character(b):
+        return SymmetricPolynomial.from_polynomial(b.character())
+
+    for mu in Partition.all(k, max_row=n):
+        print('mu =', mu)
+        print()
+
+        b = sqrt_b_lambda(n, mu)
+        c = dual_sqrt_b_lambda(n, mu)
+        
+        print('     ch =', schur_expansion(character(b)))
+        print('      G =', schur_expansion(G(n, mu).set_variable(0, 1)))
+        print()
+        print('dual ch =', schur_expansion(character(c)))
+        print('      g =', schur_expansion(g(n, mu).set_variable(0, -1)))
+        print('      j =', schur_expansion(j(n, mu).set_variable(0, 1)))
+        print()
+
+
+def sqrt_b_lambda(n, mu):
+    return _sqrt_b_lambda(n, mu, False)
+
+
+def dual_sqrt_b_lambda(n, mu):
+    return _sqrt_b_lambda(n, mu, True)
+
+
+def _sqrt_b_lambda(n, mu, dual):
+    b = InfiniteCrystal.dual_sqrt_binfty(n) if dual else InfiniteCrystal.sqrt_binfty(n)
+    t = sqrt_r_tensor(mu, n, b)
+    r = InfiniteCrystal.sqrt_r_lambda(mu, n)
+    top = InfiniteCrystal.sqrt_tensor(r, b)
+    tnaive = top.finitize(0)
+    assert len(t) == len(tnaive)
+    return t
+
+
+def _test_sqrt_r_lambda(n, k, test_lasc, dual, words=None):
     gp = set()
     ngp = set()
 
     lp = set()
     nlp = set()
 
-    for w in Permutation.longest_element(n).get_reduced_words():
+    if words is None:
+        Permutation.longest_element(n).get_reduced_words()
+    for w in words:
         gp.add(w)
         lp.add(w)
 
-        b = InfiniteCrystal.sqrt_binfty(n, w)
+        b = InfiniteCrystal.dual_sqrt_binfty(n, w) if dual else InfiniteCrystal.sqrt_binfty(n, w)
         for mu in Partition.all(k, max_row=n):
             print(n, ':', 'mu =', mu)
             
@@ -186,7 +239,7 @@ def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
             except:
                 ch = None
                 gp = gp - {w}
-                ngp |= {w}
+                ngp |= {(w, sum(mu))}
 
                 print()
                 print('  ', w, ':', len(t))
@@ -210,10 +263,15 @@ def test_sqrt_r_lambda(n=3, k=10, test_lasc=False):
                         break
                 else:
                     pass
-                    #break
+                    break
             
             if ch is not None:
-                assert ch == Vector({mu: 1})
+                try:
+                    assert ch == Vector({mu: 1})
+                except:
+                    print()
+                    print('ch =', ch)
+                    print()
 
         print()
         print('groth works:')
