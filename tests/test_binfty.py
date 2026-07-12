@@ -8,8 +8,80 @@ from binfty import InfiniteCrystal
 from permutations import Permutation
 from stable.partitions import Partition
 from stable.tableaux import Tableau
-from stable.utils import G, G_expansion_no_beta, SymmetricPolynomial
+from stable.utils import G, G_expansion_no_beta, SymmetricPolynomial, schur_expansion, g_expansion, schur
 from stable.vectors import Vector
+
+
+dual_blambda_lookup = {}
+dual_blambda_cache = {}
+dual_blambda_character_cache = {}
+
+
+def dual_blambda_character(n, mu):
+    if (n, mu) not in dual_blambda_character_cache:
+        b = dual_sqrt_b_lambda(n, mu)
+        dual_blambda_character_cache[n, mu] = SymmetricPolynomial.from_polynomial(b.character())
+    return dual_blambda_character_cache[n, mu]
+
+
+def dual_expand(n, c):
+    a = schur_expansion(c)
+    ans = Vector()
+    while a != 0:
+        mu = max(a)
+        c = a[mu]
+        if (n, mu) not in dual_blambda_lookup:
+            #print()
+            #print('. . . computing X_%s%s)' % (n, str(mu)))
+            #print()
+            dual_blambda_lookup[(n, mu)] = schur_expansion(dual_blambda_character(n, mu))
+        a = a - c * dual_blambda_lookup[(n, mu)]
+        ans += Vector({mu: c})
+    return ans
+
+
+def test_dual_positivity(n, k):
+    g = dual_sqrt_b_lambda(n, (1,))
+    b = g
+    for i in range(2, k + 1):
+        print(i, 'tensor factors')
+        print()
+        b = g.tensor(b)
+        for c in b.get_components():
+            ch = SymmetricPolynomial.from_polynomial(c.character())
+            actual = dual_expand(n, ch)
+
+            expected = Vector()
+            for e, wt in c.get_highest_weights():
+                expected += Vector({Partition.trim(wt): 1})
+
+            print('  ch =', actual)
+            print('     =', expected)
+            print()
+            assert max(expected.values()) > 0
+            assert actual == expected
+
+
+def test_dual_pieri(n, k):
+    from stable.utils import g
+
+    for mu in Partition.all(k, max_row=n) if type(k) == int else k:
+        if len(mu) <= 1 or max(mu) <= 1:
+            continue
+        for j in Partition.all(5, max_row=n):
+            if len(j) <= 1 or max(j) <= 1:
+                continue
+            # base = g_expansion(g(n, mu) * g(n, j)).set_variable(0, 1)
+            # print('    base:', base)
+            for k in range(len(mu) + len(j), n + 1):
+                c = dual_blambda_character(k, mu)
+                o = dual_blambda_character(k, j)
+                actual = dual_expand(k, c * o)
+                expected = g_expansion(g(k, mu) * g(k, j)).set_variable(0, 1)
+                print()
+                print(mu, '*', j)
+                print('    n =', k, ':', actual - expected)
+                assert actual == expected
 
 
 def test_lp(n, thresh=10):
@@ -117,6 +189,7 @@ def test_lp(n, thresh=10):
             assert len(case) == 1
             assert expected == phi
 
+
 def test_elementary_squared(n=3, p=3, q=3):
     b = InfiniteCrystal.binfty(n)
     for w in Permutation.longest_element(n).get_reduced_words():
@@ -161,26 +234,99 @@ def test_dual_sqrt_r_lambda(n=3, k=10, test_lasc=False):
         yield x
 
 
+def univar(f, n=10):
+    for i in range(1, n + 1):
+        f = f.set_variable(i, f.x(0))
+    return f
+
+
 def investigate_characters(n, k):
-    from stable.utils import G_expansion_no_beta, schur_expansion, g, j, G
+    from stable.utils import g_expansion, G_expansion_no_beta, schur_expansion, g, j, G, schur, g_expansion
 
     def character(b):
-        return SymmetricPolynomial.from_polynomial(b.character())
+        ch = b.character()
+        countval = sum(ch.coeffs.values())
+        # return subs(ch, n, -1), countval
+        return SymmetricPolynomial.from_polynomial(ch), countval
 
-    for mu in Partition.all(k, max_row=n):
+    def subs(f, n, a=1):
+        f = f.polynomial() if type(f) == SymmetricPolynomial else f
+        for i in range(1, n + 1):
+            f = f.substitute(i, f.x(i) + a)
+        return SymmetricPolynomial.from_polynomial(f)
+
+    def count(ch):
+        return sum(ch.coeffs.values())
+
+    for mu in Partition.all(k, max_row=n) if type(k) == int else k:
+        if max(mu, default=0) != 1:
+            continue
+
+        #mu = tuple(1 + a for a in mu)
+        #while len(mu) < n:
+        #    mu += (1,)
+
+        print()
+        print()
         print('mu =', mu)
         print()
 
-        b = sqrt_b_lambda(n, mu)
-        c = dual_sqrt_b_lambda(n, mu)
+        #b = sqrt_b_lambda(n, mu)
+        #c = dual_sqrt_b_lambda(n, mu)
         
-        print('     ch =', schur_expansion(character(b)))
-        print('      G =', schur_expansion(G(n, mu).set_variable(0, 1)))
+        #print('     ch =', schur_expansion(character(b)))
+        #print('      G =', schur_expansion(G(n, mu).set_variable(0, 1)))
+        #print()
+        
+        elems = []
+        for k in range(max(1, len(mu)), n + 1):
+            c = dual_sqrt_b_lambda(k, mu)
+            countval = len(c)
+            elems.append(countval)
+            print(' n =', k, ' dual ch =', schur_expansion(dual_blambda_character(k, mu)))
+            #print(k, '        =', G_expansion_no_beta(character(c)), ':', len(c))
+        #print('        =', schur_expansion(subs(character(c), -1)))
         print()
-        print('dual ch =', schur_expansion(character(c)))
-        print('      g =', schur_expansion(g(n, mu).set_variable(0, -1)))
-        print('      j =', schur_expansion(j(n, mu).set_variable(0, 1)))
+        print(' |dual B_n(mu)| =', elems)
         print()
+
+        # elems = []
+        # for k in range(max(1, len(mu)), n + 1):
+        #     ch = G(k, mu).set_variable(0, 1)
+        #     countval = sum(ch.polynomial().coeffs.values())
+        #     elems.append(countval)
+        #     print(' n =', k, '  svt ch =', schur_expansion(ch))
+        #     #print(k, '        =', G_expansion_no_beta(character(c)), ':', len(c))
+        # #print('        =', schur_expansion(subs(character(c), -1)))
+        # print()
+        # print(' | svt B_n(mu)| =', elems)
+        # print()
+        # print()
+
+        # for k in range(max(2, len(mu)), n + 1):
+        #     #c = sqrt_b_lambda(k, mu)
+        #     print(' n =', k, '      G =', schur_expansion(G(k, mu)).set_variable(0, 1))
+        # print()
+
+        # nn = n + 3
+        # for k in range(1, nn):
+        #     print(' n =', k, '      g =', schur_expansion(g(k, mu).set_variable(0, -1)).set_variable(0, -1))
+        # print()
+        # for k in range(1, nn):
+        #     print(' n =', k, '      j =', schur_expansion(j(k, mu).set_variable(0, 1)).set_variable(0, -1))
+        # print()
+        nn = n + 3
+        for k in range(1, nn):
+            f = g(k, mu).set_variable(0, -1)
+            f = subs(f, k)
+            print(' n =', k, ' g(x+1) =', schur_expansion(f))
+        print()
+        # for k in range(1, nn):
+        #     print(' n =', k, ' j(x+1) =', schur_expansion(subs(j(k, mu).set_variable(0, 1), k)).set_variable(0, -1))
+        # print()
+        # for k in range(1, nn):
+        #     print(' n =', k, ' s(x+1) =', schur_expansion(subs(schur(k, mu), k)).set_variable(0, -1))
+        # print()
 
 
 def sqrt_b_lambda(n, mu):
@@ -188,18 +334,20 @@ def sqrt_b_lambda(n, mu):
 
 
 def dual_sqrt_b_lambda(n, mu):
-    return _sqrt_b_lambda(n, mu, True)
+    if (n, mu) not in dual_blambda_cache:
+        dual_blambda_cache[n, mu] = _sqrt_b_lambda(n, mu, True)
+    return dual_blambda_cache[n, mu]
 
 
 def _sqrt_b_lambda(n, mu, dual):
     b = InfiniteCrystal.dual_sqrt_binfty(n) if dual else InfiniteCrystal.sqrt_binfty(n)
-    t = sqrt_r_tensor(mu, n, b)
     r = InfiniteCrystal.sqrt_r_lambda(mu, n)
     top = InfiniteCrystal.sqrt_tensor(r, b)
     tnaive = top.finitize(0)
-    assert len(t) == len(tnaive)
-    return t
-
+    #t = sqrt_r_tensor(mu, n, b)
+    #assert len(t) == len(tnaive)
+    #return t
+    return tnaive
 
 def _test_sqrt_r_lambda(n, k, test_lasc, dual, words=None):
     gp = set()
@@ -209,7 +357,7 @@ def _test_sqrt_r_lambda(n, k, test_lasc, dual, words=None):
     nlp = set()
 
     if words is None:
-        Permutation.longest_element(n).get_reduced_words()
+        words = Permutation.longest_element(n).get_reduced_words()
     for w in words:
         gp.add(w)
         lp.add(w)
@@ -225,8 +373,9 @@ def _test_sqrt_r_lambda(n, k, test_lasc, dual, words=None):
             tnaive = top.finitize(0)
             
             if len(t) != len(tnaive):
-                t.draw()
-                tnaive.draw()
+                #t.draw()
+                #tnaive.draw()
+                print('t =', len(t), 'tnaive =', len(tnaive))
                 input('')
             
             # t = top.finitize(0)

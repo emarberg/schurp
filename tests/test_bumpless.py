@@ -46,6 +46,29 @@ def inv_grothendieck_via_bumpless(w, strict):
     return ans
 
 
+def test_inv_bumpless_droops(n=6):
+    for strict in [True, False]:
+        todo = list(Permutation.involutions(n))
+        for w in todo:
+            print(strict, 'z =', w)
+            aset = set(BumplessPipedream.from_involution(w, reduced=True, strict=strict))
+            bset = set(BumplessPipedream.from_involution_droops(w, strict=strict))
+            if aset != bset:
+                missing = aset - bset
+                print('extra:', bset - aset)
+                print()
+                print(aset)
+                print()
+                for pd in aset:
+                    if any(m in pd.symmetric_droops(strict, False) for m in missing):
+                        print(pd)
+                        rval=pd
+                print()
+                print('missing:', missing)
+                return rval
+            assert aset == bset
+        print()
+
 def test_inv_bumpless(n=6):
     for strict in [True]:
         todo = list(Permutation.involutions(n))
@@ -69,10 +92,6 @@ def test_inv_bumpless(n=6):
             expected = AltInvGrothendieck.get(w)
             frombpd = inv_grothendieck_via_bumpless(w, strict)
             assert expected == frombpd
-        
-        dreams = list(BumplessPipedream.from_involution(w))
-        test = sum(d.inv_weight() for d in dreams)
-        actual = InvSchubert.get(w)
 
 
 def schubert_via_bumpless(w, strict):

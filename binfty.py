@@ -23,40 +23,40 @@ class InfiniteCrystal:
     def binfty(cls, n, word=None):
         elem = {i: cls.elementary(i, n) for i in range(1, n)}
         word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
-        return cls.tensor(*[elem[i] for i in word])
+        return cls.tensor(*[elem[i] for i in word]) if len(word) > 0 else cls.one(n)
 
     @classmethod 
     def binfty_squared(cls, n, word=None):
         elem = {i: cls.elementary_squared(i, n) for i in range(1, n)}
         word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
-        return cls.tensor(*[elem[i] for i in word])
+        return cls.tensor(*[elem[i] for i in word]) if len(word) > 0 else cls.one(n)
 
     @classmethod 
     def sqrt_binfty(cls, n, word=None):
         elem = {i: cls.sqrt_elementary(i, n) for i in range(1, n)}
         word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
         #print('\n\n\n', word, '\n\n\n')
-        return cls.sqrt_tensor(*[elem[i] for i in word])
+        return cls.sqrt_tensor(*[elem[i] for i in word]) if len(word) > 0 else cls.one(n)
 
     @classmethod 
     def dual_sqrt_binfty(cls, n, word=None):
         elem = {i: cls.dual_sqrt_elementary(i, n) for i in range(1, n)}
         word = word if word is not None else [n - i for j in range(n - 1, 0, -1) for i in range(j, n)]
         #print('\n\n\n', word, '\n\n\n')
-        return cls.sqrt_tensor(*[elem[i] for i in word])
+        return cls.sqrt_tensor(*[elem[i] for i in word]) if len(word) > 0 else cls.one(n)
 
     @classmethod 
     def simple_sqrt_binfty(cls, n, word=None):
         elem = {i: cls.simple_sqrt_elementary(i, n) for i in range(1, n)}
         word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
         print('\n\n\n', word, '\n\n\n')
-        return cls.sqrt_tensor(*[elem[i] for i in word])
+        return cls.sqrt_tensor(*[elem[i] for i in word]) if len(word) > 0 else cls.one(n)
 
     @classmethod 
     def odd_sqrt_binfty(cls, n):
         elem = {i: cls.odd_sqrt_elementary(i, n) for i in range(1, n)}
         print([n - i for j in range(n - 1, 0, -1) for i in range(j, n)])
-        return cls.sqrt_tensor(*[elem[n - i] for j in range(n - 1, 0, -1) for i in range(j, n)]) 
+        return cls.sqrt_tensor(*[elem[n - i] for j in range(n - 1, 0, -1) for i in range(j, n)]) if len(word) > 0 else cls.one(n)
 
     @classmethod
     def is_isomorphic(cls, b, b_vertices, c, c_vertices, ignore_strings=False, verbose=False):
@@ -608,6 +608,40 @@ class InfiniteCrystal:
                 return 0 if x % 2 == 0 else 1
 
         weight_map = lambda x: tuple(0 if i not in [j - 1, j] else (x // 2 + int(x % 2)) if i == j - 1 else -(x // 2) for i in range(n))
+        return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
+
+    @classmethod
+    def alt_dual_sqrt_elementary(cls, j, n):
+        # opposite arrows indexed by j + 1
+
+        generator = 0
+        indices = list(range(1, n))
+
+        def e_operators(i, x):
+            if i == j:
+                return x + 1
+            if i == j + 1:
+                return (x - 1) if x % 2 != 0 else None
+
+        def f_operators(i, x):
+            if i == j:
+                return x - 1
+            if i == j + 1:
+                return (x + 1) if x % 2 == 0 else None
+
+        def e_strings(i, x):
+            if i == j:
+                return -x
+            if i == j + 1:
+                return x
+
+        def f_strings(i, x):
+            if i == j:
+                return x
+            if i == j + 1:
+                return 0 if x % 2 != 0 else 1
+
+        weight_map = lambda x: tuple(0 if i not in [j - 1, j] else -(x // 2 + int(x % 2)) if i == j else (x // 2) for i in range(n))
         return cls(generator, indices, e_operators, f_operators, e_strings, f_strings, weight_map)
 
     @classmethod

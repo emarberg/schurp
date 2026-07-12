@@ -9,15 +9,33 @@ from permutations import Permutation
 
 class BumplessPipedream:
 
-    J_TILE = '┘'
-    C_TILE = '┌'
-    P_TILE = '┼'
-    H_TILE = '─'
-    V_TILE = '│'
-    B_TILE = '•'
-    E_TILE = '*'
+    J_TILE = 'J'
+    C_TILE = 'C'
+    P_TILE = 'P'
+    H_TILE = 'H'
+    V_TILE = 'V'
+    B_TILE = 'B'
+    E_TILE = 'E'
 
     TILES = [J_TILE, C_TILE, P_TILE, H_TILE, V_TILE, B_TILE, E_TILE]
+
+    def get_tile_string(self, i, j):
+        t = self.tiles.get((i, j), self.B_TILE)
+        if t == self.J_TILE:
+            return '┘'
+        if t == self.C_TILE:
+            return '┌'
+        if t == self.P_TILE:
+            return '┼'
+        if t == self.H_TILE:
+            return '─'
+        if t == self.V_TILE:
+            return '│'
+        if t == self.B_TILE:
+            return '•'
+        if t == self.E_TILE:
+            return '*'
+        raise Exception
 
     def __init__(self, bends, n=None):
         self.bends = {p: t for (p, t) in bends.items() if t in [self.J_TILE, self.C_TILE, self.E_TILE]}
@@ -308,7 +326,7 @@ class BumplessPipedream:
         for i in range(1, self.n + 1):
             row = []
             for j in range(1, self.n + 1):
-                t = self.get_tile(i, j)
+                t = self.get_tile_string(i, j)
                 row += [t]
             ans += [''.join(row)]
         return '\n' + '\n'.join(ans) + '\n'
@@ -493,6 +511,33 @@ class BumplessPipedream:
 
         return BumplessPipedream(bends, self.n)
 
+    def inv_droop(self, i, j, a, b, strict=True):
+        assert i >= j
+        if i == j and a < b:
+            return None
+        elif a < b and self.droop(i, j, a, b, True) is not None:
+            bends = self.bends.copy()
+            del bends[(i, j)]
+            bends[(a, j)] = self.C_TILE
+            bends[(b, i)] = self.C_TILE
+            bends[(b, a)] = self.J_TILE
+
+            del bends[(j, i)]
+            bends[(j, a)] = self.C_TILE
+            bends[(i, b)] = self.C_TILE
+            bends[(a, b)] = self.J_TILE
+            return BumplessPipedream(bends, self.n)
+        else:
+            ans = self.droop(i, j, a, b, strict)
+            return ans.symmetrize() if ans is not None else None
+            
+
+    def inv_kdroop(self, i, j, a, b, strict=True):
+        assert i >= j
+        assert a >= b
+        ans = self.kdroop(i, j, a, b, strict)
+        return ans if ans is None else ans.symmetrize()
+
     def droop(self, i, j, a, b, strict=True):
         #
         # strict controls whether can droop from
@@ -504,7 +549,7 @@ class BumplessPipedream:
         if self.get_tile(i, j) != self.C_TILE:
             return None
         if self.get_tile(a, b) != self.B_TILE:
-                return None
+            return None
         for x in range(i, a + 1):
             for y in range(j, b + 1):
                 if (x, y) == (i, j):
@@ -536,6 +581,16 @@ class BumplessPipedream:
             for a in range(i + 1, self.n + 1):
                 for b in range(j + 1, self.n + 1):
                     bpd = (self.kdroop if ktheoretic else self.droop)(i, j, a, b, strict=strict)
+                    if bpd is not None:
+                        yield bpd
+
+    def inv_droops(self, strict=True, ktheoretic=False):
+        for (i, j) in self.tiles:
+            if i < j:
+                continue
+            for a in range(i + 1, self.n + 1):
+                for b in range(j + 1, self.n + 1):
+                    bpd = (self.inv_kdroop if ktheoretic else self.inv_droop)(i, j, a, b, strict=strict)
                     if bpd is not None:
                         yield bpd
 
@@ -607,6 +662,19 @@ class BumplessPipedream:
             for bpd in seed:
                 ans.add(bpd)
                 new_seed |= set(bpd.symmetric_droops(strict=strict, ktheoretic=not reduced))
+            seed = new_seed - ans
+        return ans
+
+    @classmethod
+    def from_involution_droops(cls, w, n=None, reduced=True, strict=True):
+        assert w == w.inverse()
+        ans = set()
+        seed = {cls.rothe(w, n)}
+        while seed:
+            new_seed = set()
+            for bpd in seed:
+                ans.add(bpd)
+                new_seed |= set(bpd.inv_droops(strict=strict))
             seed = new_seed - ans
         return ans
 
