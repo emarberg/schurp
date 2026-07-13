@@ -266,7 +266,7 @@ def inv_transition_lower_terms(w, p, n=None, forbidden=()):
                     pairmap[z].append((i, b))
         newmap = {}
         for key in pairmap:
-            newmap[key] = max(pairmap[key], key=lambda ab: (ab[0], -ab[1]))
+            newmap[key] = max(pairmap[key], key=lambda ab: (ab[0], ab[1]))
         pairs = sorted(newmap.values(), key=lambda ab: (ab[0], -ab[1]))
 
     print(w.cycle_repr(), ':', p, w(p), 'lower:', pairs, 'from')
@@ -350,7 +350,7 @@ def decomposeinv(vec):
 
 
 def test_inv_transitions(n=4):
-    for z in Permutation.involutions(n): #[Permutation(2,1,6,8,7,3,5,4)]: #
+    for z in [Permutation(1,6,4,3,7,2,5)]:#Permutation.involutions(n): #[Permutation(2,1,6,8,7,3,5,4)]: #
         cyc = [(j, k) for j, k in z.get_two_cycles()] + [(j, j) for j in z.fixed(n + 1)]
         for j, k in cyc:
             print('n =', n, 'z =', z, 'j =', j, 'k =', k)
