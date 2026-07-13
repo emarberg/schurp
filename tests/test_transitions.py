@@ -129,7 +129,7 @@ def fpf_transition_lower_terms(w, j):
         queue.append((y, k + 1))
 
 
-def inv_transition_upper_terms(w, j, n=None, forbidden=()):
+def old_inv_transition_upper_terms(w, j, n=None, forbidden=()):
     if n is None:
         n = max(j, len(w.oneline)) + 1
         yield w, beta**0
@@ -153,7 +153,7 @@ def inv_transition_upper_terms(w, j, n=None, forbidden=()):
                 extra = tuple(a for a in range(y(k) + 1, k) if y(a) > k)
                 if extra:
                     print('RHS *', repeats, y, j, k, z, 'forbid =', forbidden + extra)
-                for u, _ in inv_transition_upper_terms(z, y(k), k, forbidden + extra):
+                for u, _ in old_inv_transition_upper_terms(z, y(k), k, forbidden + extra):
                     if extra:
                         print('RHS new term:', u)
                     yield u, beta ** (u.involution_length() - w.involution_length())
@@ -162,7 +162,7 @@ def inv_transition_upper_terms(w, j, n=None, forbidden=()):
         queue.append((y, k - 1))
 
 
-def inv_transition_lower_terms(w, j, n=None, forbidden=()):
+def old_inv_transition_lower_terms(w, j, n=None, forbidden=()):
     if n is None:
         yield w, beta**0
         n = 1
@@ -186,13 +186,91 @@ def inv_transition_lower_terms(w, j, n=None, forbidden=()):
                 extra = tuple(a for a in range(k + 1, y(k)) if y(a) < k)
                 if extra:
                     print('LHS *', y, k, j, z, 'forbid =', forbidden + extra)
-                for u, _ in inv_transition_lower_terms(z, y(k), k, forbidden + extra):
+                for u, _ in old_inv_transition_lower_terms(z, y(k), k, forbidden + extra):
                     if extra:
                         print('LHS new term:', u)
                     yield u, beta ** (u.involution_length() - w.involution_length())
                     queue.append((u, k + 1))
 
         queue.append((y, k + 1))
+
+
+def inv_transition_upper_terms(w, p, n=None, forbidden=()):
+    if n is None:
+        n = max(p, len(w.oneline)) + 1
+        yield w, beta**0
+
+    pairmap = {}
+    if p == w(p):
+        for j in range(p + 1, n + 1):
+            z = w.tau_ij(p, j)
+            if z.involution_length() == w.involution_length() + 1:
+                if z not in pairmap or pairmap[z][1] < j:
+                    pairmap[z] = (p, j)
+        pairs = sorted(pairmap.values(), key=lambda ab: ab[1])
+    else:
+        q = w(p)
+        for j in range(min(p, q) + 1, n + 1):
+            for a in [p, q]:
+                if a >= j:
+                    continue
+                z = w.tau_ij(a, j)
+                if z.involution_length() == w.involution_length() + 1:
+                    if z not in pairmap or pairmap[z][1] < j or (pairmap[z][1] == j and pairmap[z][0] > a):
+                        pairmap[z] = (a, j)
+        pairs = sorted(pairmap.values(), key=lambda ab: (ab[1], ab[0]))
+
+    print(w.cycle_repr(), ':', p, w(p), 'upper:', pairs)
+    queue = [(w, pairs)]
+    while queue:
+        y, pairs = queue[0]
+        queue = queue[1:]
+        if len(pairs) > 0:
+            a, b = pairs[0]
+            z = y.tau_ij(a, b)
+            if z.involution_length() == y.involution_length() + 1:    
+                yield z, beta ** (z.involution_length() - w.involution_length())
+                queue.append((z, pairs[1:]))
+            queue.append((y, pairs[1:]))
+
+
+def inv_transition_lower_terms(w, p, n=None, forbidden=()):
+    if n is None:
+        yield w, beta**0
+        n = 1
+    
+    pairmap = {}
+    if p == w(p):
+        for i in range(1, p):
+            z = w.tau_ij(i, p)
+            if z.involution_length() == w.involution_length() + 1:
+                if z not in pairmap or pairmap[z][0] < i:
+                    pairmap[z] = (i, p)
+        pairs = sorted(pairmap.values(), key=lambda ab: ab[0])
+    else:
+        q = w(p)
+        for i in range(1, min(p, q)):
+            for b in [p, q]:
+                if i >= b:
+                    continue
+                z = w.tau_ij(i, b)
+                if z.involution_length() == w.involution_length() + 1:
+                    if z not in pairmap or pairmap[z][0] < i or (pairmap[z][0] == i and pairmap[z][1] > b):
+                        pairmap[z] = (i, b)
+        pairs = sorted(pairmap.values(), key=lambda ab: (ab[0], -ab[1]))
+
+    print(w.cycle_repr(), ':', p, w(p), 'lower:', pairs)
+    queue = [(w, pairs)]
+    while queue:
+        y, pairs = queue[0]
+        queue = queue[1:]
+        if len(pairs) > 0:
+            a, b = pairs[0]
+            z = y.tau_ij(a, b)
+            if z.involution_length() == y.involution_length() + 1:    
+                yield z, beta ** (z.involution_length() - w.involution_length())
+                queue.append((z, pairs[1:]))
+            queue.append((y, pairs[1:]))
 
 
 def multiply_via_grothendieck_transitions(w, j):
@@ -270,33 +348,53 @@ def test_inv_transitions(n=4):
             f = multiply_via_grothendieck_transitions(f, j)
             if j < k:
                 f = multiply_via_grothendieck_transitions(f, k)
-            try:
-                decomposeinv(f)
-            except:
-                raise Exception
+
+            oldf = Vector()
+            for y, c in old_inv_transition_lower_terms(z, j):
+                oldf += invgroth(y) * c
+            oldf = multiply_via_grothendieck_transitions(oldf, j)
+            if j < k:
+                oldf = multiply_via_grothendieck_transitions(oldf, k)
+
+            #try:
+            #    decomposeinv(f)
+            #except:
+            #    raise Exception
 
             g = Vector()
             for y, c in inv_transition_upper_terms(z, k):
                 g += invgroth(y) * c
+
+            oldg = Vector()
+            for y, c in old_inv_transition_upper_terms(z, k):
+                oldg += invgroth(y) * c
             
+            #assert f == oldf
+            #assert g == oldg
+
             if f != g:
                 print()
-                # print('LHS =', f)
-                # print()
-                # print('RHS =', g)
-                # print()
-                try:
-                    dec = decomposeinv(f - g)
-                    for w, coeff in sorted(dec.items(), key=lambda a: a[0].involution_length()):
-                        print('  ', w, coeff)
-                except:
-                    print('diff =', f - g)
-                    return f - g
+                print('LHS =', f)
                 print()
-                input('?')
+                print('LHS diff with old =', f - oldf)
+                print()
+                print('RHS =', g)
+                print()
+                print('RHS diff with old =', g - oldg)
+                print()
+                #try:
+                #    dec = decomposeinv(f - g)
+                #    for w, coeff in sorted(dec.items(), key=lambda a: a[0].involution_length()):
+                #        print('  ', w, coeff)
+                #except:
+                #    print('diff =', f - g)
+                    # return f - g
+                #print()
+                #input('?')
             print()
 
-            #assert f == g
+            assert oldf == oldg
+            assert f == g
 
 
 def lessdot(z, i, j):
