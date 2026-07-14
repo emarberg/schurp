@@ -192,7 +192,7 @@ class Clan:
         return ans
 
     def grothendieck(self):
-        from schubert import GrothendieckB, GrothendieckC, GrothendieckD
+        from schubert import Grothendieck, GrothendieckB, GrothendieckC, GrothendieckD
         from stable.polynomials import beta
 
         def gettup(hd):
@@ -200,7 +200,7 @@ class Clan:
 
         def getitems(w):
             if self.family == self.TYPE_A:
-                raise Exception
+                return Grothendieck.symmetric_simple(w).coeffs.items()
             elif self.family in [self.TYPE_B, self.TYPE_C2]:
                 return GrothendieckC.symmetric_simple(w).coeffs.items()
             elif self.family in [self.TYPE_C1]:
@@ -708,8 +708,9 @@ class Clan:
             CLAN_WORDS_CACHE[self] = ans if len(ans) > 0 else [()]
         return CLAN_WORDS_CACHE[self]
 
-    def get_upper_poset(self):
-        atoms = list(self.get_atoms())
+    def get_upper_poset(self, atoms=None):
+        if atoms is None:
+            atoms = list(self.get_atoms())
         upper_poset = {a: {a} for a in atoms}
         level = atoms
         while level:
@@ -723,23 +724,28 @@ class Clan:
             level = newlevel
         return upper_poset
 
+    def upper_mobius(self, atoms=None):
+        upper_poset = self.get_upper_poset(atoms)
+        ans = {}
+        def mobius(x):
+            if x not in ans:
+                mu = 0
+                for z in upper_poset[x] - {x}:
+                    mu += mobius(z)
+                ans[x] = 1 - mu
+            return ans[x]
+
+        for w in upper_poset:
+            mobius(w)
+        return ans 
+
     def get_hecke_atoms(self):
         if self not in CLAN_HECKE_ATOMS_CACHE:
-            upper_poset = self.get_upper_poset()
-
-            ans = {}
-            def mobius(x):
-                if x not in ans:
-                    mu = 0
-                    for z in upper_poset[x] - {x}:
-                        mu += mobius(z)
-                    ans[x] = 1 - mu
-                return ans[x]
-
-            a = min(upper_poset, key=lambda x: self.weyl_group_length(x))
+            mobius = self.upper_mobius()
+            a = min(mobius, key=lambda x: self.weyl_group_length(x))
             CLAN_HECKE_ATOMS_CACHE[self] = set()
-            for w in upper_poset:
-                mu = mobius(w)
+            for w in mobius:
+                mu = mobius[w]
                 if mu == 0:
                     continue
                 assert mu == (-1)**(self.weyl_group_length(w) - self.weyl_group_length(a))

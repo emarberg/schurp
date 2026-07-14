@@ -34,6 +34,7 @@ B_DOUBLE_GROTHENDIECK_CACHE = {}
 D_GROTHENDIECK_CACHE = {}
 D_DOUBLE_GROTHENDIECK_CACHE = {}
 
+A_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
 C_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
 B_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
 D_SYMMETRIC_GROTHENDIECK_SIMPLE = {}
@@ -178,6 +179,61 @@ class Grothendieck(Schubert):
     @classmethod
     def divided_difference(cls, f, i):
         return (f * (1 + cls.beta * MPolynomial.monomial(i + 1))).divided_difference(i)
+
+    @classmethod
+    def expand_reflection_chain(cls, start, chain, length):
+        ans = Vector()
+        queue = [(1, start, chain)]
+        while queue:
+            (sgn, z, c) = queue[0]
+            queue = queue[1:]
+            if len(c) == 0:
+                ans += Vector({z: sgn})
+            else:
+                if len(c[0]) == 2:
+                    a = 1
+                    t, b = c[0]
+                else:
+                    t, a, b = c[0]
+                queue.append((a * sgn, z, c[1:]))
+                zt = z * t
+                if length(zt) == length(z) + 1:
+                    queue.append((b * sgn, zt, c[1:]))
+        return ans
+
+    @classmethod
+    def symmetric_simple(cls, w, verbose=False):
+        if w(1) > 1:
+            return cls.symmetric_simple(w.shift(1), verbose)
+
+        cache = A_SYMMETRIC_GROTHENDIECK_SIMPLE
+
+        n = len(w.oneline)
+        key = tuple(w.oneline)
+        
+        if key not in cache:
+            r = [i for i in range(1, n) if w(i) > w(i + 1)]
+            if len(r) <= 1:
+                r = n if len(r) == 0 else r[0]
+                ans = MPolynomial.one()
+                for i in range(1, r + 1):
+                    ans *= y(r + 1 - i)**(w(i) - i)
+            else:
+                r = max(r)
+                s = max([(w(i), i) for i in range(r + 1, n + 1) if w(i) < w(r)])[1]
+                v = w * Permutation.t_ij(r, s)
+
+                chain = [(Permutation.t_ij(i, r), cls.beta) for i in range(1, r)] 
+                vec = Vector({v: 1}) - cls.expand_reflection_chain(v, chain, lambda x: x.length())
+                vec *= -(cls.beta * MPolynomial.one())**-1
+                ans = MPolynomial.zero()
+                for (u, c) in vec.dictionary.items():
+                    ans += cls.symmetric_simple(u) * c
+
+                if verbose:
+                    print(' . . .', cls.__name__, 'cache:', len(cache))
+            cache[key] = ans
+        return cache[key]
 
 
 class DoubleSchubert(Schubert):
@@ -481,27 +537,6 @@ class AltInvGrothendieck(InvGrothendieck):
 
 
 class GrothendieckC(Grothendieck):
-
-    @classmethod
-    def expand_reflection_chain(cls, start, chain, length):
-        ans = Vector()
-        queue = [(1, start, chain)]
-        while queue:
-            (sgn, z, c) = queue[0]
-            queue = queue[1:]
-            if len(c) == 0:
-                ans += Vector({z: sgn})
-            else:
-                if len(c[0]) == 2:
-                    a = 1
-                    t, b = c[0]
-                else:
-                    t, a, b = c[0]
-                queue.append((a * sgn, z, c[1:]))
-                zt = z * t
-                if length(zt) == length(z) + 1:
-                    queue.append((b * sgn, zt, c[1:]))
-        return ans
 
     @classmethod
     def get_hecke_compatible_sequences(cls, n, w, ell):

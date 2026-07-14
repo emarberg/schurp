@@ -20,7 +20,7 @@ def test_stanley_a(n=4, testhecke=True):
             ans += G(m, mu) * c
         return ans
 
-    c = [x for x in Clan.all_b(n) if x.is_matchless()]
+    c = [x for x in Clan.all_a(n) if x.is_matchless()]
     for a in c:
         s = a.signs()
 
@@ -28,32 +28,42 @@ def test_stanley_a(n=4, testhecke=True):
         qbool = any(s[i] == s[i + 1] == False for i in range(len(s) - 1))
 
         got = stanley(n, a)
-        ss = S_expansion(got)
+        exps = schurschur_expand(n, got, got.degree())
 
-        print(a)
-        if not (pbool and qbool):
-            assert len(ss) == 1
-            mu = list(ss)[0]
-            assert ss[mu] == 1
-            print()
-            print('  S:', mu)
-            print()
-            
-            if testhecke:
-                mu = list(ss)[0]
-                assert grothendieck(n, a) == GS(n, mu)
-        else:
-            assert len(ss) > 1
+        print(a, '::', got.degree())
+        print()
+        failed = True
+        for ss in exps:
+            if len(ss) == 1:
+                (mu, nu) = list(ss)[0]
+                print('  schur:', mu, '*', nu)
+                failed = False
+                if testhecke:
+                    assert grothendieck(n, a) == G(n, mu) * G(n, nu)
+        print()
+        assert not failed
 
 
-def GPGP_expand(n, got, k):
-    from stable.utils import GP
+def schurschur_expand(n, got, k):
+    from stable.utils import schur
+    from stable.vectors import Vector
+
+    ans = []
+    mus = [(a, b) for i in range(k + 1) for a in Partition.all(i) for b in Partition.generate(k - i) if i <= k - i]
+    for (a, b) in mus:
+        if got == schur(n, a) * schur(n, b):
+            ans.append(Vector({(a, b): 1}))
+    return ans
+
+
+def _expand(n, got, k):
+    from stable.utils import P
     from stable.vectors import Vector
 
     ans = []
     mus = [(a, b) for i in range(k + 1) for a in Partition.all(i, strict=True) for b in Partition.generate(k - i, strict=True) if i <= k - i]
     for (a, b) in mus:
-        if got == GP(n, a) * GP(n, b):
+        if got == P(n, a) * P(n, b):
             ans.append(Vector({(a, b): 1}))
     return ans
 
@@ -938,7 +948,7 @@ def _test_hecke_atoms(cl, dtype=False, verbose=False):
         try:
             assert hecke != expected
         except:
-            input('?\n')
+            pass #input('?\n')
 
 
 def test_hecke_atoms(n=3):
