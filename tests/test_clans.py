@@ -3,6 +3,44 @@ from permutations import Permutation
 from stable.partitions import Partition
 from signed import SignedPermutation
 from even import EvenSignedPermutation
+from tests.test_kn import subsets
+
+
+def test_mobius(n=3):
+    for label, clgen in [('A', Clan.all_a), ('B', Clan.all_b), ('D', Clan.all_d1)]:
+        print()
+        print('type', label)
+        cl = next(iter(clgen(n)))
+        wmap = {}
+        for w in cl.weyl_group():
+            ell = cl.weyl_group_length(w)
+            if ell not in wmap:
+                wmap[ell] = []
+            wmap[ell].append(w)
+        works = {}
+        totals = {ell: 2**len(wmap[ell]) - 1 for ell in wmap}
+        for ell in sorted(wmap):
+            #print('type', label, 'ell =', ell)
+            for s in subsets(wmap[ell]):
+                if len(s) > 0:
+                    mobius = cl.upper_mobius(s)
+                    if set(mobius.values()) | {0, 1, -1} != {0, 1, -1}:
+                        pass
+                        #print('  type', label, 'ell =', ell, ':', set(mobius.values()))
+                        #print()
+                        #print('  ', s)
+                        #print()
+                    else:
+                        works[ell] = works.get(ell, 0) + 1
+        for cl in clgen(n):
+            atoms = cl.get_atoms()
+            mobius = cl.upper_mobius(s)
+            assert set(mobius.values()) | {0, 1, -1} == {0, 1, -1}
+
+        for ell in totals:
+            print('type', label, 'length =', ell, ':', works.get(ell, 0), 'of', totals[ell])
+        print()
+
 
 
 def test_stanley_a(n=4, testhecke=True):

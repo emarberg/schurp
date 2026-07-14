@@ -456,7 +456,7 @@ class Clan:
     def all_a(cls, p, q=None):
         if q is None:
             n = p
-            for p in range(1, n):
+            for p in range(0, n + 1):
                 for clan in cls._all_a(p, n - p):
                     yield clan
         else:
