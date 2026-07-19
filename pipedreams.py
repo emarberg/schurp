@@ -219,7 +219,7 @@ class BumplessPipedream:
         s = []
         
         s += ['\\begin{tikzpicture}[x=\\bpdwidth,y=\\bpdwidth,line cap=round,line join=round,baseline=(z.base)]']
-        s += ['\\node at (0,%s) (z) {};' % (n / 2)]
+        s += ['\\node at (0,%s) (z) {};' % (n / 2 - 0.25)]
         
         for i in range(0, n + 1):
             s += ['\\draw[gray!70, line width=0.7pt](0,%s)--(%s,%s);' % (i, n, i)]
@@ -258,7 +258,7 @@ class BumplessPipedream:
         s = []
         
         s += ['\\begin{tikzpicture}[x=\\bpdwidth,y=\\bpdwidth,line cap=round,line join=round,baseline=(z.base)]']
-        s += ['\\node at (0,%s) (z) {};' % (n / 2)]
+        s += ['\\node at (0,%s) (z) {};' % (n / 2 - 0.25)]
         
         for i in range(0, n + 1):
             s += ['\\draw[gray!70, line width=0.7pt](0,%s)--(%s,%s);' % (i, n, i)]
@@ -288,7 +288,8 @@ class BumplessPipedream:
     def is_inv_reduced(self):
         w = self.inv_bpd_word()
         sigma = Permutation.from_word(w)
-        return sigma.length() == len(w)
+        z = sigma % sigma.inverse()
+        return z.involution_length() == len(w)
         
     def bpd_word(self):
         return self._bpd_word(False)
@@ -516,6 +517,7 @@ class BumplessPipedream:
         if i == j and a < b:
             return None
         elif a < b and self.droop(i, j, a, b, True) is not None:
+            #return None
             bends = self.bends.copy()
             del bends[(i, j)]
             bends[(a, j)] = self.C_TILE
@@ -527,9 +529,10 @@ class BumplessPipedream:
             bends[(i, b)] = self.C_TILE
             bends[(a, b)] = self.J_TILE
             return BumplessPipedream(bends, self.n)
-        else:
+        elif a >= b:
             ans = self.droop(i, j, a, b, strict)
             return ans.symmetrize() if ans is not None else None
+        return None
             
 
     def inv_kdroop(self, i, j, a, b, strict=True):
@@ -674,7 +677,8 @@ class BumplessPipedream:
             new_seed = set()
             for bpd in seed:
                 ans.add(bpd)
-                new_seed |= set(bpd.inv_droops(strict=strict))
+                toadd = set(bpd.inv_droops(strict=strict))
+                new_seed |= toadd
             seed = new_seed - ans
         return ans
 

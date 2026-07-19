@@ -50,9 +50,12 @@ def test_inv_bumpless_droops(n=6):
     for strict in [True, False]:
         todo = list(Permutation.involutions(n))
         for w in todo:
+            #if not w.is_vexillary():
+            #    continue
             print(strict, 'z =', w)
             aset = set(BumplessPipedream.from_involution(w, reduced=True, strict=strict))
             bset = set(BumplessPipedream.from_involution_droops(w, strict=strict))
+            cset = set(BumplessPipedream.from_involution(w, reduced=False, strict=strict))
             if aset != bset:
                 missing = aset - bset
                 print('extra:', bset - aset)
@@ -65,8 +68,9 @@ def test_inv_bumpless_droops(n=6):
                         rval=pd
                 print()
                 print('missing:', missing)
-                return rval
+                #return rval
             assert aset == bset
+            assert aset == {p for p in cset if p.is_inv_reduced()}
         print()
 
 def test_inv_bumpless(n=6):
