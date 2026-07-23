@@ -1221,6 +1221,10 @@ class SignedPermutation(SignedMixin):
             t = SignedPermutation.s_i(0, self.rank)
             return (t * self.inverse() * t).dtype_demazure(self)
             
+    def is_atom(self):
+        y = self.inverse() % self
+        return y.involution_length() == self.length()
+
     def is_atom_d(self, twisted):
         y = self.dtype_demazure_conjugate(twisted)
         return y.involution_length(dtype=True, twisted=twisted) == self.dlength()

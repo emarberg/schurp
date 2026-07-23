@@ -145,7 +145,6 @@ def test_inclusion_b_fpf(n=4):
             assert actual == expected
 
 
-
 def test_dshape(n=4):
     for z in SignedPermutation.involutions(n, dtype=True):
         for w in z.get_atoms_d():

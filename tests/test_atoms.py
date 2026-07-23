@@ -1,5 +1,151 @@
+from permutations import Permutation
 from signed import SignedPermutation
 import subprocess
+
+
+def relation_span(generator, relation):
+    ans = set()
+    add = {generator}
+    while add:
+        newadd = set()
+        for g in add:
+            if g not in ans:
+                ans.add(g)
+                for h in relation(g):
+                    if h not in ans and h not in add:
+                        newadd.add(h)
+        add = newadd
+    return ans
+
+
+def hcm_span(w):
+    n = len(w.oneline)
+    o = [w(i) for i in range(1, n + 1)]
+    for i in range(len(o) - 2):
+        b, c, a = o[i:i + 3]
+        if a < b < c:
+            new_o = o[:i] + [c, a, b] + o[i + 3:]
+            yield w.__class__(*new_o)
+        c, a, b = o[i:i + 3]
+        if a < b < c:
+            new_o = o[:i] + [b, c, a] + o[i + 3:]
+            yield w.__class__(*new_o)
+
+
+def d_hcm_span(w):
+    for v in hcm_span(w):
+        yield v
+    for v in hcm_span(toggle(w)):
+        yield toggle(v)
+
+
+def toggle(w):
+    n = len(w.oneline)
+    o = [-w(1)] + [w(i) for i in range(2, n + 1)]
+    return w.__class__(*o)
+
+
+def is_consecutive_cba_avoiding(w):
+    n = len(w.oneline)
+    for i in range(1, n - 1):
+        if w(i) > w(i + 1) > w(i + 2):
+            return False
+    return True
+
+
+def is_negative_ba_avoiding(w):
+    n = len(w.oneline)
+    for i in range(1, n):
+        if 0 > w(i) > w(i + 1):
+            return False
+    return True
+
+
+def is_negative_cba_avoiding(w):
+    if -w(1) > w(2) > w(3):
+        return False
+    return True
+
+
+def is_crossing_avoiding(w):
+    n = len(w.oneline)
+    for i in range(1, n - 1):
+        if 0 < w(i) < -w(i + 2) < -w(i + 1):
+            return False
+    return True
+
+
+def is_even_well_nested(w):
+    equivclass = relation_span(w, d_hcm_span)
+    boolean = all(is_consecutive_cba_avoiding(v) and is_crossing_avoiding(v) for u in equivclass for v in [u, toggle(u)])
+    return boolean, equivclass
+
+
+def is_signed_well_nested(w):
+    equivclass = relation_span(w, hcm_span)
+    boolean = all(is_consecutive_cba_avoiding(v) and is_negative_ba_avoiding(v) and is_crossing_avoiding(v) for v in equivclass)
+    return boolean, equivclass
+
+
+def is_well_nested(w):
+    equivclass = relation_span(w, hcm_span)
+    boolean = all(is_consecutive_cba_avoiding(v) for v in equivclass)
+    return boolean, equivclass
+
+
+def test_well_nested(n):
+    expected = len(set(Permutation.involutions(n)))
+    base = set(Permutation.all(n))
+    ans = []
+    bns = []
+    while base:
+        w = next(iter(base))
+        boolean, equivclass = is_well_nested(w)
+        (ans if boolean else bns).append(equivclass)
+        base -= equivclass
+    assert len(ans) == expected
+    return ans, bns
+
+
+def test_signed_well_nested(n):
+    base = set(SignedPermutation.all(n))
+    ans = []
+    bns = []
+    while base:
+        w = next(iter(base))
+        boolean, equivclass = is_signed_well_nested(w)
+        (ans if boolean else bns).append(equivclass)
+        base -= equivclass
+    a = []
+    for e in ans:
+        a.append(all(w.inverse().is_atom() for w in e))
+    b = []
+    for e in bns:
+        b.append(all(not w.inverse().is_atom() for w in e))
+    assert all(a)
+    assert all(b)
+    return ans, bns, a, b
+
+
+
+def test_even_well_nested(n):
+    base = set(SignedPermutation.all(n, dtype=True))
+    ans = []
+    bns = []
+    while base:
+        w = next(iter(base))
+        boolean, equivclass = is_even_well_nested(w)
+        (ans if boolean else bns).append(equivclass)
+        base -= equivclass
+    a = []
+    for e in ans:
+        a.append(all(w.inverse().is_atom_d(twisted=False) for w in e))
+    b = []
+    for e in bns:
+        b.append(all(not w.inverse().is_atom_d(twisted=False) for w in e))
+    assert all(a)
+    assert all(b)
+    return ans, bns, a, b
 
 
 class SignedAtomsGraph:
