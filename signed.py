@@ -1299,8 +1299,9 @@ class SignedPermutation(SignedMixin):
 
         return sh
 
-    def dshape(self, offset=0, verbose=False):
-        assert self.is_atom_d(offset % 2 != 0)
+    def dshape(self, offset=0, verbose=False, strict=True):
+        if strict:
+            assert self.is_atom_d(offset % 2 != 0)
 
         o = list(self.inverse().oneline)
         init = [abs(a) for a in o[:offset]]
@@ -1355,10 +1356,11 @@ class SignedPermutation(SignedMixin):
             print()
             print('   sh =', sh)
 
-        assert y == z
+        if strict:
+            assert y == z
         return sh
 
-    def shape(self, offset=0):
+    def shape(self, offset=0, strict=True):
         o = list(self.inverse().oneline)
         ndes, fix, neg = self._ndes(o[offset:])
         neg += tuple(-abs(a) for a in o[:offset])
@@ -1371,11 +1373,12 @@ class SignedPermutation(SignedMixin):
             y *= SignedPermutation.t_ij(-i, i, n)
         for a, b in desb:
             y *= SignedPermutation.t_ij(a, b, n)
-        assert self.inverse() % self == y
+        if strict:
+            assert self.inverse() % self == y
 
         sh = set()
         for a, b in ndes:
-            if 0 < a < -b:
+            if a < -b:
                 sh.add((b, -a))
                 sh.add((a, -b))
         for e in neg:

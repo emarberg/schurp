@@ -190,6 +190,26 @@ def test_lp(n, thresh=10):
             assert expected == phi
 
 
+def string_data(b, t, word=None):
+    n = b.rank
+    word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
+    N = len(word)
+    sigma = {}
+    for j in range(N + 1, 1, -1):
+        a = t
+        for k in range(N, j - 1, -1):
+            for _ in range(sigma[k]):
+                a = b.e_operator(word[-k], a)
+        sigma[j - 1] = b.e_string(word[1 - j], a)
+    return tuple(sigma[i] for i in range(1, N + 1))
+
+
+def test_string_data():
+    b = InfiniteCrystal.sqrt_binfty(3)
+    b.printer = lambda x: str(string_data(b, x, (2,1,2))) + '\n' + str(string_data(b, x, (1,2,1)))
+    return b
+
+
 def test_elementary_squared(n=3, p=3, q=3):
     b = InfiniteCrystal.binfty(n)
     for w in Permutation.longest_element(n).get_reduced_words():

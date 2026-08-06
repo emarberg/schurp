@@ -1,6 +1,70 @@
 from signed import SignedPermutation, Permutation
 from even import EvenSignedPermutation
 from polynomials import X
+import subprocess
+
+
+def cspan(v):
+    v = v.oneline
+    level = {(None, v, None)}
+    seen = set()
+    while level:
+        nextlevel = set()
+        nextseen = set()
+        for u, v, label in level:
+            if u is not None:
+                yield (u, v, label)
+            
+            assert v not in seen
+            nextseen.add(v)
+            
+            for i in range(len(v) - 2):
+                b, c, a = v[i: i + 3]
+                if a < b < c:
+                    w = v[:i] + (c, a, b) + v[i + 3:]
+                    nextlevel.add((v, w, False))
+
+        level = nextlevel
+        seen |= nextseen
+
+
+def print_atoms_cspan(n=3):
+    def printer(oneline):
+        w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
+        return ' '.join([('+' + str(a)) if a > 0 else str(a) for a in w.oneline])
+    
+    cls = SignedPermutation
+    for w in cls.involutions(n):
+        atoms = {a.inverse() for a in w.get_atoms()}
+        edges = set()
+        for a in atoms:
+            edges |= set(cspan(a))
+        edges = list(edges)
+        
+        
+        if len(edges) == 0:
+            continue
+
+        s = []
+        s += ['digraph G {']
+        s += ['    overlap=false;']
+        s += ['    splines=spline;']
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        for x in atoms:
+            s += ['    "%s" [fillcolor=white];' % printer(x)]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges if (not b or draw_strong)]
+        s += ['}']
+        s = '\n'.join(s)
+
+        name = ''.join([str(w(i)) for i in range(1, n + 1)])
+        name = 'n' + str(n) + '_' + str(len(atoms)) + '_' + name
+
+        file = '/Users/emarberg/examples/atoms/'
+        dotfile = file + 'dot/CI/' + name + '.dot'
+        pngfile = file + 'png/CI/' + name + '.png'
+        with open(dotfile, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dotfile, "-o", pngfile])
 
 
 def test_inclusion_a(n=4):
