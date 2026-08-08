@@ -1025,7 +1025,7 @@ class InfiniteCrystal:
 
         def printer(x):
             ans = [self.printer(x)]
-            ans += [str(self.weight(x))]
+            ans += ['wt = ' + str(self.weight(x))]
             for i in self.indices:
                 ans += ['string ' + str(i) + ': ' + str((self.e_string(i, x), self.f_string(i, x)))]
             return '\n'.join(ans)

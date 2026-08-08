@@ -460,8 +460,8 @@ def test_incr(nn=3, kk=5):
 
 def test_rectify(nn=3, kk=5, cls=AbstractGLCrystal):
     # fails for AbstractQCrystal
-    for n in range(2, nn + 1):
-        for k in range(1, kk + 1):
+    for n in [nn]: #range(2, nn + 1):
+        for k in [kk]: #range(1, kk + 1):
             print()
             print('n =', n, 'k =', k)
             print()
@@ -492,7 +492,8 @@ def test_rectify(nn=3, kk=5, cls=AbstractGLCrystal):
                     boolean_hw &= sq_words.is_highest_weight(hw)
                     lw = sq_words.rectify_lowest(b, i)
                     boolean_lw &= sq_words.is_lowest_weight(lw)
-                print('  i =', i, boolean_hw, boolean_lw)
+                if boolean_hw:
+                    print('  i =', i, boolean_hw, boolean_lw)
 
 
 

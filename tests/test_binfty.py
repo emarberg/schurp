@@ -194,20 +194,83 @@ def string_data(b, t, word=None):
     n = b.rank
     word = word if word is not None else [i for j in range(n - 1, 0, -1) for i in range(j, n)]
     N = len(word)
-    sigma = {}
-    for j in range(N + 1, 1, -1):
-        a = t
-        for k in range(N, j - 1, -1):
-            for _ in range(sigma[k]):
-                a = b.e_operator(word[-k], a)
-        sigma[j - 1] = b.e_string(word[1 - j], a)
+    sigma = {N: b.e_string(word[-1], t)}
+    a = t
+    for j in range(N, 1, -1):
+        for _ in range(sigma[j]):
+            a = b.e_operator(word[j - 1], a)
+        sigma[j - 1] = b.e_string(word[j - 2], a)
     return tuple(sigma[i] for i in range(1, N + 1))
 
 
-def test_string_data():
-    b = InfiniteCrystal.sqrt_binfty(3)
-    b.printer = lambda x: str(string_data(b, x, (2,1,2))) + '\n' + str(string_data(b, x, (1,2,1)))
-    return b
+def test_string_data(n=4, mm=10):
+    bzl = tuple([i for j in range(n - 1, 0, -1) for i in range(j, n)])
+    #b = InfiniteCrystal.sqrt_binfty(3)
+    #b.printer = lambda x: str(string_data(b, x, (2,1,2))) + '\n' + str(string_data(b, x, (1,2,1)))
+    #return b
+
+    def geta(t):
+        m = n * [0]
+        b = n * [None]
+        for _, _, box in t:
+            for i in range(1, n + 1):
+                if i in box:
+                    m[i - 1] += 1
+                    if b[i - 1] is None and min(box) != i:
+                        b[i - 1] = 1
+        b = [x if x == 1 else 0 for x in b]
+        a = [2 * m[i] - b[i] for i in range(n)]
+        return a
+
+    for cols in range(1, mm + 1):
+        svt = AbstractGLCrystal.sqrtcrystal_from_partition((cols,), n)
+        for t in svt:
+            a = geta(t)
+            sd = string_data(svt, t, bzl)
+
+            print(t)
+            u = t
+            for i in range(len(bzl) - 1, -1, -1):
+                #print(('e_%s ' % str(bzl[i])) * sd[i])
+                for _ in range(sd[i]):
+                    u = svt.e_operator(bzl[i], u)
+                #print(u)
+
+            expected = (len(bzl) - (n - 1)) * (0,)
+            bs = []
+            cs = []
+            for i in range(1, n):
+                b = 0
+                for k in range(i + 2, n + 1):
+                    if all(a[j - 1] == 0 for j in range(i + 1, k)) and a[k - 1] % 2 != 0:
+                        b = 1
+                        break
+                c = 1 if ((b == 1 or a[i] % 2 != 0) and a[i - 1] == 0) else 0
+                bs.append(b)
+                cs.append(c)
+                expected += (a[i] + sum([x if x % 2 == 0 else (x - 1) for x in a[i + 1:]]) + b + c,)
+
+            print('bzl =', bzl)
+            print(expected, '=', sd)
+            print()
+            print(a, bs, cs)
+            assert svt.weight(u) == (cols,) + (n - 1) * (0,)
+            assert expected == sd
+
+            q = t
+            assert svt.e_string(n - 1, t) == a[-1] + cs[-1] == sd[-1]
+            for _ in range(sd[-1]):
+                q = svt.e_operator(n - 1, q)
+            aa = geta(q)
+
+            print()
+            print(a, aa, 'c_{n-1} =', cs[-1])
+            for i in range(1, n - 1):
+                assert aa[i - 1] == a[i - 1]
+            assert aa[n - 2] == a[n - 2] + a[-1] - (1 if a[-1] % 2 != 0 else 0)  + cs[-1]
+            assert aa[n - 1] == 0
+
+            #input('\n')
 
 
 def test_elementary_squared(n=3, p=3, q=3):
