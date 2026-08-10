@@ -111,6 +111,25 @@ def is_signed_well_nested(w):
     return boolean, equivclass
 
 
+def is_well_nested_slow(w):
+    ans = is_well_nested(w)[0]
+    assert ans == is_well_nested_fast(w)
+    return ans
+
+
+def is_well_nested_fast(w):
+    if type(w) in [Permutation, EvenSignedPermutation, SignedPermutation]:
+        w = w.oneline
+    assert len(w) == len(set(w))
+    index = {a: i for i, a in enumerate(w)}
+    ncyc = simple_ncyc(w)
+    for b1, a1 in ncyc:
+        for b2, a2 in ncyc:
+            if a1 < a2 and b1 < b2 and index[a1] > index[b2]:
+                return False
+    return True
+
+
 def is_well_nested(w):
     equivclass = relation_span(w, hcm_span)
     boolean = all(is_consecutive_cba_avoiding(v) for v in equivclass)
@@ -167,6 +186,19 @@ def is_noncrossing(m):
             if a < c < b < d or c < a < d < b:
                 return False
     return True
+
+
+def simple_ncyc(o):
+    ans = []
+    o = list(o)
+    while True:
+        if any(o[i] > o[i + 1] for i in range(len(o) - 1)):
+            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]][0]
+            ans.append((o[i], o[i + 1]))
+            o = o[:i] + o[i+2:]
+        else:
+            break
+    return sorted(ans + [(x, x) for x in o])
 
 
 def altndes(w):
@@ -239,19 +271,18 @@ def test_even_well_nested(n):
             for i in range(len(v)):
                 if abs(v[i]) == b:
                     if v[i] < 0:
-                        check.append(i == 0 and is_well_nested(v)[0] and is_well_nested(toggle(v))[0])
-                        v = v[:i] + (((-v[i + 2],) + v[i + 3:]) if len(v) >= i + 3 else v[i + 2:])
+                        check.append(i == 0 and is_well_nested_fast(toggle(v)))
                     else:
-                        check.append(is_well_nested(v)[0])
-                        v = v[:i] + v[i + 2:]
+                        check.append(is_well_nested_fast(v))
+                    v = v[:i] + v[i + 2:]
                     break
 
-        expected = is_noncrossing(sh) and is_well_nested(ww)[0] and all(check)
+        expected = is_noncrossing(sh) and all(check)
         # and not (abs(w(1)) < -w(3) < -w(2))
         if boolean != expected:
             print('new case:')
             print()
-            print(boolean, 'but expected', expected, w, is_well_nested(ww)[0], is_noncrossing(sh), check)
+            print(boolean, 'but expected', expected, w, is_well_nested_fast(ww), is_noncrossing(sh), check)
             print()
             print('ww =', ww)
             print()
@@ -285,7 +316,7 @@ def test_even_well_nested(n):
             zga = {tuple(_.inverse()) for _ in z.get_atoms_d()}
             for qw in sorted(zga, key=lambda a: (tuple(SignedPermutation(*a).inverse().dshape()), (tuple(abs(_) for _ in a)))):
                 sig = SignedPermutation(*qw)
-                com = is_well_nested(sig)[0]
+                com = is_well_nested_fast(sig)
                 nd, nr = altndes(sig)
                 xx = {a[0] for a in nd} | {abs(a) for a in nr}
                 print('  ', qw, com, [o for o in qw if abs(o) in xx], nd, nr)
