@@ -344,6 +344,9 @@ class SymmetricPolynomial(Vector):
             if mon.degree() == m
         })
 
+    def degree(self):
+        return max(self.highest_degree_terms()).degree()
+
     @classmethod
     def _vectorize(cls, n, tableaux, signs=None, degree_bound=None):
         dictionary = defaultdict(int)

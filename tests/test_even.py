@@ -3,60 +3,66 @@ from even import EvenSignedPermutation
 import subprocess
 
 
+def ndes(w):
+    if type(w) != list:
+        r = w.rank
+        w = [w(i) for i in range(1, r + 1)]
+    for i in range(len(w) - 1):
+        if w[i] > w[i + 1]:
+            return [(w[i], w[i + 1])] + ndes(w[:i] + w[i + 2:])
+    return []
+
+
+def nres(w):
+    if type(w) != list:
+        r = w.rank
+        w = [w(i) for i in range(1, r + 1)]
+    for i in range(len(w) - 1):
+        if w[i] > w[i + 1]:
+            return nres(w[:i] + w[i + 2:])
+    return w
+
+
+def nres_pm(w):
+    res = nres(w)
+    a = [i for i in res if i < 0]
+    b = [i for i in res if i > 0]
+    if len(a) % 2 != 0 and b and abs(a[-1]) > b[0]:
+        return b[1:]
+    elif len(a) % 2 != 0:
+        return [abs(a[-1])] + b
+    else:
+        return b
+
+
+def ndes_pm(w):
+    des = ndes(w)
+    res = nres(w)
+    a = [i for i in res if i < 0]
+    b = [i for i in res if i > 0]
+    ans = des
+    while len(a) >= 2:
+        ans.append((a[0], a[1]))
+        a = a[2:]
+    if a and b and abs(a[0]) > b[0]:
+        ans.append((a[0], b[0]))
+    return set(ans)
+
+
+def cyc_pm(z):
+    r = z.rank
+    cyc = {(a, z(a)) for a in range(-r, r + 1) if a != 0 and abs(a) < z(a)}
+    f = {(c, c) for c in range(1, r + 1) if z(c) == c}
+    return cyc | f
+
+
+def neg(z):
+    r = z.rank
+    return {i for i in range(1 , r + 1) if z(i) == -i}
+
+
 def test_nested(n=5):
     assert n >= 2
-
-    def ndes(w):
-        if type(w) != list:
-            r = w.rank
-            w = [w(i) for i in range(1, r + 1)]
-        for i in range(len(w) - 1):
-            if w[i] > w[i + 1]:
-                return [(w[i], w[i + 1])] + ndes(w[:i] + w[i + 2:])
-        return []
-
-    def nres(w):
-        if type(w) != list:
-            r = w.rank
-            w = [w(i) for i in range(1, r + 1)]
-        for i in range(len(w) - 1):
-            if w[i] > w[i + 1]:
-                return nres(w[:i] + w[i + 2:])
-        return w
-
-    def nres_pm(w):
-        res = nres(w)
-        a = [i for i in res if i < 0]
-        b = [i for i in res if i > 0]
-        if len(a) % 2 != 0 and b and abs(a[-1]) > b[0]:
-            return b[1:]
-        elif len(a) % 2 != 0:
-            return [abs(a[-1])] + b
-        else:
-            return b
-
-    def ndes_pm(w):
-        des = ndes(w)
-        res = nres(w)
-        a = [i for i in res if i < 0]
-        b = [i for i in res if i > 0]
-        ans = des
-        while len(a) >= 2:
-            ans.append((a[0], a[1]))
-            a = a[2:]
-        if a and b and abs(a[0]) > b[0]:
-            ans.append((a[0], b[0]))
-        return set(ans)
-
-    def cyc_pm(z):
-        r = z.rank
-        cyc = {(a, z(a)) for a in range(-r, r + 1) if a != 0 and abs(a) < z(a)}
-        f = {(c, c) for c in range(1, r + 1) if z(c) == c}
-        return cyc | f
-
-    def neg(z):
-        r = z.rank
-        return {i for i in range(1 , r + 1) if z(i) == -i}
 
     def shape(w):
         ans = set()
@@ -327,11 +333,12 @@ def span(v, strong=False):
         seen |= nextseen
 
 
-def print_atoms_span(n=3):
+def print_atoms_span(n=3, draw_strong=False):
     def printer(oneline):
         w = SignedPermutation(*oneline.oneline) if type(oneline) == EvenSignedPermutation else SignedPermutation(*oneline)
         sh = w.inverse().dshape()
-        return str(w) + '\n' + str(sh)
+        #return str(w) + '\n' + str(sh)
+        return ' '.join([('+' + str(a)) if a > 0 else str(a) for a in w.oneline])
     
     cls = EvenSignedPermutation
     for w in cls.involutions(n):
@@ -355,11 +362,11 @@ def print_atoms_span(n=3):
         s += ['    splines=spline;']
         s += ['    node [shape=box; fontname="courier"; style=filled];']
         for x in atoms:
-            if x in minima:
+            if False: #x in minima:
                 s += ['    "%s";' % printer(x)]
             else:
                 s += ['    "%s" [fillcolor=white];' % printer(x)]
-        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges]
+        s += ['    "%s" -> "%s" [style="%s"];' % (printer(x), printer(y), 'dotted' if b else 'bold') for (x, y, b) in edges if (not b or draw_strong)]
         s += ['}']
         s = '\n'.join(s)
 

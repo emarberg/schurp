@@ -3,13 +3,33 @@ from stable.tableaux import Tableau
 from num2words import num2words
 
 
+# from stable.partitions import *
+# mus = list(Partition.all(6, strict=True))
+# for n in range(1, 6):
+#     for mu in mus:
+#         document(n, mu)
+#        print(mu, n)
+
+
 def svdtab(max_entry, mu):
     ans = Tableau.setvalued_decomposition_tableaux(max_entry, mu)
-    return sorted(ans, key=defect)
+    return sorted(ans, key=lambda t: (defect(t),) + content(t))
 
 
 def defect(t):
     return len(t) - len(t.boxes)
+
+
+def content(t):
+    ans = []
+    for (_, _, v) in t:
+        for a in v:
+            while a > len(ans):
+                ans += [0]
+            ans[a - 1] += 1
+    return tuple(ans)
+
+
 
 
 def tex(self, FRENCH=False):

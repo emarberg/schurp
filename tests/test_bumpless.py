@@ -9,6 +9,25 @@ from schubert import (
 )
 
 
+def test_word(n=4):
+    for w in Permutation.all(n):
+        for bpd in BumplessPipedream.from_permutation(w):
+            print(bpd)
+            word = bpd.bpd_word()
+            print(w, word)
+            assert w == Permutation.from_hecke_word(word)
+
+
+def test_inv_word(n=4):
+    for w in Permutation.involutions(n):
+        for bpd in BumplessPipedream.from_involution(w):
+            print(bpd)
+            word = bpd.inv_bpd_word()
+            print(w, word)
+            v = Permutation.from_hecke_word(word)
+            assert w == v % v.inverse()
+
+
 def inv_schubert_via_bumpless(w, strict):
     ans = 0
     for bpd in BumplessPipedream.from_involution(w, strict=strict):
@@ -27,10 +46,39 @@ def inv_grothendieck_via_bumpless(w, strict):
     return ans
 
 
-def test_inv_bumpless(n=6):
+def test_inv_bumpless_droops(n=6):
     for strict in [True, False]:
-        for w in Permutation.involutions(n):
-            print(w, strict)
+        todo = list(Permutation.involutions(n))
+        for w in todo:
+            #if not w.is_vexillary():
+            #    continue
+            print(strict, 'z =', w)
+            aset = set(BumplessPipedream.from_involution(w, reduced=True, strict=strict))
+            bset = set(BumplessPipedream.from_involution_droops(w, strict=strict))
+            cset = set(BumplessPipedream.from_involution(w, reduced=False, strict=strict))
+            if aset != bset:
+                missing = aset - bset
+                print('extra:', bset - aset)
+                print()
+                print(aset)
+                print()
+                for pd in aset:
+                    if any(m in pd.symmetric_droops(strict, False) for m in missing):
+                        print(pd)
+                        rval=pd
+                print()
+                print('missing:', missing)
+                #return rval
+            assert aset == bset
+            assert aset == {p for p in cset if p.is_inv_reduced()}
+        print()
+
+def test_inv_bumpless(n=6):
+    for strict in [True]:
+        todo = list(Permutation.involutions(n))
+        for i, w in enumerate(todo):
+            print(len(todo) - i, 'left')
+            # print(w, strict)
             expected = InvSchubert.get(w)
             frombpd = inv_schubert_via_bumpless(w, strict) 
             if expected != frombpd:
@@ -48,10 +96,6 @@ def test_inv_bumpless(n=6):
             expected = AltInvGrothendieck.get(w)
             frombpd = inv_grothendieck_via_bumpless(w, strict)
             assert expected == frombpd
-        
-        dreams = list(BumplessPipedream.from_involution(w))
-        test = sum(d.inv_weight() for d in dreams)
-        actual = InvSchubert.get(w)
 
 
 def schubert_via_bumpless(w, strict):

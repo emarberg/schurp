@@ -1,22 +1,41 @@
 from schubert import InvSchubert, FPFSchubert, Grothendieck, AltInvGrothendieck
 from polynomials import x as x_var, one as one_var, y as y_var
 import subprocess
+import pyperclip
+import random
 import os
-from permutations import *
+from permutations import Permutation
 
 
 class BumplessPipedream:
 
-    J_TILE = '┘'
-    C_TILE = '┌'
-    P_TILE = '┼'
-    H_TILE = '─'
-    V_TILE = '│'
-    B_TILE = '•'
-
-    E_TILE = '*'
+    J_TILE = 'J'
+    C_TILE = 'C'
+    P_TILE = 'P'
+    H_TILE = 'H'
+    V_TILE = 'V'
+    B_TILE = 'B'
+    E_TILE = 'E'
 
     TILES = [J_TILE, C_TILE, P_TILE, H_TILE, V_TILE, B_TILE, E_TILE]
+
+    def get_tile_string(self, i, j):
+        t = self.tiles.get((i, j), self.B_TILE)
+        if t == self.J_TILE:
+            return '┘'
+        if t == self.C_TILE:
+            return '┌'
+        if t == self.P_TILE:
+            return '┼'
+        if t == self.H_TILE:
+            return '─'
+        if t == self.V_TILE:
+            return '│'
+        if t == self.B_TILE:
+            return '•'
+        if t == self.E_TILE:
+            return '*'
+        raise Exception
 
     def __init__(self, bends, n=None):
         self.bends = {p: t for (p, t) in bends.items() if t in [self.J_TILE, self.C_TILE, self.E_TILE]}
@@ -53,12 +72,262 @@ class BumplessPipedream:
                     else:
                         raise Exception
 
+    def symmetrize(self):
+        tiles = self.tiles.copy()
+        for i in range(1, self.n + 1):
+            for j in range(i, self.n + 1):
+                t = self.get_tile(j, i)
+                if i == j:
+                    if t == self.V_TILE:
+                        tiles[i, j] = self.C_TILE
+                    elif t == self.H_TILE:
+                        tiles[i, j] = self.J_TILE
+                    else:
+                        tiles[i, j] = t
+                else:
+                    tiles[i, j] = self.transpose_tile(t)
+        try:
+            ans = BumplessPipedream(tiles, self.n)
+        except:
+            print()
+            print('(cannot symmetrize)')
+            print()
+            ans = self
+        return ans
+
+    @classmethod
+    def random(cls, n, pipedream, bumpless, reduced):
+        base = set(cls.TILES)
+        if bumpless:
+            base.remove(cls.E_TILE)
+
+        tiles = {}
+        positions = [(i + 1, j + 1) for i in range(n) for j in range(n)]
+        positions = sorted(positions, key=lambda x: (x[1] - x[0], x[0]))
+        for (i, j) in positions:
+            available = base.copy()
+            
+            if pipedream and j == 1:
+                available -= {cls.J_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}
+
+            if pipedream and i == n:
+                available -= {cls.H_TILE, cls.J_TILE, cls.B_TILE}
+
+            if pipedream and i == 1:
+                available -= {cls.V_TILE, cls.J_TILE, cls.P_TILE, cls.E_TILE}
+
+            if pipedream and j == n:
+                available -= {cls.V_TILE, cls.J_TILE, cls.B_TILE}
+
+            if i < n and tiles[i + 1, j] in {cls.J_TILE, cls.V_TILE, cls.P_TILE, cls.E_TILE}:
+                available -= {cls.J_TILE, cls.H_TILE, cls.B_TILE}
+            elif i < n and tiles[i + 1, j] in {cls.C_TILE, cls.H_TILE, cls.B_TILE}:
+                available -= {cls.C_TILE, cls.V_TILE, cls.P_TILE, cls.E_TILE}
+            
+            if j > 1 and tiles[i, j - 1] in {cls.C_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}:
+                available -= {cls.C_TILE, cls.V_TILE, cls.B_TILE}
+            elif j > 1 and tiles[i, j - 1] in {cls.J_TILE, cls.V_TILE, cls.B_TILE}:
+                available -= {cls.J_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}
+
+            if len(available) == 0:
+                return cls.random(n, pipedream, bumpless, reduced)
+            tiles[i, j] = random.choice(list(available))
+
+        ans = cls({}, n)
+        ans.tiles = tiles
+        
+        if pipedream:
+            if (reduced and not ans.is_reduced()) or (not reduced and ans.is_reduced()):
+                return cls.random(n, pipedream, bumpless, reduced)
+        return ans
+
+    @classmethod
+    def halfrandom(cls, n, pipedream, bumpless, reduced):
+        base = set(cls.TILES)
+        if bumpless:
+            base.remove(cls.E_TILE)
+
+        tiles = {}
+        positions = [(i + 1, j + 1) for i in range(n) for j in range(n) if i >= j]
+        positions = sorted(positions, key=lambda x: (x[1] - x[0], x[0]))
+        for (i, j) in positions:
+            available = base.copy()
+            
+            if pipedream and j == 1:
+                available -= {cls.J_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}
+
+            if pipedream and i == n:
+                available -= {cls.H_TILE, cls.J_TILE, cls.B_TILE}
+
+            if i < n and tiles[i + 1, j] in {cls.J_TILE, cls.V_TILE, cls.P_TILE, cls.E_TILE}:
+                available -= {cls.J_TILE, cls.H_TILE, cls.B_TILE}
+            elif i < n and tiles[i + 1, j] in {cls.C_TILE, cls.H_TILE, cls.B_TILE}:
+                available -= {cls.C_TILE, cls.V_TILE, cls.P_TILE, cls.E_TILE}
+            
+            if j > 1 and tiles[i, j - 1] in {cls.C_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}:
+                available -= {cls.C_TILE, cls.V_TILE, cls.B_TILE}
+            elif j > 1 and tiles[i, j - 1] in {cls.J_TILE, cls.V_TILE, cls.B_TILE}:
+                available -= {cls.J_TILE, cls.H_TILE, cls.P_TILE, cls.E_TILE}
+
+            tiles[i, j] = random.choice(list(available))
+
+        ans = cls({}, n)
+        ans.tiles = tiles
+        
+        if pipedream:
+            if (reduced and not ans.is_inv_reduced()) or (not reduced and ans.is_inv_reduced()):
+                return cls.halfrandom(n, pipedream, bumpless, reduced)
+        return ans
+
+
+    @classmethod
+    def halftex_tile(cls, n, i, j, t):
+        if i == j and t == cls.C_TILE:
+            t = cls.V_TILE
+        elif i == j and t == cls.J_TILE:
+            t = cls.H_TILE
+        return cls.tex_tile(n, i, j, t)
+
+    @classmethod
+    def tex_tile(cls, n, i, j, t):
+        x = j - 1
+        y = n - i - 1
+        ans = []
+        if t == cls.J_TILE:
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s)--(%s,%s);' % (x + .5, y + 2, x + .5, y + 1.5, x + 0, y + 1.5)]
+        elif t == cls.C_TILE:
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s)--(%s,%s);' % (x + .5, y + 1, x + .5, y + 1.5, x + 1, y + 1.5)]
+        elif t == cls.P_TILE:
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s);' % (x + 0, y + 1.5, x + 1, y + 1.5)]
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s);' % (x + 0.5, y + 1, x + 0.5, y + 2)]
+        elif t == cls.H_TILE:
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s);' % (x + 0, y + 1.5, x + 1, y + 1.5)]    
+        elif t == cls.V_TILE:
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s);' % (x + 0.5, y + 1, x + 0.5, y + 2)]
+        elif t == cls.B_TILE:
+            pass
+        elif t == cls.E_TILE:
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s)--(%s,%s);' % (x + .5, y + 2, x + .5, y + 1.5, x + 0, y + 1.5)]
+            ans += ['\\draw[thick,rounded corners,color=blue] (%s,%s)--(%s,%s)--(%s,%s);' % (x + .5, y + 1, x + .5, y + 1.5, x + 1, y + 1.5)]
+        return ans
+
+    def halftex(self, numbers=False):
+        n = self.n
+        if numbers:
+            assert n < 10
+
+        s = []
+        
+        s += ['\\begin{tikzpicture}[x=\\bpdwidth,y=\\bpdwidth,line cap=round,line join=round,baseline=(z.base)]']
+        s += ['\\node at (0,%s) (z) {};' % (n / 2 - 0.25)]
+        
+        for i in range(0, n + 1):
+            s += ['\\draw[gray!70, line width=0.7pt](0,%s)--(%s,%s);' % (i, n, i)]
+            s += ['\\draw[gray!70, line width=0.7pt](%s,0)--(%s,%s);' % (i, i, n)]
+        
+        for (i, j) in self.tiles:
+            if i >= j:
+                s += self.halftex_tile(n, i, j, self.tiles[i, j])
+        
+        s += ['\\draw[white, line width=0.7pt,fill=white] (0,%s)--(%s,0)--(%s,%s)--(0,%s);' % (n, n, n, n, n)]
+        s += ['\\draw[black, line width=1.6pt] (0,%s)--(%s,0)--(0,0)--(0,%s);' % (n, n, n)]
+
+        if numbers:
+            for i in range(1, n + 1):
+                s += ['\\draw[](%s,%s) node {%s};' % (i - 0.5, -0.4, i)]
+            for i in range(1, n + 1):
+                diagonal = self.get_pipe_from_diagonal(i)
+                if len(diagonal) == 1:
+                    d = diagonal[0]
+                    s += ['\\draw[](%s,%s) node {%s};' % (i - 0.2, n + 1 - i - 0.25, d)]
+                elif len(diagonal) == 2:
+                    d, e = diagonal[0], diagonal[1]
+                    delta = 0.25
+                    s += ['\\draw[](%s,%s) node {%s};' % (i - 0.2 - delta, n + 1 - i - 0.25 + delta, d)]
+                    s += ['\\draw[](%s,%s) node {%s};' % (i - 0.2 + delta, n + 1 - i - 0.25 - delta, e)]
+
+        s += ['\\end{tikzpicture}']
+        s += ['%% recreate: pd = BumplessPipedream({}, %s); pd.tiles = %s; pd = pd.symmetrize()' % (self.n, str(self.tiles))]
+        return '\n'.join(s)
+
+    def tex(self, numbers=False):
+        n = self.n
+        if numbers:
+            assert n < 10
+
+        s = []
+        
+        s += ['\\begin{tikzpicture}[x=\\bpdwidth,y=\\bpdwidth,line cap=round,line join=round,baseline=(z.base)]']
+        s += ['\\node at (0,%s) (z) {};' % (n / 2 - 0.25)]
+        
+        for i in range(0, n + 1):
+            s += ['\\draw[gray!70, line width=0.7pt](0,%s)--(%s,%s);' % (i, n, i)]
+            s += ['\\draw[gray!70, line width=0.7pt](%s,0)--(%s,%s);' % (i, i, n)]
+        
+        for (i, j) in self.tiles:
+            s += self.tex_tile(n, i, j, self.tiles[i, j])
+        
+        s += ['\\draw[black, line width=1.6pt] (0,%s)--(%s,%s)--(%s,0)--(0,0)--(0,%s);' % (n, n, n, n, n)]
+
+        if numbers:
+            for i in range(1, n + 1):
+                s += ['\\draw[](%s,%s) node {%s};' % (i - 0.5, -0.4, i)]
+            for i in range(1, n + 1):
+                v = self.get_pipe(i, n, 'H')
+                s += ['\\draw[](%s,%s) node {%s};' % (n + 0.4, n + 1 - i - 0.5, v)]
+
+        s += ['\\end{tikzpicture}']
+        s += ['%% recreate: pd = BumplessPipedream({}, %s); pd.tiles = %s' % (self.n, str(self.tiles))]
+        return '\n'.join(s)
+
+    def is_reduced(self):
+        w = self.bpd_word()
+        sigma = Permutation.from_word(w)
+        return sigma.length() == len(w)
+
+    def is_inv_reduced(self):
+        w = self.inv_bpd_word()
+        sigma = Permutation.from_word(w)
+        z = sigma % sigma.inverse()
+        return z.involution_length() == len(w)
+        
+    def bpd_word(self):
+        return self._bpd_word(False)
+
+    def inv_bpd_word(self):
+        return self._bpd_word(True)
+
+    def _bpd_word(self, invword):
+        diag = lambda x: x[1] + self.n - x[0] - 1
+
+        tiles = [(i, j) for i in range(1, self.n + 1) for j in range(1, self.n + 1)]
+        if invword:
+            tiles = [(i, j) for (i, j) in tiles if i >= j]
+        tiles = sorted(tiles, key=lambda x: (diag(x), x[0]))
+
+        ans = []
+        prev = None
+        for x in tiles:
+            if prev is None or diag(x) != diag(prev):
+                wires = 0
+            if x not in self.tiles or self.tiles[x] == self.B_TILE:
+                wires += 0
+            elif self.tiles[x] in [self.J_TILE, self.C_TILE, self.H_TILE, self.V_TILE]:
+                wires += 1
+            elif self.tiles[x] == self.E_TILE:
+                wires += 2
+            elif self.tiles[x] == self.P_TILE:
+                ans.append(wires + 1)
+                wires += 2
+            prev = x
+        return ans
+
     def __repr__(self):
         ans = []
         for i in range(1, self.n + 1):
             row = []
             for j in range(1, self.n + 1):
-                t = self.get_tile(i, j)
+                t = self.get_tile_string(i, j)
                 row += [t]
             ans += [''.join(row)]
         return '\n' + '\n'.join(ans) + '\n'
@@ -243,11 +512,47 @@ class BumplessPipedream:
 
         return BumplessPipedream(bends, self.n)
 
+    def inv_droop(self, i, j, a, b, strict=True):
+        assert i >= j
+        if i == j and a < b:
+            return None
+        elif a < b and self.droop(i, j, a, b, True) is not None:
+            #return None
+            bends = self.bends.copy()
+            del bends[(i, j)]
+            bends[(a, j)] = self.C_TILE
+            bends[(b, i)] = self.C_TILE
+            bends[(b, a)] = self.J_TILE
+
+            del bends[(j, i)]
+            bends[(j, a)] = self.C_TILE
+            bends[(i, b)] = self.C_TILE
+            bends[(a, b)] = self.J_TILE
+            return BumplessPipedream(bends, self.n)
+        elif a >= b:
+            ans = self.droop(i, j, a, b, strict)
+            return ans.symmetrize() if ans is not None else None
+        return None
+            
+
+    def inv_kdroop(self, i, j, a, b, strict=True):
+        assert i >= j
+        assert a >= b
+        ans = self.kdroop(i, j, a, b, strict)
+        return ans if ans is None else ans.symmetrize()
+
     def droop(self, i, j, a, b, strict=True):
+        #
+        # strict controls whether can droop from
+        #
+        #  ┌──┘
+        #  │
+        #  ┘  B
+        #
         if self.get_tile(i, j) != self.C_TILE:
             return None
         if self.get_tile(a, b) != self.B_TILE:
-                return None
+            return None
         for x in range(i, a + 1):
             for y in range(j, b + 1):
                 if (x, y) == (i, j):
@@ -279,6 +584,16 @@ class BumplessPipedream:
             for a in range(i + 1, self.n + 1):
                 for b in range(j + 1, self.n + 1):
                     bpd = (self.kdroop if ktheoretic else self.droop)(i, j, a, b, strict=strict)
+                    if bpd is not None:
+                        yield bpd
+
+    def inv_droops(self, strict=True, ktheoretic=False):
+        for (i, j) in self.tiles:
+            if i < j:
+                continue
+            for a in range(i + 1, self.n + 1):
+                for b in range(j + 1, self.n + 1):
+                    bpd = (self.inv_kdroop if ktheoretic else self.inv_droop)(i, j, a, b, strict=strict)
                     if bpd is not None:
                         yield bpd
 
@@ -350,6 +665,20 @@ class BumplessPipedream:
             for bpd in seed:
                 ans.add(bpd)
                 new_seed |= set(bpd.symmetric_droops(strict=strict, ktheoretic=not reduced))
+            seed = new_seed - ans
+        return ans
+
+    @classmethod
+    def from_involution_droops(cls, w, n=None, reduced=True, strict=True):
+        assert w == w.inverse()
+        ans = set()
+        seed = {cls.rothe(w, n)}
+        while seed:
+            new_seed = set()
+            for bpd in seed:
+                ans.add(bpd)
+                toadd = set(bpd.inv_droops(strict=strict))
+                new_seed |= toadd
             seed = new_seed - ans
         return ans
 
@@ -646,6 +975,17 @@ class BumplessPipedream:
         oneline = [self.get_pipe(i, self.n, 'H') for i in range(1, self.n + 1)]
         return Permutation(*oneline)
 
+    def get_pipe_from_diagonal(self, i):
+        t = self.get_tile(i, i)
+        if t == self.P_TILE or t == self.E_TILE:
+            return [self.get_pipe(i, i, 'V'), self.get_pipe(i, i, 'H')]
+        elif t == self.J_TILE:
+            return [self.get_pipe(i, i, 'H')]
+        elif t == self.C_TILE:
+            return [self.get_pipe(i, i, 'V')]
+        else:
+            return []
+
     def get_pipe(self, i, j, direction=None):
         # returns the column index of the position on the bottom side where the pipe enters the n-by-n grid
         assert direction in [None, 'V', 'H']
@@ -658,9 +998,9 @@ class BumplessPipedream:
         if t == self.E_TILE:
             assert direction is not None
             if direction == 'V':
-                return self.get_pipe(i, j-1, 'H')
+                return self.get_pipe(i, j - 1, 'H')
             else:
-                return self.get_pipe(i+1, j, 'V')
+                return self.get_pipe(i + 1, j, 'V')
 
         if t == self.P_TILE:
             assert direction is not None
@@ -670,13 +1010,13 @@ class BumplessPipedream:
                 return self.get_pipe(i, j-1, direction)
 
         if t == self.J_TILE: # ┘
-            return self.get_pipe(i, j-1, 'H')
+            return self.get_pipe(i, j - 1, 'H')
         elif t == self.C_TILE: # ┌
-            return self.get_pipe(i+1, j, 'V')
+            return self.get_pipe(i + 1, j, 'V')
         elif t == self.H_TILE: # ─
-            return self.get_pipe(i, j-1, 'H')
+            return self.get_pipe(i, j - 1, 'H')
         elif t == self.V_TILE: # │
-            return self.get_pipe(i+1, j, 'V')
+            return self.get_pipe(i + 1, j, 'V')
 
     def has_blank_tiles(self):
         return len(self.get_blank_tiles()) > 0
@@ -1004,6 +1344,24 @@ class Pipedream:
                 continue
             yield Pipedream((self.crossings - {(i, j)}) | {(x, j + 1)})
 
+    def generalized_ladder_moves(self):
+        for (i, j) in self.crossings:
+            for x in range(1, i):
+                for y in range(j + 1, self.n - x + 1):
+                    rect = {(a, b) for a in range(x, i + 1) for b in range(j, y + 1)} - {(x, j), (x, y), (i, y)}
+                    if (x, j) not in self.crossings and (x, y) not in self.crossings and (i, y) not in self.crossings and all((a, b) in self.crossings for (a, b) in rect):
+                        yield Pipedream((self.crossings - {(i, j)}) | {(x, y)})
+
+    def generalized_involution_ladder_moves(self, extended):
+        ans = set()
+        for move in self.generalized_ladder_moves():
+            if extended or move.is_weakly_lower_triangular():
+                ans.add(move)
+        for move in self.involution_ladder_moves(extended=extended):
+            ans.add(move)
+        for move in ans:
+            yield move
+
     def upper_ladder_interval(self):
         level = {self}
         while level:
@@ -1016,6 +1374,9 @@ class Pipedream:
 
     def is_symmetric(self):
         return all((j, i) in self.crossings for (i, j) in self.crossings)
+
+    def is_weakly_lower_triangular(self):
+        return self == self.lower_part()
 
     def lower_part(self):
         return Pipedream({(i, j) for (i, j) in self.crossings if i >= j})

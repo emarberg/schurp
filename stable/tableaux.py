@@ -756,6 +756,9 @@ class Tableau:
     def transpose(self):
         return Tableau({(j, i): v for i, j, v in self})
 
+    def upper_half(self):
+        return Tableau({(i, j): v for i, j, v in self if i <= j})
+
     def standardize(self):
         entries = sorted(
             [(v, i, j) for i, j, value in self for v in value],
@@ -1017,6 +1020,73 @@ class Tableau:
         for i in range(1, self.max_row() + 1):
             ans += [len([j for i_, j, v in self if i == i_])]
         return tuple(ans)
+
+    def is_ejectable(self, n, from_row=1):
+        rows = self.get_rows()
+        row = rows[from_row - 1] if from_row <= len(rows) else []
+        if n in row:
+            if n - 1 not in row:
+                return True
+            else:
+                return self.is_ejectable(n - 1, from_row + 1)
+
+    def row_hecke(self, word, index=None):
+        if index is None:
+            index = list(range(1, len(word) + 1))
+        assert len(word) == len(index)
+
+        ans = self
+        rec = Tableau()
+        for i in range(len(word) -1, -1, -1):
+            a = word[i]
+            (ans, box, alpha) = ans.row_hecke_insert(a)
+            x, y = box
+            rec = rec.add(x, y, index[i])
+        return ans, rec
+
+    def row_hecke_insert(self, N, from_row=1):
+        rows = self.get_rows()
+        row = rows[from_row - 1] if from_row <= len(rows) else []
+        
+        n1 = None
+        c = 1
+        while c <= len(row):
+            if row[c - 1] <= N:
+                n1 = row[c - 1]
+                break
+            c += 1
+
+        if n1 is None:
+            r, c = from_row, len(row) + 1
+            t = self.add(r, c, N)
+            alpha = 1
+            return (t, (r, c), alpha)
+
+        t = self.replace(from_row, c, N)
+        if n1 == N and N - 1 in row:
+            return t.row_hecke_insert(N - 1, from_row + 1)
+        elif n1 < N and not t.is_ejectable(n1, from_row + 1):
+            return t.row_hecke_insert(n1, from_row + 1)
+        else:
+            y = None
+            n2 = row[c] if c < len(row) else 0
+            
+            # find largest ejectable below
+            for (i, j) in t.boxes:
+                if i > from_row:
+                    z = t.get(i, j)
+                    if n1 > z > n2 and t.is_ejectable(z, from_row + 1) and (y is None or z > y):
+                        y = z
+
+            if y is not None:
+                return t.row_hecke_insert(y, from_row + 1)
+            elif y is None and n2 > 0:
+                return t.row_hecke_insert(n2, from_row + 1)
+            else:
+                r = from_row
+                alpha = 0
+                return (t, (r, c), alpha)
+
 
     def setvalued_excess(self):
         return sum([len(v) - 1 for _, _, v in self])
@@ -2176,6 +2246,20 @@ class Tableau:
 
         return Tableau(boxes), bumped
 
+    def column_hecke(self, word, index=None):
+        if index is None:
+            index = list(range(1, len(word) + 1))
+        assert len(word) == len(index)
+
+        ans = self
+        rec = Tableau()
+        for i in range(len(word) -1, -1, -1):
+            a = word[i]
+            (ans, box,) = ans.column_hecke_insert(a)
+            x, y = box
+            rec = rec.add(x, y, index[i])
+        return ans, rec
+
     def column_hecke_insert(self, p):
         if type(p) in [list, tuple]:
             ans = self
@@ -2206,6 +2290,22 @@ class Tableau:
                 while (i, j + 1) in boxes:
                     j += 1
                 return Tableau(boxes), (i, j)
+
+    def shifted_hecke(self, word, index=None):
+        if index is None:
+            index = list(range(1, len(word) + 1))
+        assert len(word) == len(index)
+
+        ans = self
+        rec = Tableau()
+        for i in range(len(word) -1, -1, -1):
+            a = word[i]
+            (ans, box) = ans.shifted_hecke_insert(a)
+            print('inserting', a)
+            print(ans)
+            x, y, sign = box
+            rec = rec.add(x, y, sign * index[i])
+        return ans, rec
 
     def shifted_hecke_insert(self, p):
         if type(p) in [list, tuple]:

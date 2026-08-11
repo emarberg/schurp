@@ -246,6 +246,32 @@ class Permutation:
             HECKE_WORDS[key] = words
         return HECKE_WORDS[key]
 
+    def get_decreasing_hecke_factorizations(self, k):
+        def inflate(w, a):
+            ans = []
+            for i in range(len(w)):
+                ans += a[i] * [w[i]]
+            return tuple(ans)
+
+        for w in self.get_reduced_words():
+            q = [len(w) * [0]]
+            while q:
+                a = q[0]
+                q = q[1:]
+                if sum(a) + 1 <= k:
+                    inf = inflate(w, a)
+                    for f in Word.decreasing_factorizations(inf, k):
+                        yield tuple(_.elements for _ in f)
+                    for i in range(len(w)):
+                        b = a[:i] + [a[i] + 1] + a[i + 1:]
+                        q.append(b)
+
+    def get_decreasing_inv_hecke_factorizations(self, k):
+        for w in self.get_involution_hecke_atoms():
+            for h in w.get_decreasing_hecke_factorizations(k):
+                for f in Word.decreasing_factorizations(h, k):
+                    yield tuple(_.elements for _ in f)
+
     def get_increasing_factorizations(self, k):
         for w in self.get_reduced_words():
             for f in Word.increasing_factorizations(w, k):
@@ -1529,6 +1555,9 @@ class Permutation:
     def length(self):
         return len(self)
 
+    def absolute_involution_length(self):
+        return len([i for i in range(1, len(self.oneline) + 1) if -i <= self(i) < i])
+
     def __call__(self, i):
         if i < 1:
             return i
@@ -1625,6 +1654,25 @@ class Permutation:
         assert self.is_fpf_involution()
         n = len(self.oneline)
         return self if (n == 0 or self(n - 1) != n) else (self * self.s_i(n - 1)).fpf_trim()
+
+    @classmethod
+    def from_hecke_word(cls, *args):
+        if len(args) == 1 and type(args[0]) in [list, tuple]:
+            args = args[0]
+        w = Permutation()
+        for i in args:
+            w = w % Permutation.s_i(i)
+        return w
+
+    @classmethod
+    def from_involution_hecke_word(cls, *args):
+        if len(args) == 1 and type(args[0]) in [list, tuple]:
+            args = args[0]
+        w = Permutation()
+        for i in args:
+            s = Permutation.s_i(i)
+            w = s % w % s
+        return w
 
     @classmethod
     def from_word(cls, *args):

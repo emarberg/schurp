@@ -561,12 +561,13 @@ class SignedPermutation(SignedMixin):
                 yield (cls(*oneline), mu)
 
     @classmethod
-    def reflections(cls, n):
+    def reflections(cls, n, dtype=False):
         for i in range(1, n + 1):
             for j in range(i + 1, n + 1):
                 yield cls.reflection_t(i, j, n)
                 yield cls.reflection_s(i, j, n)
-            yield cls.reflection_s(i, i, n)
+            if not dtype:
+                yield cls.reflection_s(i, i, n)
 
     @classmethod
     def all(cls, n, dtype=False):
@@ -603,6 +604,9 @@ class SignedPermutation(SignedMixin):
                     yield w
                 elif dtype and twisted and not w.is_even_signed():
                     yield cls.s_i(0, n) * w
+
+    def absolute_involution_length(self):
+        return len([i for i in range(1, self.rank + 1) if -i <= self(i) < i])
 
     @classmethod
     def abs_fpf_involutions(cls, n):
@@ -1217,6 +1221,10 @@ class SignedPermutation(SignedMixin):
             t = SignedPermutation.s_i(0, self.rank)
             return (t * self.inverse() * t).dtype_demazure(self)
             
+    def is_atom(self):
+        y = self.inverse() % self
+        return y.involution_length() == self.length()
+
     def is_atom_d(self, twisted):
         y = self.dtype_demazure_conjugate(twisted)
         return y.involution_length(dtype=True, twisted=twisted) == self.dlength()
@@ -1291,8 +1299,9 @@ class SignedPermutation(SignedMixin):
 
         return sh
 
-    def dshape(self, offset=0, verbose=False):
-        assert self.is_atom_d(offset % 2 != 0)
+    def dshape(self, offset=0, verbose=False, strict=True):
+        if strict:
+            assert self.is_atom_d(offset % 2 != 0)
 
         o = list(self.inverse().oneline)
         init = [abs(a) for a in o[:offset]]
@@ -1347,10 +1356,11 @@ class SignedPermutation(SignedMixin):
             print()
             print('   sh =', sh)
 
-        assert y == z
+        if strict:
+            assert y == z
         return sh
 
-    def shape(self, offset=0):
+    def shape(self, offset=0, strict=True):
         o = list(self.inverse().oneline)
         ndes, fix, neg = self._ndes(o[offset:])
         neg += tuple(-abs(a) for a in o[:offset])
@@ -1363,11 +1373,12 @@ class SignedPermutation(SignedMixin):
             y *= SignedPermutation.t_ij(-i, i, n)
         for a, b in desb:
             y *= SignedPermutation.t_ij(a, b, n)
-        assert self.inverse() % self == y
+        if strict:
+            assert self.inverse() % self == y
 
         sh = set()
         for a, b in ndes:
-            if 0 < a < -b:
+            if a < -b:
                 sh.add((b, -a))
                 sh.add((a, -b))
         for e in neg:

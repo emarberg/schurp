@@ -1,5 +1,342 @@
+from permutations import Permutation
 from signed import SignedPermutation
+from even import EvenSignedPermutation
+from tests.test_even import nres_pm, ndes_pm
+from tests.test_nested import ddraw
 import subprocess
+
+
+def relation_span(generator, relation):
+    ans = set()
+    add = {generator}
+    while add:
+        newadd = set()
+        for g in add:
+            if g not in ans:
+                ans.add(g)
+                for h in relation(g):
+                    if h not in ans and h not in add:
+                        newadd.add(h)
+        add = newadd
+    return ans
+
+
+def hcm_span(w):
+    ptype = type(w) in [Permutation, EvenSignedPermutation, SignedPermutation]
+    if ptype:
+        n = len(w.oneline)
+        o = [w(i) for i in range(1, n + 1)]
+    else:
+        n = len(w)
+        o = list(w)
+    for i in range(len(o) - 2):
+        b, c, a = o[i:i + 3]
+        if a < b < c:
+            new_o = o[:i] + [c, a, b] + o[i + 3:]
+            yield w.__class__(*new_o) if ptype else tuple(new_o)
+        c, a, b = o[i:i + 3]
+        if a < b < c:
+            new_o = o[:i] + [b, c, a] + o[i + 3:]
+            yield w.__class__(*new_o) if ptype else tuple(new_o)
+
+
+def d_hcm_span(w):
+    for v in hcm_span(w):
+        yield v
+    for v in hcm_span(toggle(w)):
+        yield toggle(v)
+
+
+def toggle(w):
+    ptype = type(w) in [Permutation, EvenSignedPermutation, SignedPermutation]
+    if ptype:
+        n = len(w.oneline)
+        o = [-w(1)] + [w(i) for i in range(2, n + 1)]
+        return w.__class__(*o)
+    else:
+        return () if len(w) == 0 else ((-w[0],) + tuple(w[1:]))
+
+
+def is_consecutive_cba_avoiding(w):
+    ptype = type(w) in [Permutation, EvenSignedPermutation, SignedPermutation]
+    if ptype:
+        n = len(w.oneline)
+        o = [w(i) for i in range(1, n + 1)]
+    else:
+        n = len(w)
+        o = list(w)
+    for i in range(n - 2):
+        if o[i] > o[i + 1] > o[i + 2]:
+            return False
+    return True
+
+
+def is_negative_ba_avoiding(w):
+    ptype = type(w) in [Permutation, EvenSignedPermutation, SignedPermutation]
+    if ptype:
+        n = len(w.oneline)
+        o = [w(i) for i in range(1, n + 1)]
+    else:
+        n = len(w)
+        o = list(w)
+    for i in range(n - 1):
+        if 0 > o[i] > o[i + 1]:
+            return False
+    return True
+
+
+#def is_negative_cba_avoiding(w):
+#    if -w(1) > w(2) > w(3):
+#        return False
+#    return True
+
+
+def is_crossing_avoiding(w):
+    n = len(w.oneline)
+    for i in range(1, n - 1):
+        if 0 < w(i) < -w(i + 2) < -w(i + 1):
+            return False
+    return True
+
+
+def is_even_well_nested(w):
+    equivclass = relation_span(w, d_hcm_span)
+    boolean = all(is_consecutive_cba_avoiding(v) and is_crossing_avoiding(v) for u in equivclass for v in [u, toggle(u)])
+    return boolean, equivclass
+
+
+def is_signed_well_nested(w):
+    equivclass = relation_span(w, hcm_span)
+    boolean = all(is_consecutive_cba_avoiding(v) and is_negative_ba_avoiding(v) and is_crossing_avoiding(v) for v in equivclass)
+    return boolean, equivclass
+
+
+def is_well_nested_slow(w):
+    ans = is_well_nested(w)[0]
+    assert ans == is_well_nested_fast(w)
+    return ans
+
+
+def is_well_nested_fast(w):
+    if type(w) in [Permutation, EvenSignedPermutation, SignedPermutation]:
+        w = w.oneline
+    assert len(w) == len(set(w))
+    index = {a: i for i, a in enumerate(w)}
+    ncyc = simple_ncyc(w)
+    for b1, a1 in ncyc:
+        for b2, a2 in ncyc:
+            if a1 < a2 and b1 < b2 and index[a1] > index[b2]:
+                return False
+    return True
+
+
+def is_well_nested(w):
+    equivclass = relation_span(w, hcm_span)
+    boolean = all(is_consecutive_cba_avoiding(v) for v in equivclass)
+    return boolean, equivclass
+
+
+def test_well_nested(n):
+    expected = len(set(Permutation.involutions(n)))
+    base = set(Permutation.all(n))
+    ans = []
+    bns = []
+    while base:
+        w = next(iter(base))
+        boolean, equivclass = is_well_nested(w)
+        (ans if boolean else bns).append(equivclass)
+        base -= equivclass
+    assert len(ans) == expected
+    return ans, bns
+
+
+def test_signed_well_nested(n):
+    base = set(SignedPermutation.all(n))
+    ans = []
+    bns = []
+    while base:
+        w = next(iter(base))
+        boolean, equivclass = is_signed_well_nested(w)
+
+        sh = w.inverse().shape(strict=False)
+        ndes = w._ndes(w.oneline)[0]
+        expected = is_well_nested(w)[0] and is_noncrossing(sh)
+        if boolean != expected:
+            print(boolean, expected, w, is_well_nested(w)[0], sh, is_noncrossing(sh))
+        assert boolean == expected
+
+        (ans if boolean else bns).append(equivclass)
+        base -= equivclass
+    a = []
+    for e in ans:
+        a.append(all(w.inverse().is_atom() for w in e))
+    b = []
+    for e in bns:
+        b.append(all(not w.inverse().is_atom() for w in e))
+    assert all(a)
+    assert all(b)
+    return ans, bns, a, b
+
+
+def is_noncrossing(m):
+    for ab in m:
+        for cd in m:
+            a, b = min(ab), max(ab)
+            c, d = min(cd), max(cd)
+            if a < c < b < d or c < a < d < b:
+                return False
+    return True
+
+
+def simple_ncyc(o):
+    ans = []
+    o = list(o)
+    while True:
+        if any(o[i] > o[i + 1] for i in range(len(o) - 1)):
+            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]][0]
+            ans.append((o[i], o[i + 1]))
+            o = o[:i] + o[i+2:]
+        else:
+            break
+    return sorted(ans + [(x, x) for x in o])
+
+
+def altndes(w):
+    ans = []
+    o = list(w.oneline)
+    while True:
+        if len(o) >= 2 and abs(o[0]) > o[1]:
+            ans.append((abs(o[0]), o[1]))
+            o = o[2:]
+        elif any(o[i] > o[i + 1] for i in range(len(o) - 1)):
+            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]][0]
+            ans.append((abs(o[i]), o[i + 1]))
+            o = o[:i] + o[i+2:]
+        else:
+            break
+    return sorted(ans), sorted(o)
+
+
+def oldndes(w):
+    return w._ndes(w.oneline)[0]
+
+
+def is_source(w):
+    n = len(w.oneline)
+    o = [w(i) for i in range(1, n + 1)]
+    for i in range(len(o) - 2):
+        c, a, b = o[i:i + 3]
+        if a < b < c:
+            return False
+    return True
+
+
+def evendelta(ndes, nres):
+    n = len({abs(a[0]) for a in ndes} | {abs(a[1]) for a in ndes} | {abs(a) for a in nres})
+    ans = SignedPermutation.identity(n)
+    for a, b in ndes:
+        if a > -b:
+            ans *= SignedPermutation.reflection(a, b, n)
+        else:
+            ans *= SignedPermutation.reflection(a, -a, n)
+            ans *= SignedPermutation.reflection(b, -b, n)
+    return ans
+
+
+def test_even_well_nested(n):
+    def convent(v, ndes):
+        s = {abs(a): a for b in ndes for a in b}
+        o = [s.get(abs(a), a) for a in v.oneline]
+        return SignedPermutation(*o)
+
+    base = set(SignedPermutation.all(n, dtype=True))
+    ans = []
+    bns = []
+    while base:
+        w = next(iter(base))
+        boolean, equivclass = is_even_well_nested(w)
+        
+        sh = w.inverse().dshape(strict=False)
+        
+        ndes, nres = ndes_pm(w), nres_pm(w)
+        ndes = [(abs(a), b) for (a, b) in ndes]
+        ww = convent(w, altndes(w)[0])
+
+        andes, anres = altndes(w)
+        ncyc = set(andes) | {(abs(c), abs(c)) for c in anres}
+        
+        check = []
+        v = tuple(w.oneline)
+        for b, a in reversed(sorted(ncyc)):
+            for i in range(len(v)):
+                if abs(v[i]) == b:
+                    if v[i] < 0:
+                        check.append(i == 0 and is_well_nested_fast(toggle(v)))
+                    else:
+                        check.append(is_well_nested_fast(v))
+                    v = v[:i] + v[i + 2:]
+                    break
+
+        expected = is_noncrossing(sh) and all(check)
+        # and not (abs(w(1)) < -w(3) < -w(2))
+        if boolean != expected:
+            print('new case:')
+            print()
+            print(boolean, 'but expected', expected, w, is_well_nested_fast(ww), is_noncrossing(sh), check)
+            print()
+            print('ww =', ww)
+            print()
+            print(andes, anres)
+            #print()
+            #print(ndes, nres)
+            print()
+            for qw in sorted(equivclass, key=lambda a: tuple(abs(_) for _ in a)):
+                sig = SignedPermutation(*qw)
+                nd, nr = altndes(sig)
+                xx = {a[0] for a in nd} | {abs(a) for a in nr}
+                print('  ' if SignedPermutation(*qw) != w else '* ', qw, [o for o in qw if abs(o) in xx])
+            print()
+            flag = True
+            # sources = sorted([v for v in equivclass if is_source(v)], key=lambda x: len(oldndes(x)))
+            # for v in sources:
+            #     p, q = is_well_nested(v)
+            #     r = is_well_nested(toggle(v))[0]
+
+            #     vv = convent(v, altndes(v)[0])
+            #     pp = is_well_nested(vv)[0]
+            #     rr = is_well_nested(toggle(vv))[0]
+            #     print('*' if w in q else ' ', v, altndes(v), vv, p, r, pp, rr)
+            #     if w in q and (not p or not r):
+            #         flag = False
+            # print()
+        #assert boolean == expected
+            z = evendelta(*altndes(w))
+            print('z = ', z)
+            print()
+            zga = {tuple(_.inverse()) for _ in z.get_atoms_d()}
+            for qw in sorted(zga, key=lambda a: (tuple(SignedPermutation(*a).inverse().dshape()), (tuple(abs(_) for _ in a)))):
+                sig = SignedPermutation(*qw)
+                com = is_well_nested_fast(sig)
+                nd, nr = altndes(sig)
+                xx = {a[0] for a in nd} | {abs(a) for a in nr}
+                print('  ', qw, com, [o for o in qw if abs(o) in xx], nd, nr)
+            print()
+            #print(tuple(EvenSignedPermutation(*z).get_max_atom().inverse()))
+            if flag:
+                #ddraw(zga | {tuple(_) for _ in equivclass})
+                input('??\n')
+
+        (ans if boolean else bns).append(equivclass)
+        base -= equivclass
+    a = []
+    for e in ans:
+        a.append(all(w.inverse().is_atom_d(twisted=False) for w in e))
+    b = []
+    for e in bns:
+        b.append(all(not w.inverse().is_atom_d(twisted=False) for w in e))
+    assert all(a)
+    assert all(b)
+    return ans, bns, a, b
 
 
 class SignedAtomsGraph:
