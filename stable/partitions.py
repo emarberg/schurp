@@ -14,6 +14,17 @@ class Partition:
     FRENCH = False
 
     @classmethod
+    def dominance_leq(cls, mu, nu):
+        n = max(len(mu), len(nu))
+        a, b = 0, 0
+        for i in range(n):
+            a += cls.get(mu, i + 1)
+            b += cls.get(nu, i + 1)
+            if a > b:
+                return False
+        return True
+
+    @classmethod
     def stabilizer_order(cls, mu):
         mu = cls.sort(mu, trim=True)
         m = 1

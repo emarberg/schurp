@@ -104,6 +104,22 @@ class Shape:
 
 
 class Partition:
+
+    @classmethod
+    def dominance_leq(cls, mu, nu):
+        n = max(len(mu), len(nu))
+        a, b = 0, 0
+        for i in range(n):
+            a += cls.get(mu, i + 1)
+            b += cls.get(nu, i + 1)
+            if a > b:
+                return False
+        return True
+
+    @classmethod
+    def get(cls, mu, i):
+        return mu[i - 1] if 0 <= i - 1 < len(mu) else 0
+
     def __init__(self, *args):
         self.parts = sorted(args, reverse=True)
         assert self.parts == list(args)

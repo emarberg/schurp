@@ -6,6 +6,26 @@ from .vectors import Vector
 from fractions import Fraction
 
 
+def testb(n, k):
+    for lam in Partition.all(n):
+        ans = {}
+        f = schur(k, lam)
+        gen = [nu for nu in Partition.all(sum(lam)) if sum(nu) == sum(lam)]
+        while f != 0:
+            c = f[max(f)]
+            nu = max(f).mu
+            ans[nu] = c
+            if c < 0:
+                return lam
+            else:
+                for mu in gen:
+                    if len(mu) <= k and Partition.dominance_leq(mu, nu):
+                        f = f - SymmetricPolynomial({SymmetricPolynomial.monomial(k, mu): c})
+            # print('f is now', f)
+        # print()
+        print('schur%s' % str(lam), '=', Vector(ans))
+
+
 def safe_expand(fn, f):
     try:
         return fn(f)
