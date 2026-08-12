@@ -243,6 +243,88 @@ def evendelta(ndes, nres):
     return ans
 
 
+def is_even_well_nested_slow(w):
+    w = SignedPermutation(*w)
+    andes, anres = altndes(w)
+    ncyc = set(andes) | {(abs(c), abs(c)) for c in anres}
+    
+    check = []
+    v = tuple(w.oneline)
+    for b, a in reversed(sorted(ncyc)):
+        for i in range(len(v)):
+            if abs(v[i]) == b:
+                if v[i] < 0:
+                    check.append(i == 0 and is_well_nested_fast(toggle(v)))
+                else:
+                    check.append(is_well_nested_fast(v))
+                v = v[:i] + v[i + 2:]
+                break
+
+    sh= w.inverse().dshape(strict=False)
+    return is_noncrossing(sh) and all(check)
+
+
+def is_even_well_nested_fast(w, verbose=True):
+    w = SignedPermutation(*w)
+    if verbose:
+        print('\n\n\nw =', w, '\n')
+    andes, anres = altndes(w)
+    ncyc = set(andes) | {(abs(c), c) for c in anres}
+    
+    index = {a: i + 1 for i, a in enumerate(w.oneline)}
+    for i, a in enumerate(w.oneline):
+        index[-a] = i + 1
+    
+    signed = {a: -1 if a < 0 else 1 for a in w.oneline}
+    for a in w.oneline:
+        signed[-a] = signed[a]
+
+    check = True
+    for b1, a1 in ncyc:
+        for b2, a2 in ncyc:
+            if b1 == b2 and a1 == a2:
+                continue
+            check1 = check2 = check3 = True
+            if signed[b2] == -1 and (b1 < b2) and index[a1] < index[b2]:
+                check1 = False
+            if a1 < a2 and b1 < b2 and index[b2] < index[a1]:
+                check2 = False
+
+            check &= check1 and check2 and check3
+            if verbose:
+                print('checking', (signed[b1] * b1, a1), (signed[b2] * b2, a2), check1, check2, check3)
+
+    sh= w.inverse().dshape(strict=False)
+    return is_noncrossing(sh) and check
+
+
+def test_even_well_nested_fast(n):
+    base = list(SignedPermutation.all(n, dtype=True))
+    for i, w in enumerate(base):
+        if i % 1000 == 0:
+            print(len(base) - i)
+        andes, anres = altndes(w)
+        ncyc = set(andes) | {(abs(c), c) for c in anres}
+
+        iswell = is_even_well_nested_slow(w) 
+        expected = is_even_well_nested_fast(w)
+        #slow, equivclass = is_even_well_nested(w)
+
+        if iswell != expected:
+            print()
+            print('w =', w, 'should be', iswell, 'got', expected)
+            print()
+            print('ndes =', andes, 'nres =', anres)
+            print()
+            print('ncyc =', sorted(ncyc, reverse=True))
+            print()
+            #for v in equivclass:
+            #    print('  ', v)
+            input('\n?\n')
+    
+        #assert slow == iswell
+
+
 def test_even_well_nested(n):
     def convent(v, ndes):
         s = {abs(a): a for b in ndes for a in b}
@@ -265,19 +347,7 @@ def test_even_well_nested(n):
         andes, anres = altndes(w)
         ncyc = set(andes) | {(abs(c), abs(c)) for c in anres}
         
-        check = []
-        v = tuple(w.oneline)
-        for b, a in reversed(sorted(ncyc)):
-            for i in range(len(v)):
-                if abs(v[i]) == b:
-                    if v[i] < 0:
-                        check.append(i == 0 and is_well_nested_fast(toggle(v)))
-                    else:
-                        check.append(is_well_nested_fast(v))
-                    v = v[:i] + v[i + 2:]
-                    break
-
-        expected = is_noncrossing(sh) and all(check)
+        expected = is_even_well_nested_slow(w)
         # and not (abs(w(1)) < -w(3) < -w(2))
         if boolean != expected:
             print('new case:')
