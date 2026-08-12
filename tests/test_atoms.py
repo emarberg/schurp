@@ -285,7 +285,7 @@ def is_even_well_nested_fast(w, verbose=True):
             if b1 == b2 and a1 == a2:
                 continue
             check1 = check2 = check3 = True
-            if signed[b2] == -1 and (b1 < b2) and index[a1] < index[b2]:
+            if signed[b2] == -1 and min(b1, -a1) < b2 and index[a1] < index[b2]:
                 check1 = False
             if a1 < a2 and b1 < b2 and index[b2] < index[a1]:
                 check2 = False
