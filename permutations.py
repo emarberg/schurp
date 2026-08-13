@@ -935,6 +935,26 @@ class Permutation:
 
         return mu, nu
 
+    def vex_mu(self):
+        assert self.is_vexillary()
+        mu = list(sorted(self.code(), reversed=True))
+        while mu and mu[-1] == 0:
+            mu = mu[:-1]
+        return tuple(mu)
+
+    def vex_flag(self):
+        assert self.is_vexillary()
+        lam = {(i, j) for j in self.smallest_partition_containg_rothe() for i in range(1, j + 1)}
+        mu = self.vex_mu()
+
+    def smallest_partition_containg_rothe(self):
+        mu = n * [0]
+        for (i, j) in sorted(self.rothe_diagram()):
+            for t in range(i):
+                mu[t] = max(mu[t], j)
+        while mu and mu[-1] == 0:
+            mu = mu[:-1]
+        return tuple(mu)
 
     def is_sp_vexillary(self):
         assert self.is_fpf_involution()

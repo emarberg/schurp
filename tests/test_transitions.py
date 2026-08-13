@@ -129,7 +129,11 @@ def fpf_transition_lower_terms(w, j):
         queue.append((y, k + 1))
 
 
-def old_inv_transition_upper_terms(w, j, n=None, forbidden=()):
+def inv_transition_upper_terms(w, j, n=None, forbidden=(), verbose=True):
+    def vprint(*args):
+        if verbose:
+            print(*args)
+
     if n is None:
         n = max(j, len(w.oneline)) + 1
         yield w, beta**0
@@ -152,17 +156,21 @@ def old_inv_transition_upper_terms(w, j, n=None, forbidden=()):
             if z.number_two_cycles() < y.number_two_cycles():
                 extra = tuple(a for a in range(y(k) + 1, k) if y(a) > k)
                 if extra:
-                    print('RHS *', repeats, y, j, k, z, 'forbid =', forbidden + extra)
-                for u, _ in old_inv_transition_upper_terms(z, y(k), k, forbidden + extra):
+                    vprint('RHS *', repeats, y, j, k, z, 'forbid =', forbidden + extra)
+                for u, _ in inv_transition_upper_terms(z, y(k), k, forbidden + extra):
                     if extra:
-                        print('RHS new term:', u)
+                        vprint('RHS new term:', u)
                     yield u, beta ** (u.involution_length() - w.involution_length())
                     queue.append((u, k - 1))
             
         queue.append((y, k - 1))
 
 
-def old_inv_transition_lower_terms(w, j, n=None, forbidden=()):
+def inv_transition_lower_terms(w, j, n=None, forbidden=(), verbose=True):
+    def vprint(*args):
+        if verbose:
+            print(*args)
+
     if n is None:
         yield w, beta**0
         n = 1
@@ -185,17 +193,23 @@ def old_inv_transition_lower_terms(w, j, n=None, forbidden=()):
             if z.number_two_cycles() < y.number_two_cycles():
                 extra = tuple(a for a in range(k + 1, y(k)) if y(a) < k)
                 if extra:
-                    print('LHS *', y, k, j, z, 'forbid =', forbidden + extra)
-                for u, _ in old_inv_transition_lower_terms(z, y(k), k, forbidden + extra):
+                    vprint()
+                    vprint('LHS *', y.cycle_repr(), k, j, z.cycle_repr(), 'forbid =', forbidden + extra)
+                    vprint()
+                    vprint(':', list(inv_transition_lower_terms(z, y(k), k, forbidden + extra)))
+                    vprint()
+                for u, _ in inv_transition_lower_terms(z, y(k), k, forbidden + extra):
                     if extra:
-                        print('LHS new term:', u)
+                        vprint()
+                        vprint('LHS new term:', u, '=', u.cycle_repr())
+                        vprint()
                     yield u, beta ** (u.involution_length() - w.involution_length())
                     queue.append((u, k + 1))
 
         queue.append((y, k + 1))
 
 
-def inv_transition_upper_terms(w, p, n=None, forbidden=()):
+def alt_inv_transition_upper_terms(w, p, n=None, forbidden=()):
     if n is None:
         n = max(p, len(w.oneline)) + 1
         yield w, beta**0
@@ -224,9 +238,9 @@ def inv_transition_upper_terms(w, p, n=None, forbidden=()):
             newmap[key] = max(pairmap[key], key=lambda ab: (-ab[1], ab[0]))
         pairs = sorted(newmap.values(), key=lambda ab: (-ab[1], ab[0]))
 
-    print(w.cycle_repr(), ':', p, w(p), 'upper:', pairs, 'from')
-    for key in pairmap:
-        print('  ', key, pairmap[key])
+    #print(w.cycle_repr(), ':', p, w(p), 'upper:', pairs, 'from')
+    #for key in pairmap:
+    #    print('  ', key, pairmap[key])
     queue = [(w, pairs)]
     while queue:
         y, pairs = queue[0]
@@ -240,7 +254,7 @@ def inv_transition_upper_terms(w, p, n=None, forbidden=()):
             queue.append((y, pairs[1:]))
 
 
-def inv_transition_lower_terms(w, p, n=None, forbidden=()):
+def alt_inv_transition_lower_terms(w, p, n=None, forbidden=()):
     if n is None:
         yield w, beta**0
         n = 1
@@ -269,9 +283,9 @@ def inv_transition_lower_terms(w, p, n=None, forbidden=()):
             newmap[key] = max(pairmap[key], key=lambda ab: (ab[0], ab[1]))
         pairs = sorted(newmap.values(), key=lambda ab: (ab[0], -ab[1]))
 
-    print(w.cycle_repr(), ':', p, w(p), 'lower:', pairs, 'from')
-    for key in pairmap:
-        print('  ', key, pairmap[key])
+    #print(w.cycle_repr(), ':', p, w(p), 'lower:', pairs, 'from')
+    #for key in pairmap:
+    #    print('  ', key, pairmap[key])
 
     queue = [(w, pairs)]
     while queue:
@@ -362,12 +376,12 @@ def test_inv_transitions(n=4):
             if j < k:
                 f = multiply_via_grothendieck_transitions(f, k)
 
-            oldf = Vector()
-            for y, c in old_inv_transition_lower_terms(z, j):
-                oldf += invgroth(y) * c
-            oldf = multiply_via_grothendieck_transitions(oldf, j)
+            altf = Vector()
+            for y, c in alt_inv_transition_lower_terms(z, j):
+                altf += invgroth(y) * c
+            altf = multiply_via_grothendieck_transitions(altf, j)
             if j < k:
-                oldf = multiply_via_grothendieck_transitions(oldf, k)
+                altf = multiply_via_grothendieck_transitions(altf, k)
 
             #try:
             #    decomposeinv(f)
@@ -378,22 +392,22 @@ def test_inv_transitions(n=4):
             for y, c in inv_transition_upper_terms(z, k):
                 g += invgroth(y) * c
 
-            oldg = Vector()
-            for y, c in old_inv_transition_upper_terms(z, k):
-                oldg += invgroth(y) * c
+            altg = Vector()
+            for y, c in alt_inv_transition_upper_terms(z, k):
+                altg += invgroth(y) * c
             
-            #assert f == oldf
-            #assert g == oldg
+            #assert f == altf
+            #assert g == altg
 
-            if f != g:
+            if altf != altg:
                 # print()
                 # print('LHS =', f)
                 # print()
-                print('LHS diff with old =', f - oldf == 0)
+                print('LHS diff with alt =', f - altf == 0)
                 # print()
                 # print('RHS =', g)
                 # print()
-                print('RHS diff with old =', g - oldg == 0)
+                print('RHS diff with alt =', g - altg == 0)
                 # print()
                 #try:
                 #    dec = decomposeinv(f - g)
@@ -406,10 +420,46 @@ def test_inv_transitions(n=4):
                 #input('?')
             print()
 
-            assert oldf == oldg
             assert f == g
-            assert f == oldf
-            assert g == oldg
+            assert altf == altg
+            assert f == altf
+            assert g == altg
+
+
+def test_maximal_inv_transitions(n=4):
+    for z in Permutation.involutions(n): #[Permutation(3, 4, 1, 2, 7, 6, 5)]:
+        if len(z) == 0:
+            continue
+
+        k, l = max(z.get_visible_inversions())
+        assert k == max([i for i in range(1, n) if z(i + 1) <= i and z(i + 1) < z(i)])
+        assert l == max([i for i in range(1, n + 1) if z(i) <= k and z(i) < z(k)])
+        v = z.inverse_tau_ij(k, l)
+        assert v.tau_ij(k, l) == z
+        j = v(k)
+
+        print('n =', n, 'z =', z, 'v =', v, 'j =', j, 'k =', k, 'l =', l)
+
+        actual = invgroth(z) * beta
+        expected = Vector()
+        for y, c in A(v, 1, j):
+            expected += invgroth(y) * c
+        expected = multiply_via_grothendieck_transitions(expected, j)
+        if j < k:
+            expected = multiply_via_grothendieck_transitions(expected, k)
+        expected -= invgroth(v)
+
+        assert actual == expected
+
+        # alternate = Vector()
+        # for y, c in alt_inv_transition_lower_terms(v, j):
+        #     alternate += invgroth(y) * c
+        # alternate = multiply_via_grothendieck_transitions(alternate, j)
+        # if j < k:
+        #     alternate = multiply_via_grothendieck_transitions(alternate, k)
+        # alternate -= invgroth(v)
+
+        # assert actual == alternate
 
 
 def lessdot(z, i, j):
@@ -480,10 +530,13 @@ def bop(z, j, S):
 
 
 def A(z, a, b):
+    flag = False
+    tex = {}
     queue = [(z, 1, a, b)]
     while queue:
         v, c, i, j = queue[0]
         queue = queue[1:]
+        tex[i, j] = tex.get((i, j), []) + [(str(c) + ' * ' if c != 1 else '') + '\\iG_{%s}' % str(v.cycle_repr())]
 
         if i == j:
             yield (v, c)
@@ -496,14 +549,29 @@ def A(z, a, b):
             queue.append((v, c, i + 1, j))
         elif i < j and kappa(v) > kappa(g):
             queue.append((v, c, i + 1, j))
+            count = 0
             for (w, d) in aop(g, v(i), R):
+                count += 1
                 queue.append((w, c * d * beta, i + 1, j))
+            flag = flag or count > 1
         else:
             queue.append((v, c, i + 1, j))
             queue.append((g, c * beta, i + 1, j))
 
+    # if flag:
+    #     print('\\ba')
+    #     for i, j in sorted(tex):
+    #         if i < j:
+    #             print(' &=\\iAm_{%s%s} \\left(%s\\right) \\\\' % (i, j, ' + '.join(tex[i, j])))
+    #         else:
+    #             print(' &=%s' % (' + '.join(tex[i, j])))
+    #     print('\\ea')
+    #     print()
+    #     input('\n')
+
 
 def B(z, a, b):
+    #flag = False
     queue = [(z, 1, a, b)]
     while queue:
         v, c, j, k = queue[0]
@@ -520,11 +588,17 @@ def B(z, a, b):
             queue.append((v, c, j, k - 1))
         elif j < k and kappa(v) > kappa(g):
             queue.append((v, c, j, k - 1))
+            #count = 0
             for (w, d) in bop(g, v(k), S):
+                #count += 1
                 queue.append((w, c * d * beta, j, k - 1))
+            #flag = flag or count > 2
         else:
             queue.append((v, c, j, k - 1))
             queue.append((g, c * beta, j, k - 1))
+        #if flag:
+        #    print('  flagged')
+        #    input('')
 
 
 def test_reformulation(n=4):

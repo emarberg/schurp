@@ -33,6 +33,14 @@ class Tableau:
         self.max_row = max({i for i, j in self.mapping} | {0})
         self.max_column = max({j for i, j in self.mapping} | {0})
 
+    def is_flagged(self, flag):
+        for i, j in self:
+            f = flag[i - 1] if i < len(flag) else 0
+            v = self[i, j]
+            if v > f:
+                return False
+        return True
+
     def __iter__(self):
         return self.mapping.__iter__()
 
@@ -2192,6 +2200,11 @@ class Tableau:
         return {t for t in cls.semistandard(max_entry, mu) if t.is_k_flagged(k)}
 
     @classmethod
+    def flagged_semistandard(cls, flag, mu, nu=()):  # noqa
+        max_entry = max(flag) if flag else 0
+        return {t for t in cls._semistandard(max_entry, mu, nu) if t.is_flagged(flag)}
+
+    @classmethod
     def semistandard(cls, max_entry, mu, nu=()):  # noqa
         return cls._semistandard(max_entry, mu, nu)
 
@@ -2202,7 +2215,7 @@ class Tableau:
             ans = {Tableau()}
         elif Partition._contains(mu, lam) and max_entry > 0:
             for nu, diff, corners in cls._horizontal_strips(mu, lam):
-                for tab in cls._semistandard(max_entry - 1, nu, lam, setvalued):
+                for tab in cls._semistandard(max_entry - 1, nu, lam):
                     for (i, j) in diff:
                         tab = tab.add(i, j, max_entry)
                     ans.add(tab)

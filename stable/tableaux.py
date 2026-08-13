@@ -86,6 +86,14 @@ class Tableau:
         )
         self._string_array = None
 
+    def is_flagged(self, flag):
+        for i, j, b in self:
+            f = flag[i - 1] if i < len(flag) else 0
+            for v in b:
+                if v > f:
+                    return False
+        return True
+
     @classmethod
     def union(cls, *args):
         ans = cls()
