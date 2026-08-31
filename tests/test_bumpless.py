@@ -6,6 +6,7 @@ from schubert import (
     FPFSchubert, 
     InvSchubert,
     AltInvGrothendieck,
+    InvGrothendieck,
 )
 
 
@@ -35,7 +36,18 @@ def inv_schubert_via_bumpless(w, strict):
     return ans
 
 
-def inv_grothendieck_via_bumpless(w, strict):
+def inv_grothendieck_via_bumpless(w, reduced=True):
+    ans = 0
+    for bpd in BumplessPipedream.from_involution(w, reduced=reduced, strict=True):
+        if InvGrothendieck.beta in [-1, 1]:
+            sgn = InvGrothendieck.beta**w.involution_length()
+        else:
+            sgn = InvGrothendieck.beta**(-w.involution_length())
+        ans += sgn * bpd.inv_vexweight()    
+    return ans
+
+
+def alt_inv_grothendieck_via_bumpless(w, strict):
     ans = 0
     for bpd in BumplessPipedream.from_involution(w, reduced=False, strict=strict):
         if AltInvGrothendieck.beta in [-1, 1]:
@@ -54,24 +66,42 @@ def test_inv_bumpless_droops(n=6):
             #    continue
             print(strict, 'z =', w)
             aset = set(BumplessPipedream.from_involution(w, reduced=True, strict=strict))
-            bset = set(BumplessPipedream.from_involution_droops(w, strict=strict))
+            bset = set(BumplessPipedream.from_involution_droops(w, reduced=True, strict=strict))
             cset = set(BumplessPipedream.from_involution(w, reduced=False, strict=strict))
             if aset != bset:
                 missing = aset - bset
-                print('extra:', bset - aset)
+                extra = bset - aset
+                print('extra:', extra)
+                print()
+                for pd in bset:
+                    for m, a, b, i, j in pd.inv_droops(strict, False, verbose=True):
+                        if m in extra:
+                            print(pd)
+                            print((a, b), (i, j))
+                            print(m)
                 print()
                 print(aset)
                 print()
-                for pd in aset:
-                    if any(m in pd.symmetric_droops(strict, False) for m in missing):
-                        print(pd)
-                        rval=pd
-                print()
+                #for pd in aset:
+                #    if any(m in pd.symmetric_droops(strict, False) for m in missing):
+                #        print(pd)
+                #        rval=pd
+                #print()
                 print('missing:', missing)
                 #return rval
             assert aset == bset
             assert aset == {p for p in cset if p.is_inv_reduced()}
         print()
+
+
+def test_inv_vex_groth(n=6):
+    todo = [z for z in Permutation.involutions(n) if z.is_vexillary()]
+    for i, w in enumerate(todo):
+        print(len(todo) - i, 'left')
+        expected = InvGrothendieck.get(w)
+        frombpd = inv_grothendieck_via_bumpless(w)
+        assert expected == frombpd
+
 
 def test_inv_bumpless(n=6):
     for strict in [True]:
@@ -94,7 +124,7 @@ def test_inv_bumpless(n=6):
             assert expected == frombpd
 
             expected = AltInvGrothendieck.get(w)
-            frombpd = inv_grothendieck_via_bumpless(w, strict)
+            frombpd = alt_inv_grothendieck_via_bumpless(w, strict)
             assert expected == frombpd
 
 

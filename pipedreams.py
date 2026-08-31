@@ -1,4 +1,4 @@
-from schubert import InvSchubert, FPFSchubert, Grothendieck, AltInvGrothendieck
+from schubert import InvSchubert, FPFSchubert, Grothendieck, AltInvGrothendieck, InvGrothendieck
 from polynomials import x as x_var, one as one_var, y as y_var
 import subprocess
 import pyperclip
@@ -18,6 +18,13 @@ class BumplessPipedream:
     E_TILE = 'E'
 
     TILES = [J_TILE, C_TILE, P_TILE, H_TILE, V_TILE, B_TILE, E_TILE]
+
+    def number_diagonal_blank(self):
+        a = 0
+        for i in range(1, self.n + 1):
+            if self.is_blank(i, i):
+                a += 1
+        return a
 
     def get_tile_string(self, i, j):
         t = self.tiles.get((i, j), self.B_TILE)
@@ -376,6 +383,17 @@ class BumplessPipedream:
                         ans *= x_var(i)
         return ans
 
+    def inv_vexweight(self):
+        beta = InvGrothendieck.beta
+        ans = x_var(0)**0
+        for i in range(1, self.n + 1):
+            for j in range(1, i + 1):
+                if self.get_tile(i, j) == self.B_TILE:
+                    ans *= beta * (x_var(i) + x_var(j) + beta * x_var(i) * x_var(j))
+                if self.get_tile(i, j) == self.J_TILE:
+                    ans *= (1 + beta * x_var(i)) * (1 + beta * x_var(j))
+        return ans
+
     def inv_kweight(self):
         beta = AltInvGrothendieck.beta
         ans = x_var(0)**0
@@ -512,27 +530,144 @@ class BumplessPipedream:
 
         return BumplessPipedream(bends, self.n)
 
-    def inv_droop(self, i, j, a, b, strict=True):
-        assert i >= j
-        if i == j and a < b:
-            return None
-        elif a < b and self.droop(i, j, a, b, True) is not None:
-            #return None
-            bends = self.bends.copy()
-            del bends[(i, j)]
-            bends[(a, j)] = self.C_TILE
-            bends[(b, i)] = self.C_TILE
-            bends[(b, a)] = self.J_TILE
+    def inv_droop(self, a, b, i, j, strict=True):
+        assert a >= b
+        if not strict:
+            for x in range(a, i + 1):
+                for y in range(b, j + 1):
+                    if x >= y and (x, y) not in {(a, b), (i, j), (i, b), (a, j)} and (x, y) in self.bends:
+                        return None
 
-            del bends[(j, i)]
-            bends[(j, a)] = self.C_TILE
-            bends[(i, b)] = self.C_TILE
-            bends[(a, b)] = self.J_TILE
+            for x in range(b, j + 1):
+                for y in range(a, i + 1):
+                    if x >= y and (x, y) not in {(b, a), (b, i), (j, a), (j, i)} and (x, y) in self.bends:
+                        return None
+
+        if not strict and i < j:
+            i, j = j, i
+            if self.get_tile(a, a) != self.P_TILE:
+                return None
+            maps = {}
+            maps[a, b] = {self.C_TILE: self.B_TILE}
+            maps[j, b] = {self.V_TILE: self.C_TILE, self.J_TILE: self.H_TILE}
+            maps[i, j] = {self.B_TILE: self.J_TILE}
+            maps[i, a] = {self.V_TILE: self.C_TILE, self.J_TILE: self.V_TILE}
+
+            bends = self.bends.copy()
+            for (x, y) in maps:
+                t = self.get_tile(x, y)
+                if t not in maps[x, y]:
+                    return None
+                bends[x, y] = maps[x, y][t]
+                bends[y, x] = self.transpose_tile(maps[x, y][t])
             return BumplessPipedream(bends, self.n)
-        elif a >= b:
-            ans = self.droop(i, j, a, b, strict)
-            return ans.symmetrize() if ans is not None else None
-        return None
+
+        elif not strict:
+            maps = {}
+            maps[a, b] = {self.C_TILE: self.B_TILE}
+            maps[i, b] = {self.V_TILE: self.C_TILE, self.J_TILE: self.H_TILE}
+            maps[i, j] = {self.B_TILE: self.J_TILE}
+            if a > j:
+                maps[a, j] = {self.H_TILE: self.C_TILE, self.J_TILE: self.V_TILE}
+            if a == j:
+                maps[a, j] = {self.J_TILE: self.C_TILE}
+            if b < a < j:
+                maps[a, a] = {self.J_TILE: self.C_TILE, self.P_TILE: self.C_TILE}
+            if a < j < i:
+                maps[j, j] = {self.B_TILE: self.C_TILE}
+
+            bends = self.bends.copy()
+            for (x, y) in maps:
+                t = self.get_tile(x, y)
+                if t not in maps[x, y]:
+                    return None
+                bends[x, y] = maps[x, y][t]
+                bends[y, x] = self.transpose_tile(maps[x, y][t])
+            return BumplessPipedream(bends, self.n)
+
+        # complex droop
+        elif i < j:
+            i, j = j, i
+            if not (b < a < j < i):
+                return None
+            
+            if self.get_tile(a, b) != self.C_TILE:
+                return None
+            if self.get_tile(a, a) != self.P_TILE:
+                return None
+            if self.get_tile(i, j) != self.B_TILE:
+                return None
+
+            for x in range(a, j + 1):
+                for y in range(b, i + 1):
+                    if x >= y and (x, y) not in {(a, b), (a, a), (i, j)} and (x, y) in self.bends:
+                        return None
+
+            for x in range(b, i + 1):
+                for y in range(a, j + 1):
+                    if x >= y and (x, y) not in {(a, b), (a, a), (i, j)} and (x, y) in self.bends:
+                        return None
+
+            bends = self.bends.copy()
+            del bends[a, b]
+            del bends[b, a]
+            bends[i, j] = self.J_TILE
+            bends[j, i] = self.J_TILE
+            bends[j, b] = self.C_TILE
+            bends[b, j] = self.C_TILE
+            bends[i, a] = self.C_TILE
+            bends[a, i] = self.C_TILE
+            return BumplessPipedream(bends, self.n)
+
+        # simple droop
+        else:
+            if self.get_tile(a, b) != self.C_TILE:
+                return None
+            if self.get_tile(i, j) != self.B_TILE:
+                return None
+
+            for x in range(a, i + 1):
+                for y in range(b, j + 1):
+                    if x >= y and (x, y) not in {(a, b), (i, j)} and (x, y) in self.bends:
+                        return None
+
+            bends = self.bends.copy()
+            del bends[a, b]
+            if a != b:
+                del bends[b, a]
+            bends[i, j] = self.J_TILE
+            bends[j, i] = self.J_TILE
+            bends[i, b] = self.C_TILE
+            bends[b, i] = self.C_TILE
+            if a > j:
+                bends[a, j] = self.C_TILE
+                bends[j, a] = self.C_TILE
+            if b < a < j:
+                bends[a, a] = self.C_TILE
+            if a < j < i:
+                bends[j, j] = self.C_TILE
+            return BumplessPipedream(bends, self.n)
+
+        # i, j, a, b = a, b, i, j
+        # if i == j and a < b:
+        #     return None
+        # elif a < b and self.droop(i, j, a, b, True) is not None:
+        #     #return None
+        #     bends = self.bends.copy()
+        #     del bends[(i, j)]
+        #     bends[(a, j)] = self.C_TILE
+        #     bends[(b, i)] = self.C_TILE
+        #     bends[(b, a)] = self.J_TILE
+
+        #     del bends[(j, i)]
+        #     bends[(j, a)] = self.C_TILE
+        #     bends[(i, b)] = self.C_TILE
+        #     bends[(a, b)] = self.J_TILE
+        #     return BumplessPipedream(bends, self.n)
+        # elif a >= b:
+        #     ans = self.droop(i, j, a, b, strict)
+        #     return ans.symmetrize() if ans is not None else None
+        # return None
             
 
     def inv_kdroop(self, i, j, a, b, strict=True):
@@ -587,15 +722,16 @@ class BumplessPipedream:
                     if bpd is not None:
                         yield bpd
 
-    def inv_droops(self, strict=True, ktheoretic=False):
+    def inv_droops(self, strict=True, ktheoretic=False, verbose=False):
+        assert not ktheoretic
         for (i, j) in self.tiles:
             if i < j:
                 continue
             for a in range(i + 1, self.n + 1):
                 for b in range(j + 1, self.n + 1):
-                    bpd = (self.inv_kdroop if ktheoretic else self.inv_droop)(i, j, a, b, strict=strict)
+                    bpd = self.inv_droop(i, j, a, b, strict=strict)
                     if bpd is not None:
-                        yield bpd
+                        yield (bpd, i, j, a, b) if verbose else bpd 
 
     def symmetric_droops(self, strict=True, ktheoretic=False):
         for (i, j) in self.tiles:

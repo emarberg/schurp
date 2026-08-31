@@ -326,6 +326,15 @@ class SignedMixin:
         return s
 
     @classmethod
+    def from_dword(cls, n, *args):
+        if len(args) == 1 and type(args[0]) == tuple:
+            args = args[0]
+        w = cls.identity(n)
+        for i in args:
+            w *= cls.ds_i(i, n)
+        return w
+
+    @classmethod
     def from_word(cls, n, *args):
         if len(args) == 1 and type(args[0]) == tuple:
             args = args[0]

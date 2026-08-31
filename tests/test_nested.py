@@ -90,6 +90,9 @@ def is_dgood(a):
             c, b, a = w[i], w[i + 1], w[i + 2]
             if c > b > a:
                 return False
+            a, c, b = w[i], -w[i + 1], -w[i + 2]
+            if 0 < a < b < c:
+                return False
         if len(w) >= 3:
             c, b, a = -w[0], w[1], w[2]
             if c > b > a:

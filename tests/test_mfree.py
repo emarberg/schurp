@@ -6,7 +6,65 @@ from qp_utils import (
     is_zero_hecke_module,
     is_q_hecke_module
 )
+from tests.test_crystals import draw_graph
 from tests.test_kn import subsets
+
+
+def get_digraph(poset, length, typename, w0=None):
+    if w0 is None:
+        w0 = [w for w in poset if length(w) == max(map(length, poset))][0]
+    e = w0.get_reduced_word(True) if typename == 'D' else w0.get_reduced_word()
+    vertices = {w0}
+    edges = set()
+    q = [(e, w0, None)]
+    seen = set()
+    while q:
+        e, w, j = q[0]
+        q = q[1:]
+        for i in range(0, len(e)):
+            f = e[:i] + (None,) + e[i + 1:]
+            ee = [a for a in e if a is not None]
+            ff = [a for a in f if a is not None]
+            v = w0.from_word(*ff) if typename == 'A' else w0.from_word(w0.rank, *ff) if typename == 'BC' else w0.from_dword(w0.rank, *ff)
+            if length(v) == len(ee) - 1 and v in poset and (v, w) not in seen:
+                vertices.add(v)
+                edges.add((i, w, v))
+                q.append((f, v, i))
+                seen.add((v, w))
+    return vertices, edges
+
+
+def test_atom_subsets(n=4):
+    types = ['A']#, 'BC', 'D']
+    for t in types:
+        print('check type', t, n)
+        
+        longest_element = lambda x: Permutation.longest_element(x) if t == 'A' else SignedPermutation.longest_element(x) if t == 'BC' else SignedPermutation.dtype_longest_element(x)
+        length = lambda w: w.dlength() if t == 'D' else w.length()
+        group = lambda x: Permutation.all(x) if t == 'A' else SignedPermutation.all(x, dtype=(t=='D'))
+        invol = lambda x: Permutation.involutions(x) if t == 'A' else SignedPermutation.involutions(x, dtype=(t=='D'))
+        leq = lambda x,y: x.dbruhat_less_equal(y) if t == 'D' else x.strong_bruhat_less_equal(y)
+
+        for z in invol(n):
+            atoms = set(z.get_atoms_d() if t == 'D' else z.get_atoms())
+            for s in subsets(atoms):
+                if len(s) == 0:
+                    continue
+                upper_poset = get_upper_poset(None, lambda x: s, lambda x: group(n), leq)
+                mobius = get_mobius(upper_poset)
+                print('  ', z, s, set(mobius.values()))
+                try:
+                    if False and len(s) == len(atoms):
+                        vertices, edges = get_digraph(upper_poset, length, t)
+                        draw_graph(vertices, edges, printer=lambda s: ''.join(['-' if a is None else str(a) for a in s.inverse()]), edge_labels=False)
+                        input('?')
+                    assert set(mobius.values()).issubset({-1, 0, 1})
+                except:
+                    for x in mobius:
+                        if mobius[x] not in {-1, 0, 1}:
+                            vertices, edges = get_digraph(upper_poset, length, t, x)
+                            draw_graph(vertices, edges, printer=lambda s: ''.join(['-' if a is None else str(a) for a in s.inverse()]), edge_labels=False)
+                            input('')
 
 
 def test_subsets(n=4):
@@ -18,6 +76,8 @@ def test_subsets(n=4):
         group = lambda x: Permutation.all(x) if t == 'A' else SignedPermutation.all(x, dtype=(t=='D'))
         leq = lambda x,y: x.dbruhat_less_equal(y) if t == 'D' else x.strong_bruhat_less_equal(y)
 
+        atoms = lambda n: [w for w in group(n) if (w.is_atom_d(True) if t == 'D' else w.is_atom())]
+        
         bylength = {}
         for w in group(n):
             bylength[length(w)] = bylength.get(length(w), set()) | {w}
@@ -39,6 +99,7 @@ def test_subsets(n=4):
                             print()
                             print(r, s)
                             return
+                #assert set(mobius.values()).issubset({-1, 0, 1})
                 
 
 
@@ -112,6 +173,7 @@ def test_a_conjugation_modules(n=4, test_mobius=True, test_all=False):
     printer = lambda m: m
     allfn = lambda x: Permutation.all(n)
     _test_conjugation_modules(test_mobius, test_all, simple, reflections, length, elements, construct, right_action, left_action, printer, allfn)
+
 
 def test_a_twisted_conjugation_modules(n=4, test_mobius=True, test_all=False):
     simple = [Permutation.s_i(i) for i in range(1, n)]

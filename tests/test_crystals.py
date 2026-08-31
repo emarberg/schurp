@@ -339,7 +339,7 @@ def test_qnormal_sqrtcrystal_characters(n=3, k=5):
         assert actual == expected
 
 
-def draw_graph(vertices, edges, neato=False, colors=None, printer=str):
+def draw_graph(vertices, edges, neato=False, colors=None, printer=str, filename=None, edge_labels=True):
     s = ['digraph G {']
     s += ['    overlap=false;']
     s += ['    splines=true;']
@@ -352,14 +352,22 @@ def draw_graph(vertices, edges, neato=False, colors=None, printer=str):
             s += ['    "%s";' % printer(x)]
 
     for i, x, y in edges:
-        s += ['    "%s" -> "%s" [label="%s"];' % (printer(x), printer(y), str(i))]
+        if edge_labels:
+            s += ['    "%s" -> "%s" [label="%s"];' % (printer(x), printer(y), str(i))]
+        else:
+            s += ['    "%s" -> "%s";' % (printer(x), printer(y))]
 
     s += ['}']
     s = '\n'.join(s)
 
-    filename = "crystal.%s" % len(vertices)
-    dot_filename = BASE_DIRECTORY + 'abstract/' + 'dot/' + '%s.dot' % filename
-    png_filename = BASE_DIRECTORY + 'abstract/' + 'png/' + '%s.png' % filename
+    if filename is None:
+        filename = 'test'
+        dot_filename = '/Users/emarberg/examples/test/graphs/dot/' + '%s.dot' % filename
+        png_filename = '/Users/emarberg/examples/test/graphs/png/' + '%s.png' % filename
+    else:
+        filename = "crystal.%s" % len(vertices)
+        dot_filename = BASE_DIRECTORY + 'abstract/' + 'dot/' + '%s.dot' % filename
+        png_filename = BASE_DIRECTORY + 'abstract/' + 'png/' + '%s.png' % filename
     with open(dot_filename, 'w') as f:
         f.write(s)
     subprocess.run(["neato" if neato else "dot", "-Tpng", dot_filename, "-o", png_filename])
