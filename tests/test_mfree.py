@@ -10,6 +10,59 @@ from tests.test_crystals import draw_graph
 from tests.test_kn import subsets
 
 
+def cover_group(c):
+    g = {i for i in c.generators() if c.weak_order_action(i)[1] is not None}
+    bns = [(c.simple_generator(i), c.weak_order_action(i)[0]) for i in g]
+
+    add = {c.weyl_group_identity()}
+    ans = set()
+    while add:
+        newadd = set()
+        for w in add:
+            ans.add(w)
+            for i in g:
+                ws = w * c.simple_generator(i)
+                newadd.add(ws)
+        add = newadd - ans
+    return ans, bns
+
+
+def test_clan_hecke_atoms(n):
+    for genfn in [Clan.all_a, Clan.all_b, Clan.all_c1, Clan.all_c2, Clan.all_d1, Clan.all_d2, Clan.all_d3]:
+        a = list(genfn(n))
+        for c in a:
+            atoms = set(c.get_atoms())
+            hecke = set(c.get_hecke_atoms())
+            if atoms != hecke:
+                print(c)
+                print()
+                for w in atoms:
+                    print('  ', w, '=', w.get_reduced_word())
+                print()
+                for w in hecke - atoms:
+                    print('  ', w, '=', w.get_reduced_word())
+                print()
+                print()
+                
+                expected = set()
+                group, covers = cover_group(c)
+                for (s, d) in covers:
+                    for w in d.get_hecke_atoms():
+                        assert c.weyl_group_length(w * s) == c.weyl_group_length(w) + 1
+                        for v in group:
+                            h = w * s * v
+                            if c.weyl_group_length(h) == c.weyl_group_length(w) + c.weyl_group_length(v) + 1:
+                                expected.add(h)
+                for w in expected - hecke:
+                    print('  extra  ', w, '=', w.get_reduced_word())
+                for w in hecke - expected:
+                    print('missing  ', w, '=', w.get_reduced_word())
+                      
+                if expected != hecke:
+                    c.draw()
+                assert expected == hecke
+
+
 def get_digraph(poset, length, typename, w0=None):
     if w0 is None:
         w0 = [w for w in poset if length(w) == max(map(length, poset))][0]

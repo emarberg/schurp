@@ -1695,6 +1695,31 @@ class Permutation:
         return w
 
     @classmethod
+    def root_sequence(cls, *args):
+        a = []
+        for i in range(len(args)):
+            t = cls.s_i(args[i])
+            for j in range(i - 1, -1, -1):
+                t = cls.s_i(args[j]) * t * cls.s_i(args[j])
+            a.append(t.cycle_repr())
+        return ' '.join(a)
+
+    def twisted_atom_root_sequence(self, n):
+        args = self.get_reduced_word()
+        a = []
+        z = Permutation()
+        for i in range(len(args)):
+            t = self.s_i(args[i])
+            if z * t == t.star(n) * z:
+                z = z * t
+                for j in range(i + 1, len(args)):
+                    t = self.s_i(args[j]) * t * self.s_i(args[j])
+                a.append(t.cycle_repr())
+            else:
+                z = t.star(n) * z * t
+        return ' '.join(a)
+
+    @classmethod
     def from_word(cls, *args):
         if len(args) == 1 and type(args[0]) in [list, tuple]:
             args = args[0]

@@ -222,6 +222,22 @@ class EvenSignedPermutation(SignedMixin):
             yfixed |= {-1, 1}
         return yfixed
 
+    def twisted_atom_root_sequence(self, n):
+        args = self.get_reduced_word()
+        a = []
+        z = EvenSignedPermutation.identity(n)
+        for i in range(len(args)):
+            t = self.s_i(args[i], n)
+            if z * t == t.star() * z:
+                z = z * t
+                for j in range(i + 1, len(args)):
+                    t = self.s_i(args[j], n) * t * self.s_i(args[j], n)
+                a.append(t.cycle_repr())
+            else:
+                z = t.star() * z * t
+        return ' '.join(a)
+
+
     def twisted_shape(self, verbose=False):
         def vprint(*args):
             if verbose:

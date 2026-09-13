@@ -85,6 +85,42 @@ class Clan:
     def create_d3(cls, oneline):
         return Clan(oneline, cls.TYPE_D3)
 
+    def draw(self):
+        def printer(c):
+            return str(c) + '\n' + c.richardson_springer_involution().cycle_repr()
+
+        clans = set()
+        edges = set()
+        q = {self}
+        while q:
+            c = q.pop()
+            clans.add(c)
+            for i in c.generators():
+                d, doubled = c.weak_order_action(i)
+                if doubled is not None:
+                    edges.add((c, d, i, doubled))
+                    q.add(d)
+        
+        s = []
+        s += ['digraph G {']
+        s += ['    rankdir=BT;']
+        s += ['    overlap=false;']
+        s += ['    splines=true;']
+        
+        s += ['    node [shape=box; fontname="courier"; style=filled];']
+        for c, d, i, doubled in edges:
+            s += ['    "%s" -> "%s" [label="%s",color="%s"];' % (printer(c), printer(d), str(i), 'blue' if doubled else 'black')]
+        s += ['}']
+        s = '\n'.join(s)
+        
+        dot_filename = BASE_DIRECTORY + 'dot/test/test.dot'
+        png_filename = BASE_DIRECTORY + 'png/test/test.png'
+        with open(dot_filename, 'w') as f:
+            f.write(s)
+        subprocess.run(["dot", "-Tpng", dot_filename, "-o", png_filename])
+        subprocess.run(["open", png_filename])
+
+
     @classmethod
     def _draw(cls, clans, folder, filename):
         assert len(clans) > 0
