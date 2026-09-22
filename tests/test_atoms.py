@@ -1,7 +1,7 @@
 from permutations import Permutation
 from signed import SignedPermutation
 from even import EvenSignedPermutation
-from tests.test_even import nres_pm, ndes_pm
+from tests.test_even import nres_pm, ndes_pm, ndes, nres
 from tests.test_nested import ddraw
 import subprocess
 
@@ -203,7 +203,7 @@ def simple_ncyc(o):
 
 def altndes(w):
     ans = []
-    o = list(w.oneline)
+    o = list(w.oneline) if type(w) != list else w
     while True:
         if len(o) >= 2 and abs(o[0]) > o[1]:
             ans.append((abs(o[0]), o[1]))
@@ -246,7 +246,7 @@ def evendelta(ndes, nres):
 def is_even_well_nested_slow(w):
     w = SignedPermutation(*w)
     andes, anres = altndes(w)
-    ncyc = set(andes) | {(abs(c), abs(c)) for c in anres}
+    ncyc = set(andes)| {(abs(c), c) for c in anres}
     
     check = []
     v = tuple(w.oneline)
@@ -264,7 +264,7 @@ def is_even_well_nested_slow(w):
     return is_noncrossing(sh) and all(check)
 
 
-def is_even_well_nested_fast(w, verbose=True):
+def is_even_well_nested_fast(w, verbose=False):
     w = SignedPermutation(*w)
     if verbose:
         print('\n\n\nw =', w, '\n')
@@ -273,29 +273,95 @@ def is_even_well_nested_fast(w, verbose=True):
     
     index = {a: i + 1 for i, a in enumerate(w.oneline)}
     for i, a in enumerate(w.oneline):
-        index[-a] = i + 1
+        index[-a] = -i - 1
+        #index[-a] = i + 1
     
-    signed = {a: -1 if a < 0 else 1 for a in w.oneline}
-    for a in w.oneline:
-        signed[-a] = signed[a]
+    #signed = {a: -1 if a < 0 else 1 for a in w.oneline}
+    #for a in w.oneline:
+    #    signed[-a] = signed[a]
+
+    # check = True
+    # for b1, a1 in ncyc:
+    #     for b2, a2 in ncyc:
+    #         if b1 == b2 and a1 == a2:
+    #             continue
+    #         check1 = check2 = check3 = True
+    #         if signed[b2] == -1 and -a1 < b2 and index[a1] < index[b2]:
+    #             check1 = False
+    #         if a1 < a2 and b1 < b2 and (signed[b2] == -1 or index[b2] < index[a1]):
+    #             check2 = False
+    #         #if signed[b2] == -1 and b1 < b2 and a1 < a2:
+    #         #    check3 = False
 
     check = True
-    for b1, a1 in ncyc:
-        for b2, a2 in ncyc:
-            if b1 == b2 and a1 == a2:
-                continue
-            check1 = check2 = check3 = True
-            if signed[b2] == -1 and min(b1, -a1) < b2 and index[a1] < index[b2]:
-                check1 = False
-            if a1 < a2 and b1 < b2 and index[b2] < index[a1]:
-                check2 = False
+    for a1, b1 in ncyc:
+        for a2, b2 in ncyc:
+            #if a1 == a2 and b1 == b2:
+            #    continue
+            if a1 < a2 and b1 < b2 and not (index[b1] < index[a2]):
+                check = False
+            if -a2 < b1 and not (-index[b1] < index[a2]):
+                check = False
 
-            check &= check1 and check2 and check3
-            if verbose:
-                print('checking', (signed[b1] * b1, a1), (signed[b2] * b2, a2), check1, check2, check3)
+    #         check &= check1 and check2 and check3
+    #         if verbose:
+    #             print('checking', (signed[b1] * b1, a1), (signed[b2] * b2, a2), check1, check2, check3)
 
     sh= w.inverse().dshape(strict=False)
     return is_noncrossing(sh) and check
+
+
+def is_even_well_nested_twisted(w, verbose=False):
+    w = SignedPermutation(*w)
+    if verbose:
+        print('\n\n\nw =', w, '\n')
+    n = len(w.oneline)
+    o = [w(i) for i in range(2, n + 1)]
+    andes, anres = altndes(o)
+    ncyc = set(andes) | {(abs(c), c) for c in anres}| {(abs(w(1)), -n - 1)}
+    if verbose:
+        print('ncyc =', ncyc)
+    
+    index = {a: i + 1 for i, a in enumerate(w.oneline)}
+    for i, a in enumerate(w.oneline):
+        index[-a] = -i - 1
+    index[n + 1] = -1.5
+    index[-n - 1] = 1.5
+
+    #if n >= 2 and abs(w(1)) < -w(2):
+    #    return False
+
+    #if n >= 3 and 0 < -w(2) < w(1) < -w(3):
+    #    return False
+
+    check = True
+    for a1, b1 in ncyc:
+        for a2, b2 in ncyc:
+            if a1 < a2 and b1 < b2 and not (index[b1] < index[a2]):
+                check = False
+            if -a2 < b1 and not (-index[b1] < index[a2]):
+                check = False
+
+    c = abs(w(1))
+    sh = {(-c,c)} | {(a, -b) for (a, b) in ncyc if a < -b} | {(b, -a) for (a, b) in ncyc if a < -b}
+    if verbose:
+        print('shape =', sh)
+    return is_noncrossing(sh) and check
+
+
+def test_even_well_nested_twisted(n):
+    base = list(SignedPermutation.all(n, dtype=True))
+    for i, w in enumerate(base):
+        if i % 1000 == 0:
+            print(len(base) - i)
+        iswell = is_even_well_nested_twisted(w) 
+        expected = w.inverse().is_atom_d(twisted=True)
+        also = SignedPermutation(*([-w(1), -n - 1] + [w(j) for j in range(2, n + 1)])).inverse().is_atom_d(twisted=False)
+        if iswell != expected or also != expected:
+            print(iswell, 'but should be', expected, also)
+            print(w)
+        assert iswell == expected
+        assert expected == also
 
 
 def test_even_well_nested_fast(n):
@@ -308,7 +374,7 @@ def test_even_well_nested_fast(n):
 
         iswell = is_even_well_nested_slow(w) 
         expected = is_even_well_nested_fast(w)
-        #slow, equivclass = is_even_well_nested(w)
+        slow, equivclass = is_even_well_nested(w)
 
         if iswell != expected:
             print()
@@ -321,8 +387,8 @@ def test_even_well_nested_fast(n):
             #for v in equivclass:
             #    print('  ', v)
             input('\n?\n')
-    
-        #assert slow == iswell
+        assert iswell == expected
+        assert slow == iswell
 
 
 def test_even_well_nested(n):
@@ -342,14 +408,14 @@ def test_even_well_nested(n):
         
         ndes, nres = ndes_pm(w), nres_pm(w)
         ndes = [(abs(a), b) for (a, b) in ndes]
-        ww = convent(w, altndes(w)[0])
-
+        
         andes, anres = altndes(w)
         ncyc = set(andes) | {(abs(c), abs(c)) for c in anres}
         
         expected = is_even_well_nested_slow(w)
         # and not (abs(w(1)) < -w(3) < -w(2))
         if boolean != expected:
+            ww = convent(w, altndes(w)[0])
             print('new case:')
             print()
             print(boolean, 'but expected', expected, w, is_well_nested_fast(ww), is_noncrossing(sh), check)
@@ -379,7 +445,6 @@ def test_even_well_nested(n):
             #     if w in q and (not p or not r):
             #         flag = False
             # print()
-        #assert boolean == expected
             z = evendelta(*altndes(w))
             print('z = ', z)
             print()
@@ -395,6 +460,7 @@ def test_even_well_nested(n):
             if flag:
                 #ddraw(zga | {tuple(_) for _ in equivclass})
                 input('??\n')
+        assert boolean == expected
 
         (ans if boolean else bns).append(equivclass)
         base -= equivclass

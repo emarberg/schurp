@@ -1288,6 +1288,10 @@ class Permutation:
         expr = self.reduced_expr()
         return self.expr_to_involution(expr).involution_length() == len(expr)
 
+    def is_twisted_atom(self, n):
+        z = (self.star(n).inverse()) % self
+        return z.twisted_involution_length(n) == self.length()
+
     def twisted_fixed_points(self, n):
         return [i for i in range(1, n + 1) if n + 1 - self(i) == i]
 

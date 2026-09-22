@@ -3,6 +3,14 @@ from even import EvenSignedPermutation
 import subprocess
 
 
+def atwisted_span(w, symmetric=True):
+    for i in range(len(w) - 1):
+        if i + 1 < len(w) - 2 - i:
+            b1, b2, a2, a1 = w[i], w[i + 1], w[len(w) - 2 - i], w[len(w) - 1 - i]
+            if (b1 < b2 and a2 > a1) or (symmetric and b1 > b2 and a2 < a1):
+                yield w[:i] + (b2, b1) + w[i + 2:len(w) - 2 - i] + (a1, a2) + w[len(w) - i:]
+
+
 def aspan(w, symmetric=True):
     for i in range(len(w) - 2):
         if symmetric:
@@ -35,6 +43,46 @@ def dspan(w, symmetric=True):
         b, c, a = -w[0], w[1], w[2]
         if a < b < c:
             yield (-c, a, b) + w[3:]
+
+
+def dtwisted_span(w, symmetric=True):
+    for i in range(1, len(w) - 2):
+        if symmetric:
+            c, a, b = w[i], w[i + 1], w[i + 2]
+            if a < b < c:
+                yield w[:i] + (b, c, a) + w[i + 3:]
+
+        b, c, a = w[i], w[i + 1], w[i + 2]
+        if a < b < c:
+            yield w[:i] + (c, a, b) + w[i + 3:]
+
+    if len(w) >= 2:
+        if symmetric:
+            b, a = w[0], w[1]
+            if 0 < -a < abs(b):
+                yield (-b, -a) + w[2:]
+
+        b, a = w[0], w[1]
+        if 0 < a < abs(b):
+            yield (-b, -a) + w[2:]
+
+
+def get_atwisted_classes(n):
+    ans = []
+    tuples = {tuple([w(i) for i in range(1, n + 1)]) for w in Permutation.all(n)}
+    while tuples:
+        ans.append(set())
+        add = {tuples.pop()}
+        while add:
+            nextadd = set()
+            for w in add:
+                ans[-1].add(w)
+                for v in atwisted_span(w):
+                    nextadd.add(v)
+            add = nextadd - ans[-1]
+        tuples -= ans[-1]
+    return ans
+
 
 
 def get_aclasses(n):
@@ -71,6 +119,40 @@ def get_dclasses(n):
     return ans
 
 
+def get_dtwisted_classes(n):
+    ans = []
+    tuples = {tuple(w) for w in EvenSignedPermutation.all(n)}
+    while tuples:
+        ans.append(set())
+        add = {tuples.pop()}
+        while add:
+            nextadd = set()
+            for w in add:
+                ans[-1].add(w)
+                for v in dtwisted_span(w):
+                    nextadd.add(v)
+            add = nextadd - ans[-1]
+        tuples -= ans[-1]
+    return ans
+
+
+def is_atwisted_good(a):
+    for w in a:
+        for i in range(len(w) - 1):
+            if i + 1 < len(w) - 2 - i:
+                b1, b2, a2, a1 = w[i], w[i + 1], w[len(w) - 2 - i], w[len(w) - 1 - i]
+                if b1 > b2 and a2 > a1:
+                    return False
+                # 34 21
+                if a1 < a2 < b1 < b2:
+                    return False
+            if i + 1 == len(w) - 2 - i:
+                b, x, a = w[i], w[i + 1], w[i + 2]
+                if b > x > a:
+                    return False
+    return True
+
+
 def is_agood(a):
     for w in a:
         for i in range(len(w) - 2):
@@ -81,6 +163,26 @@ def is_agood(a):
             c, b, a = -w[0], w[1], w[2]
             if c > b > a:
                 return False
+    return True
+
+
+def is_dtwisted_good(a):
+    for w in a:
+        for i in range(1, len(w) - 2):
+            c, b, a = w[i], w[i + 1], w[i + 2]
+            if c > b > a:
+                return False
+            a, c, b = w[i], -w[i + 1], -w[i + 2]
+            if 0 < a < b < c:
+                return False
+        if len(w) >= 2:
+            a, b = w[0], w[1]
+            if 0 < abs(a) < -b:
+                return False 
+        if len(w) >= 3:
+            b, a, c = w[0], w[1], w[2]
+            if 0 < a < abs(b) < -c:
+                return False    
     return True
 
 
@@ -108,6 +210,20 @@ def is_dgood(a):
     return True
 
 
+def test_atwisted_atoms(n=4):
+    for a in get_atwisted_classes(n):
+        if is_atwisted_good(a):
+            for w in a:
+                sigma = Permutation(w).inverse()
+                #print('atom?', w)
+                assert sigma.is_twisted_atom(n)
+        else:
+            for w in a:
+                sigma = Permutation(w).inverse()
+                #print('not atom?', w)
+                assert not sigma.is_twisted_atom(n)
+
+
 def test_aatoms(n=4):
     for a in get_aclasses(n):
         if is_agood(a):
@@ -118,7 +234,6 @@ def test_aatoms(n=4):
             for w in a:
                 sigma = Permutation(w).inverse()
                 assert not sigma.is_atom()
-
 
 
 def test_datoms(n=4):
@@ -138,6 +253,24 @@ def test_datoms(n=4):
                     ddraw(a)
                     input('??')
                     break
+
+
+def test_dtwisted_atoms(n=4):
+    for a in get_dtwisted_classes(n):
+        #print('class:')
+        #for w in a:
+        #    print('  ', w)
+        if is_dtwisted_good(a):
+            for w in a:
+                sigma = EvenSignedPermutation(*w).inverse()
+                #print('atom?', w)
+                assert sigma.is_twisted_atom()
+        else:
+            for w in a:
+                sigma = EvenSignedPermutation(*w).inverse()
+                #print('not atom?', w)
+                assert not sigma.is_twisted_atom()
+
 
 def good_aclasses(n):
     a = get_aclasses(n)

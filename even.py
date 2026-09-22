@@ -136,6 +136,10 @@ class EvenSignedPermutation(SignedMixin):
         y = self.inverse() % self
         return self.length() == y.involution_length()
 
+    def is_twisted_atom(self):
+        y = self.inverse().star() % self
+        return self.length() == y.twisted_involution_length()
+
     def get_flattened_reduced_words(self):
         prev = None
         for word in self.get_reduced_words():

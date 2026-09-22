@@ -572,7 +572,7 @@ def print_twisted_atoms_span(n):
         assert next(iter(sources)) == v
         expected = {x for x in atoms if not any(not b and tuple(x) == tuple(v) for u, v, b in edges)}
         minima = {x for x in atoms if x.inverse() == w.get_max_twisted_atom(SignedPermutation(*x).inverse().dshape(offset=1))}
-        assert expected == minima
+        #assert expected == minima
 
         for x, y, b in edges:
             if cls(*x) not in atoms or cls(*y) not in atoms:

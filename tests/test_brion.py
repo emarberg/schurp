@@ -269,6 +269,29 @@ def nest(o):
     return ndes, nres
 
 
+def ncyc_d(o, twisted):
+    if twisted and len(o) > 0:
+        a = -abs(o[0])
+        ans = [(a, a)]
+        o = o[1:]
+    else:
+        ans = []
+    while True:
+        if len(o) >= 2 and abs(o[0]) > o[1]:
+            ans.append((abs(o[0]), o[1]))
+            o = o[2:]
+        else:
+            i = [i for i in range(len(o) - 1) if o[i] > o[i + 1]]
+            if len(i) == 0:
+                break
+            i = i[0]
+            ans.append((abs(o[i]), o[i + 1]))
+            o = o[:i] + o[i + 2:]
+    for a in o:
+        ans.append((abs(a), a))
+    return sorted(ans, key=lambda pair: pair[0])
+
+
 def cyc_pm(z, m, n):
     ans = [(a, b) for a in range(-n, n + 1) for b in range(1, n + 1) if a != 0 and (abs(a) < z(a) == b or a == z(a) == b)]
     ans += [(-b, a) for (a, b) in m if 0 < a < b]
@@ -278,10 +301,10 @@ def cyc_pm(z, m, n):
 def desword(p):
     ans = []
     for a, b in p:
-        if a == b:
-            ans.append(a)
+        if abs(a) == abs(b):
+            ans.append(max(a, b))
         else:
-            ans += [b, a]
+            ans += [max(a, b), min(a, b)]
     return ans
 
 
@@ -291,7 +314,7 @@ def ascword(p):
         if a == b:
             ans.append(a)
         else:
-            ans += [a, b]
+            ans += [min(a, b), max(a, b)]
     return ans
 
 
@@ -510,7 +533,18 @@ def _test_DI(rank):
             c = sorted([b for (a, b) in m if a + b == 0])
             u = c
             v = desword(cyc_pm(z, m, n))
-            return es(SignedPermutation(*(u + v)))
+            ans = es(SignedPermutation(*(u + v)))
+            if k == 0:
+                ncyc = ncyc_d(list(ans.oneline), False)
+                expected = es(SignedPermutation(*desword(ncyc)))
+                if ans != expected:
+                    print('actual =', ans)
+                    print()
+                    print(ncyc)
+                    print()
+                    print('expect =', expected)
+                assert ans == expected
+            return ans
 
         span_fn = transitive_closure(precsim(k, n), approx_D(k, n))
         
@@ -611,7 +645,18 @@ def _test_DII(rank):
             c = sorted([b for (a, b) in m if a + b == 0])
             u = c
             v = desword(cyc_pm(t * z, m, n))
-            return es(SignedPermutation(*(u + v)))
+            ans = es(SignedPermutation(*(u + v)))
+            if k == 1:
+                ncyc = ncyc_d(list(ans.oneline), True)
+                expected = es(SignedPermutation(*desword(ncyc)))
+                if ans != expected:
+                    print('actual =', ans)
+                    print()
+                    print(ncyc)
+                    print()
+                    print('expect =', expected)
+                assert ans == expected
+            return ans
 
         span_fn = transitive_closure(precsim(k, n), approx_D(k, n))
         
