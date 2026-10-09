@@ -7,7 +7,57 @@ from schubert import (
     InvSchubert,
     AltInvGrothendieck,
     InvGrothendieck,
+    X
 )
+
+
+def test_inv_identity_a(n):
+    def oplus(i, j):
+        return X(i) if i ==j else (X(i) + X(j) + X(i) * X(j))
+
+    lhs = 0 
+    for w in Permutation.involutions(n):
+        for bpd in BumplessPipedream.from_involution(w, n=n, reduced=False):
+            term = 1
+            for i in range(1, n + 1):
+                for j in range(1, i + 1):
+                    t = bpd.get_tile(i, j)
+                    if t == bpd.J_TILE:
+                        term *= 1 + oplus(i, j)
+                    elif t == bpd.B_TILE:
+                        term *= oplus(i, j)
+            lhs += term
+
+    rhs = 1
+    for i in range(1, n):
+        for j in range(1, n):
+            if i + j <= n:
+                rhs *= 1 + X(i)
+
+    assert lhs == rhs
+
+
+def test_inv_identity_b(n):
+    lhs = 0 
+    for w in Permutation.involutions(n):
+        for bpd in BumplessPipedream.from_involution(w, n=n, reduced=False):
+            term = 1
+            for i in range(1, n + 1):
+                for j in range(1, i + 1):
+                    t = bpd.get_tile(i, j)
+                    if t == bpd.J_TILE:
+                        term *= X(i) if i == j else (X(i) * X(j))
+                    elif t == bpd.B_TILE:
+                        term *= X(i) if i == j else ((1 + X(i)) * (1 + X(j)))
+            lhs += term
+
+    rhs = 1
+    for i in range(1, n):
+        for j in range(1, n):
+            if i + j <= n:
+                rhs *= 1 + X(i)
+
+    assert lhs == rhs
 
 
 def test_word(n=4):

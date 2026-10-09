@@ -311,59 +311,6 @@ def is_even_well_nested_fast(w, verbose=False):
     return is_noncrossing(sh) and check
 
 
-def is_even_well_nested_twisted(w, verbose=False):
-    w = SignedPermutation(*w)
-    if verbose:
-        print('\n\n\nw =', w, '\n')
-    n = len(w.oneline)
-    o = [w(i) for i in range(2, n + 1)]
-    andes, anres = altndes(o)
-    ncyc = set(andes) | {(abs(c), c) for c in anres}| {(abs(w(1)), -n - 1)}
-    if verbose:
-        print('ncyc =', ncyc)
-    
-    index = {a: i + 1 for i, a in enumerate(w.oneline)}
-    for i, a in enumerate(w.oneline):
-        index[-a] = -i - 1
-    index[n + 1] = -1.5
-    index[-n - 1] = 1.5
-
-    #if n >= 2 and abs(w(1)) < -w(2):
-    #    return False
-
-    #if n >= 3 and 0 < -w(2) < w(1) < -w(3):
-    #    return False
-
-    check = True
-    for a1, b1 in ncyc:
-        for a2, b2 in ncyc:
-            if a1 < a2 and b1 < b2 and not (index[b1] < index[a2]):
-                check = False
-            if -a2 < b1 and not (-index[b1] < index[a2]):
-                check = False
-
-    c = abs(w(1))
-    sh = {(-c,c)} | {(a, -b) for (a, b) in ncyc if a < -b} | {(b, -a) for (a, b) in ncyc if a < -b}
-    if verbose:
-        print('shape =', sh)
-    return is_noncrossing(sh) and check
-
-
-def test_even_well_nested_twisted(n):
-    base = list(SignedPermutation.all(n, dtype=True))
-    for i, w in enumerate(base):
-        if i % 1000 == 0:
-            print(len(base) - i)
-        iswell = is_even_well_nested_twisted(w) 
-        expected = w.inverse().is_atom_d(twisted=True)
-        also = SignedPermutation(*([-w(1), -n - 1] + [w(j) for j in range(2, n + 1)])).inverse().is_atom_d(twisted=False)
-        if iswell != expected or also != expected:
-            print(iswell, 'but should be', expected, also)
-            print(w)
-        assert iswell == expected
-        assert expected == also
-
-
 def test_even_well_nested_fast(n):
     base = list(SignedPermutation.all(n, dtype=True))
     for i, w in enumerate(base):
@@ -473,6 +420,67 @@ def test_even_well_nested(n):
     assert all(a)
     assert all(b)
     return ans, bns, a, b
+
+
+def is_even_well_nested_twisted(w, verbose=False):
+    w = SignedPermutation(*w)
+    if verbose:
+        print('\n\n\nw =', w, '\n')
+    n = len(w.oneline)
+    o = [w(i) for i in range(2, n + 1)]
+    andes, anres = altndes(o)
+    ncyc = set(andes) | {(abs(c), c) for c in anres}# | {(abs(w(1)), -n - 1)}
+    if verbose:
+        print('ncyc =', ncyc)
+    
+    index = {a: i + 1 for i, a in enumerate(w.oneline)}
+    for i, a in enumerate(w.oneline):
+        index[-a] = -i - 1
+    #index[n + 1] = -1.5
+    #index[-n - 1] = 1.5
+
+    #if n >= 2 and abs(w(1)) < -w(2):
+    #    return False
+
+    #if n >= 3 and 0 < -w(2) < w(1) < -w(3):
+    #    return False
+
+    check = True
+    check = not any(abs(w(1)) < a and index[a] < 0 for (a, b) in ncyc)
+    for a1, b1 in ncyc:
+        for a2, b2 in ncyc:
+            if a1 < a2 and b1 < b2 and not (index[b1] < index[a2]):
+                if -n - 1 in {a1,b1,a2,b2}:
+                    print(a1, b1, a2, b2, ':', index[b1], index[a2]) 
+                    input('\n??')
+                check = False
+            if -a2 < b1 and not (-index[b1] < index[a2]):
+                if -n - 1 in {a1,b1,a2,b2}:
+                    print(a1, b1, a2, b2) 
+                    input('\n?')
+                check = False
+
+    c = abs(w(1))
+    ncyc -= {(abs(w(1)), -n - 1)}
+    sh = {(-c,c)} | {(a, -b) for (a, b) in ncyc if a < -b} | {(b, -a) for (a, b) in ncyc if a < -b}
+    if verbose:
+        print('shape =', sh)
+    return is_noncrossing(sh) and check
+
+
+def test_even_well_nested_twisted(n):
+    base = list(SignedPermutation.all(n, dtype=True))
+    for i, w in enumerate(base):
+        if i % 1000 == 0:
+            print(len(base) - i)
+        iswell = is_even_well_nested_twisted(w, verbose=False) 
+        expected = w.inverse().is_atom_d(twisted=True)
+        also = SignedPermutation(*([-w(1), -n - 1] + [w(j) for j in range(2, n + 1)])).inverse().is_atom_d(twisted=False)
+        if iswell != expected or also != expected:
+            print(iswell, 'but should be', expected, also)
+            print(w)
+        assert iswell == expected
+        assert expected == also
 
 
 class SignedAtomsGraph:

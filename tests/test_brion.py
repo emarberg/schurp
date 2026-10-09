@@ -745,7 +745,7 @@ def _test_DIII(rank):
     
     def matchings_fn(z):
         if n % 2 != 0:
-            return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 2 != 0}
+            return {m for m in Permutation.ncsp_matchings(base(z))}
         else:
             return {m for m in Permutation.ncsp_matchings(base(z)) if triv(m) % 4 == z.ell_zero() % 4}
 
