@@ -211,6 +211,26 @@ class Permutation:
             w = Permutation.s_i(i) % w % Permutation.s_i(i)
         return w
 
+    def get_nested_descents(self, y=None, twisted=None):
+        theta = lambda w: w if twisted is None else w.star(twisted)
+        y = Permutation() if y is None else y
+        w = self.get_reduced_word()
+        s = {i: Permutation.s_i(i) for i in w}
+
+        u = [Permutation()]
+        for i in w[:-1]:
+            u.append(u[-1] * s[i])
+
+        inv = [u[j] * s[w[j]] * u[j].inverse() for j in range(len(w))]
+        ans = set()
+        for i in range(len(w) - 1, -1, -1):
+            if theta(s[w[i]]) * y == y * s[w[i]]:
+                ans.add(inv[i])
+                y = y * s[w[i]]
+            else:
+                y = theta(s[w[i]]) * y * s[w[i]]
+        return tuple(sorted(ans))
+
     def get_reduced_word(self):
         w = self
         ans = ()

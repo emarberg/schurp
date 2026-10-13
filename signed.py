@@ -1394,6 +1394,28 @@ class SignedPermutation(SignedMixin):
             sh.add((e, -e))
         return sh
 
+    def get_nested_descents(self, y=None, dtype=False, twisted=False):
+        assert not twisted or dtype
+        n = self.rank
+        theta = lambda w: w if not twisted else w.s_i(0, n) * w * w.s_i(0, n)
+        y = SignedPermutation.identity(n) if y is None else y
+        w = self.get_reduced_word(dtype=dtype)
+        s = {i: SignedPermutation.s_i(i, n) for i in w}
+
+        u = [SignedPermutation.identity(n)]
+        for i in w[:-1]:
+            u.append(u[-1] * s[i])
+
+        inv = [u[j] * s[w[j]] * u[j].inverse() for j in range(len(w))]
+        ans = set()
+        for i in range(len(w) - 1, -1, -1):
+            if theta(s[w[i]]) * y == y * s[w[i]]:
+                ans.add(inv[i])
+                y = y * s[w[i]]
+            else:
+                y = theta(s[w[i]]) * y * s[w[i]]
+        return tuple(sorted(ans))
+
     def ndes(self):
         ndes, fix, neg = self._ndes()
         return ndes

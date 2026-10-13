@@ -4,91 +4,91 @@ from signed import SignedPermutation
 
 
 def test(slow=False):
-    _test_DIII(1)
-    _test_DIII(2)
-    _test_DIII(3)
-    _test_DIII(4)
-    _test_DIII(5)
-    _test_DIII(6)
+    do_test_DIII(1)
+    do_test_DIII(2)
+    do_test_DIII(3)
+    do_test_DIII(4)
+    do_test_DIII(5)
+    do_test_DIII(6)
 
-    _test_DII(1)
-    _test_DII(2)
-    _test_DII(3)
-    _test_DII(4)
-    _test_DII(5)
-    _test_DII(6)
+    do_test_DII(1)
+    do_test_DII(2)
+    do_test_DII(3)
+    do_test_DII(4)
+    do_test_DII(5)
+    do_test_DII(6)
 
-    _test_DI(1)
-    _test_DI(2)
-    _test_DI(3)
-    _test_DI(4)
-    _test_DI(5)
-    _test_DI(6)
+    do_test_DI(1)
+    do_test_DI(2)
+    do_test_DI(3)
+    do_test_DI(4)
+    do_test_DI(5)
+    do_test_DI(6)
 
-    _test_CII(1)
-    _test_CII(2)
-    _test_CII(3)
-    _test_CII(4)
-    _test_CII(5)
-    _test_CII(6)
+    do_test_CII(1)
+    do_test_CII(2)
+    do_test_CII(3)
+    do_test_CII(4)
+    do_test_CII(5)
+    do_test_CII(6)
 
-    _test_CI(1)
-    _test_CI(2)
-    _test_CI(3)
-    _test_CI(4)
-    _test_CI(5)
+    do_test_CI(1)
+    do_test_CI(2)
+    do_test_CI(3)
+    do_test_CI(4)
+    do_test_CI(5)
 
-    _test_BI(1)
-    _test_BI(2)
-    _test_BI(3)
-    _test_BI(4)
-    _test_BI(5)
+    do_test_BI(1)
+    do_test_BI(2)
+    do_test_BI(3)
+    do_test_BI(4)
+    do_test_BI(5)
 
-    _test_AIII(1)
-    _test_AIII(2)
-    _test_AIII(3)
-    _test_AIII(4)
-    _test_AIII(5)
+    do_test_AIII(1)
+    do_test_AIII(2)
+    do_test_AIII(3)
+    do_test_AIII(4)
+    do_test_AIII(5)
 
-    _test_AII(1)
-    _test_AII(3)
-    _test_AII(5)
-    _test_AII(7)
+    do_test_AII(1)
+    do_test_AII(3)
+    do_test_AII(5)
+    do_test_AII(7)
 
-    _test_AI(1)
-    _test_AI(2)
-    _test_AI(3)
-    _test_AI(4)
-    _test_AI(5)
-    _test_AI(6)
+    do_test_AI(1)
+    do_test_AI(2)
+    do_test_AI(3)
+    do_test_AI(4)
+    do_test_AI(5)
+    do_test_AI(6)
 
     if slow:
-        _test_AI(7)
-        _test_AI(8)
+        do_test_AI(7)
+        do_test_AI(8)
 
-        _test_AII(9)
-        _test_AII(11)
+        do_test_AII(9)
+        do_test_AII(11)
         
-        _test_AIII(6)
-        _test_AIII(7)
+        do_test_AIII(6)
+        do_test_AIII(7)
 
-        _test_BI(6)
-        _test_BI(7)
+        do_test_BI(6)
+        do_test_BI(7)
 
-        _test_CI(6)
-        _test_CI(7)
+        do_test_CI(6)
+        do_test_CI(7)
 
-        _test_CII(6)
-        _test_CII(7)
+        do_test_CII(6)
+        do_test_CII(7)
 
-        _test_DI(7)
-        _test_DI(8)
+        do_test_DI(7)
+        do_test_DI(8)
 
-        _test_DII(7)
-        _test_DII(8)
+        do_test_DII(7)
+        do_test_DII(8)
 
-        _test_DIII(7)
-        _test_DIII(8)
+        do_test_DIII(7)
+        do_test_DIII(8)
 
 
 def inv(w):
@@ -191,7 +191,7 @@ def transitive_closure(*args):
     return span
 
 
-def _test_AI(rank):
+def do_test_AI(rank):
     print('testing AI, rank =', rank)
     gamma_set = set(Permutation.involutions(rank + 1))
     invol_set = gamma_set
@@ -204,9 +204,10 @@ def _test_AI(rank):
     generator_fn = lambda z, m: z.get_max_atom().inverse()
     span_fn = precsim(0, rank + 1)
     degree_fn = lambda z: (z.length() + z.absolute_involution_length()) // 2
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
+    ndes_fn = lambda w: w.get_nested_descents()
+    do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
-def _test_AII(rank):
+def do_test_AII(rank):
     print('testing AII, rank =', rank)
     assert rank % 2 != 0
     gamma_set = set(Permutation.fpf_involutions(rank + 1))
@@ -220,10 +221,16 @@ def _test_AII(rank):
     generator_fn = lambda z, m: z.get_max_fpf_atom().inverse()
     span_fn = precapprox(0, rank + 1)
     degree_fn = lambda z: (z.length() - z.absolute_involution_length()) // 2
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
+    
+    y = Permutation()
+    for a in range(1, rank, 2):
+        y *= Permutation.s_i(a)
+        
+    ndes_fn = lambda w: w.get_nested_descents(y)
+    do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
 
-def _test_AIII(rank):
+def do_test_AIII(rank):
     n = rank + 1
     twisted = set(Permutation.twisted_involutions(n))
 
@@ -253,7 +260,16 @@ def _test_AIII(rank):
             assert (2 * z.length() - 2 * (w0*z).absolute_involution_length() + (n - k**2)) % 4 == 0
             return (2 * z.length() - 2 * (w0*z).absolute_involution_length() + (n - k**2)) // 4
 
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
+        i = (n - k) // 2
+        j = (n + k) // 2 + 1
+        y = Permutation()
+        for a in range(i + 1, n // 2 + 1 - i):
+            y *= Permutation.t_ij(i + a, j - a)
+        
+        def ndes_fn(w):
+            return w.get_nested_descents(y, twisted=n)
+
+        do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
 
 def nest(o):
@@ -318,7 +334,7 @@ def ascword(p):
     return ans
 
 
-def _test_BI(rank):
+def do_test_BI(rank):
     n = rank
     invol = set(SignedPermutation.involutions(n))
 
@@ -367,10 +383,15 @@ def _test_BI(rank):
             assert (z.length() + z.absolute_involution_length() - k * (k + 1)) % 2 == 0
             return (z.length() + z.absolute_involution_length() - k * (k + 1)) // 2
 
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
+        y = SignedPermutation(*([-i for i in range(1, k + 1)] + [i for i in range(k + 1, n + 1)]))
+        
+        def ndes_fn(w):
+            return w.get_nested_descents(y)
+
+        do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
 
-def _test_CI(rank):
+def do_test_CI(rank):
     n = rank
     print('testing CI, rank =', rank)
 
@@ -409,10 +430,13 @@ def _test_CI(rank):
         assert (z.length() + z.absolute_involution_length()) % 2 == 0
         return (z.length() + z.absolute_involution_length()) // 2
 
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
+    def ndes_fn(w):
+        return w.get_nested_descents()
+
+    do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
 
-def _test_CII(rank):
+def do_test_CII(rank):
     n = rank
     invol = set(SignedPermutation.fpf_involutions(n))
 
@@ -446,7 +470,12 @@ def _test_CII(rank):
             assert (z.length() + z.absolute_involution_length() - k**2 - n) % 2 == 0
             return (z.length() + z.absolute_involution_length() - k**2 - n) // 2
 
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
+        y = SignedPermutation(*([-i for i in range(1, k + 1)] + [i - (-1)**(i - k) for i in range(k + 1, n + 1)]))
+        
+        def ndes_fn(w):
+            return w.get_nested_descents(y)
+
+        do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
 
 def shape_CII(p, q):
@@ -471,7 +500,7 @@ def shape_CII(p, q):
     return ansfn
 
 
-def _test_DI(rank):
+def do_test_DI(rank):
     n = rank
     invol = set(SignedPermutation.involutions(n, dtype=True, twisted=False))
 
@@ -576,17 +605,22 @@ def _test_DI(rank):
             assert (z.dlength() + z.absolute_involution_length() - k**2) % 2 == 0
             return (z.dlength() + z.absolute_involution_length() - k**2) // 2
 
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn)
+        y = SignedPermutation(*([-i for i in range(1, k + 1)] + [i for i in range(k + 1, n + 1)]))
+        
+        def ndes_fn(w):
+            return w.get_nested_descents(y, dtype=True, twisted=False)
 
-        def minimal_gen(z):
-            m = []
-            b = base(z)
-            while len(b) > 1:
-                p, q = b[:2]
-                m += [(p, q), (-q, -p)]
-                b = b[2:]
-            m = tuple(sorted(m))
-            return generator_fn(z, m)
+        do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn, ndes_fn)
+
+        # def minimal_gen(z):
+        #     m = []
+        #     b = base(z)
+        #     while len(b) > 1:
+        #         p, q = b[:2]
+        #         m += [(p, q), (-q, -p)]
+        #         b = b[2:]
+        #     m = tuple(sorted(m))
+        #     return generator_fn(z, m)
             
         # if k == 0:
         #     for z in invol_set:
@@ -595,7 +629,7 @@ def _test_DI(rank):
         #             span_test(w, extend_D(n), rank_fn)
 
 
-def _test_DII(rank):
+def do_test_DII(rank):
     n = rank
     t = SignedPermutation.s_i(0, n)
     invol = set(SignedPermutation.involutions(n, dtype=True, twisted=True))
@@ -681,10 +715,15 @@ def _test_DII(rank):
             assert (z.dlength() + (t*z).absolute_involution_length() - k**2) % 2 == 0
             return (z.dlength() + (t*z).absolute_involution_length() - k**2) // 2
 
-        _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn)
+        y = SignedPermutation(*([1] + [-i for i in range(2, k + 1)] + [i for i in range(k + 1, n + 1)]))
+        
+        def ndes_fn(w):
+            return w.get_nested_descents(y, dtype=True, twisted=True)
+
+        do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, rank_fn, degree_fn, ndes_fn)
 
 
-def _test_DIII(rank):
+def do_test_DIII(rank):
     n = rank
     t = SignedPermutation.s_i(0, n)
     
@@ -718,12 +757,14 @@ def _test_DIII(rank):
             o = o[1:]
         while o:
             b, c = o[:2]
-            if 0 < c < -b:
-                ans.append((c, -b))
-                ans.append((b, -c))
-            elif c < 0 < -b:
-                ans.append((c, -c))
-                ans.append((b, -b))
+            assert b < c
+            if c < -b:
+                if 0 < c:
+                    ans.append((c, -b))
+                    ans.append((b, -c))
+                else:
+                    ans.append((c, -c))
+                    ans.append((b, -b))
             o = o[2:]
         return tuple(sorted(ans))
 
@@ -761,10 +802,17 @@ def _test_DIII(rank):
 
     span_fn = precapprox(0 if n % 2 == 0 else 1, n)
     def degree_fn(z):
-        assert (z.dlength() + (z if n %2 == 0 else t* z).absolute_involution_length() - z.rank) % 2 ==0
-        return (z.dlength() + (z if n %2 == 0 else t* z).absolute_involution_length() - z.rank) // 2
+        assert (z.dlength() + (z if n % 2 == 0 else t * z).absolute_involution_length() - z.rank) % 2 ==0
+        return (z.dlength() + (z if n % 2 == 0 else t * z).absolute_involution_length() - z.rank) // 2
 
-    _generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn)
+    y = SignedPermutation.identity(n)
+    for i in range(1, n, 2):
+        y *= SignedPermutation.s_i(i + (1 if n % 2 != 0 else 0), n)
+    
+    def ndes_fn(w):
+        return w.get_nested_descents(y, dtype=True, twisted=n % 2 == 1)
+
+    do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
 
 def span_test(generator, preorder_fn, rank_fn=None):
@@ -787,10 +835,10 @@ def span_test(generator, preorder_fn, rank_fn=None):
     return ans
 
 
-def _generic_test(
+def do_generic_test(
         gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, 
         matchings_fn, shape_fn, is_aligned_fn, 
-        generator_fn, preorder_fn, rank_fn, degree_fn):
+        generator_fn, preorder_fn, rank_fn, degree_fn, ndes_fn):
     expected_invol = {rs_fn(gamma) for gamma in gamma_set}
     assert expected_invol == invol_set
 
@@ -803,9 +851,22 @@ def _generic_test(
         assert expected_matchings == actual_matchings
     
         matchings[z] = {m: set() for m in actual_matchings}
+        shape_to_ndes = {}
+        ndes_to_shape = {}
+
         for w in extended_brion:
             m = shape_fn(w)
+            d = ndes_fn(w)
             matchings[z][m].add(w)
+
+            if m not in shape_to_ndes:
+                shape_to_ndes[m] = d
+            else:
+                assert shape_to_ndes[m] == d
+            if d not in ndes_to_shape:
+                ndes_to_shape[d] = m
+            else:
+                assert ndes_to_shape[d] == m
 
         for m in matchings[z]:
             gen = generator_fn(z, m)
