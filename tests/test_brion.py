@@ -590,15 +590,12 @@ def do_test_DI(rank):
             left = set(o[k:]) - right
 
             w_right = [a for a in o if a in right]
+            w_half = [a for a in o if a in left]
             w_left = [-a for a in reversed(o) if a in left] + [a for a in o if a in left]
 
-            if k == 0:
-                # offset = len([(b1, a1, b2, a2) for b1, a1 in ndes for b2, a2 in ndes if abs(b2) < abs(b1) < -a1 < -a2])
-                # if not addoffset:
-                offset = 0
-                return offset + (inv(w_left) - neg(o[k:])) // 2 - inv(w_right)
-            else:
-                return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
+            diff = inv(w_left) - neg(w_half)
+            assert diff % 2 == 0
+            return diff // 2 - inv(w_right) + (0 if k == 0 else neg(o[k:]))
         
         rank_fn = lambda w: rk(w)
         def degree_fn(z):
@@ -707,9 +704,12 @@ def do_test_DII(rank):
             left = set(o[k:]) - right
 
             w_right = [a for a in o if a in right]
+            w_half = [a for a in o if a in left]
             w_left = [-a for a in reversed(o) if a in left] + [a for a in o if a in left]
 
-            return (inv(w_left) + neg(o[k:])) // 2 - inv(w_right)
+            diff = inv(w_left) - neg(w_half)
+            assert diff % 2 == 0
+            return diff // 2 - inv(w_right) + neg(o[k:])
         
         def degree_fn(z):
             assert (z.dlength() + (t*z).absolute_involution_length() - k**2) % 2 == 0
@@ -815,7 +815,7 @@ def do_test_DIII(rank):
     do_generic_test(gamma_set, invol_set, rs_fn, brion_fn, extended_brion_fn, matchings_fn, shape_fn, is_aligned_fn, generator_fn, span_fn, None, degree_fn, ndes_fn)
 
 
-def span_test(generator, preorder_fn, rank_fn=None):
+def span_test(generator, preorder_fn, rank_fn):
     ans = set()
     add = {generator}
     while add:
@@ -828,7 +828,7 @@ def span_test(generator, preorder_fn, rank_fn=None):
                         if rank_fn(g) + 1 != rank_fn(h):
                             print(g, rank_fn(g), h, rank_fn(h))
                             input('')
-                        #assert rank_fn(g) + 1 == rank_fn(h)
+                        assert rank_fn(g) + 1 == rank_fn(h)
                     if h not in ans or add:
                         newadd.add(h)
         add = newadd
